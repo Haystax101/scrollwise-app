@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   bottomContent: {
-    paddingBottom: 40,
+    paddingBottom: 25,
   },
   titleBlock: {
     marginBottom: 8,
