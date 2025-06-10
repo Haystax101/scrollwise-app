@@ -1,16 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, StyleSheet, Alert } from 'react-native';
 import { MaterialCommunityIcons, Feather, FontAwesome } from '@expo/vector-icons';
 import type { User } from '../types';
 import { CustomCheckbox } from './CustomCheckbox';
-// Removed: import { styled } from "nativewind";
-
-// Removed: const StyledView = styled(View);
-// Removed: const StyledText = styled(Text);
-// Removed: const StyledTextInput = styled(TextInput);
-// Removed: const StyledTouchableOpacity = styled(TouchableOpacity);
-// Removed: const StyledScrollView = styled(ScrollView);
-// Removed: const StyledKeyboardAvoidingView = styled(KeyboardAvoidingView);
+import { supabase } from '../lib/supabase';
 
 
 interface SignUpProps {
@@ -24,21 +17,44 @@ export const SignUp: React.FC<SignUpProps> = ({ onSignUp, onSwitchToSignIn }) =>
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name || !email || !password || !confirmPassword) {
-      alert("Please fill in all fields.");
+      Alert.alert('Please fill in all fields.');
       return;
     }
     if (password !== confirmPassword) {
-      alert("Passwords don't match!");
+      Alert.alert("Passwords don't match!");
       return;
     }
     if (!agreedToTerms) {
-      alert('You must agree to the terms and privacy policy.');
+      Alert.alert('You must agree to the terms and privacy policy.');
       return;
     }
-    onSignUp({ email, name });
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name },
+        },
+      });
+      if (error) {
+        Alert.alert(error.message);
+      } else if (!data.session) {
+        Alert.alert('Please check your inbox for email verification!');
+        // Optionally, you can still call onSignUp here if you want to move to the next screen
+      } else {
+        // Signed up and session created
+        onSignUp({ email, name });
+      }
+    } catch (e) {
+      Alert.alert('An unexpected error occurred.');
+    } finally {
+      setLoading(false);
+    }
   };
   
   const termsLabel = (
@@ -149,11 +165,12 @@ export const SignUp: React.FC<SignUpProps> = ({ onSignUp, onSwitchToSignIn }) =>
 
               <TouchableOpacity
                 onPress={handleSubmit}
-                style={styles.signUpButton}
+                style={[styles.signUpButton, loading && { opacity: 0.6 }]}
                 accessibilityLabel="Create account button"
                 accessibilityRole="button"
+                disabled={loading}
               >
-                <Text style={styles.signUpButtonText}>Create Account</Text>
+                <Text style={styles.signUpButtonText}>{loading ? 'Creating...' : 'Create Account'}</Text>
               </TouchableOpacity>
             </View>
 

@@ -1,16 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, StyleSheet, Alert } from 'react-native';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import type { User } from '../types';
 import { CustomCheckbox } from './CustomCheckbox';
-// Removed: import { styled } from "nativewind";
-
-// Removed: const StyledView = styled(View);
-// Removed: const StyledText = styled(Text);
-// Removed: const StyledTextInput = styled(TextInput);
-// Removed: const StyledTouchableOpacity = styled(TouchableOpacity);
-// Removed: const StyledScrollView = styled(ScrollView);
-// Removed: const StyledKeyboardAvoidingView = styled(KeyboardAvoidingView);
+import { supabase } from '../lib/supabase';
 
 interface SignInProps {
   onSignIn: (user: User) => void;
@@ -21,14 +14,32 @@ export const SignIn: React.FC<SignInProps> = ({ onSignIn, onSwitchToSignUp }) =>
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
-    // Basic validation, can be expanded
+  const handleSubmit = async () => {
     if (!email || !password) {
-      alert("Please fill in all fields.");
+      Alert.alert('Please fill in all fields.');
       return;
     }
-    onSignIn({ email, name: 'Demo User' }); // Name can be fetched or set later
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) {
+        Alert.alert(error.message);
+      } else if (!data.session) {
+        Alert.alert('Sign in failed.');
+      } else {
+        // Optionally fetch user profile here
+        onSignIn({ email, name: 'Demo User' }); // Replace with actual user info if available
+      }
+    } catch (e) {
+      Alert.alert('An unexpected error occurred.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -94,11 +105,12 @@ export const SignIn: React.FC<SignInProps> = ({ onSignIn, onSwitchToSignUp }) =>
 
               <TouchableOpacity
                 onPress={handleSubmit}
-                style={styles.signInButton}
+                style={[styles.signInButton, loading && { opacity: 0.6 }]}
                 accessibilityLabel="Sign in button"
                 accessibilityRole="button"
+                disabled={loading}
               >
-                <Text style={styles.signInButtonText}>Sign in</Text>
+                <Text style={styles.signInButtonText}>{loading ? 'Signing in...' : 'Sign in'}</Text>
               </TouchableOpacity>
             </View>
 
