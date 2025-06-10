@@ -2,13 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { User, UserData } from '../types';
-// Removed: import { styled } from "nativewind";
 
-// Removed: const StyledView = styled(View);
-// Removed: const StyledText = styled(Text);
-// Removed: const StyledScrollView = styled(ScrollView);
-// Removed: const StyledTouchableOpacity = styled(TouchableOpacity);
-// Removed: const StyledImage = styled(Image);
 
 interface ProfileProps {
   user: User | null;

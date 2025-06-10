@@ -1,12 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-// Removed: import { styled } from "nativewind";
 import type { ReactNode } from 'react';
-
-// Removed: const StyledView = styled(View);
-// Removed: const StyledText = styled(Text);
-// Removed: const StyledTouchableOpacity = styled(TouchableOpacity);
 
 interface CustomCheckboxProps {
   label: ReactNode;

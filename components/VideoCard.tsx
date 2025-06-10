@@ -2,14 +2,12 @@ import React from 'react';
 import { View, Text, ImageBackground, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Video } from '../types';
-// Removed: import { styled } from "nativewind";
 
-// Removed: const StyledView = styled(View);
-// Removed: const StyledText = styled(Text);
-// Removed: const StyledImageBackground = styled(ImageBackground);
-// Removed: const StyledTouchableOpacity = styled(TouchableOpacity);
 
-const { height: screenHeight } = Dimensions.get('window');
+const { height: windowHeight } = Dimensions.get('window');
+// Height of the bottom navbar (Header) in px, must match styles.navRow height in Header.tsx
+const NAVBAR_HEIGHT = 84;
+const screenHeight = windowHeight - NAVBAR_HEIGHT;
 
 interface VideoCardProps {
   video: Video;

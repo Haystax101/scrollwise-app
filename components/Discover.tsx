@@ -2,14 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import type { SearchResult } from '../types';
-// Removed: import { styled } from "nativewind";
 
-// Removed: const StyledView = styled(View);
-// Removed: const StyledText = styled(Text);
-// Removed: const StyledTextInput = styled(TextInput);
-// Removed: const StyledScrollView = styled(ScrollView);
-// Removed: const StyledTouchableOpacity = styled(TouchableOpacity);
-// Removed: const StyledImage = styled(Image);
 
 const mockResults: SearchResult[] = [
   {

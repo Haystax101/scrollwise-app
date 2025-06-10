@@ -20,7 +20,7 @@ export default function App() {
 
   const handleSignIn = (userData: User) => {
     setUser(userData);
-    setCurrentScreen('onboarding');
+    setCurrentScreen('feed');
   };
 
   const handleSignUp = (userData: User) => {
@@ -59,19 +59,27 @@ export default function App() {
 
   const showHeader = currentScreen !== 'signIn' && currentScreen !== 'signUp' && currentScreen !== 'onboarding';
   const isAuthOrOnboarding = currentScreen === 'signIn' || currentScreen === 'signUp' || currentScreen === 'onboarding';
-
+  const isMainFeed = currentScreen === 'feed';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar 
-        barStyle={isAuthOrOnboarding ? "dark-content" : "light-content"} 
-        backgroundColor={currentScreen === 'feed' ? 'black' : (isAuthOrOnboarding ? '#F9FAFB' : 'white')} 
-      />
-      <View style={styles.flex1}>
+    isMainFeed ? (
+      <View style={[styles.flex1, { backgroundColor: '#000' }]}> 
+        <StatusBar barStyle="light-content" backgroundColor="black" />
         {renderScreen()}
+        {showHeader && <Header currentScreen={currentScreen} navigateTo={navigateTo} dark />}
       </View>
-      {showHeader && <Header currentScreen={currentScreen} navigateTo={navigateTo} />}
-    </SafeAreaView>
+    ) : (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar 
+          barStyle={isAuthOrOnboarding ? "dark-content" : "light-content"} 
+          backgroundColor={isAuthOrOnboarding ? '#F9FAFB' : 'white'} 
+        />
+        <View style={styles.flex1}>
+          {renderScreen()}
+        </View>
+        {showHeader && <Header currentScreen={currentScreen} navigateTo={navigateTo} />}
+      </SafeAreaView>
+    )
   );
 }
 
@@ -82,5 +90,6 @@ const styles = StyleSheet.create({
   },
   flex1: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
 });

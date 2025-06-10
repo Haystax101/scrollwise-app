@@ -2,11 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Dimensions, StyleSheet } from 'react-native';
 import { VideoCard } from './VideoCard';
 import type { Video } from '../types';
-// Removed: import { styled } from "nativewind";
-
-// Removed: const StyledView = styled(View);
-// Removed: const StyledText = styled(Text);
-// Removed: const StyledFlatList = styled(FlatList);
 
 interface MainFeedProps {
   industries: string[]; 
