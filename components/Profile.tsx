@@ -6,6 +6,7 @@ import type { User, UserData } from '../types';
 
 interface ProfileProps {
   user: User | null;
+  navigateTo?: (screen: string) => void;
 }
 
 const defaultUserData: UserData = {
@@ -35,7 +36,7 @@ const defaultUserData: UserData = {
   ],
 };
 
-export const Profile: React.FC<ProfileProps> = ({ user }) => {
+export const Profile: React.FC<ProfileProps> = ({ user, navigateTo }) => {
   const userData = user ? { ...defaultUserData, name: user.name, email: user.email } : defaultUserData;
 
   return (
@@ -44,7 +45,7 @@ export const Profile: React.FC<ProfileProps> = ({ user }) => {
       <View style={styles.headerContainer}>
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>Profile</Text>
-          <TouchableOpacity style={styles.headerSettingsBtn} accessibilityLabel="Open settings" accessibilityRole="button">
+          <TouchableOpacity style={styles.headerSettingsBtn} accessibilityLabel="Open settings" accessibilityRole="button" onPress={() => navigateTo && navigateTo('settings')}>
             <Feather name="settings" size={22} color="#374151" />
           </TouchableOpacity>
         </View>

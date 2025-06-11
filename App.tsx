@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SafeAreaView, View, StatusBar, Platform, StyleSheet } from 'react-native';
+import { SafeAreaView, View, StatusBar, StyleSheet } from 'react-native';
 import { SignIn } from './components/SignIn';
 import { SignUp } from './components/SignUp';
 import { Onboarding } from './components/Onboarding';
@@ -7,6 +7,7 @@ import { MainFeed } from './components/MainFeed';
 import { Profile } from './components/Profile';
 import { Header } from './components/Header';
 import { Discover } from './components/Discover';
+import Settings from './components/Settings';
 import type { User, ScreenName } from './types';
 // Removed: import { styled } from "nativewind";
 
@@ -50,7 +51,9 @@ export default function App() {
       case 'discover':
         return <Discover />;
       case 'profile':
-        return <Profile user={user} />;
+        return <Profile user={user} navigateTo={navigateTo as any} />;
+      case 'settings':
+        return <Settings navigateTo={navigateTo as any} />;
       default:
         // Should not happen with defined ScreenName type
         return <SignIn onSignIn={handleSignIn} onSwitchToSignUp={() => setCurrentScreen('signUp')} />;

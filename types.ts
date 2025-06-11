@@ -1,4 +1,3 @@
-
 // Using React.ReactElement for icons from lucide-react-native is generally fine.
 // No specific changes needed unless stricter typing for icon components is desired.
 // For simplicity, ReactNode is acceptable as lucide-react-native icons are React components.
@@ -38,7 +37,7 @@ export interface SavedContentItem {
   date: string;
 }
 
-export type ScreenName = 'signIn' | 'signUp' | 'onboarding' | 'feed' | 'discover' | 'profile';
+export type ScreenName = 'signIn' | 'signUp' | 'onboarding' | 'feed' | 'discover' | 'profile' | 'settings';
 
 export interface UserData {
   name: string;
