@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SafeAreaView, View, StatusBar, StyleSheet } from 'react-native';
 import { SignIn } from './components/SignIn';
 import { SignUp } from './components/SignUp';
@@ -8,6 +8,7 @@ import { Profile } from './components/Profile';
 import { Header } from './components/Header';
 import { Discover } from './components/Discover';
 import Settings from './components/Settings';
+import { useAuth } from './context/AuthContext';
 import type { User, ScreenName } from './types';
 // Removed: import { styled } from "nativewind";
 
@@ -15,17 +16,26 @@ import type { User, ScreenName } from './types';
 // Removed: const StyledView = styled(View);
 
 export default function App() {
+  const { user, loading, signOut } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('signIn');
-  const [user, setUser] = useState<User | null>(null);
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
 
-  const handleSignIn = (userData: User) => {
-    setUser(userData);
-    setCurrentScreen('feed');
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        setCurrentScreen('signIn');
+      } else if (currentScreen === 'signIn' || currentScreen === 'signUp') {
+        setCurrentScreen('feed');
+      }
+    }
+    // eslint-disable-next-line
+  }, [user, loading]);
+
+  const handleSignIn = (_user: User) => {
+    // No-op: handled by AuthContext
   };
 
-  const handleSignUp = (userData: User) => {
-    setUser(userData);
+  const handleSignUp = (_user: User) => {
     setCurrentScreen('onboarding');
   };
 
@@ -51,11 +61,14 @@ export default function App() {
       case 'discover':
         return <Discover />;
       case 'profile':
-        return <Profile user={user} navigateTo={navigateTo as any} />;
+        // Map Supabase user to local User type
+        const localUser = user
+          ? { email: user.email ?? '', name: user.user_metadata?.name ?? '' }
+          : null;
+        return <Profile user={localUser} navigateTo={navigateTo as any} signOut={signOut} />;
       case 'settings':
-        return <Settings navigateTo={navigateTo as any} />;
+        return <Settings navigateTo={navigateTo as any} signOut={signOut} />;
       default:
-        // Should not happen with defined ScreenName type
         return <SignIn onSignIn={handleSignIn} onSwitchToSignUp={() => setCurrentScreen('signUp')} />;
     }
   };

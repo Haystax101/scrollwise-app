@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import type { User, UserData } from '../types';
+import type { UserData } from '../types';
 
 
 interface ProfileProps {
-  user: User | null;
+  user: import('../types').User | null;
   navigateTo?: (screen: string) => void;
+  signOut?: () => Promise<void>;
 }
 
 const defaultUserData: UserData = {
@@ -36,12 +37,12 @@ const defaultUserData: UserData = {
   ],
 };
 
-export const Profile: React.FC<ProfileProps> = ({ user, navigateTo }) => {
+export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) => {
   const userData = user ? { ...defaultUserData, name: user.name, email: user.email } : defaultUserData;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      {/* Header */}
+    <View style={styles.container}>
+     {/* Header */}
       <View style={styles.headerContainer}>
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>Profile</Text>
@@ -50,6 +51,8 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo }) => {
           </TouchableOpacity>
         </View>
       </View>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+     
 
       <View style={styles.innerContent}>
         {/* User Info */}
@@ -141,8 +144,16 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo }) => {
             )}
           </View>
         </View>
+
+        {/* Add a logout button if signOut is provided */}
+        {signOut && (
+          <TouchableOpacity style={{marginTop: 16, alignSelf: 'center'}} onPress={signOut} accessibilityLabel="Log out" accessibilityRole="button">
+            <Text style={{color: 'red', fontWeight: 'bold'}}>Log Out</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </ScrollView>
+    </View>
   );
 };
 
@@ -202,10 +213,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 80,
+    paddingTop: 30,
   },
   headerContainer: {
     backgroundColor: '#fff',
-    padding: 16,
+    padding: 20,
+    paddingTop: 50,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -238,7 +251,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
-    marginBottom: 16,
+    marginBottom: 15,
   },
   userInfoRow: {
     flexDirection: 'row',

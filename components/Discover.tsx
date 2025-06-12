@@ -151,6 +151,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
     padding: 16,
+    paddingTop: 60,
     zIndex: 10,
   },
   searchInputWrapper: {

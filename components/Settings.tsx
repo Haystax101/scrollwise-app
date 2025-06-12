@@ -4,11 +4,12 @@ import { supabase } from '../lib/supabase';
 
 interface SettingsProps {
   navigateTo: (screen: string) => void;
+  signOut: () => Promise<void>;
 }
 
-const Settings: React.FC<SettingsProps> = ({ navigateTo }) => {
+const Settings: React.FC<SettingsProps> = ({ navigateTo, signOut }) => {
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     navigateTo('signIn');
   };
 
