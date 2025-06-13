@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Industry, ExperienceLevel } from '../types';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 // Removed: import { styled } from "nativewind";
 
 // Removed: const StyledView = styled(View);
@@ -47,6 +49,8 @@ const industriesData: Industry[] = [
   },
 ];
 
+
+
 const experienceLevels: ExperienceLevel[] = [
   'Student',
   'Working Professional',
@@ -54,33 +58,56 @@ const experienceLevels: ExperienceLevel[] = [
   'Enthusiast',
 ];
 
+
+
 interface OnboardingProps {
-  onComplete: (selectedIndustries: string[]) => void;
+  onComplete: (interests: string[]) => void;
 }
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [step, setStep] = useState(1);
-  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
-  const [selectedExperience, setSelectedExperience] = useState<ExperienceLevel | null>(null);
+  const [interests, setInterests] = useState<string[]>([]);
+  const [experience, setExperience] = useState<ExperienceLevel | null>(null);
+  const { user } = useAuth();
+
 
   const toggleIndustry = (industryId: string) => {
-    setSelectedIndustries((prev) =>
+    setInterests((prev) =>
       prev.includes(industryId)
         ? prev.filter((id) => id !== industryId)
         : [...prev, industryId]
     );
   };
 
-  const handleComplete = () => {
-    if (selectedIndustries.length === 0) {
+  const handleComplete = async () => {
+    if (interests.length === 0) {
         alert("Please select at least one industry.");
         return;
     }
-    if (!selectedExperience) {
+    if (!experience) {
         alert("Please select your experience level.");
         return;
     }
-    onComplete(selectedIndustries);
+    if (!user) {
+        alert("User not found in context. Cannot submit onboarding.");
+        console.log("[Onboarding] No user found in context.");
+        return;
+    }
+    const payload = {
+      experience,
+      interests
+    };
+    console.log("[Onboarding] Submitting to Supabase:", payload);
+    const { error } = await supabase 
+      .from('profiles')
+      .update(payload)
+      .eq('id', user.id);
+    if (error) {
+      console.log("[Onboarding] Supabase upsert error:", error);
+      return;
+    }
+    console.log("[Onboarding] Upsert successful, calling onComplete.");
+    onComplete(interests);
   };
 
   return (
@@ -120,12 +147,12 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                       padding: 16,
                       borderRadius: 12,
                       borderWidth: 2,
-                      borderColor: selectedIndustries.includes(industry.id) ? '#2563EB' : '#E5E7EB',
-                      backgroundColor: selectedIndustries.includes(industry.id) ? '#EFF6FF' : '#fff',
+                      borderColor: interests.includes(industry.id) ? '#2563EB' : '#E5E7EB',
+                      backgroundColor: interests.includes(industry.id) ? '#EFF6FF' : '#fff',
                       marginBottom: 12,
                     }}
                     accessibilityLabel={`Select industry ${industry.name}`}
-                    accessibilityState={{ selected: selectedIndustries.includes(industry.id) }}
+                    accessibilityState={{ selected: interests.includes(industry.id) }}
                   >
                     <View style={{
                       padding: 12,
@@ -139,7 +166,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                       <Text style={{ fontWeight: '500', color: '#111827' }}>{industry.name}</Text>
                       <Text style={{ fontSize: 14, color: '#4B5563' }}>{industry.description}</Text>
                     </View>
-                    {selectedIndustries.includes(industry.id) && <MaterialCommunityIcons name="check-circle" size={24} color="#2563EB" />}
+                    {interests.includes(industry.id) && <MaterialCommunityIcons name="check-circle" size={24} color="#2563EB" />}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -147,7 +174,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             <View style={{ marginTop: 32 }}>
               <TouchableOpacity
                 onPress={() => setStep(2)}
-                disabled={selectedIndustries.length === 0}
+                disabled={interests.length === 0}
                 style={{
                   width: '100%',
                   paddingVertical: 12,
@@ -155,12 +182,12 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                   borderRadius: 12,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: selectedIndustries.length > 0 ? '#2563EB' : '#E5E7EB',
+                  backgroundColor: interests.length > 0 ? '#2563EB' : '#E5E7EB',
                 }}
                 accessibilityLabel="Continue to experience level selection"
-                accessibilityState={{ disabled: selectedIndustries.length === 0 }}
+                accessibilityState={{ disabled: interests.length === 0 }}
               >
-                <Text style={{ fontWeight: '500', color: selectedIndustries.length > 0 ? '#fff' : '#6B7280' }}>Continue</Text>
+                <Text style={{ fontWeight: '500', color: interests.length > 0 ? '#fff' : '#6B7280' }}>Continue</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -191,7 +218,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 {experienceLevels.map((level) => (
                   <TouchableOpacity
                     key={level}
-                    onPress={() => setSelectedExperience(level)}
+                    onPress={() => setExperience(level)}
                     style={{
                       width: '100%',
                       flexDirection: 'row',
@@ -199,18 +226,18 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                       padding: 16,
                       borderRadius: 12,
                       borderWidth: 2,
-                      borderColor: selectedExperience === level ? '#2563EB' : '#E5E7EB',
-                      backgroundColor: selectedExperience === level ? '#EFF6FF' : '#fff',
+                      borderColor: experience === level ? '#2563EB' : '#E5E7EB',
+                      backgroundColor: experience === level ? '#EFF6FF' : '#fff',
                       marginBottom: 12,
                     }}
                     accessibilityLabel={`Select experience level ${level}`}
-                    accessibilityState={{ selected: selectedExperience === level }}
+                    accessibilityState={{ selected: experience === level }}
                     accessibilityRole="radio"
                   >
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontWeight: '500', color: '#111827' }}>{level}</Text>
                     </View>
-                    {selectedExperience === level ? (
+                    {experience === level ? (
                       <MaterialCommunityIcons name="check-circle" size={24} color="#2563EB" />
                     ) : (
                       <MaterialCommunityIcons name="checkbox-blank-circle-outline" size={24} color="#D1D5DB" />
@@ -222,7 +249,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             <View style={{ marginTop: 32 }}>
               <TouchableOpacity
                 onPress={handleComplete}
-                disabled={!selectedExperience}
+                disabled={!experience}
                 style={{
                   width: '100%',
                   paddingVertical: 12,
@@ -230,13 +257,13 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                   borderRadius: 12,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: selectedExperience ? '#2563EB' : '#E5E7EB',
+                  backgroundColor: experience ? '#2563EB' : '#E5E7EB',
                   marginBottom: 12,
                 }}
                 accessibilityLabel="Get started with onboarding"
-                accessibilityState={{ disabled: !selectedExperience }}
+                accessibilityState={{ disabled: !experience }}
               >
-                <Text style={{ fontWeight: '500', color: selectedExperience ? '#fff' : '#6B7280' }}>Get Started</Text>
+                <Text style={{ fontWeight: '500', color: experience ? '#fff' : '#6B7280' }}>Get Started</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setStep(1)}
