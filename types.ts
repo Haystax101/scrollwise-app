@@ -25,11 +25,11 @@ export interface Video {
   caption: string;
   source: string; // This will be the source_url from Supabase
   industry: string;
-  thumbnail: string; // URL for the image
   video_url: string; // Add this property for video playback
   likes: number;
   saves: number;
   comments: number;
+  content: string; // Add content field
 }
 
 export interface SavedContentItem {

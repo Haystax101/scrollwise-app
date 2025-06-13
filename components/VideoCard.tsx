@@ -15,104 +15,167 @@ interface VideoCardProps {
 }
 
 export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
-  // Create a player instance for this video
-  const player = useVideoPlayer(
-    { uri: video.video_url },
-    (player) => {
-      player.loop = true;
-      player.volume = 1.0;
-      player.muted = false;
-      if (isActive) {
-        player.play();
-      } else {
-        player.pause();
+  // Show video player if video_url exists, else show static content
+  if (video.video_url) {
+    // Create a player instance for this video
+    const player = useVideoPlayer(
+      { uri: video.video_url },
+      (player) => {
+        player.loop = true;
+        player.volume = 1.0;
+        player.muted = false;
+        if (isActive) {
+          player.play();
+        } else {
+          player.pause();
+        }
       }
-    }
-  );
+    );
 
-  const getTypeIcon = () => {
-    const iconProps = { size: 16, color: 'white', style: { marginRight: 4 } };
-    switch (video.type) {
-      case 'research':
-        return <MaterialCommunityIcons name="microscope" {...iconProps} />;
-      case 'book':
-        return <Feather name="book-open" {...iconProps} />;
-      case 'news':
-        return <MaterialCommunityIcons name="newspaper" {...iconProps} />;
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <View style={[{ height: screenHeight }, styles.root]}>
-      {/* Video Player */}
-      <VideoView
-        player={player}
-        style={styles.bgImage}
-        contentFit="cover"
-        nativeControls={false}
-        allowsFullscreen={false}
-      />
-      <View style={styles.gradientOverlay} />
-      <View style={styles.contentContainer}>
-        {/* Top Bar */}
-        <View style={styles.topBarRow}>
-          <View style={styles.topBarPill}>
-            <Text style={styles.topBarPillText}>For You</Text>
+    return (
+      <View style={[{ height: screenHeight }, styles.root]}>
+        {/* Video Player */}
+        <VideoView
+          player={player}
+          style={styles.bgImage}
+          contentFit="cover"
+          nativeControls={false}
+          allowsFullscreen={false}
+        />
+        <View style={styles.gradientOverlay} />
+        <View style={styles.contentContainer}>
+          {/* Top Bar */}
+          <View style={styles.topBarRow}>
+            <View style={styles.topBarPill}>
+              <Text style={styles.topBarPillText}>For You</Text>
+            </View>
+            <View style={styles.topBarPill}>
+              {getTypeIcon(video.type)}
+              <Text style={styles.topBarPillText}>{String(video.type).charAt(0).toUpperCase() + String(video.type).slice(1)}</Text>
+            </View>
           </View>
-          <View style={styles.topBarPill}>
-            {getTypeIcon()}
-            <Text style={styles.topBarPillText}>{video.type.charAt(0).toUpperCase() + video.type.slice(1)}</Text>
-          </View>
-        </View>
-        {/* Bottom Content */}
-        <View style={styles.bottomContent}>
-          <View style={styles.titleBlock}>
-            <Text style={styles.title}>{video.title}</Text>
-            <Text style={styles.caption}>{video.caption}</Text>
-            <View style={styles.metaRow}>
-              <Text style={styles.metaSourceSite}>{getSiteName(video.source)}</Text>
-              <View style={styles.metaDot} />
-              <View style={styles.industryPill}>
-                <Text style={styles.industryPillText}>{video.industry}</Text>
+          {/* Bottom Content */}
+          <View style={styles.bottomContent}>
+            <View style={styles.titleBlock}>
+              <Text style={styles.title}>{video.title}</Text>
+              <Text style={styles.caption}>{video.caption}</Text>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaSourceSite}>{getSiteName(video.source)}</Text>
+                <View style={styles.metaDot} />
+                <View style={styles.industryPill}>
+                  <Text style={styles.industryPillText}>{video.industry}</Text>
+                </View>
               </View>
             </View>
-          </View>
-          {/* Progress Bar - Placeholder */}
-          <View style={styles.progressBarBg}>
-            <View style={styles.progressBarFill} />
-          </View>
-          <View style={styles.actionRow}>
-            <View style={styles.actionBtnGroup}>
-              <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Like video, ${video.likes} likes`} accessibilityRole="button">
-                <View style={styles.actionBtnIconCircle}>
-                  <Feather name="heart" size={22} color="white" />
-                </View>
-                <Text style={styles.actionBtnCount}>{video.likes}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Save video, ${video.saves} saves`} accessibilityRole="button">
-                <View style={styles.actionBtnIconCircle}>
-                  <Feather name="bookmark" size={22} color="white" />
-                </View>
-                <Text style={styles.actionBtnCount}>{video.saves}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Comment on video, ${video.comments} comments`} accessibilityRole="button">
-                <View style={styles.actionBtnIconCircle}>
-                  <Feather name="message-circle" size={22} color="white" />
-                </View>
-                <Text style={styles.actionBtnCount}>{video.comments}</Text>
+            {/* Progress Bar - Placeholder */}
+            <View style={styles.progressBarBg}>
+              <View style={styles.progressBarFill} />
+            </View>
+            <View style={styles.actionRow}>
+              <View style={styles.actionBtnGroup}>
+                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Like video, ${video.likes} likes`} accessibilityRole="button">
+                  <View style={styles.actionBtnIconCircle}>
+                    <Feather name="heart" size={22} color="white" />
+                  </View>
+                  <Text style={styles.actionBtnCount}>{video.likes}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Save video, ${video.saves} saves`} accessibilityRole="button">
+                  <View style={styles.actionBtnIconCircle}>
+                    <Feather name="bookmark" size={22} color="white" />
+                  </View>
+                  <Text style={styles.actionBtnCount}>{video.saves}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Comment on video, ${video.comments} comments`} accessibilityRole="button">
+                  <View style={styles.actionBtnIconCircle}>
+                    <Feather name="message-circle" size={22} color="white" />
+                  </View>
+                  <Text style={styles.actionBtnCount}>{video.comments}</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={styles.readMoreBtn} accessibilityLabel="Read more about this video" accessibilityRole="button" onPress={() => video.source && Linking.openURL(video.source)}>
+                <Text style={styles.readMoreBtnText}>Read More</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.readMoreBtn} accessibilityLabel="Read more about this video" accessibilityRole="button" onPress={() => video.source && Linking.openURL(video.source)}>
-              <Text style={styles.readMoreBtnText}>Read More</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  } else {
+    // Render static content for non-video types
+    return (
+      <View style={[{ height: screenHeight }, styles.root]}>
+        <View style={styles.contentContainer}>
+          <View style={styles.topBarRow}>
+            <View style={styles.topBarPill}>
+              <Text style={styles.topBarPillText}>For You</Text>
+            </View>
+            <View style={styles.topBarPill}>
+              <Text style={styles.topBarPillText}>{String(video.type).charAt(0).toUpperCase() + String(video.type).slice(1)}</Text>
+            </View>
+          </View>
+          <View style={styles.bottomContent}>
+            <View style={styles.titleBlock}>
+              <Text style={styles.title}>{video.title}</Text>
+              <Text style={styles.caption}>{video.caption}</Text>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaSourceSite}>{getSiteName(video.source)}</Text>
+                <View style={styles.metaDot} />
+                <View style={styles.industryPill}>
+                  <Text style={styles.industryPillText}>{video.industry}</Text>
+                </View>
+              </View>
+            </View>
+            {/* Render static content from the content field in a styled card */}
+            <View style={styles.staticCardContainer}>
+              <Text style={styles.staticCardTitle}>{Array.isArray(video.content) && video.content[0]}</Text>
+              <Text style={styles.staticCardSynopsis}>{Array.isArray(video.content) && video.content[1]}</Text>
+              <Text style={styles.staticCardOwner}>{Array.isArray(video.content) && video.content[2]}</Text>
+            </View>
+            <View style={styles.actionRow}>
+              <View style={styles.actionBtnGroup}>
+                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Like post, ${video.likes} likes`} accessibilityRole="button">
+                  <View style={styles.actionBtnIconCircle}>
+                    <Feather name="heart" size={22} color="white" />
+                  </View>
+                  <Text style={styles.actionBtnCount}>{video.likes}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Save post, ${video.saves} saves`} accessibilityRole="button">
+                  <View style={styles.actionBtnIconCircle}>
+                    <Feather name="bookmark" size={22} color="white" />
+                  </View>
+                  <Text style={styles.actionBtnCount}>{video.saves}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Comment on post, ${video.comments} comments`} accessibilityRole="button">
+                  <View style={styles.actionBtnIconCircle}>
+                    <Feather name="message-circle" size={22} color="white" />
+                  </View>
+                  <Text style={styles.actionBtnCount}>{video.comments}</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={styles.readMoreBtn} accessibilityLabel="Read more about this post" accessibilityRole="button" onPress={() => video.source && Linking.openURL(video.source)}>
+                <Text style={styles.readMoreBtnText}>Read More</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
 };
+
+function getTypeIcon(type: string) {
+  const iconProps = { size: 16, color: 'white', style: { marginRight: 4 } };
+  switch (type) {
+    case 'research':
+      return <MaterialCommunityIcons name="microscope" {...iconProps} />;
+    case 'book':
+      return <Feather name="book-open" {...iconProps} />;
+    case 'news':
+      return <MaterialCommunityIcons name="newspaper" {...iconProps} />;
+    default:
+      return null;
+  }
+}
 
 function getSiteName(url: string) {
   try {
@@ -254,5 +317,42 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '500',
+  },
+  // Add new styles for static content card
+  staticCardContainer: {
+    backgroundColor: 'rgba(30,41,59,0.95)',
+    borderRadius: 24,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    marginVertical: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  staticCardTitle: {
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+  },
+  staticCardSynopsis: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 18,
+    marginBottom: 16,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  staticCardOwner: {
+    color: '#60A5FA',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 4,
+    letterSpacing: 0.2,
   },
 });

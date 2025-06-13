@@ -18,28 +18,34 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries }) => {
 
   useEffect(() => {
     setIsLoading(true);
+    console.log('Fetching videos. Selected industries:', industries);
     // Fetch videos from Supabase
     async function fetchVideos() {
       let query = supabase
         .from('reels')
-        .select('id, type, title, caption, source_url, industry:industry_id, thumbnail:thumbnail_url, video_url, likes:likes_count, saves:saves_count, comments:comments_count');
+        .select('id, type, title, caption, source_url, industry:industry_id, video_url, likes:likes_count, saves:saves_count, comments:comments_count, content');
       if (industries.length > 0) {
+        console.log('Filtering by industries:', industries);
         query = query.in('industry_id', industries);
+      } else {
+        console.log('No industry filter applied.');
       }
       const { data, error } = await query;
       if (error) {
+        console.error('Supabase error:', error);
         setVideos([]);
       } else {
-        // Debug: log the video_url for each video
-        console.log('Fetched videos:', data?.map(v => ({ id: v.id, video_url: v.video_url })));
+        console.log('Fetched videos:', data);
         // Map industry_id to industry name for display and map source_url to source
         const mapped = (data || []).map((v) => ({
           ...v,
           industry: industryIdToName[v.industry] || v.industry,
           source: v.source_url,
           video_url: v.video_url,
+          content: v.content, // new field
         }));
         setVideos(mapped);
+        console.log('Mapped videos:', mapped);
       }
       setIsLoading(false);
       setCurrentVideoIndex(0);
@@ -67,6 +73,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries }) => {
   );
 
   if (isLoading) {
+    console.log('Loading videos...');
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="white" />
@@ -75,6 +82,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries }) => {
   }
 
   if (videos.length === 0) {
+    console.log('No videos found for the selected industries:', industries);
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>No videos available for the selected industries. Please update your preferences in Onboarding or Profile.</Text>
