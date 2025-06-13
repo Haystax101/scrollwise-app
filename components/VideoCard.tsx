@@ -4,19 +4,115 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Video as VideoType } from '../types';
 import { StaticVisual } from './StaticVisual';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 const { height: windowHeight } = Dimensions.get('window');
 // Height of the bottom navbar (Header) in px, must match styles.navRow height in Header.tsx
 const NAVBAR_HEIGHT = 84;
 const screenHeight = windowHeight - NAVBAR_HEIGHT;
 
+
 interface VideoCardProps {
   video: VideoType;
   isActive: boolean;
 }
 
+
 export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
-  // Show video player if video_url exists, else show static content
+  const { user } = useAuth();
+  const [likes, setLikes] = useState(video.likes);
+  const [hasLiked, setHasLiked] = useState(false);
+
+  // Check if user has already liked this post on mount
+  React.useEffect(() => {
+    const checkLiked = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('reel_likes')
+        .select('user_id, reel_id')
+        .eq('user_id', user.id)
+        .eq('reel_id', video.id)
+        .maybeSingle();
+      setHasLiked(!!data);
+    };
+    checkLiked();
+  }, [user, video.id]);
+
+  const likePost = async () => {
+    if (!user) return;
+    // Always check the database before liking
+    const { data: likeData } = await supabase
+      .from('reel_likes')
+      .select('user_id, reel_id')
+      .eq('user_id', user.id)
+      .eq('reel_id', video.id)
+      .maybeSingle();
+    if (likeData) {
+      setHasLiked(true);
+      return;
+    }
+    setHasLiked(true);
+    setLikes((prev) => prev + 1);
+    // Add entry to reel_likes table
+    const { error: insertError } = await supabase
+      .from('reel_likes')
+      .insert({ user_id: user.id, reel_id: video.id });
+    if (insertError) {
+      setHasLiked(false);
+      setLikes((prev) => prev - 1);
+      return;
+    }
+    // Update likes count in reels table
+    const { error: updateError } = await supabase
+      .from('reels')
+      .update({ likes_count: likes + 1 })
+      .eq('id', video.id);
+    if (updateError) {
+      setLikes((prev) => prev - 1);
+      setHasLiked(false);
+    }
+  };
+
+  const unlikePost = async () => {
+    if (!user) return;
+    // Always check the database before unliking
+    const { data: likeData } = await supabase
+      .from('reel_likes')
+      .select('user_id, reel_id')
+      .eq('user_id', user.id)
+      .eq('reel_id', video.id)
+      .maybeSingle();
+    if (!likeData) {
+      setHasLiked(false);
+      return;
+    }
+    setHasLiked(false);
+    setLikes((prev) => Math.max(prev - 1, 0));
+    // Remove entry from reel_likes table
+    const { error: deleteError } = await supabase
+      .from('reel_likes')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('reel_id', video.id);
+    if (deleteError) {
+      setHasLiked(true);
+      setLikes((prev) => prev + 1);
+      console.error('Error removing like entry:', deleteError);
+      return;
+    }
+    // Decrement likes count in reels table
+    const { error: updateError } = await supabase
+      .from('reels')
+      .update({ likes_count: Math.max(likes - 1, 0) })
+      .eq('id', video.id);
+    if (updateError) {
+      setLikes((prev) => prev + 1);
+      setHasLiked(true);
+      console.error('Error updating likes count: ', updateError);
+    }
+  }
+
   if (video.video_url) {
     // Create a player instance for this video
     const player = useVideoPlayer(
@@ -74,11 +170,16 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
             </View>
             <View style={styles.actionRow}>
               <View style={styles.actionBtnGroup}>
-                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Like video, ${video.likes} likes`} accessibilityRole="button">
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  accessibilityLabel={`Like video, ${likes} likes`}
+                  accessibilityRole="button"
+                  onPress={hasLiked ? unlikePost : likePost}
+                >
                   <View style={styles.actionBtnIconCircle}>
-                    <Feather name="heart" size={22} color="white" />
+                    <Feather name="heart" size={22} color={hasLiked ? '#3b82f6' : 'white'} />
                   </View>
-                  <Text style={styles.actionBtnCount}>{video.likes}</Text>
+                  <Text style={styles.actionBtnCount}>{likes}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Save video, ${video.saves} saves`} accessibilityRole="button">
                   <View style={styles.actionBtnIconCircle}>
@@ -113,7 +214,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
       <View style={[{ height: screenHeight, backgroundColor: '#101014' }, styles.root]}>
         <View style={styles.staticContentContainer}>
           {/* Only show the visual if not expanded */}
-          {!expanded && <StaticVisual industry={video.industry} />}
+          {!expanded && <StaticVisual industry={video.industry} postId={video.id} />}
           <View style={[styles.staticCardContainerV3, expanded && { flex: 1, justifyContent: 'flex-start' }]}> 
             {/* Meta row (source and topic) always at the top with safe area padding */}
             <View style={{ paddingTop: topSafePadding, paddingBottom: 8 }}>
@@ -144,11 +245,11 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
             {/* Like/comment/save row always at the bottom */}
             <View style={styles.staticActionsRowV3}>
               <View style={styles.actionBtnGroup}>
-                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Like post, ${video.likes} likes`} accessibilityRole="button">
+                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Like post, ${likes} likes`} accessibilityRole="button"  onPress={hasLiked ? unlikePost : likePost}>
                   <View style={styles.actionBtnIconCircleV3}>
-                    <Feather name="heart" size={22} color="#3b82f6" />
+                    <Feather name="heart" size={22} color={hasLiked ? '#3b82f6' : '#3b82f6'} />
                   </View>
-                  <Text style={styles.actionBtnCountV3}>{video.likes}</Text>
+                  <Text style={styles.actionBtnCountV3}>{likes}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Save post, ${video.saves} saves`} accessibilityRole="button">
                   <View style={styles.actionBtnIconCircleV3}>

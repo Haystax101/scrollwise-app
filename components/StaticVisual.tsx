@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Animated, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -525,10 +525,24 @@ const INDUSTRY_ANIMATIONS: Record<string, (() => React.ReactNode | null)[]> = {
   Default: [QuantumParticles, GeometricMorphing],
 };
 
-export const StaticVisual = ({ industry = 'Default' }) => {
-  // Pick one of the two assigned variations at random
+export const StaticVisual = ({ industry = 'Default', postId }: { industry?: string, postId?: string | number }) => {
+  // Pick one of the two assigned variations deterministically based on postId
   const variations = INDUSTRY_ANIMATIONS[industry] || INDUSTRY_ANIMATIONS.Default;
-  const VariationComponent = variations[Math.floor(Math.random() * variations.length)];
+  const variationIndex = useMemo(() => {
+    if (typeof postId === 'number' || typeof postId === 'string') {
+      // Simple deterministic hash
+      let hash = 0;
+      const str = String(postId);
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash) % variations.length;
+    }
+    // fallback to random if no postId
+    return Math.floor(Math.random() * variations.length);
+  }, [postId, variations.length]);
+  const VariationComponent = variations[variationIndex];
   return <VariationComponent />;
 };
 
