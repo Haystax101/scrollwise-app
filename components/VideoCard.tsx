@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Linking } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Linking, Image, Platform } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Video as VideoType } from '../types';
+import { StaticVisual } from './StaticVisual';
 
 const { height: windowHeight } = Dimensions.get('window');
 // Height of the bottom navbar (Header) in px, must match styles.navRow height in Header.tsx
@@ -43,7 +44,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
           allowsFullscreen={false}
         />
         <View style={styles.gradientOverlay} />
-        <View style={styles.contentContainer}>
+        <View style={styles.videoContentContainer}>
           {/* Top Bar */}
           <View style={styles.topBarRow}>
             <View style={styles.topBarPill}>
@@ -101,59 +102,69 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
       </View>
     );
   } else {
-    // Render static content for non-video types
+    // Render static content for non-video types, with expandable/collapsible synopsis on text press
+    const [expanded, setExpanded] = React.useState(false);
+    const synopsis = Array.isArray(video.content) ? video.content[1] : '';
+    const title = Array.isArray(video.content) ? video.content[0] : '';
+    const source = Array.isArray(video.content) ? video.content[2] : '';
+    // Add safe area padding for notch
+    const topSafePadding = Platform.OS === 'ios' ? 44 : 24;
     return (
-      <View style={[{ height: screenHeight }, styles.root]}>
-        <View style={styles.contentContainer}>
-          <View style={styles.topBarRow}>
-            <View style={styles.topBarPill}>
-              <Text style={styles.topBarPillText}>For You</Text>
-            </View>
-            <View style={styles.topBarPill}>
-              <Text style={styles.topBarPillText}>{String(video.type).charAt(0).toUpperCase() + String(video.type).slice(1)}</Text>
-            </View>
-          </View>
-          <View style={styles.bottomContent}>
-            <View style={styles.titleBlock}>
-              <Text style={styles.title}>{video.title}</Text>
-              <Text style={styles.caption}>{video.caption}</Text>
-              <View style={styles.metaRow}>
-                <Text style={styles.metaSourceSite}>{getSiteName(video.source)}</Text>
+      <View style={[{ height: screenHeight, backgroundColor: '#101014' }, styles.root]}>
+        <View style={styles.staticContentContainer}>
+          {/* Only show the visual if not expanded */}
+          {!expanded && <StaticVisual industry={video.industry} />}
+          <View style={[styles.staticCardContainerV3, expanded && { flex: 1, justifyContent: 'flex-start' }]}> 
+            {/* Meta row (source and topic) always at the top with safe area padding */}
+            <View style={{ paddingTop: topSafePadding, paddingBottom: 8 }}>
+              <View style={styles.staticMetaRowV3}>
+                <Text style={styles.staticCardOwnerV3}>{source}</Text>
                 <View style={styles.metaDot} />
-                <View style={styles.industryPill}>
-                  <Text style={styles.industryPillText}>{video.industry}</Text>
+                <View style={styles.industryPillV3}>
+                  <Text style={styles.industryPillTextV3}>{video.industry}</Text>
                 </View>
               </View>
             </View>
-            {/* Render static content from the content field in a styled card */}
-            <View style={styles.staticCardContainer}>
-              <Text style={styles.staticCardTitle}>{Array.isArray(video.content) && video.content[0]}</Text>
-              <Text style={styles.staticCardSynopsis}>{Array.isArray(video.content) && video.content[1]}</Text>
-              <Text style={styles.staticCardOwner}>{Array.isArray(video.content) && video.content[2]}</Text>
-            </View>
-            <View style={styles.actionRow}>
+            {/* Title below meta row */}
+            <Text style={styles.staticCardTitleV3}>{title}</Text>
+            {/* Body text, press to expand/collapse */}
+            <TouchableOpacity activeOpacity={0.8} onPress={() => setExpanded(!expanded)}>
+              <Text
+                style={styles.staticCardSynopsisV3}
+                numberOfLines={expanded ? undefined : 4}
+                ellipsizeMode="tail"
+              >
+                {synopsis}
+              </Text>
+            </TouchableOpacity>
+            {/* Gap after body text in expanded view */}
+            {expanded && <View style={{ height: 24, flexShrink: 0 }} />}
+            {/* Spacer to push actions to bottom in expanded view */}
+            {expanded && <View style={{ flex: 1 }} />}
+            {/* Like/comment/save row always at the bottom */}
+            <View style={styles.staticActionsRowV3}>
               <View style={styles.actionBtnGroup}>
                 <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Like post, ${video.likes} likes`} accessibilityRole="button">
-                  <View style={styles.actionBtnIconCircle}>
-                    <Feather name="heart" size={22} color="white" />
+                  <View style={styles.actionBtnIconCircleV3}>
+                    <Feather name="heart" size={22} color="#3b82f6" />
                   </View>
-                  <Text style={styles.actionBtnCount}>{video.likes}</Text>
+                  <Text style={styles.actionBtnCountV3}>{video.likes}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Save post, ${video.saves} saves`} accessibilityRole="button">
-                  <View style={styles.actionBtnIconCircle}>
-                    <Feather name="bookmark" size={22} color="white" />
+                  <View style={styles.actionBtnIconCircleV3}>
+                    <Feather name="bookmark" size={22} color="#3b82f6" />
                   </View>
-                  <Text style={styles.actionBtnCount}>{video.saves}</Text>
+                  <Text style={styles.actionBtnCountV3}>{video.saves}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Comment on post, ${video.comments} comments`} accessibilityRole="button">
-                  <View style={styles.actionBtnIconCircle}>
-                    <Feather name="message-circle" size={22} color="white" />
+                  <View style={styles.actionBtnIconCircleV3}>
+                    <Feather name="message-circle" size={22} color="#3b82f6" />
                   </View>
-                  <Text style={styles.actionBtnCount}>{video.comments}</Text>
+                  <Text style={styles.actionBtnCountV3}>{video.comments}</Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.readMoreBtn} accessibilityLabel="Read more about this post" accessibilityRole="button" onPress={() => video.source && Linking.openURL(video.source)}>
-                <Text style={styles.readMoreBtnText}>Read More</Text>
+              <TouchableOpacity style={styles.readMoreBtnV3} accessibilityLabel="Read more about this post" accessibilityRole="button" onPress={() => video.source && Linking.openURL(video.source)}>
+                <Text style={styles.readMoreBtnTextV3}>Read More</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -198,11 +209,18 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
-  contentContainer: {
+  videoContentContainer: {
     flex: 1,
     flexDirection: 'column',
     justifyContent: 'space-between',
     padding: 16,
+  },
+  staticContentContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    padding: 0,
+    margin: 0,
   },
   topBarRow: {
     flexDirection: 'row',
@@ -226,9 +244,11 @@ const styles = StyleSheet.create({
   },
   bottomContent: {
     paddingBottom: 25,
+    paddingHorizontal: 0, // ensure no extra horizontal padding
   },
   titleBlock: {
     marginBottom: 8,
+    paddingHorizontal: 0, // ensure no extra horizontal padding
   },
   title: {
     color: '#fff',
@@ -318,41 +338,149 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
   },
-  // Add new styles for static content card
-  staticCardContainer: {
-    backgroundColor: 'rgba(30,41,59,0.95)',
-    borderRadius: 24,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    marginVertical: 32,
+  // Add new styles for static content card v3 (stunning visual design)
+  staticImageWrapper: {
+    width: '100%',
+    aspectRatio: 1.5,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: 'hidden',
+    marginBottom: -40,
+    zIndex: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
+    elevation: 10,
+  },
+  staticImage: {
+    width: '100%',
+    height: '100%',
+  },
+  staticCardContainerV3: {
+    backgroundColor: '#18181b',
+    borderRadius: 0,
+    paddingTop: 56,
+    paddingBottom: 28,
+    paddingHorizontal: 24,
+    marginHorizontal: 0,
+    marginTop: -32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
     elevation: 8,
   },
-  staticCardTitle: {
+  staticCardTitleV3: {
     color: '#fff',
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 12,
-    textAlign: 'center',
-    letterSpacing: 0.5,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 14,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  staticCardSynopsis: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 18,
-    marginBottom: 16,
-    textAlign: 'center',
-    fontStyle: 'italic',
+  staticCardSynopsisV3: {
+    color: 'rgba(255,255,255,0.95)',
+    fontSize: 17,
+    marginBottom: 14,
+    textAlign: 'left',
+    lineHeight: 22,
   },
-  staticCardOwner: {
-    color: '#60A5FA',
+  staticMetaRowV3: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  staticCardOwnerV3: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  industryPillV3: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginLeft: 8,
+  },
+  industryPillTextV3: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  staticAuthorsRowV3: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    marginTop: 2,
+  },
+  authorAvatarV3: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#3b82f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  authorAvatarTextV3: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  staticAuthorsTextV3: {
+    color: '#fff',
+    fontSize: 14,
+    marginLeft: 10,
+  },
+  staticActionsRowV3: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  actionBtnIconCircleV3: {
+    backgroundColor: '#23232b',
+    padding: 12,
+    borderRadius: 999,
+    marginBottom: 4,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  actionBtnCountV3: {
+    color: '#3b82f6',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  readMoreBtnV3: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 999,
+    alignItems: 'center',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  readMoreBtnTextV3: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 4,
-    letterSpacing: 0.2,
   },
 });
