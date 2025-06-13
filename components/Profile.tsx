@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { UserData } from '../types';
-
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface ProfileProps {
   user: import('../types').User | null;
@@ -37,8 +38,32 @@ const defaultUserData: UserData = {
   ],
 };
 
+
+
 export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) => {
-  const userData = user ? { ...defaultUserData, name: user.name, email: user.email } : defaultUserData;
+  const [userData, setUserData] = useState<UserData>(defaultUserData);
+  const [fullName, setFullName] = useState<string>(defaultUserData.name);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, email, created_at')
+        .single();
+      if (data) {
+        setFullName(data.full_name || defaultUserData.name);
+        setUserData((prev) => ({
+          ...prev,
+          name: data.full_name || defaultUserData.name,
+          email: data.email || defaultUserData.email,
+          joinDate: data.created_at
+            ? new Date(data.created_at).toLocaleString('default', { month: 'long', year: 'numeric' })
+            : defaultUserData.joinDate,
+        }));
+      }
+    };
+    fetchProfile();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -59,10 +84,10 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
         <View style={styles.userInfoCard}>
           <View style={styles.userInfoRow}>
             <View style={styles.avatarCircle}>
-              <Text style={styles.avatarInitial}>{userData.name.charAt(0).toUpperCase()}</Text>
+              <Text style={styles.avatarInitial}>{fullName.charAt(0).toUpperCase()}</Text>
             </View>
             <View style={styles.userInfoTextCol}>
-              <Text style={styles.userName}>{userData.name}</Text>
+              <Text style={styles.userName}>{fullName}</Text>
               <Text style={styles.userEmail}>{userData.email}</Text>
               <Text style={styles.userJoinDate}>Member since {userData.joinDate}</Text>
             </View>
