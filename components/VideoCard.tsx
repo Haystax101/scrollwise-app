@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, ImageBackground, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Linking } from 'react-native';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import type { Video } from '../types';
-
+import type { Video as VideoType } from '../types';
 
 const { height: windowHeight } = Dimensions.get('window');
 // Height of the bottom navbar (Header) in px, must match styles.navRow height in Header.tsx
@@ -10,13 +10,28 @@ const NAVBAR_HEIGHT = 84;
 const screenHeight = windowHeight - NAVBAR_HEIGHT;
 
 interface VideoCardProps {
-  video: Video;
-  isActive: boolean; // Can be used for optimizations or specific active state visuals
+  video: VideoType;
+  isActive: boolean;
 }
 
-export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
+export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
+  // Create a player instance for this video
+  const player = useVideoPlayer(
+    { uri: video.video_url },
+    (player) => {
+      player.loop = true;
+      player.volume = 1.0;
+      player.muted = false;
+      if (isActive) {
+        player.play();
+      } else {
+        player.pause();
+      }
+    }
+  );
+
   const getTypeIcon = () => {
-    const iconProps = { size: 16, color: "white", style: { marginRight: 4 } };
+    const iconProps = { size: 16, color: 'white', style: { marginRight: 4 } };
     switch (video.type) {
       case 'research':
         return <MaterialCommunityIcons name="microscope" {...iconProps} />;
@@ -31,15 +46,15 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
 
   return (
     <View style={[{ height: screenHeight }, styles.root]}>
-      <ImageBackground
-        source={{ uri: video.thumbnail }}
+      {/* Video Player */}
+      <VideoView
+        player={player}
         style={styles.bgImage}
-        resizeMode="cover"
-        accessibilityLabel={`Background image for ${video.title}`}
-      >
-        <View style={styles.gradientOverlay} />
-      </ImageBackground>
-
+        contentFit="cover"
+        nativeControls={false}
+        allowsFullscreen={false}
+      />
+      <View style={styles.gradientOverlay} />
       <View style={styles.contentContainer}>
         {/* Top Bar */}
         <View style={styles.topBarRow}>
@@ -51,25 +66,23 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
             <Text style={styles.topBarPillText}>{video.type.charAt(0).toUpperCase() + video.type.slice(1)}</Text>
           </View>
         </View>
-
         {/* Bottom Content */}
         <View style={styles.bottomContent}>
           <View style={styles.titleBlock}>
             <Text style={styles.title}>{video.title}</Text>
+            <Text style={styles.caption}>{video.caption}</Text>
             <View style={styles.metaRow}>
-              <Text style={styles.metaSource}>{video.source}</Text>
+              <Text style={styles.metaSourceSite}>{getSiteName(video.source)}</Text>
               <View style={styles.metaDot} />
               <View style={styles.industryPill}>
                 <Text style={styles.industryPillText}>{video.industry}</Text>
               </View>
             </View>
           </View>
-
           {/* Progress Bar - Placeholder */}
           <View style={styles.progressBarBg}>
             <View style={styles.progressBarFill} />
           </View>
-
           <View style={styles.actionRow}>
             <View style={styles.actionBtnGroup}>
               <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Like video, ${video.likes} likes`} accessibilityRole="button">
@@ -91,7 +104,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
                 <Text style={styles.actionBtnCount}>{video.comments}</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.readMoreBtn} accessibilityLabel="Read more about this video" accessibilityRole="button">
+            <TouchableOpacity style={styles.readMoreBtn} accessibilityLabel="Read more about this video" accessibilityRole="button" onPress={() => video.source && Linking.openURL(video.source)}>
               <Text style={styles.readMoreBtnText}>Read More</Text>
             </TouchableOpacity>
           </View>
@@ -100,6 +113,16 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
     </View>
   );
 };
+
+function getSiteName(url: string) {
+  try {
+    const { hostname } = new URL(url);
+    // Remove www. if present
+    return hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
 
 const styles = StyleSheet.create({
   root: {
@@ -149,14 +172,23 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
   },
+  caption: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 15,
+    marginTop: 4,
+    marginBottom: 2,
+  },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
   },
-  metaSource: {
+  metaSourceSite: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: 14,
+    fontWeight: '500',
+    marginRight: 8,
+    textTransform: 'capitalize',
   },
   metaDot: {
     height: 4,

@@ -2,68 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Dimensions, StyleSheet } from 'react-native';
 import { VideoCard } from './VideoCard';
 import type { Video } from '../types';
+import { supabase } from '../lib/supabase'; // Adjust the import based on your project structure
+import { industryIdToName } from '../lib/industryMap';
 
 interface MainFeedProps {
   industries: string[]; 
 }
-
-const sampleVideos: Video[] = [
-  {
-    id: 1,
-    type: 'research',
-    title: 'Advancements in AI Ethics: A 2024 Overview',
-    source: 'Tech Ethics Quarterly',
-    industry: 'STEM',
-    thumbnail: 'https://picsum.photos/seed/feed1/720/1280',
-    likes: 2453,
-    saves: 982,
-    comments: 156,
-  },
-  {
-    id: 2,
-    type: 'book',
-    title: "Understanding Behavioral Economics: Nudge Theory",
-    source: 'Economic Insights Journal',
-    industry: 'Finance',
-    thumbnail: 'https://picsum.photos/seed/feed2/720/1280',
-    likes: 1872,
-    saves: 1243,
-    comments: 89,
-  },
-  {
-    id: 3,
-    type: 'news',
-    title: "Global Health Initiatives: Successes and Challenges",
-    source: 'World Health Review',
-    industry: 'Healthcare',
-    thumbnail: 'https://picsum.photos/seed/feed3/720/1280',
-    likes: 3241,
-    saves: 1567,
-    comments: 203,
-  },
-  {
-    id: 4,
-    type: 'research',
-    title: 'The Future of Quantum Entanglement Applications',
-    source: 'Physics Today',
-    industry: 'STEM',
-    thumbnail: 'https://picsum.photos/seed/feed4/720/1280',
-    likes: 4510,
-    saves: 2100,
-    comments: 350,
-  },
-   {
-    id: 5,
-    type: 'news',
-    title: 'EdTech Innovations Transforming Higher Education',
-    source: 'Learning Technology Magazine',
-    industry: 'Education',
-    thumbnail: 'https://picsum.photos/seed/feed5/720/1280',
-    likes: 1280,
-    saves: 600,
-    comments: 77,
-  },
-];
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -74,15 +18,33 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries }) => {
 
   useEffect(() => {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      const filteredVideos = industries.length > 0 
-        ? sampleVideos.filter(v => industries.some(ind => v.industry.toLowerCase() === ind.toLowerCase()))
-        : sampleVideos;
-      setVideos(filteredVideos);
+    // Fetch videos from Supabase
+    async function fetchVideos() {
+      let query = supabase
+        .from('reels')
+        .select('id, type, title, caption, source_url, industry:industry_id, thumbnail:thumbnail_url, video_url, likes:likes_count, saves:saves_count, comments:comments_count');
+      if (industries.length > 0) {
+        query = query.in('industry_id', industries);
+      }
+      const { data, error } = await query;
+      if (error) {
+        setVideos([]);
+      } else {
+        // Debug: log the video_url for each video
+        console.log('Fetched videos:', data?.map(v => ({ id: v.id, video_url: v.video_url })));
+        // Map industry_id to industry name for display and map source_url to source
+        const mapped = (data || []).map((v) => ({
+          ...v,
+          industry: industryIdToName[v.industry] || v.industry,
+          source: v.source_url,
+          video_url: v.video_url,
+        }));
+        setVideos(mapped);
+      }
       setIsLoading(false);
-      setCurrentVideoIndex(0); // Reset index when videos change
-    }, 500);
+      setCurrentVideoIndex(0);
+    }
+    fetchVideos();
   }, [industries]);
 
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {

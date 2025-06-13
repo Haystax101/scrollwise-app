@@ -22,9 +22,11 @@ export interface Video {
   id: number;
   type: 'research' | 'book' | 'news';
   title: string;
-  source: string;
+  caption: string;
+  source: string; // This will be the source_url from Supabase
   industry: string;
   thumbnail: string; // URL for the image
+  video_url: string; // Add this property for video playback
   likes: number;
   saves: number;
   comments: number;
