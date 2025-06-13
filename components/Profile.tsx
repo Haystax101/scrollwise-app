@@ -43,15 +43,17 @@ const defaultUserData: UserData = {
 export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) => {
   const [userData, setUserData] = useState<UserData>(defaultUserData);
   const [fullName, setFullName] = useState<string>(defaultUserData.name);
+  const [interests, setInterests] = useState<string[]>(defaultUserData.interests);
 
   useEffect(() => {
     const fetchProfile = async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, email, created_at')
+        .select('full_name, email, created_at, interests')
         .single();
       if (data) {
         setFullName(data.full_name || defaultUserData.name);
+        setInterests(data.interests || defaultUserData.interests)
         setUserData((prev) => ({
           ...prev,
           name: data.full_name || defaultUserData.name,
@@ -93,12 +95,12 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
             </View>
           </View>
           <View style={styles.interestsRow}>
-            {userData.interests.map((interest) => (
+            {interests.map((interest) => (
               <View
                 key={interest}
                 style={styles.interestPill}
               >
-                <Text style={styles.interestText}>{interest}</Text>
+                <Text style={styles.interestText}>{interest.charAt(0).toUpperCase() + interest.slice(1)}</Text>
               </View>
             ))}
           </View>

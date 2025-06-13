@@ -8,11 +8,6 @@ interface SettingsProps {
 }
 
 const Settings: React.FC<SettingsProps> = ({ navigateTo, signOut }) => {
-  const handleLogout = async () => {
-    await signOut();
-    navigateTo('signIn');
-  };
-
   const handleContentPreferences = () => {
     navigateTo('onboarding');
   };
@@ -21,7 +16,7 @@ const Settings: React.FC<SettingsProps> = ({ navigateTo, signOut }) => {
     <View style={styles.container}>
       <Text style={styles.title}>Settings</Text>
       <Button title="Content Preferences" onPress={handleContentPreferences} />
-      <Button title="Log Out" color="red" onPress={handleLogout} />
+      <Button title="Log Out" color="red" onPress={signOut} />
     </View>
   );
 };
