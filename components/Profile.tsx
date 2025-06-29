@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import type { UserData } from '../types';
+import type { UserData, SavedContentItem } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { industryIdToName } from '../lib/industryMap';
+import { useRouter } from 'expo-router';
 
 interface ProfileProps {
   user: import('../types').User | null;
@@ -23,50 +24,66 @@ const defaultUserData: UserData = {
     topicsExplored: 18,
     daysStreak: 14,
   },
-  savedContent: [
-    {
-      id: 1,
-      title: 'GPT-5 Breakthrough: What You Need to Know',
-      type: 'research',
-      date: '2 days ago',
-    },
-    {
-      id: 2,
-      title: "Key Insights from 'The Psychology of Money'",
-      type: 'book',
-      date: '1 week ago',
-    },
-  ],
+  savedContent: [],
 };
-
-
 
 export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) => {
   const [userData, setUserData] = useState<UserData>(defaultUserData);
   const [fullName, setFullName] = useState<string>(defaultUserData.name);
   const [interests, setInterests] = useState<number[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      const { data, error } = await supabase
+    const fetchProfileAndSaves = async () => {
+      // Fetch profile info
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('full_name, email, created_at, interests')
         .single();
-      if (data) {
-        setFullName(data.full_name || defaultUserData.name);
-        setInterests(data.interests || defaultUserData.interests)
+      if (profileData) {
+        setFullName(profileData.full_name || defaultUserData.name);
+        setInterests(profileData.interests || defaultUserData.interests);
         setUserData((prev) => ({
           ...prev,
-          name: data.full_name || defaultUserData.name,
-          email: data.email || defaultUserData.email,
-          joinDate: data.created_at
-            ? new Date(data.created_at).toLocaleString('default', { month: 'long', year: 'numeric' })
+          name: profileData.full_name || defaultUserData.name,
+          email: profileData.email || defaultUserData.email,
+          joinDate: profileData.created_at
+            ? new Date(profileData.created_at).toLocaleString('default', { month: 'long', year: 'numeric' })
             : defaultUserData.joinDate,
         }));
       }
+
+      // Fetch saved reels for this user
+      if (user && user.email) {
+        // Get user id from supabase.auth
+        const { data: authUser } = await supabase.auth.getUser();
+        const userId = authUser?.user?.id;
+        if (userId) {
+          // Join reel_saves and reels to get saved content
+          const { data: savedRows, error: savedError } = await supabase
+            .from('reel_saves')
+            .select('reel_id, created_at, reels (id, title, type, created_at)')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+          if (!savedError && savedRows) {
+            const savedContent: SavedContentItem[] = savedRows.map((row: any) => {
+              const reel = row.reels;
+              return {
+                id: reel?.id,
+                title: reel?.title || 'Untitled',
+                type: reel?.type || 'unknown',
+                date: reel?.created_at
+                  ? new Date(reel.created_at).toLocaleDateString()
+                  : '',
+              };
+            });
+            setUserData((prev) => ({ ...prev, savedContent }));
+          }
+        }
+      }
     };
-    fetchProfile();
-  }, []);
+    fetchProfileAndSaves();
+  }, [user]);
 
   return (
     <View style={styles.container}>
@@ -142,17 +159,20 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
         <View style={styles.savedCard}>
           <View style={styles.savedHeaderRow}>
             <Text style={styles.savedTitle}>Saved Content</Text>
-            <TouchableOpacity accessibilityLabel="View all saved content" accessibilityRole="button">
-              <Text style={styles.savedViewAll}>View All</Text>
-            </TouchableOpacity>
           </View>
-          <View>
+          <ScrollView
+            horizontal={true}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingVertical: 4 }}
+            style={{ marginTop: 8 }}
+          >
             {userData.savedContent.map((item) => (
               <TouchableOpacity
                 key={item.id}
-                style={styles.savedItemRow}
+                style={[styles.savedItemRow, { width: 260, marginRight: 16 }]}
                 accessibilityLabel={`View saved content: ${item.title}`}
                 accessibilityRole="button"
+                onPress={() => router.push({ pathname: '/feed', params: { reelId: item.id } })}
               >
                 <View style={styles.savedIconCircle}>
                   <Feather name="bookmark" size={18} color="#2563EB" />
@@ -170,7 +190,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
             {userData.savedContent.length === 0 && (
               <Text style={styles.savedEmptyText}>No saved content yet.</Text>
             )}
-          </View>
+          </ScrollView>
         </View>
 
         {/* Add a logout button if signOut is provided */}

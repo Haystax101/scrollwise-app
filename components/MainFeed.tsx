@@ -7,11 +7,12 @@ import { industryIdToName } from '../lib/industryMap';
 
 interface MainFeedProps {
   industries: string[]; 
+  initialReelId?: number;
 }
 
 const { height: screenHeight } = Dimensions.get('window');
 
-export const MainFeed: React.FC<MainFeedProps> = ({ industries }) => {
+export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId }) => {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [videos, setVideos] = useState<Video[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +55,13 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries }) => {
     }
     fetchVideos();
   }, [industries]);
+
+  useEffect(() => {
+    if (initialReelId && videos.length > 0) {
+      const idx = videos.findIndex((v) => v.id === initialReelId);
+      if (idx !== -1) setCurrentVideoIndex(idx);
+    }
+  }, [initialReelId, videos]);
 
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -106,6 +114,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries }) => {
       )}
       style={styles.list}
       accessibilityHint="Scroll vertically to watch videos"
+      initialScrollIndex={currentVideoIndex}
     />
   );
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Linking, Image, Platform } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 import type { Video as VideoType } from '../types';
 import { StaticVisual } from './StaticVisual';
 import { supabase } from '../lib/supabase';
@@ -23,6 +24,8 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
   const { user } = useAuth();
   const [likes, setLikes] = useState(video.likes);
   const [hasLiked, setHasLiked] = useState(false);
+  const [saves, setSaves] = useState(video.saves);
+  const [hasSaved, setHasSaved] = useState(false);
   const [expanded, setExpanded] = React.useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
 
@@ -42,20 +45,101 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
     }
   );
 
-  // Check if user has already liked this post on mount
+  // Check if user has already liked/saved this post on mount
   React.useEffect(() => {
-    const checkLiked = async () => {
+    const checkLikedAndSaved = async () => {
       if (!user) return;
-      const { data } = await supabase
+      // Like check
+      const { data: likeData } = await supabase
         .from('reel_likes')
         .select('user_id, reel_id')
         .eq('user_id', user.id)
         .eq('reel_id', video.id)
         .maybeSingle();
-      setHasLiked(!!data);
+      setHasLiked(!!likeData);
+      // Save check
+      const { data: saveData } = await supabase
+        .from('reel_saves')
+        .select('user_id, reel_id')
+        .eq('user_id', user.id)
+        .eq('reel_id', video.id)
+        .maybeSingle();
+      setHasSaved(!!saveData);
     };
-    checkLiked();
+    checkLikedAndSaved();
   }, [user, video.id]);
+  // Save/Unsave logic
+  const savePost = async () => {
+    if (!user) return;
+    // Always check the database before saving
+    const { data: saveData } = await supabase
+      .from('reel_saves')
+      .select('user_id, reel_id')
+      .eq('user_id', user.id)
+      .eq('reel_id', video.id)
+      .maybeSingle();
+    if (saveData) {
+      setHasSaved(true);
+      return;
+    }
+    setHasSaved(true);
+    setSaves((prev) => prev + 1);
+    // Add entry to reel_saves table
+    const { error: insertError } = await supabase
+      .from('reel_saves')
+      .insert({ user_id: user.id, reel_id: video.id });
+    if (insertError) {
+      setHasSaved(false);
+      setSaves((prev) => prev - 1);
+      return;
+    }
+    // Update saves count in reels table
+    const { error: updateError } = await supabase
+      .from('reels')
+      .update({ saves_count: saves + 1 })
+      .eq('id', video.id);
+    if (updateError) {
+      setSaves((prev) => prev - 1);
+      setHasSaved(false);
+    }
+  };
+
+  const unsavePost = async () => {
+    if (!user) return;
+    // Always check the database before unsaving
+    const { data: saveData } = await supabase
+      .from('reel_saves')
+      .select('user_id, reel_id')
+      .eq('user_id', user.id)
+      .eq('reel_id', video.id)
+      .maybeSingle();
+    if (!saveData) {
+      setHasSaved(false);
+      return;
+    }
+    setHasSaved(false);
+    setSaves((prev) => Math.max(prev - 1, 0));
+    // Remove entry from reel_saves table
+    const { error: deleteError } = await supabase
+      .from('reel_saves')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('reel_id', video.id);
+    if (deleteError) {
+      setHasSaved(true);
+      setSaves((prev) => prev + 1);
+      return;
+    }
+    // Decrement saves count in reels table
+    const { error: updateError } = await supabase
+      .from('reels')
+      .update({ saves_count: Math.max(saves - 1, 0) })
+      .eq('id', video.id);
+    if (updateError) {
+      setSaves((prev) => prev + 1);
+      setHasSaved(true);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -210,15 +294,20 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
                   onPress={hasLiked ? unlikePost : likePost}
                 >
                   <View style={styles.actionBtnIconCircle}>
-                    <Feather name="heart" size={22} color={hasLiked ? '#3b82f6' : 'white'} />
+                    <FontAwesome name={hasLiked ? 'heart' : 'heart-o'} size={22} color={hasLiked ? '#3b82f6' : 'white'} />
                   </View>
                   <Text style={styles.actionBtnCount}>{likes}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Save video, ${video.saves} saves`} accessibilityRole="button">
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  accessibilityLabel={`Save video, ${saves} saves`}
+                  accessibilityRole="button"
+                  onPress={hasSaved ? unsavePost : savePost}
+                >
                   <View style={styles.actionBtnIconCircle}>
-                    <Feather name="bookmark" size={22} color="white" />
+                    <FontAwesome name={hasSaved ? 'bookmark' : 'bookmark-o'} size={22} color={hasSaved ? '#3b82f6' : 'white'} />
                   </View>
-                  <Text style={styles.actionBtnCount}>{video.saves}</Text>
+                  <Text style={styles.actionBtnCount}>{saves}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Comment on video, ${video.comments} comments`} accessibilityRole="button">
                   <View style={styles.actionBtnIconCircle}>
@@ -288,15 +377,20 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
               <View style={styles.actionBtnGroup}>
                 <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Like post, ${likes} likes`} accessibilityRole="button"  onPress={hasLiked ? unlikePost : likePost}>
                   <View style={styles.actionBtnIconCircleV3}>
-                    <Feather name="heart" size={22} color={hasLiked ? '#3b82f6' : '#3b82f6'} />
+                    <FontAwesome name={hasLiked ? 'heart' : 'heart-o'} size={22} color={hasLiked ? '#3b82f6' : '#3b82f6'} />
                   </View>
                   <Text style={styles.actionBtnCountV3}>{likes}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Save post, ${video.saves} saves`} accessibilityRole="button">
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  accessibilityLabel={`Save post, ${saves} saves`}
+                  accessibilityRole="button"
+                  onPress={hasSaved ? unsavePost : savePost}
+                >
                   <View style={styles.actionBtnIconCircleV3}>
-                    <Feather name="bookmark" size={22} color="#3b82f6" />
+                    <FontAwesome name={hasSaved ? 'bookmark' : 'bookmark-o'} size={22} color={hasSaved ? '#3b82f6' : '#3b82f6'} />
                   </View>
-                  <Text style={styles.actionBtnCountV3}>{video.saves}</Text>
+                  <Text style={styles.actionBtnCountV3}>{saves}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Comment on post, ${video.comments} comments`} accessibilityRole="button">
                   <View style={styles.actionBtnIconCircleV3}>
@@ -460,8 +554,11 @@ const styles = StyleSheet.create({
   },
   actionBtnIconCircle: {
     backgroundColor: 'rgba(0,0,0,0.4)',
-    padding: 10,
-    borderRadius: 999,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionBtnCount: {
     color: '#fff',
@@ -594,8 +691,12 @@ const styles = StyleSheet.create({
   },
   actionBtnIconCircleV3: {
     backgroundColor: '#23232b',
-    padding: 12,
+    padding: 10,
     borderRadius: 999,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 4,
     shadowColor: '#3b82f6',
     shadowOffset: { width: 0, height: 2 },
