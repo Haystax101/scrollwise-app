@@ -25,8 +25,10 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries }) => {
         .from('reels')
         .select('id, type, title, caption, source_url, industry:industry_id, video_url, likes:likes_count, saves:saves_count, comments:comments_count, content');
       if (industries.length > 0) {
-        console.log('Filtering by industries:', industries);
-        query = query.in('industry_id', industries);
+        // Convert industries to numbers for correct Supabase query
+        const industryIds = industries.map((id) => typeof id === 'string' ? parseInt(id, 10) : id).filter((id) => !isNaN(id));
+        console.log('Filtering by industry IDs:', industryIds);
+        query = query.in('industry_id', industryIds);
       } else {
         console.log('No industry filter applied.');
       }

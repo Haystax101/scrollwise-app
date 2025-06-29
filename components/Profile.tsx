@@ -4,6 +4,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { UserData } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { industryIdToName } from '../lib/industryMap';
 
 interface ProfileProps {
   user: import('../types').User | null;
@@ -43,7 +44,7 @@ const defaultUserData: UserData = {
 export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) => {
   const [userData, setUserData] = useState<UserData>(defaultUserData);
   const [fullName, setFullName] = useState<string>(defaultUserData.name);
-  const [interests, setInterests] = useState<string[]>(defaultUserData.interests);
+  const [interests, setInterests] = useState<number[]>([]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -100,7 +101,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
                 key={interest}
                 style={styles.interestPill}
               >
-                <Text style={styles.interestText}>{interest.charAt(0).toUpperCase() + interest.slice(1)}</Text>
+                <Text style={styles.interestText}>{industryIdToName[interest] || interest}</Text>
               </View>
             ))}
           </View>

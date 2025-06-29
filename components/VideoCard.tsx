@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Linking, Image, Platform } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -23,6 +23,24 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
   const { user } = useAuth();
   const [likes, setLikes] = useState(video.likes);
   const [hasLiked, setHasLiked] = useState(false);
+  const [expanded, setExpanded] = React.useState(false);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+
+  const player = useVideoPlayer(
+    signedUrl ? { uri: signedUrl } : null, // Pass null when no URL
+    (player) => {
+      if (player && signedUrl) {
+        player.loop = true;
+        player.volume = 1.0;
+        player.muted = false;
+        if (isActive) {
+          player.play();
+        } else {
+          player.pause();
+        }
+      }
+    }
+  );
 
   // Check if user has already liked this post on mount
   React.useEffect(() => {
@@ -38,6 +56,32 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
     };
     checkLiked();
   }, [user, video.id]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const getSignedUrl = async () => {
+      if (video.video_url) {
+        console.log('[VideoCard] Requesting signed URL for:', video.video_url);
+        const { data, error } = await supabase.storage
+          .from('videos')
+          .createSignedUrl(video.video_url, 3600); // 1 hour expiry
+        if (isMounted) {
+          if (data && data.signedUrl) {
+            console.log('[VideoCard] Received signed URL:', data.signedUrl);
+            setSignedUrl(data.signedUrl);
+          } else {
+            setSignedUrl(null);
+            console.log('[VideoCard] Error generating signed URL:', error);
+          }
+        }
+      } else {
+        setSignedUrl(null);
+        console.log('[VideoCard] No video_url provided for video:', video);
+      }
+    };
+    getSignedUrl();
+    return () => { isMounted = false; };
+  }, [video.video_url]);
 
   const likePost = async () => {
     if (!user) return;
@@ -113,21 +157,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
     }
   }
 
-  if (video.video_url) {
+  if (video.video_url && signedUrl) {
+    console.log('[VideoCard] Rendering video with signed URL:', signedUrl);
     // Create a player instance for this video
-    const player = useVideoPlayer(
-      { uri: video.video_url },
-      (player) => {
-        player.loop = true;
-        player.volume = 1.0;
-        player.muted = false;
-        if (isActive) {
-          player.play();
-        } else {
-          player.pause();
-        }
-      }
-    );
+    
 
     return (
       <View style={[{ height: screenHeight }, styles.root]}>
@@ -202,9 +235,17 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
         </View>
       </View>
     );
+  } else if (video.video_url && !signedUrl) {
+    console.log('[VideoCard] Waiting for signed URL for:', video.video_url);
+    // Show loading or error state if signedUrl is not ready
+    return (
+      <View style={[{ height: screenHeight, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }, styles.root]}>
+        <Text style={{ color: '#fff' }}>Loading video...</Text>
+      </View>
+    );
   } else {
+    console.log('[VideoCard] No video_url, rendering static content for video:', video);
     // Render static content for non-video types, with expandable/collapsible synopsis on text press
-    const [expanded, setExpanded] = React.useState(false);
     const synopsis = Array.isArray(video.content) ? video.content[1] : '';
     const title = Array.isArray(video.content) ? video.content[0] : '';
     const source = Array.isArray(video.content) ? video.content[2] : '';

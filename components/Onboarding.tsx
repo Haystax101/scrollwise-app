@@ -4,52 +4,45 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Industry, ExperienceLevel } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-// Removed: import { styled } from "nativewind";
-
-// Removed: const StyledView = styled(View);
-// Removed: const StyledText = styled(Text);
-// Removed: const StyledTouchableOpacity = styled(TouchableOpacity);
-// Removed: const StyledScrollView = styled(ScrollView);
+import { useIndustries } from '../context/IndustriesContext';
 
 const industriesData: Industry[] = [
   {
-    id: 'stem',
+    id: 1, // STEM
     name: 'STEM',
     description: 'Tech, AI, Engineering, Biology',
     icon: <MaterialCommunityIcons name="microscope" size={24} color="#16A34A" />,
     color: 'bg-green-100',
   },
   {
-    id: 'finance',
+    id: 2, // Finance & Economics
     name: 'Finance & Economics',
     description: 'Markets, Investment, Economy',
     icon: <MaterialCommunityIcons name="chart-line" size={24} color="#2563EB" />,
     color: 'bg-blue-100',
   },
   {
-    id: 'healthcare',
+    id: 3, // Medicine & Healthcare
     name: 'Medicine & Healthcare',
     description: 'Medical research, Health trends',
     icon: <MaterialCommunityIcons name="heart-pulse" size={24} color="#DC2626" />,
     color: 'bg-red-100',
   },
   {
-    id: 'education',
+    id: 4, // Education & EdTech
     name: 'Education & EdTech',
     description: 'Teaching methods, Learning science',
     icon: <MaterialCommunityIcons name="book-open-variant" size={24} color="#F59E42" />,
     color: 'bg-yellow-100',
   },
   {
-    id: 'law',
+    id: 5, // Law & Policy
     name: 'Law & Policy',
     description: 'Legal updates, Policy changes',
     icon: <MaterialCommunityIcons name="brain" size={24} color="#9333EA" />,
     color: 'bg-purple-100',
   },
 ];
-
-
 
 const experienceLevels: ExperienceLevel[] = [
   'Student',
@@ -58,20 +51,18 @@ const experienceLevels: ExperienceLevel[] = [
   'Enthusiast',
 ];
 
-
-
 interface OnboardingProps {
-  onComplete: (interests: string[]) => void;
+  onComplete: (interests: number[]) => void;
 }
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [step, setStep] = useState(1);
-  const [interests, setInterests] = useState<string[]>([]);
+  const [interests, setInterests] = useState<number[]>([]);
   const [experience, setExperience] = useState<ExperienceLevel | null>(null);
   const { user } = useAuth();
+  const { refreshIndustries } = useIndustries();
 
-
-  const toggleIndustry = (industryId: string) => {
+  const toggleIndustry = (industryId: number) => {
     setInterests((prev) =>
       prev.includes(industryId)
         ? prev.filter((id) => id !== industryId)
@@ -95,7 +86,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     }
     const payload = {
       experience,
-      interests
+      interests // now an array of numbers
     };
     console.log("[Onboarding] Submitting to Supabase:", payload);
     const { error } = await supabase 
@@ -106,6 +97,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       console.log("[Onboarding] Supabase upsert error:", error);
       return;
     }
+    // Refresh industries context after successful update
+    await refreshIndustries();
     console.log("[Onboarding] Upsert successful, calling onComplete.");
     onComplete(interests);
   };
@@ -291,17 +284,17 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 };
 
 // Helper to map industry id to background color
-function getIndustryBgColor(id: string) {
+function getIndustryBgColor(id: number) {
   switch (id) {
-    case 'stem':
+    case 1:
       return '#DCFCE7'; // green-100
-    case 'finance':
+    case 2:
       return '#DBEAFE'; // blue-100
-    case 'healthcare':
+    case 3:
       return '#FEE2E2'; // red-100
-    case 'education':
+    case 4:
       return '#FEF9C3'; // yellow-100
-    case 'law':
+    case 5:
       return '#F3E8FF'; // purple-100
     default:
       return '#F3F4F6'; // gray-100 fallback

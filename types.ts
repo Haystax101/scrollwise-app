@@ -9,7 +9,7 @@ export interface User {
 }
 
 export interface Industry {
-  id: string;
+  id: number; // Changed to number to match new usage in Onboarding and database
   name: string;
   description: string;
   icon: ReactElement; // lucide-react-native icons are ReactElements

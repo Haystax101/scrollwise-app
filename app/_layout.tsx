@@ -1,4 +1,5 @@
 import { AuthProvider } from '@/context/AuthContext';
+import { IndustriesProvider } from '../context/IndustriesContext';
 import { Slot } from 'expo-router';
 import AppHeader from '../components/AppHeader';
 
@@ -8,8 +9,10 @@ export default function RootLayout() {
   // e.g., <ThemeProvider><Slot /></ThemeProvider>
   return (
     <AuthProvider>
+      <IndustriesProvider>
         <Slot />
         <AppHeader />
+      </IndustriesProvider>
     </AuthProvider>  
   );
 }
