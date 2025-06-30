@@ -86,7 +86,6 @@ export const Discover: React.FC = () => {
             <TouchableOpacity 
               key={`${result.type}-${result.id}`}
               style={styles.resultCard}
-              onPress={() => console.log('Tapped on:', result)}
               accessibilityLabel={`View details for ${result.type === 'user' ? result.name : result.title}`}
               accessibilityRole="button"
             >

@@ -7,6 +7,7 @@ import type { Video as VideoType } from '../types';
 import { StaticVisual } from './StaticVisual';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import Slider from '@react-native-community/slider';
 
 const { height: windowHeight } = Dimensions.get('window');
 // Height of the bottom navbar (Header) in px, must match styles.navRow height in Header.tsx
@@ -17,10 +18,11 @@ const screenHeight = windowHeight - NAVBAR_HEIGHT;
 interface VideoCardProps {
   video: VideoType;
   isActive: boolean;
+  onOpenComments?: (videoId: number) => void;
 }
 
 
-export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
+export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenComments }) => {
   const { user } = useAuth();
   const [likes, setLikes] = useState(video.likes);
   const [hasLiked, setHasLiked] = useState(false);
@@ -28,6 +30,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
   const [hasSaved, setHasSaved] = useState(false);
   const [expanded, setExpanded] = React.useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [sliderValue, setSliderValue] = useState(0);
 
   const player = useVideoPlayer(
     signedUrl ? { uri: signedUrl } : null, // Pass null when no URL
@@ -44,6 +50,17 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
       }
     }
   );
+
+  // Ensure video plays/pauses when isActive changes
+  useEffect(() => {
+    if (player) {
+      if (isActive) {
+        player.play();
+      } else {
+        player.pause();
+      }
+    }
+  }, [isActive, player]);
 
   // Check if user has already liked/saved this post on mount
   React.useEffect(() => {
@@ -145,22 +162,18 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
     let isMounted = true;
     const getSignedUrl = async () => {
       if (video.video_url) {
-        console.log('[VideoCard] Requesting signed URL for:', video.video_url);
         const { data, error } = await supabase.storage
           .from('videos')
           .createSignedUrl(video.video_url, 3600); // 1 hour expiry
         if (isMounted) {
           if (data && data.signedUrl) {
-            console.log('[VideoCard] Received signed URL:', data.signedUrl);
             setSignedUrl(data.signedUrl);
           } else {
             setSignedUrl(null);
-            console.log('[VideoCard] Error generating signed URL:', error);
           }
         }
       } else {
         setSignedUrl(null);
-        console.log('[VideoCard] No video_url provided for video:', video);
       }
     };
     getSignedUrl();
@@ -226,7 +239,6 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
     if (deleteError) {
       setHasLiked(true);
       setLikes((prev) => prev + 1);
-      console.error('Error removing like entry:', deleteError);
       return;
     }
     // Decrement likes count in reels table
@@ -237,15 +249,34 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
     if (updateError) {
       setLikes((prev) => prev + 1);
       setHasLiked(true);
-      console.error('Error updating likes count: ', updateError);
     }
   }
 
-  if (video.video_url && signedUrl) {
-    console.log('[VideoCard] Rendering video with signed URL:', signedUrl);
-    // Create a player instance for this video
-    
+  // Listen for time updates
+  useEffect(() => {
+    if (!player) return;
+    // Set timeUpdateEventInterval for frequent updates
+    player.timeUpdateEventInterval = 0.25;
+    const onTimeUpdate = (payload: { currentTime: number }) => {
+      if (!isSeeking) {
+        setCurrentTime(payload.currentTime);
+        setSliderValue(payload.currentTime);
+      }
+    };
+    const onSourceLoad = (payload: { duration: number }) => {
+      setDuration(payload.duration);
+    };
+    player.addListener('timeUpdate', onTimeUpdate);
+    player.addListener('sourceLoad', onSourceLoad);
+    // Set initial duration if available
+    if (player.duration) setDuration(player.duration);
+    return () => {
+      player.removeListener('timeUpdate', onTimeUpdate);
+      player.removeListener('sourceLoad', onSourceLoad);
+    };
+  }, [player]);
 
+  if (video.video_url && signedUrl) {
     return (
       <View style={[{ height: screenHeight }, styles.root]}>
         {/* Video Player */}
@@ -254,7 +285,6 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
           style={styles.bgImage}
           contentFit="cover"
           nativeControls={false}
-          allowsFullscreen={false}
         />
         <View style={styles.gradientOverlay} />
         <View style={styles.videoContentContainer}>
@@ -281,9 +311,36 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
                 </View>
               </View>
             </View>
-            {/* Progress Bar - Placeholder */}
-            <View style={styles.progressBarBg}>
-              <View style={styles.progressBarFill} />
+            {/* Progress Bar - Real */}
+            <View style={[styles.progressBarBg, { height: 6, justifyContent: 'center' }]}>
+              <Slider
+                style={{ flex: 1, height: 2 }}
+                minimumValue={0}
+                maximumValue={duration || 1}
+                value={sliderValue}
+                minimumTrackTintColor="#fff"
+                maximumTrackTintColor="rgba(255,255,255,0.3)"
+                thumbTintColor="#fff"
+                onValueChange={val => {
+                  if (duration > 0) {
+                    setIsSeeking(true);
+                    setSliderValue(val);
+                  }
+                }}
+                onSlidingComplete={val => {
+                  if (player && duration > 0) {
+                    player.currentTime = val;
+                    setCurrentTime(val);
+                  }
+                  setIsSeeking(false);
+                }}
+                disabled={duration === 0}
+              />
+            </View>
+            {/* Time labels */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ color: '#fff', fontSize: 12 }}>{formatTime(sliderValue)}</Text>
+              <Text style={{ color: '#fff', fontSize: 12 }}>{formatTime(duration)}</Text>
             </View>
             <View style={styles.actionRow}>
               <View style={styles.actionBtnGroup}>
@@ -309,7 +366,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
                   </View>
                   <Text style={styles.actionBtnCount}>{saves}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Comment on video, ${video.comments} comments`} accessibilityRole="button">
+                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Comment on video, ${video.comments} comments`} accessibilityRole="button" onPress={() => onOpenComments && onOpenComments(video.id)}>
                   <View style={styles.actionBtnIconCircle}>
                     <Feather name="message-circle" size={22} color="white" />
                   </View>
@@ -325,15 +382,12 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
       </View>
     );
   } else if (video.video_url && !signedUrl) {
-    console.log('[VideoCard] Waiting for signed URL for:', video.video_url);
-    // Show loading or error state if signedUrl is not ready
     return (
       <View style={[{ height: screenHeight, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }, styles.root]}>
         <Text style={{ color: '#fff' }}>Loading video...</Text>
       </View>
     );
   } else {
-    console.log('[VideoCard] No video_url, rendering static content for video:', video);
     // Render static content for non-video types, with expandable/collapsible synopsis on text press
     const synopsis = Array.isArray(video.content) ? video.content[1] : '';
     const title = Array.isArray(video.content) ? video.content[0] : '';
@@ -392,7 +446,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive }) => {
                   </View>
                   <Text style={styles.actionBtnCountV3}>{saves}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Comment on post, ${video.comments} comments`} accessibilityRole="button">
+                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Comment on post, ${video.comments} comments`} accessibilityRole="button" onPress={() => onOpenComments && onOpenComments(video.id)}>
                   <View style={styles.actionBtnIconCircleV3}>
                     <Feather name="message-circle" size={22} color="#3b82f6" />
                   </View>
@@ -432,6 +486,13 @@ function getSiteName(url: string) {
   } catch {
     return url;
   }
+}
+
+function formatTime(seconds: number) {
+  if (!isFinite(seconds)) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 const styles = StyleSheet.create({

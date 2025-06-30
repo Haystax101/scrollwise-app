@@ -61,14 +61,14 @@ export const SignUp: React.FC<SignUpProps> = ({ onSignUp, onSwitchToSignIn }) =>
     <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
       I agree to the{' '}
       <Text
-        onPress={() => console.log("Terms link pressed")}
+        onPress={() => {}}
         style={{ fontWeight: '500', color: '#2563EB', textDecorationLine: 'underline' }}
       >
         Terms of Service
       </Text>
       {' '}and{' '}
       <Text
-        onPress={() => console.log("Privacy link pressed")}
+        onPress={() => {}}
         style={{ fontWeight: '500', color: '#2563EB', textDecorationLine: 'underline' }}
       >
         Privacy Policy

@@ -96,7 +96,7 @@ export const SignIn: React.FC<SignInProps> = ({ onSignIn, onSwitchToSignUp }) =>
 
               <View style={styles.rowBetween}>
                 <CustomCheckbox label="Remember me" checked={rememberMe} onChange={setRememberMe} accessibilityLabelText="Remember me checkbox" />
-                <TouchableOpacity onPress={() => console.log('Forgot password pressed')} accessibilityLabel="Forgot your password button">
+                <TouchableOpacity onPress={() => {}} accessibilityLabel="Forgot your password button">
                   <Text style={styles.forgotText} numberOfLines={1} ellipsizeMode="tail">
                     Forgot your password?
                   </Text>

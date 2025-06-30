@@ -72,3 +72,8 @@ export interface SearchResultPost {
 }
 
 export type SearchResult = SearchResultUser | SearchResultPost;
+
+export interface MainFeedProps {
+  industries: number[];
+  initialReelId?: number;
+}

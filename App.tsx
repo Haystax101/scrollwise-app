@@ -10,6 +10,8 @@ import { Discover } from './components/Discover';
 import Settings from './components/Settings';
 import { useAuth } from './context/AuthContext';
 import type { User, ScreenName } from './types';
+// Removed: import { GestureHandlerRootView } from 'react-native-gesture-handler';
+// Removed: import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 // Removed: import { styled } from "nativewind";
 
 // Removed: const StyledSafeAreaView = styled(SafeAreaView);
@@ -18,7 +20,7 @@ import type { User, ScreenName } from './types';
 export default function App() {
   const { user, loading, signOut } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('signIn');
-  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
+  const [selectedIndustries, setSelectedIndustries] = useState<number[]>([]);
 
   useEffect(() => {
     if (!loading) {
@@ -39,8 +41,8 @@ export default function App() {
     setCurrentScreen('onboarding');
   };
 
-  const handleOnboardingComplete = (industries: string[]) => {
-    setSelectedIndustries(industries);
+  const handleOnboardingComplete = (interests: number[]) => {
+    setSelectedIndustries(interests);
     setCurrentScreen('feed');
   };
 

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Dimensions, StyleSheet } from 'react-native';
 import { VideoCard } from './VideoCard';
 import type { Video } from '../types';
 import { supabase } from '../lib/supabase'; // Adjust the import based on your project structure
 import { industryIdToName } from '../lib/industryMap';
+import { CommentsModal } from './CommentsModal';
 
 interface MainFeedProps {
   industries: string[]; 
@@ -16,10 +17,12 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId })
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const [videos, setVideos] = useState<Video[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
+  const [commentsVideoId, setCommentsVideoId] = useState<number | null>(null);
+  const flatListRef = useRef<FlatList>(null);
+  const [hasScrolledToInitial, setHasScrolledToInitial] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
-    console.log('Fetching videos. Selected industries:', industries);
     // Fetch videos from Supabase
     async function fetchVideos() {
       let query = supabase
@@ -28,17 +31,12 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId })
       if (industries.length > 0) {
         // Convert industries to numbers for correct Supabase query
         const industryIds = industries.map((id) => typeof id === 'string' ? parseInt(id, 10) : id).filter((id) => !isNaN(id));
-        console.log('Filtering by industry IDs:', industryIds);
         query = query.in('industry_id', industryIds);
-      } else {
-        console.log('No industry filter applied.');
       }
       const { data, error } = await query;
       if (error) {
-        console.error('Supabase error:', error);
         setVideos([]);
       } else {
-        console.log('Fetched videos:', data);
         // Map industry_id to industry name for display and map source_url to source
         const mapped = (data || []).map((v) => ({
           ...v,
@@ -48,7 +46,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId })
           content: v.content, // new field
         }));
         setVideos(mapped);
-        console.log('Mapped videos:', mapped);
       }
       setIsLoading(false);
       setCurrentVideoIndex(0);
@@ -63,6 +60,21 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId })
     }
   }, [initialReelId, videos]);
 
+  // Imperatively scroll to the correct index after videos are loaded
+  useEffect(() => {
+    if (
+      initialReelId &&
+      videos.length > 0 &&
+      !hasScrolledToInitial
+    ) {
+      const idx = videos.findIndex((v) => v.id === initialReelId);
+      if (idx !== -1 && flatListRef.current) {
+        flatListRef.current.scrollToIndex({ index: idx, animated: false });
+        setHasScrolledToInitial(true);
+      }
+    }
+  }, [initialReelId, videos, hasScrolledToInitial]);
+
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
       setCurrentVideoIndex(viewableItems[0].index);
@@ -73,17 +85,31 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId })
     itemVisiblePercentThreshold: 50 // Item is considered viewable when 50% visible
   };
 
+  const handleOpenComments = (videoId: number) => {
+    setCommentsVideoId(videoId);
+  };
+
+  const handleCloseComments = () => {
+    setCommentsVideoId(null);
+  };
+
+  // Update comment count in real time
+  const handleCommentsCountChange = (count: number) => {
+    if (commentsVideoId == null) return;
+    setVideos((prev) => prev.map(v => v.id === commentsVideoId ? { ...v, comments: count } : v));
+  };
+
   const renderItem = ({ item, index }: { item: Video; index: number }) => (
     <View style={{ height: screenHeight }}>
       <VideoCard
         video={item}
         isActive={index === currentVideoIndex}
+        onOpenComments={handleOpenComments}
       />
     </View>
   );
 
   if (isLoading) {
-    console.log('Loading videos...');
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="white" />
@@ -92,7 +118,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId })
   }
 
   if (videos.length === 0) {
-    console.log('No videos found for the selected industries:', industries);
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>No videos available for the selected industries. Please update your preferences in Onboarding or Profile.</Text>
@@ -101,21 +126,31 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId })
   }
   
   return (
-    <FlatList
-      data={videos}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id.toString()}
-      pagingEnabled // This creates the reel effect
-      showsVerticalScrollIndicator={false}
-      onViewableItemsChanged={onViewableItemsChanged}
-      viewabilityConfig={viewabilityConfig}
-      getItemLayout={(_data, index) => (
-        {length: screenHeight, offset: screenHeight * index, index}
-      )}
-      style={styles.list}
-      accessibilityHint="Scroll vertically to watch videos"
-      initialScrollIndex={currentVideoIndex}
-    />
+    <>
+      <FlatList
+        ref={flatListRef}
+        data={videos}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id.toString()}
+        pagingEnabled // This creates the reel effect
+        showsVerticalScrollIndicator={false}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        getItemLayout={(_data, index) => (
+          {length: screenHeight, offset: screenHeight * index, index}
+        )}
+        style={styles.list}
+        accessibilityHint="Scroll vertically to watch videos"
+        initialScrollIndex={currentVideoIndex}
+      />
+      {/* CommentsModal will be rendered here, controlled by commentsVideoId */}
+      <CommentsModal
+        videoId={commentsVideoId}
+        visible={!!commentsVideoId}
+        onClose={handleCloseComments}
+        onCommentsCountChange={handleCommentsCountChange}
+      />
+    </>
   );
 };
 

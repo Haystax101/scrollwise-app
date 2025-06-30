@@ -81,25 +81,21 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     }
     if (!user) {
         alert("User not found in context. Cannot submit onboarding.");
-        console.log("[Onboarding] No user found in context.");
         return;
     }
     const payload = {
       experience,
       interests // now an array of numbers
     };
-    console.log("[Onboarding] Submitting to Supabase:", payload);
     const { error } = await supabase 
       .from('profiles')
       .update(payload)
       .eq('id', user.id);
     if (error) {
-      console.log("[Onboarding] Supabase upsert error:", error);
       return;
     }
     // Refresh industries context after successful update
     await refreshIndustries();
-    console.log("[Onboarding] Upsert successful, calling onComplete.");
     onComplete(interests);
   };
 
