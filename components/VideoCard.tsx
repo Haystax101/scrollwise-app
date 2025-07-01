@@ -7,7 +7,6 @@ import type { Video as VideoType } from '../types';
 import { StaticVisual } from './StaticVisual';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import Slider from '@react-native-community/slider';
 
 const { height: windowHeight } = Dimensions.get('window');
 // Height of the bottom navbar (Header) in px, must match styles.navRow height in Header.tsx
@@ -32,8 +31,6 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isSeeking, setIsSeeking] = useState(false);
-  const [sliderValue, setSliderValue] = useState(0);
 
   const player = useVideoPlayer(
     signedUrl ? { uri: signedUrl } : null, // Pass null when no URL
@@ -61,6 +58,29 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
       }
     }
   }, [isActive, player]);
+
+  // Listen for time updates
+  useEffect(() => {
+    if (!player) return;
+    // Set timeUpdateEventInterval for very frequent updates (smooth progress)
+    player.timeUpdateEventInterval = 0.01;
+    const onTimeUpdate = (payload: { currentTime: number }) => {
+      setCurrentTime(payload.currentTime);
+    };
+    const onSourceLoad = (payload: { duration: number }) => {
+      setDuration(payload.duration);
+    };
+    player.addListener('timeUpdate', onTimeUpdate);
+    player.addListener('sourceLoad', onSourceLoad);
+    // Set initial duration if available
+    if (player.duration) {
+      setDuration(player.duration);
+    }
+    return () => {
+      player.removeListener('timeUpdate', onTimeUpdate);
+      player.removeListener('sourceLoad', onSourceLoad);
+    };
+  }, [player]);
 
   // Check if user has already liked/saved this post on mount
   React.useEffect(() => {
@@ -252,30 +272,6 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     }
   }
 
-  // Listen for time updates
-  useEffect(() => {
-    if (!player) return;
-    // Set timeUpdateEventInterval for frequent updates
-    player.timeUpdateEventInterval = 0.25;
-    const onTimeUpdate = (payload: { currentTime: number }) => {
-      if (!isSeeking) {
-        setCurrentTime(payload.currentTime);
-        setSliderValue(payload.currentTime);
-      }
-    };
-    const onSourceLoad = (payload: { duration: number }) => {
-      setDuration(payload.duration);
-    };
-    player.addListener('timeUpdate', onTimeUpdate);
-    player.addListener('sourceLoad', onSourceLoad);
-    // Set initial duration if available
-    if (player.duration) setDuration(player.duration);
-    return () => {
-      player.removeListener('timeUpdate', onTimeUpdate);
-      player.removeListener('sourceLoad', onSourceLoad);
-    };
-  }, [player]);
-
   if (video.video_url && signedUrl) {
     return (
       <View style={[{ height: screenHeight }, styles.root]}>
@@ -312,34 +308,17 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
               </View>
             </View>
             {/* Progress Bar - Real */}
-            <View style={[styles.progressBarBg, { height: 6, justifyContent: 'center' }]}>
-              <Slider
-                style={{ flex: 1, height: 2 }}
-                minimumValue={0}
-                maximumValue={duration || 1}
-                value={sliderValue}
-                minimumTrackTintColor="#fff"
-                maximumTrackTintColor="rgba(255,255,255,0.3)"
-                thumbTintColor="#fff"
-                onValueChange={val => {
-                  if (duration > 0) {
-                    setIsSeeking(true);
-                    setSliderValue(val);
-                  }
-                }}
-                onSlidingComplete={val => {
-                  if (player && duration > 0) {
-                    player.currentTime = val;
-                    setCurrentTime(val);
-                  }
-                  setIsSeeking(false);
-                }}
-                disabled={duration === 0}
+            <View style={[styles.progressBarBg, { height: 4, justifyContent: 'center' }]}>
+              <View 
+                style={[
+                  styles.progressBarFill, 
+                  { width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }
+                ]} 
               />
             </View>
             {/* Time labels */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-              <Text style={{ color: '#fff', fontSize: 12 }}>{formatTime(sliderValue)}</Text>
+              <Text style={{ color: '#fff', fontSize: 12 }}>{formatTime(currentTime)}</Text>
               <Text style={{ color: '#fff', fontSize: 12 }}>{formatTime(duration)}</Text>
             </View>
             <View style={styles.actionRow}>
