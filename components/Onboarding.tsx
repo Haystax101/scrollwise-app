@@ -8,38 +8,38 @@ import { useIndustries } from '../context/IndustriesContext';
 
 const industriesData: Industry[] = [
   {
-    id: 1, // STEM
-    name: 'STEM',
-    description: 'Tech, AI, Engineering, Biology',
-    icon: <MaterialCommunityIcons name="microscope" size={24} color="#16A34A" />,
+    id: 1, // CS
+    name: 'CS',
+    description: 'Computer Science, Programming, Software Development',
+    icon: <MaterialCommunityIcons name="laptop" size={24} color="#16A34A" />,
     color: 'bg-green-100',
   },
   {
     id: 2, // Finance & Economics
     name: 'Finance & Economics',
-    description: 'Markets, Investment, Economy',
+    description: 'Markets, Investment, Economic Theory',
     icon: <MaterialCommunityIcons name="chart-line" size={24} color="#2563EB" />,
     color: 'bg-blue-100',
   },
   {
-    id: 3, // Medicine & Healthcare
-    name: 'Medicine & Healthcare',
-    description: 'Medical research, Health trends',
-    icon: <MaterialCommunityIcons name="heart-pulse" size={24} color="#DC2626" />,
+    id: 3, // Maths
+    name: 'Maths',
+    description: 'Pure Mathematics, Applied Math, Statistics',
+    icon: <MaterialCommunityIcons name="function" size={24} color="#DC2626" />,
     color: 'bg-red-100',
   },
   {
-    id: 4, // Education & EdTech
-    name: 'Education & EdTech',
-    description: 'Teaching methods, Learning science',
-    icon: <MaterialCommunityIcons name="book-open-variant" size={24} color="#F59E42" />,
+    id: 4, // Physics
+    name: 'Physics',
+    description: 'Theoretical Physics, Applied Physics, Research',
+    icon: <MaterialCommunityIcons name="atom" size={24} color="#F59E42" />,
     color: 'bg-yellow-100',
   },
   {
-    id: 5, // Law & Policy
-    name: 'Law & Policy',
-    description: 'Legal updates, Policy changes',
-    icon: <MaterialCommunityIcons name="brain" size={24} color="#9333EA" />,
+    id: 5, // EdTech
+    name: 'EdTech',
+    description: 'Educational Technology, Learning Innovation',
+    icon: <MaterialCommunityIcons name="school" size={24} color="#9333EA" />,
     color: 'bg-purple-100',
   },
 ];

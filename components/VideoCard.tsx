@@ -88,18 +88,18 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
       if (!user) return;
       // Like check
       const { data: likeData } = await supabase
-        .from('reel_likes')
-        .select('user_id, reel_id')
+        .from('article_likes')
+        .select('user_id, article_id')
         .eq('user_id', user.id)
-        .eq('reel_id', video.id)
+        .eq('article_id', video.id)
         .maybeSingle();
       setHasLiked(!!likeData);
       // Save check
       const { data: saveData } = await supabase
-        .from('reel_saves')
-        .select('user_id, reel_id')
+        .from('article_saves')
+        .select('user_id, article_id')
         .eq('user_id', user.id)
-        .eq('reel_id', video.id)
+        .eq('article_id', video.id)
         .maybeSingle();
       setHasSaved(!!saveData);
     };
@@ -110,10 +110,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     if (!user) return;
     // Always check the database before saving
     const { data: saveData } = await supabase
-      .from('reel_saves')
-      .select('user_id, reel_id')
+      .from('article_saves')
+      .select('user_id, article_id')
       .eq('user_id', user.id)
-      .eq('reel_id', video.id)
+      .eq('article_id', video.id)
       .maybeSingle();
     if (saveData) {
       setHasSaved(true);
@@ -121,18 +121,18 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     }
     setHasSaved(true);
     setSaves((prev) => prev + 1);
-    // Add entry to reel_saves table
+    // Add entry to article_saves table
     const { error: insertError } = await supabase
-      .from('reel_saves')
-      .insert({ user_id: user.id, reel_id: video.id });
+      .from('article_saves')
+      .insert({ user_id: user.id, article_id: video.id });
     if (insertError) {
       setHasSaved(false);
       setSaves((prev) => prev - 1);
       return;
     }
-    // Update saves count in reels table
+    // Update saves count in articles table
     const { error: updateError } = await supabase
-      .from('reels')
+      .from('articles')
       .update({ saves_count: saves + 1 })
       .eq('id', video.id);
     if (updateError) {
@@ -145,10 +145,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     if (!user) return;
     // Always check the database before unsaving
     const { data: saveData } = await supabase
-      .from('reel_saves')
-      .select('user_id, reel_id')
+      .from('article_saves')
+      .select('user_id, article_id')
       .eq('user_id', user.id)
-      .eq('reel_id', video.id)
+      .eq('article_id', video.id)
       .maybeSingle();
     if (!saveData) {
       setHasSaved(false);
@@ -156,20 +156,20 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     }
     setHasSaved(false);
     setSaves((prev) => Math.max(prev - 1, 0));
-    // Remove entry from reel_saves table
+    // Remove entry from article_saves table
     const { error: deleteError } = await supabase
-      .from('reel_saves')
+      .from('article_saves')
       .delete()
       .eq('user_id', user.id)
-      .eq('reel_id', video.id);
+      .eq('article_id', video.id);
     if (deleteError) {
       setHasSaved(true);
       setSaves((prev) => prev + 1);
       return;
     }
-    // Decrement saves count in reels table
+    // Decrement saves count in articles table
     const { error: updateError } = await supabase
-      .from('reels')
+      .from('articles')
       .update({ saves_count: Math.max(saves - 1, 0) })
       .eq('id', video.id);
     if (updateError) {
@@ -204,10 +204,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     if (!user) return;
     // Always check the database before liking
     const { data: likeData } = await supabase
-      .from('reel_likes')
-      .select('user_id, reel_id')
+      .from('article_likes')
+      .select('user_id, article_id')
       .eq('user_id', user.id)
-      .eq('reel_id', video.id)
+      .eq('article_id', video.id)
       .maybeSingle();
     if (likeData) {
       setHasLiked(true);
@@ -215,18 +215,18 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     }
     setHasLiked(true);
     setLikes((prev) => prev + 1);
-    // Add entry to reel_likes table
+    // Add entry to article_likes table
     const { error: insertError } = await supabase
-      .from('reel_likes')
-      .insert({ user_id: user.id, reel_id: video.id });
+      .from('article_likes')
+      .insert({ user_id: user.id, article_id: video.id });
     if (insertError) {
       setHasLiked(false);
       setLikes((prev) => prev - 1);
       return;
     }
-    // Update likes count in reels table
+    // Update likes count in articles table
     const { error: updateError } = await supabase
-      .from('reels')
+      .from('articles')
       .update({ likes_count: likes + 1 })
       .eq('id', video.id);
     if (updateError) {
@@ -239,10 +239,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     if (!user) return;
     // Always check the database before unliking
     const { data: likeData } = await supabase
-      .from('reel_likes')
-      .select('user_id, reel_id')
+      .from('article_likes')
+      .select('user_id, article_id')
       .eq('user_id', user.id)
-      .eq('reel_id', video.id)
+      .eq('article_id', video.id)
       .maybeSingle();
     if (!likeData) {
       setHasLiked(false);
@@ -250,20 +250,20 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     }
     setHasLiked(false);
     setLikes((prev) => Math.max(prev - 1, 0));
-    // Remove entry from reel_likes table
+    // Remove entry from article_likes table
     const { error: deleteError } = await supabase
-      .from('reel_likes')
+      .from('article_likes')
       .delete()
       .eq('user_id', user.id)
-      .eq('reel_id', video.id);
+      .eq('article_id', video.id);
     if (deleteError) {
       setHasLiked(true);
       setLikes((prev) => prev + 1);
       return;
     }
-    // Decrement likes count in reels table
+    // Decrement likes count in articles table
     const { error: updateError } = await supabase
-      .from('reels')
+      .from('articles')
       .update({ likes_count: Math.max(likes - 1, 0) })
       .eq('id', video.id);
     if (updateError) {
@@ -298,6 +298,21 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
           <View style={styles.bottomContent}>
             <View style={styles.titleBlock}>
               <Text style={styles.title}>{video.title}</Text>
+              {/* Authors horizontal scroll view */}
+              {video.authors && video.authors.length > 0 && (
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.authorsContainer}
+                  contentContainerStyle={styles.authorsContent}
+                >
+                  {video.authors.map((author, index) => (
+                    <View key={index} style={styles.authorPill}>
+                      <Text style={styles.authorText}>{author}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
               <Text style={styles.caption}>{video.caption}</Text>
               <View style={styles.metaRow}>
                 <Text style={styles.metaSourceSite}>{getSiteName(video.source)}</Text>
@@ -368,9 +383,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     );
   } else {
     // Render static content for non-video types, with expandable/collapsible synopsis on text press
-    const synopsis = Array.isArray(video.content) ? video.content[1] : '';
-    const title = Array.isArray(video.content) ? video.content[0] : '';
-    const source = Array.isArray(video.content) ? video.content[2] : '';
+    const synopsis = video.content || '';
+    const title = video.title || '';
+    const source = video.source || '';
     // Add safe area padding for notch
     const topSafePadding = Platform.OS === 'ios' ? 44 : 24;
     return (
@@ -765,5 +780,26 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Authors styles
+  authorsContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+    maxHeight: 32,
+  },
+  authorsContent: {
+    paddingRight: 16,
+  },
+  authorPill: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  authorText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '500',
   },
 });

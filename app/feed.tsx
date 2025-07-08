@@ -17,5 +17,5 @@ export default function FeedScreen() {
     }
   }, [user, loading]);
   if (loading || !user) return null;
-  return <MainFeed industries={industries} initialReelId={reelId ? Number(reelId) : undefined} />;
+  return <MainFeed industries={industries} initialArticleId={reelId ? Number(reelId) : undefined} />;
 }

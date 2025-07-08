@@ -17,7 +17,7 @@ const defaultUserData: UserData = {
   name: 'Demo User',
   email: 'user@example.com',
   joinDate: 'September 2023',
-  interests: ['STEM', 'Finance', 'Healthcare'],
+  interests: ['CS', 'Finance & Economics', 'Maths'],
   stats: {
     videosWatched: 247,
     minutesLearned: 823,
@@ -59,26 +59,26 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
         const { data: authUser } = await supabase.auth.getUser();
         const userId = authUser?.user?.id;
         if (userId) {
-          // Join reel_saves and reels to get saved content
-          const { data: savedRows, error: savedError } = await supabase
-            .from('reel_saves')
-            .select('reel_id, created_at, reels (id, title, type, created_at)')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
-          if (!savedError && savedRows) {
-            const savedContent: SavedContentItem[] = savedRows.map((row: any) => {
-              const reel = row.reels;
-              return {
-                id: reel?.id,
-                title: reel?.title || 'Untitled',
-                type: reel?.type || 'unknown',
-                date: reel?.created_at
-                  ? new Date(reel.created_at).toLocaleDateString()
-                  : '',
-              };
-            });
-            setUserData((prev) => ({ ...prev, savedContent }));
-          }
+                  // Join article_saves and articles to get saved content
+        const { data: savedRows, error: savedError } = await supabase
+          .from('article_saves')
+          .select('article_id, created_at, articles (id, title, type, created_at)')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        if (!savedError && savedRows) {
+          const savedContent: SavedContentItem[] = savedRows.map((row: any) => {
+            const article = row.articles;
+            return {
+              id: article?.id,
+              title: article?.title || 'Untitled',
+              type: article?.type || 'unknown',
+              date: article?.created_at
+                ? new Date(article.created_at).toLocaleDateString()
+                : '',
+            };
+          });
+          setUserData((prev) => ({ ...prev, savedContent }));
+        }
         }
       }
     };
@@ -172,7 +172,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
                 style={[styles.savedItemRow, { width: 260, marginRight: 16 }]}
                 accessibilityLabel={`View saved content: ${item.title}`}
                 accessibilityRole="button"
-                onPress={() => router.push({ pathname: '/feed', params: { reelId: item.id } })}
+                onPress={() => router.push({ pathname: '/feed', params: { articleId: item.id } })}
               >
                 <View style={styles.savedIconCircle}>
                   <Feather name="bookmark" size={18} color="#2563EB" />

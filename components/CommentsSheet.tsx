@@ -75,8 +75,8 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ videoId, visible, 
     if (!error && data) {
       setComments((prev) => [data, ...prev]);
       setInput('');
-      // Update comments_count in reels table
-      await supabase.from('reels').update({ comments_count: comments.length + 1 }).eq('id', videoId);
+          // Update comments_count in articles table
+    await supabase.from('articles').update({ comments_count: comments.length + 1 }).eq('id', videoId);
     }
     setSubmitting(false);
   };
@@ -91,8 +91,8 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ videoId, visible, 
       .eq('user_id', user.id);
     if (!error) {
       setComments((prev) => prev.filter((c) => c.id !== commentId));
-      // Update comments_count in reels table
-      await supabase.from('reels').update({ comments_count: Math.max(comments.length - 1, 0) }).eq('id', videoId);
+          // Update comments_count in articles table
+    await supabase.from('articles').update({ comments_count: Math.max(comments.length - 1, 0) }).eq('id', videoId);
     }
   };
 

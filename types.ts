@@ -18,6 +18,22 @@ export interface Industry {
 
 export type ExperienceLevel = 'Student' | 'Working Professional' | 'Researcher' | 'Enthusiast';
 
+export interface Article {
+  id: number;
+  type: 'research' | 'book' | 'news';
+  title: string;
+  caption: string;
+  source: string; // This will be the source_url from Supabase
+  industry: string;
+  video_url?: string; // Optional video support
+  likes: number;
+  saves: number;
+  comments: number;
+  content: string; // Article text content
+  authors: string[]; // Array of author names
+}
+
+// Keep Video interface for backward compatibility if needed
 export interface Video {
   id: number;
   type: 'research' | 'book' | 'news';

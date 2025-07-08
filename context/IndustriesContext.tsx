@@ -17,18 +17,28 @@ export const IndustriesProvider = ({ children }: { children: ReactNode }) => {
   const [industries, setIndustries] = useState<string[]>([]);
 
   const fetchIndustries = async () => {
+    console.log('🏭 IndustriesContext: Fetching user industries...');
+    console.log('👤 IndustriesContext: Current user:', user);
+    
     if (user) {
       const { data, error } = await supabase
         .from('profiles')
         .select('interests')
         .eq('id', user.id)
         .single();
+      
+      console.log('📊 IndustriesContext: Profile data:', data);
+      console.log('❌ IndustriesContext: Profile error:', error);
+      
       if (data && data.interests) {
+        console.log('✅ IndustriesContext: User interests found:', data.interests);
         setIndustries(data.interests);
       } else {
+        console.log('⚠️ IndustriesContext: No interests found, setting empty array');
         setIndustries([]);
       }
     } else {
+      console.log('⚠️ IndustriesContext: No user, setting empty array');
       setIndustries([]);
     }
   };

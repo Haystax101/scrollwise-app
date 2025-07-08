@@ -91,7 +91,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
       setInput('');
       onCommentsCountChange && onCommentsCountChange(comments.length + 1);
       // Update comments_count in reels table
-      await supabase.from('reels').update({ comments_count: comments.length + 1 }).eq('id', videoId);
+      await supabase.from('articles').update({ comments_count: comments.length + 1 }).eq('id', videoId);
     }
     setSubmitting(false);
   };
@@ -109,7 +109,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
       setComments((prev) => prev.filter((c) => c.id !== commentId));
       onCommentsCountChange && onCommentsCountChange(newCount);
       // Update comments_count in reels table
-      await supabase.from('reels').update({ comments_count: newCount }).eq('id', videoId);
+      await supabase.from('articles').update({ comments_count: newCount }).eq('id', videoId);
     }
   };
 

@@ -1,83 +1,113 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Dimensions, StyleSheet } from 'react-native';
 import { VideoCard } from './VideoCard';
-import type { Video } from '../types';
+import type { Article } from '../types';
 import { supabase } from '../lib/supabase'; // Adjust the import based on your project structure
 import { industryIdToName } from '../lib/industryMap';
 import { CommentsModal } from './CommentsModal';
 
 interface MainFeedProps {
   industries: string[]; 
-  initialReelId?: number;
+  initialArticleId?: number;
 }
 
 const { height: screenHeight } = Dimensions.get('window');
 
-export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId }) => {
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const [videos, setVideos] = useState<Video[]>([]); 
+export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId }) => {
+  const [currentArticleIndex, setCurrentArticleIndex] = useState(0);
+  const [articles, setArticles] = useState<Article[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
-  const [commentsVideoId, setCommentsVideoId] = useState<number | null>(null);
+  const [commentsArticleId, setCommentsArticleId] = useState<number | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const [hasScrolledToInitial, setHasScrolledToInitial] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
-    // Fetch videos from Supabase
-    async function fetchVideos() {
+    // Fetch articles from Supabase
+    async function fetchArticles() {
+      console.log('🔍 MainFeed: Starting article fetch...');
+      console.log('📊 MainFeed: User selected industries:', industries);
+      
+      // First, let's check if there are ANY articles in the database
+      const { data: allArticles, error: countError } = await supabase
+        .from('articles')
+        .select('id, industry_id')
+        .limit(5);
+      
+      console.log('🗃️ MainFeed: Total articles in database (sample):', allArticles);
+      console.log('❌ MainFeed: Count error:', countError);
+      
       let query = supabase
-        .from('reels')
-        .select('id, type, title, caption, source_url, industry:industry_id, video_url, likes:likes_count, saves:saves_count, comments:comments_count, content');
+        .from('articles')
+        .select('id, type, title, content, authors, link, industry_id, likes_count, saves_count, comments_count')
+        .limit(10);
+      
       if (industries.length > 0) {
         // Convert industries to numbers for correct Supabase query
         const industryIds = industries.map((id) => typeof id === 'string' ? parseInt(id, 10) : id).filter((id) => !isNaN(id));
+        console.log('🏭 MainFeed: Converted industry IDs for query:', industryIds);
         query = query.in('industry_id', industryIds);
-      }
-      const { data, error } = await query;
-      if (error) {
-        setVideos([]);
       } else {
-        // Map industry_id to industry name for display and map source_url to source
-        const mapped = (data || []).map((v) => ({
-          ...v,
-          industry: industryIdToName[v.industry] || v.industry,
-          source: v.source_url,
-          video_url: v.video_url,
-          content: v.content, // new field
+        console.log('⚠️ MainFeed: No industries selected, fetching all articles');
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('❌ MainFeed: Error fetching articles:', error);
+        setArticles([]);
+      } else {
+        console.log('✅ MainFeed: Raw data from Supabase:', data);
+        console.log('📝 MainFeed: Number of articles fetched:', data?.length || 0);
+        
+        // Map industry_id to industry name for display and map link to source
+        const mapped = (data || []).map((article) => ({
+          ...article,
+          industry: industryIdToName[article.industry_id] || `Industry ${article.industry_id}`,
+          source: article.link, // Use 'link' column from database
+          caption: '', // No caption column in articles table, set to empty
+          video_url: null, // No video_url column in articles table  
+          content: article.content,
+          authors: article.authors || [], // Ensure authors is always an array
+          likes: article.likes_count || 0,
+          saves: article.saves_count || 0,
+          comments: article.comments_count || 0,
         }));
-        setVideos(mapped);
+        
+        console.log('🔄 MainFeed: Mapped articles:', mapped);
+        setArticles(mapped);
       }
       setIsLoading(false);
-      setCurrentVideoIndex(0);
+      setCurrentArticleIndex(0);
     }
-    fetchVideos();
+    fetchArticles();
   }, [industries]);
 
   useEffect(() => {
-    if (initialReelId && videos.length > 0) {
-      const idx = videos.findIndex((v) => v.id === initialReelId);
-      if (idx !== -1) setCurrentVideoIndex(idx);
+    if (initialArticleId && articles.length > 0) {
+      const idx = articles.findIndex((article) => article.id === initialArticleId);
+      if (idx !== -1) setCurrentArticleIndex(idx);
     }
-  }, [initialReelId, videos]);
+  }, [initialArticleId, articles]);
 
-  // Imperatively scroll to the correct index after videos are loaded
+  // Imperatively scroll to the correct index after articles are loaded
   useEffect(() => {
     if (
-      initialReelId &&
-      videos.length > 0 &&
+      initialArticleId &&
+      articles.length > 0 &&
       !hasScrolledToInitial
     ) {
-      const idx = videos.findIndex((v) => v.id === initialReelId);
+      const idx = articles.findIndex((article) => article.id === initialArticleId);
       if (idx !== -1 && flatListRef.current) {
         flatListRef.current.scrollToIndex({ index: idx, animated: false });
         setHasScrolledToInitial(true);
       }
     }
-  }, [initialReelId, videos, hasScrolledToInitial]);
+  }, [initialArticleId, articles, hasScrolledToInitial]);
 
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
-      setCurrentVideoIndex(viewableItems[0].index);
+      setCurrentArticleIndex(viewableItems[0].index);
     }
   }, []);
 
@@ -85,25 +115,25 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId })
     itemVisiblePercentThreshold: 50 // Item is considered viewable when 50% visible
   };
 
-  const handleOpenComments = (videoId: number) => {
-    setCommentsVideoId(videoId);
+  const handleOpenComments = (articleId: number) => {
+    setCommentsArticleId(articleId);
   };
 
   const handleCloseComments = () => {
-    setCommentsVideoId(null);
+    setCommentsArticleId(null);
   };
 
   // Update comment count in real time
   const handleCommentsCountChange = (count: number) => {
-    if (commentsVideoId == null) return;
-    setVideos((prev) => prev.map(v => v.id === commentsVideoId ? { ...v, comments: count } : v));
+    if (commentsArticleId == null) return;
+    setArticles((prev) => prev.map(article => article.id === commentsArticleId ? { ...article, comments: count } : article));
   };
 
-  const renderItem = ({ item, index }: { item: Video; index: number }) => (
+  const renderItem = ({ item, index }: { item: Article; index: number }) => (
     <View style={{ height: screenHeight }}>
       <VideoCard
         video={item}
-        isActive={index === currentVideoIndex}
+        isActive={index === currentArticleIndex}
         onOpenComments={handleOpenComments}
       />
     </View>
@@ -117,10 +147,10 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId })
     );
   }
 
-  if (videos.length === 0) {
+  if (articles.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No videos available for the selected industries. Please update your preferences in Onboarding or Profile.</Text>
+        <Text style={styles.emptyText}>No articles available for the selected industries. Please update your preferences in Onboarding or Profile.</Text>
       </View>
     );
   }
@@ -129,7 +159,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId })
     <>
       <FlatList
         ref={flatListRef}
-        data={videos}
+        data={articles}
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
         pagingEnabled // This creates the reel effect
@@ -140,13 +170,13 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialReelId })
           {length: screenHeight, offset: screenHeight * index, index}
         )}
         style={styles.list}
-        accessibilityHint="Scroll vertically to watch videos"
-        initialScrollIndex={currentVideoIndex}
+        accessibilityHint="Scroll vertically to read articles"
+        initialScrollIndex={currentArticleIndex}
       />
-      {/* CommentsModal will be rendered here, controlled by commentsVideoId */}
+      {/* CommentsModal will be rendered here, controlled by commentsArticleId */}
       <CommentsModal
-        videoId={commentsVideoId}
-        visible={!!commentsVideoId}
+        videoId={commentsArticleId}
+        visible={!!commentsArticleId}
         onClose={handleCloseComments}
         onCommentsCountChange={handleCommentsCountChange}
       />

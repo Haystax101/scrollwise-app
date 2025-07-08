@@ -517,11 +517,11 @@ function HealthcareFallback() {
 
 // Map industries to two animation variations each
 const INDUSTRY_ANIMATIONS: Record<string, (() => React.ReactNode | null)[]> = {
-  STEM: [NeuralNetwork, QuantumParticles],
-  Finance: [CircuitBoard, MatrixDataStream],
-  Healthcare: [DNAHelix, OceanWaves],
-  Education: [GeometricMorphing, CrystalFormation],
-  Law: [SpaceCosmos, FireEnergy],
+  CS: [NeuralNetwork, QuantumParticles],
+  'Finance & Economics': [CircuitBoard, MatrixDataStream],
+  Maths: [DNAHelix, OceanWaves],
+  Physics: [GeometricMorphing, CrystalFormation],
+  EdTech: [SpaceCosmos, FireEnergy],
   Default: [QuantumParticles, GeometricMorphing],
 };
 
@@ -576,4 +576,4 @@ const styles = StyleSheet.create({
   },
 });
 
-INDUSTRY_ANIMATIONS.Healthcare.push(HealthcareFallback);
+INDUSTRY_ANIMATIONS.Maths.push(HealthcareFallback);
