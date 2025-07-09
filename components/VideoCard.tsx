@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Linking, Image, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Linking, Image, Platform, ScrollView } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { FontAwesome } from '@expo/vector-icons';
@@ -22,65 +22,101 @@ interface VideoCardProps {
 
 
 export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenComments }) => {
+  console.log(`[VideoCard] Rendering video ID ${video.id}, isActive: ${isActive}, hasVideoUrl: ${!!video.video_url}`);
+  
   const { user } = useAuth();
   const [likes, setLikes] = useState(video.likes);
   const [hasLiked, setHasLiked] = useState(false);
   const [saves, setSaves] = useState(video.saves);
   const [hasSaved, setHasSaved] = useState(false);
   const [expanded, setExpanded] = React.useState(false);
+
+  const toggleExpanded = () => {
+    setExpanded(!expanded);
+  };
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  // Only create player for videos that actually have video_url
+  const shouldCreatePlayer = !!video.video_url;
+  console.log(`[VideoCard ${video.id}] Should create player: ${shouldCreatePlayer}, video_url: ${video.video_url}`);
+
   const player = useVideoPlayer(
-    signedUrl ? { uri: signedUrl } : null, // Pass null when no URL
+    shouldCreatePlayer && signedUrl ? { uri: signedUrl } : null, // Only pass URI if we should have a player AND have signed URL
     (player) => {
-      if (player && signedUrl) {
+      console.log(`[VideoCard ${video.id}] Player callback - player exists: ${!!player}, signedUrl exists: ${!!signedUrl}, isActive: ${isActive}, shouldCreatePlayer: ${shouldCreatePlayer}`);
+      if (player && signedUrl && shouldCreatePlayer) {
         player.loop = true;
         player.volume = 1.0;
         player.muted = false;
         if (isActive) {
+          console.log(`[VideoCard ${video.id}] Starting playback`);
           player.play();
         } else {
+          console.log(`[VideoCard ${video.id}] Pausing playback`);
           player.pause();
         }
+      } else {
+        console.log(`[VideoCard ${video.id}] Player callback - cannot play: player=${!!player}, signedUrl=${!!signedUrl}, shouldCreatePlayer=${shouldCreatePlayer}`);
       }
     }
   );
 
   // Ensure video plays/pauses when isActive changes
   useEffect(() => {
-    if (player) {
+    console.log(`[VideoCard ${video.id}] isActive changed to ${isActive}, player exists: ${!!player}, shouldCreatePlayer: ${shouldCreatePlayer}`);
+    if (player && shouldCreatePlayer) {
       if (isActive) {
+        console.log(`[VideoCard ${video.id}] Playing video due to isActive change`);
         player.play();
       } else {
+        console.log(`[VideoCard ${video.id}] Pausing video due to isActive change`);
         player.pause();
       }
+    } else if (player && !shouldCreatePlayer) {
+      console.log(`[VideoCard ${video.id}] Ignoring player control - this is static content`);
+    } else {
+      console.log(`[VideoCard ${video.id}] Cannot control playback - no player available`);
     }
-  }, [isActive, player]);
+  }, [isActive, player, shouldCreatePlayer]);
 
   // Listen for time updates
   useEffect(() => {
-    if (!player) return;
+    if (!player || !shouldCreatePlayer) {
+      console.log(`[VideoCard ${video.id}] No player available for event listeners, player: ${!!player}, shouldCreatePlayer: ${shouldCreatePlayer}`);
+      return;
+    }
+    console.log(`[VideoCard ${video.id}] Setting up player event listeners`);
     // Set timeUpdateEventInterval for very frequent updates (smooth progress)
     player.timeUpdateEventInterval = 0.01;
     const onTimeUpdate = (payload: { currentTime: number }) => {
       setCurrentTime(payload.currentTime);
     };
     const onSourceLoad = (payload: { duration: number }) => {
+      console.log(`[VideoCard ${video.id}] Source loaded with duration: ${payload.duration}`);
       setDuration(payload.duration);
     };
+    const onStatusChange = (status: any) => {
+      console.log(`[VideoCard ${video.id}] Player status changed:`, status);
+    };
+    
     player.addListener('timeUpdate', onTimeUpdate);
     player.addListener('sourceLoad', onSourceLoad);
+    player.addListener('statusChange', onStatusChange);
+    
     // Set initial duration if available
     if (player.duration) {
+      console.log(`[VideoCard ${video.id}] Initial duration available: ${player.duration}`);
       setDuration(player.duration);
     }
     return () => {
+      console.log(`[VideoCard ${video.id}] Removing player event listeners`);
       player.removeListener('timeUpdate', onTimeUpdate);
       player.removeListener('sourceLoad', onSourceLoad);
+      player.removeListener('statusChange', onStatusChange);
     };
-  }, [player]);
+  }, [player, shouldCreatePlayer]);
 
   // Check if user has already liked/saved this post on mount
   React.useEffect(() => {
@@ -107,172 +143,300 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
   }, [user, video.id]);
   // Save/Unsave logic
   const savePost = async () => {
-    if (!user) return;
-    // Always check the database before saving
-    const { data: saveData } = await supabase
+    console.log(`[Interaction] Save button pressed for article ID: ${video.id}`);
+    if (!user) {
+      console.error('[Interaction] SAVE CANCELED: User not authenticated.');
+      return;
+    }
+    console.log(`[Interaction] User authenticated with ID: ${user.id}. Checking for existing save.`);
+
+    // Always check the database before saving to prevent race conditions
+    const { data: saveData, error: checkError } = await supabase
       .from('article_saves')
       .select('user_id, article_id')
       .eq('user_id', user.id)
       .eq('article_id', video.id)
       .maybeSingle();
+
+    if (checkError) {
+        console.error(`[Interaction] SAVE FAILED on check: ${checkError.message}`);
+        return;
+    }
+    
     if (saveData) {
+      console.log('[Interaction] Save already exists in DB. Syncing UI state.');
       setHasSaved(true);
       return;
     }
+    console.log('[Interaction] No existing save found. Proceeding to save post.');
+    
     setHasSaved(true);
     setSaves((prev) => prev + 1);
+    
     // Add entry to article_saves table
     const { error: insertError } = await supabase
       .from('article_saves')
       .insert({ user_id: user.id, article_id: video.id });
+
     if (insertError) {
+      console.error(`[Interaction] SAVE FAILED on insert: ${insertError.message}`);
       setHasSaved(false);
       setSaves((prev) => prev - 1);
       return;
     }
+    console.log('[Interaction] Insert into article_saves successful.');
+    
     // Update saves count in articles table
+    const newSavesCount = saves + 1; // Stale state can be an issue here
+    console.log(`[Interaction] Updating 'articles' table for id ${video.id} with saves_count: ${newSavesCount}. Current 'saves' state is ${saves}.`);
     const { error: updateError } = await supabase
       .from('articles')
-      .update({ saves_count: saves + 1 })
+      .update({ saves_count: newSavesCount })
       .eq('id', video.id);
+
     if (updateError) {
+      console.error(`[Interaction] SAVE FAILED on update: ${updateError.message}`);
+      console.error('[Interaction] This is likely due to missing RLS UPDATE policy on the "articles" table.');
       setSaves((prev) => prev - 1);
       setHasSaved(false);
+    } else {
+        console.log('[Interaction] Update of articles table successful.');
     }
   };
 
   const unsavePost = async () => {
-    if (!user) return;
+    console.log(`[Interaction] Unsave button pressed for article ID: ${video.id}`);
+    if (!user) {
+      console.error('[Interaction] UNSAVE CANCELED: User not authenticated.');
+      return;
+    }
+    console.log(`[Interaction] User authenticated with ID: ${user.id}. Checking for existing save.`);
+    
     // Always check the database before unsaving
-    const { data: saveData } = await supabase
+    const { data: saveData, error: checkError } = await supabase
       .from('article_saves')
       .select('user_id, article_id')
       .eq('user_id', user.id)
       .eq('article_id', video.id)
       .maybeSingle();
+
+    if (checkError) {
+        console.error(`[Interaction] UNSAVE FAILED on check: ${checkError.message}`);
+        return;
+    }
+
     if (!saveData) {
+      console.log('[Interaction] Save does not exist in DB. Syncing UI state.');
       setHasSaved(false);
       return;
     }
+    console.log('[Interaction] Existing save found. Proceeding to unsave post.');
+    
     setHasSaved(false);
     setSaves((prev) => Math.max(prev - 1, 0));
+    
     // Remove entry from article_saves table
     const { error: deleteError } = await supabase
       .from('article_saves')
       .delete()
       .eq('user_id', user.id)
       .eq('article_id', video.id);
+
     if (deleteError) {
+      console.error(`[Interaction] UNSAVE FAILED on delete: ${deleteError.message}`);
       setHasSaved(true);
       setSaves((prev) => prev + 1);
       return;
     }
+    console.log('[Interaction] Delete from article_saves successful.');
+    
     // Decrement saves count in articles table
+    const newSavesCount = Math.max(saves - 1, 0); // Stale state can be an issue here
+    console.log(`[Interaction] Updating 'articles' table for id ${video.id} with saves_count: ${newSavesCount}. Current 'saves' state is ${saves}.`);
     const { error: updateError } = await supabase
       .from('articles')
-      .update({ saves_count: Math.max(saves - 1, 0) })
+      .update({ saves_count: newSavesCount })
       .eq('id', video.id);
+
     if (updateError) {
+      console.error(`[Interaction] UNSAVE FAILED on update: ${updateError.message}`);
+      console.error('[Interaction] This is likely due to missing RLS UPDATE policy on the "articles" table.');
       setSaves((prev) => prev + 1);
       setHasSaved(true);
+    } else {
+        console.log('[Interaction] Update of articles table successful.');
     }
   };
 
   useEffect(() => {
     let isMounted = true;
     const getSignedUrl = async () => {
-      if (video.video_url) {
-        const { data, error } = await supabase.storage
-          .from('videos')
-          .createSignedUrl(video.video_url, 3600); // 1 hour expiry
-        if (isMounted) {
-          if (data && data.signedUrl) {
-            setSignedUrl(data.signedUrl);
+      console.log(`[VideoCard ${video.id}] Getting signed URL for video_url: ${video.video_url}, shouldCreatePlayer: ${shouldCreatePlayer}`);
+      if (video.video_url && shouldCreatePlayer) {
+        try {
+          const { data, error } = await supabase.storage
+            .from('videos')
+            .createSignedUrl(video.video_url, 3600); // 1 hour expiry
+          
+          console.log(`[VideoCard ${video.id}] Signed URL response - error: ${error?.message || 'none'}, signedUrl exists: ${!!(data?.signedUrl)}`);
+          
+          if (isMounted) {
+            if (data && data.signedUrl) {
+              console.log(`[VideoCard ${video.id}] Setting signed URL: ${data.signedUrl.substring(0, 100)}...`);
+              setSignedUrl(data.signedUrl);
+            } else {
+              console.log(`[VideoCard ${video.id}] No signed URL available, setting to null`);
+              setSignedUrl(null);
+            }
           } else {
+            console.log(`[VideoCard ${video.id}] Component unmounted, ignoring signed URL response`);
+          }
+        } catch (err) {
+          console.error(`[VideoCard ${video.id}] Error getting signed URL:`, err);
+          if (isMounted) {
             setSignedUrl(null);
           }
         }
       } else {
+        console.log(`[VideoCard ${video.id}] No video_url provided, setting signed URL to null`);
         setSignedUrl(null);
       }
     };
     getSignedUrl();
-    return () => { isMounted = false; };
-  }, [video.video_url]);
+    return () => { 
+      console.log(`[VideoCard ${video.id}] Component unmounting`);
+      isMounted = false; 
+    };
+  }, [video.video_url, shouldCreatePlayer]);
 
   const likePost = async () => {
-    if (!user) return;
-    // Always check the database before liking
-    const { data: likeData } = await supabase
+    console.log(`[Interaction] Like button pressed for article ID: ${video.id}`);
+    if (!user) {
+      console.error('[Interaction] LIKE CANCELED: User not authenticated.');
+      return;
+    }
+    console.log(`[Interaction] User authenticated with ID: ${user.id}. Checking for existing like.`);
+    
+    // Always check the database before liking to prevent race conditions
+    const { data: likeData, error: checkError } = await supabase
       .from('article_likes')
       .select('user_id, article_id')
       .eq('user_id', user.id)
       .eq('article_id', video.id)
       .maybeSingle();
+
+    if (checkError) {
+        console.error(`[Interaction] LIKE FAILED on check: ${checkError.message}`);
+        return;
+    }
+    
     if (likeData) {
+      console.log('[Interaction] Like already exists in DB. Syncing UI state.');
       setHasLiked(true);
       return;
     }
+    console.log('[Interaction] No existing like found. Proceeding to like post.');
+
     setHasLiked(true);
     setLikes((prev) => prev + 1);
+
     // Add entry to article_likes table
     const { error: insertError } = await supabase
       .from('article_likes')
       .insert({ user_id: user.id, article_id: video.id });
+
     if (insertError) {
+      console.error(`[Interaction] LIKE FAILED on insert: ${insertError.message}`);
       setHasLiked(false);
       setLikes((prev) => prev - 1);
       return;
     }
+    console.log('[Interaction] Insert into article_likes successful.');
+
     // Update likes count in articles table
+    const newLikesCount = likes + 1; // Stale state can be an issue here
+    console.log(`[Interaction] Updating 'articles' table for id ${video.id} with likes_count: ${newLikesCount}. Current 'likes' state is ${likes}.`);
     const { error: updateError } = await supabase
       .from('articles')
-      .update({ likes_count: likes + 1 })
+      .update({ likes_count: newLikesCount })
       .eq('id', video.id);
+
     if (updateError) {
+      console.error(`[Interaction] LIKE FAILED on update: ${updateError.message}`);
+      console.error('[Interaction] This is likely due to missing RLS UPDATE policy on the "articles" table.');
       setLikes((prev) => prev - 1);
       setHasLiked(false);
+    } else {
+        console.log('[Interaction] Update of articles table successful.');
     }
   };
 
   const unlikePost = async () => {
-    if (!user) return;
+    console.log(`[Interaction] Unlike button pressed for article ID: ${video.id}`);
+    if (!user) {
+      console.error('[Interaction] UNLIKE CANCELED: User not authenticated.');
+      return;
+    }
+    console.log(`[Interaction] User authenticated with ID: ${user.id}. Checking for existing like.`);
+
     // Always check the database before unliking
-    const { data: likeData } = await supabase
+    const { data: likeData, error: checkError } = await supabase
       .from('article_likes')
       .select('user_id, article_id')
       .eq('user_id', user.id)
       .eq('article_id', video.id)
       .maybeSingle();
+    
+    if (checkError) {
+        console.error(`[Interaction] UNLIKE FAILED on check: ${checkError.message}`);
+        return;
+    }
+
     if (!likeData) {
+      console.log('[Interaction] Like does not exist in DB. Syncing UI state.');
       setHasLiked(false);
       return;
     }
+    console.log('[Interaction] Existing like found. Proceeding to unlike post.');
+
     setHasLiked(false);
     setLikes((prev) => Math.max(prev - 1, 0));
+    
     // Remove entry from article_likes table
     const { error: deleteError } = await supabase
       .from('article_likes')
       .delete()
       .eq('user_id', user.id)
       .eq('article_id', video.id);
+
     if (deleteError) {
+      console.error(`[Interaction] UNLIKE FAILED on delete: ${deleteError.message}`);
       setHasLiked(true);
       setLikes((prev) => prev + 1);
       return;
     }
+    console.log('[Interaction] Delete from article_likes successful.');
+
     // Decrement likes count in articles table
+    const newLikesCount = Math.max(likes - 1, 0); // Stale state can be an issue here
+    console.log(`[Interaction] Updating 'articles' table for id ${video.id} with likes_count: ${newLikesCount}. Current 'likes' state is ${likes}.`);
     const { error: updateError } = await supabase
       .from('articles')
-      .update({ likes_count: Math.max(likes - 1, 0) })
+      .update({ likes_count: newLikesCount })
       .eq('id', video.id);
+
     if (updateError) {
+      console.error(`[Interaction] UNLIKE FAILED on update: ${updateError.message}`);
+      console.error('[Interaction] This is likely due to missing RLS UPDATE policy on the "articles" table.');
       setLikes((prev) => prev + 1);
       setHasLiked(true);
+    } else {
+        console.log('[Interaction] Update of articles table successful.');
     }
   }
 
   if (video.video_url && signedUrl) {
+    console.log(`[VideoCard ${video.id}] Rendering video player with signed URL`);
     return (
       <View style={[{ height: screenHeight }, styles.root]}>
         {/* Video Player */}
@@ -376,12 +540,15 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
       </View>
     );
   } else if (video.video_url && !signedUrl) {
+    console.log(`[VideoCard ${video.id}] Rendering loading state - has video_url but no signed URL yet`);
     return (
       <View style={[{ height: screenHeight, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }, styles.root]}>
         <Text style={{ color: '#fff' }}>Loading video...</Text>
       </View>
     );
   } else {
+    console.log(`[VideoCard ${video.id}] Rendering static content - no video_url`);
+    // Render static content for non-video types, with expandable/collapsible synopsis on text press
     // Render static content for non-video types, with expandable/collapsible synopsis on text press
     const synopsis = video.content || '';
     const title = video.title || '';
@@ -391,37 +558,85 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     return (
       <View style={[{ height: screenHeight, backgroundColor: '#101014' }, styles.root]}>
         <View style={styles.staticContentContainer}>
-          {/* Only show the visual if not expanded */}
-          {!expanded && <StaticVisual industry={video.industry} postId={video.id} />}
+          {/* Only show visual when not expanded to maintain smooth scrolling */}
+          {!expanded && (() => {
+            console.log(`[VideoCard ${video.id}] Rendering StaticVisual with industry: "${video.industry}", postId: ${video.id}, expanded: ${expanded}`);
+            return (
+              <View style={styles.visualWrapper}>
+                <StaticVisual industry={video.industry} postId={video.id} />
+              </View>
+            );
+          })()}
           <View style={[styles.staticCardContainerV3, expanded && { flex: 1, justifyContent: 'flex-start' }]}> 
             {/* Meta row (source and topic) always at the top with safe area padding */}
             <View style={{ paddingTop: topSafePadding, paddingBottom: 8 }}>
               <View style={styles.staticMetaRowV3}>
-                <Text style={styles.staticCardOwnerV3}>{source}</Text>
+                <Text style={styles.staticCardOwnerV3}>{getSiteName(source)}</Text>
                 <View style={styles.metaDot} />
                 <View style={styles.industryPillV3}>
                   <Text style={styles.industryPillTextV3}>{video.industry}</Text>
                 </View>
               </View>
             </View>
-            {/* Title below meta row */}
-            <Text style={styles.staticCardTitleV3}>{title}</Text>
-            {/* Body text, press to expand/collapse */}
-            <TouchableOpacity activeOpacity={0.8} onPress={() => setExpanded(!expanded)}>
-              <Text
-                style={styles.staticCardSynopsisV3}
-                numberOfLines={expanded ? undefined : 4}
+            {/* Title below meta row - tappable to expand/collapse */}
+            <TouchableOpacity activeOpacity={0.8} onPress={toggleExpanded}>
+              <Text 
+                style={styles.staticCardTitleV3}
+                numberOfLines={expanded ? undefined : 2}
                 ellipsizeMode="tail"
               >
-                {synopsis}
+                {title}
               </Text>
             </TouchableOpacity>
-            {/* Gap after body text in expanded view */}
-            {expanded && <View style={{ height: 24, flexShrink: 0 }} />}
-            {/* Spacer to push actions to bottom in expanded view */}
-            {expanded && <View style={{ flex: 1 }} />}
+            {/* Authors horizontal scroll view */}
+            {video.authors && video.authors.length > 0 && (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.authorsContainerStatic}
+                contentContainerStyle={styles.authorsContent}
+              >
+                {video.authors.map((author: string, index: number) => (
+                  <View key={index} style={styles.authorPillStatic}>
+                    <Text style={styles.authorTextStatic}>{author}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            {/* Conditional content rendering: ScrollView only when expanded */}
+            {expanded ? (
+              <View style={[styles.scrollableContentContainer, { flex: 1 }]}>
+                <ScrollView 
+                  showsVerticalScrollIndicator={true}
+                  style={{ flex: 1 }}
+                  nestedScrollEnabled={true}
+                >
+                  <TouchableOpacity activeOpacity={0.8} onPress={toggleExpanded}>
+                    <Text style={styles.staticCardSynopsisV3}>
+                      {synopsis}
+                    </Text>
+                  </TouchableOpacity>
+                  <View style={{ height: 24 }} />
+                </ScrollView>
+              </View>
+            ) : (
+              <View style={styles.scrollableContentContainer}>
+                <TouchableOpacity activeOpacity={0.8} onPress={toggleExpanded}>
+                  <Text
+                    style={styles.staticCardSynopsisV3}
+                    numberOfLines={4}
+                    ellipsizeMode="tail"
+                  >
+                    {synopsis}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
             {/* Like/comment/save row always at the bottom */}
-            <View style={styles.staticActionsRowV3}>
+            <View style={[
+              styles.staticActionsRowV3,
+              expanded ? styles.staticActionsRowExpanded : styles.staticActionsRowCollapsed
+            ]}>
               <View style={styles.actionBtnGroup}>
                 <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Like post, ${likes} likes`} accessibilityRole="button"  onPress={hasLiked ? unlikePost : likePost}>
                   <View style={styles.actionBtnIconCircleV3}>
@@ -655,7 +870,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#18181b',
     borderRadius: 0,
     paddingTop: 56,
-    paddingBottom: 28,
+    paddingBottom: 40, // Increased from 28 to ensure proper spacing above navbar
     paddingHorizontal: 24,
     marginHorizontal: 0,
     marginTop: -32,
@@ -744,6 +959,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 16,
   },
+  staticActionsRowCollapsed: {
+    marginBottom: 32, // Generous bottom spacing for collapsed state
+    paddingBottom: 8,
+  },
+  staticActionsRowExpanded: {
+    marginBottom: 16, // Reduced bottom spacing for expanded state
+    paddingBottom: 4,
+  },
   actionBtnIconCircleV3: {
     backgroundColor: '#23232b',
     padding: 10,
@@ -801,5 +1024,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     fontWeight: '500',
+  },
+  // Static content specific author styles
+  authorsContainerStatic: {
+    marginTop: 8,
+    marginBottom: 12,
+    maxHeight: 32,
+  },
+  authorPillStatic: {
+    backgroundColor: 'rgba(59,130,246,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  authorTextStatic: {
+    color: '#3b82f6',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  // Scrollable content container
+  scrollableContentContainer: {
+    marginBottom: 16,
+  },
+  // Visual wrapper styles
+  visualWrapper: {
+    minHeight: 200, // Ensure minimum height to prevent gaps
+  },
+  visualWrapperExpanded: {
+    height: 120, // Smaller height when expanded
+    minHeight: 120,
   },
 });

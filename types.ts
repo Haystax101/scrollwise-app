@@ -41,11 +41,12 @@ export interface Video {
   caption: string;
   source: string; // This will be the source_url from Supabase
   industry: string;
-  video_url: string; // Add this property for video playback
+  video_url?: string; // Optional video support
   likes: number;
   saves: number;
   comments: number;
   content: string; // Add content field
+  authors: string[]; // Array of author names
 }
 
 export interface SavedContentItem {
