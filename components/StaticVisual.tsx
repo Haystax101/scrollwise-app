@@ -6,14 +6,11 @@ const { width } = Dimensions.get('window');
 
 // Animation variation components
 function QuantumParticles() {
-  console.log('[QuantumParticles] Component rendering');
-  
   const primaryAnim = useRef(new Animated.Value(0)).current;
   const secondaryAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
-    console.log('[QuantumParticles] Starting animations');
     
     // Primary floating animation
     Animated.loop(
@@ -57,7 +54,6 @@ function QuantumParticles() {
     ).start();
   }, []);
 
-  console.log('[QuantumParticles] Returning animated view');
   return (
     <View style={styles.visualContainer}>
       <LinearGradient
@@ -223,15 +219,12 @@ function QuantumParticles() {
 }
 
 function SpaceCosmos() {
-  console.log('[SpaceCosmos] Component rendering');
-  
   const starAnim = useRef(new Animated.Value(0)).current;
   const nebularAnim = useRef(new Animated.Value(0)).current;
   const planetAnim = useRef(new Animated.Value(0)).current;
   const cometAnim = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
-    console.log('[SpaceCosmos] Starting animations');
     
     // Star twinkling animation
     Animated.loop(
@@ -2467,7 +2460,6 @@ const INDUSTRY_ANIMATIONS: Record<string, (() => React.ReactNode | null)[]> = {
 };
 
 export const StaticVisual = ({ industry = 'Default', postId }: { industry?: string, postId?: string | number }) => {
-  console.log(`[StaticVisual] Called with industry: "${industry}", postId: ${postId}`);
   
   // Get variations for the industry, with smart fallbacks
   let variations = INDUSTRY_ANIMATIONS[industry];
@@ -2481,9 +2473,6 @@ export const StaticVisual = ({ industry = 'Default', postId }: { industry?: stri
     );
     
     variations = industryKey ? INDUSTRY_ANIMATIONS[industryKey] : ALL_ANIMATIONS;
-    console.log(`[StaticVisual] Industry "${industry}" not found, using ${industryKey || 'all animations'} (${variations.length} variations)`);
-  } else {
-    console.log(`[StaticVisual] Industry "${industry}" has ${variations.length} variations available`);
   }
   
   const variationIndex = useMemo(() => {
@@ -2496,24 +2485,19 @@ export const StaticVisual = ({ industry = 'Default', postId }: { industry?: stri
         hash |= 0;
       }
       const index = Math.abs(hash) % variations.length;
-      console.log(`[StaticVisual] Calculated variation index ${index} for postId ${postId} (hash: ${hash})`);
       return index;
     }
     // fallback to random if no postId
     const index = Math.floor(Math.random() * variations.length);
-    console.log(`[StaticVisual] Using random variation index ${index} (no postId provided)`);
     return index;
   }, [postId, variations.length]);
   
   const VariationComponent = variations[variationIndex];
-  console.log(`[StaticVisual] Rendering variation component: ${VariationComponent?.name || 'Unknown'}`);
   
   try {
     const result = <VariationComponent />;
-    console.log(`[StaticVisual] Successfully created component for postId ${postId}`);
     return result;
   } catch (error) {
-    console.error(`[StaticVisual] Error rendering component for postId ${postId}:`, error);
     // Ultimate fallback - render QuantumParticles if anything goes wrong
     return <QuantumParticles />;
   }

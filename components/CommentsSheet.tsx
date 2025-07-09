@@ -14,7 +14,7 @@ interface CommentsSheetProps {
 interface Comment {
   id: number;
   user_id: string;
-  reel_id: number;
+  article_id: number;
   content: string;
   created_at: string;
   user_name?: string;
@@ -52,8 +52,8 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ videoId, visible, 
     setLoading(true);
     const { data, error } = await supabase
       .from('comments')
-      .select('id, user_id, reel_id, content, created_at')
-      .eq('reel_id', videoId)
+      .select('id, user_id, article_id, content, created_at')
+      .eq('article_id', videoId)
       .order('created_at', { ascending: false });
     if (error) {
       setComments([]);
@@ -69,7 +69,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ videoId, visible, 
     setSubmitting(true);
     const { error, data } = await supabase
       .from('comments')
-      .insert({ user_id: user.id, reel_id: videoId, content: input.trim() })
+      .insert({ user_id: user.id, article_id: videoId, content: input.trim() })
       .select()
       .single();
     if (!error && data) {

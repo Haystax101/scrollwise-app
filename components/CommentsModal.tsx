@@ -14,7 +14,7 @@ interface CommentsModalProps {
 interface Comment {
   id: number;
   user_id: string;
-  reel_id: number;
+  article_id: number;
   content: string;
   created_at: string;
   author_name?: string;
@@ -55,17 +55,17 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
     setLoading(true);
     const { data, error } = await supabase
       .from('comments')
-      .select('id, user_id, reel_id, content, created_at, profiles(full_name)')
-      .eq('reel_id', videoId)
+      .select('id, user_id, article_id, content, created_at')
+      .eq('article_id', videoId)
       .order('created_at', { ascending: false });
     if (error) {
       setComments([]);
       onCommentsCountChange && onCommentsCountChange(0);
     } else {
-      // Map author name from joined profiles
+      // Map author name - for now just show "User" for all non-current users
       const mapped = (data || []).map((c: any) => ({
         ...c,
-        author_name: c.profiles?.full_name || 'Unknown',
+        author_name: c.user_id === user?.id ? 'You' : 'User',
       }));
       setComments(mapped);
       onCommentsCountChange && onCommentsCountChange(mapped.length);
@@ -75,23 +75,42 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
 
   // Add comment
   const handleAddComment = async () => {
-    if (!user || !input.trim() || !videoId) return;
+    console.log('🔴 DEBUG: handleAddComment called');
+    console.log('🔴 DEBUG: user exists?', !!user);
+    console.log('🔴 DEBUG: input value:', input);
+    console.log('🔴 DEBUG: videoId:', videoId);
+    
+    if (!user || !input.trim() || !videoId) {
+      console.log('🔴 DEBUG: Early return - missing data');
+      console.log('🔴 DEBUG: user:', !!user, 'input:', !!input.trim(), 'videoId:', !!videoId);
+      return;
+    }
+    
+    console.log('🔴 DEBUG: Starting comment submission...');
     setSubmitting(true);
+    
     const { error, data } = await supabase
       .from('comments')
-      .insert({ user_id: user.id, reel_id: videoId, content: input.trim() })
-      .select('id, user_id, reel_id, content, created_at, profiles(full_name)')
+      .insert({ user_id: user.id, article_id: videoId, content: input.trim() })
+      .select('id, user_id, article_id, content, created_at')
       .single();
+      
+    console.log('🔴 DEBUG: Insert result - error:', error, 'data:', data);
+    
     if (!error && data) {
+      console.log('🔴 DEBUG: Comment inserted successfully');
       const newComment = {
         ...data,
-        author_name: data.profiles?.full_name || 'You',
+        author_name: 'You',
       };
       setComments((prev) => [newComment, ...prev]);
       setInput('');
       onCommentsCountChange && onCommentsCountChange(comments.length + 1);
-      // Update comments_count in reels table
+      // Update comments_count in articles table
       await supabase.from('articles').update({ comments_count: comments.length + 1 }).eq('id', videoId);
+      console.log('🔴 DEBUG: Comment added to state and count updated');
+    } else {
+      console.log('🔴 DEBUG: Failed to insert comment:', error);
     }
     setSubmitting(false);
   };

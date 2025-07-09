@@ -25,18 +25,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     setIsLoading(true);
     // Fetch articles from Supabase
     async function fetchArticles() {
-      console.log('🔍 MainFeed: Starting article fetch...');
-      console.log('📊 MainFeed: User selected industries:', industries);
-      
-      // First, let's check if there are ANY articles in the database
-      const { data: allArticles, error: countError } = await supabase
-        .from('articles')
-        .select('id, industry_id')
-        .limit(5);
-      
-      console.log('🗃️ MainFeed: Total articles in database (sample):', allArticles);
-      console.log('❌ MainFeed: Count error:', countError);
-      
       let query = supabase
         .from('articles')
         .select('id, type, title, content, authors, link, industry_id, likes_count, saves_count, comments_count')
@@ -45,28 +33,21 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       if (industries.length > 0) {
         // Convert industries to numbers for correct Supabase query
         const industryIds = industries.map((id) => typeof id === 'string' ? parseInt(id, 10) : id).filter((id) => !isNaN(id));
-        console.log('🏭 MainFeed: Converted industry IDs for query:', industryIds);
         query = query.in('industry_id', industryIds);
-      } else {
-        console.log('⚠️ MainFeed: No industries selected, fetching all articles');
       }
       
       const { data, error } = await query;
       
       if (error) {
-        console.error('❌ MainFeed: Error fetching articles:', error);
         setArticles([]);
       } else {
-        console.log('✅ MainFeed: Raw data from Supabase:', data);
-        console.log('📝 MainFeed: Number of articles fetched:', data?.length || 0);
-        
         // Map industry_id to industry name for display and map link to source
         const mapped = (data || []).map((article) => ({
           ...article,
           industry: industryIdToName[article.industry_id] || `Industry ${article.industry_id}`,
           source: article.link, // Use 'link' column from database
           caption: '', // No caption column in articles table, set to empty
-          video_url: null, // No video_url column in articles table  
+          video_url: undefined, // No video_url column in articles table  
           content: article.content,
           authors: article.authors || [], // Ensure authors is always an array
           likes: article.likes_count || 0,
@@ -74,7 +55,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
           comments: article.comments_count || 0,
         }));
         
-        console.log('🔄 MainFeed: Mapped articles:', mapped);
         setArticles(mapped);
       }
       setIsLoading(false);
@@ -116,10 +96,12 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   };
 
   const handleOpenComments = (articleId: number) => {
+    console.log('🔵 DEBUG: handleOpenComments called with articleId:', articleId);
     setCommentsArticleId(articleId);
   };
 
   const handleCloseComments = () => {
+    console.log('🔵 DEBUG: handleCloseComments called');
     setCommentsArticleId(null);
   };
 
