@@ -20,7 +20,7 @@ export type ExperienceLevel = 'Student' | 'Working Professional' | 'Researcher' 
 
 export interface Article {
   id: number;
-  type: 'research' | 'book' | 'news';
+  type: 'paper' | 'book' | 'article';
   title: string;
   caption: string;
   source: string; // This will be the source_url from Supabase
@@ -36,7 +36,7 @@ export interface Article {
 // Keep Video interface for backward compatibility if needed
 export interface Video {
   id: number;
-  type: 'research' | 'book' | 'news';
+  type: 'paper' | 'book' | 'article';
   title: string;
   caption: string;
   source: string; // This will be the source_url from Supabase

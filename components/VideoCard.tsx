@@ -18,10 +18,11 @@ interface VideoCardProps {
   video: VideoType;
   isActive: boolean;
   onOpenComments?: (videoId: number) => void;
+  onUserInteraction?: (articleId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => void;
 }
 
 
-export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenComments }) => {
+export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenComments, onUserInteraction }) => {
   const { user } = useAuth();
   const [likes, setLikes] = useState(video.likes);
   const [hasLiked, setHasLiked] = useState(false);
@@ -169,6 +170,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     if (updateError) {
       setSaves((prev) => prev - 1);
       setHasSaved(false);
+    } else {
+      // Notify parent component about the save interaction
+      onUserInteraction?.(video.id, 'save');
     }
   };
 
@@ -220,6 +224,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     if (updateError) {
       setSaves((prev) => prev + 1);
       setHasSaved(true);
+    } else {
+      // Notify parent component about the unsave interaction
+      onUserInteraction?.(video.id, 'unsave');
     }
   };
 
@@ -300,6 +307,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     if (updateError) {
       setLikes((prev) => prev - 1);
       setHasLiked(false);
+    } else {
+      // Notify parent component about the like interaction
+      onUserInteraction?.(video.id, 'like');
     }
   };
 
@@ -351,6 +361,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     if (updateError) {
       setLikes((prev) => prev + 1);
       setHasLiked(true);
+    } else {
+      // Notify parent component about the unlike interaction
+      onUserInteraction?.(video.id, 'unlike');
     }
   }
 
@@ -591,11 +604,11 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
 function getTypeIcon(type: string) {
   const iconProps = { size: 16, color: 'white', style: { marginRight: 4 } };
   switch (type) {
-    case 'research':
+    case 'paper':
       return <MaterialCommunityIcons name="microscope" {...iconProps} />;
     case 'book':
       return <Feather name="book-open" {...iconProps} />;
-    case 'news':
+    case 'article':
       return <MaterialCommunityIcons name="newspaper" {...iconProps} />;
     default:
       return null;

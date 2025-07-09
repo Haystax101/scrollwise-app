@@ -75,30 +75,14 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
 
   // Add comment
   const handleAddComment = async () => {
-    console.log('🔴 DEBUG: handleAddComment called');
-    console.log('🔴 DEBUG: user exists?', !!user);
-    console.log('🔴 DEBUG: input value:', input);
-    console.log('🔴 DEBUG: videoId:', videoId);
-    
-    if (!user || !input.trim() || !videoId) {
-      console.log('🔴 DEBUG: Early return - missing data');
-      console.log('🔴 DEBUG: user:', !!user, 'input:', !!input.trim(), 'videoId:', !!videoId);
-      return;
-    }
-    
-    console.log('🔴 DEBUG: Starting comment submission...');
+    if (!user || !input.trim() || !videoId) return;
     setSubmitting(true);
-    
     const { error, data } = await supabase
       .from('comments')
       .insert({ user_id: user.id, article_id: videoId, content: input.trim() })
       .select('id, user_id, article_id, content, created_at')
       .single();
-      
-    console.log('🔴 DEBUG: Insert result - error:', error, 'data:', data);
-    
     if (!error && data) {
-      console.log('🔴 DEBUG: Comment inserted successfully');
       const newComment = {
         ...data,
         author_name: 'You',
@@ -108,9 +92,6 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
       onCommentsCountChange && onCommentsCountChange(comments.length + 1);
       // Update comments_count in articles table
       await supabase.from('articles').update({ comments_count: comments.length + 1 }).eq('id', videoId);
-      console.log('🔴 DEBUG: Comment added to state and count updated');
-    } else {
-      console.log('🔴 DEBUG: Failed to insert comment:', error);
     }
     setSubmitting(false);
   };

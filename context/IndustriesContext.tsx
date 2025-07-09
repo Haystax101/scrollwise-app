@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 
 interface IndustriesContextType {
-  industries: string[];
+  industries: number[]; // Changed from string[] to number[]
   refreshIndustries: () => Promise<void>;
 }
 
@@ -14,7 +14,7 @@ const IndustriesContext = createContext<IndustriesContextType>({
 
 export const IndustriesProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const [industries, setIndustries] = useState<string[]>([]);
+  const [industries, setIndustries] = useState<number[]>([]); // Changed from string[] to number[]
 
   const fetchIndustries = async () => {
     console.log('🏭 IndustriesContext: Fetching user industries...');
@@ -32,7 +32,9 @@ export const IndustriesProvider = ({ children }: { children: ReactNode }) => {
       
       if (data && data.interests) {
         console.log('✅ IndustriesContext: User interests found:', data.interests);
-        setIndustries(data.interests);
+        // Ensure the interests are numbers
+        const industryIds = Array.isArray(data.interests) ? data.interests : [];
+        setIndustries(industryIds);
       } else {
         console.log('⚠️ IndustriesContext: No interests found, setting empty array');
         setIndustries([]);

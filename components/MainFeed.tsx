@@ -1,74 +1,133 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, Dimensions, StyleSheet, RefreshControl } from 'react-native';
 import { VideoCard } from './VideoCard';
 import type { Article } from '../types';
-import { supabase } from '../lib/supabase'; // Adjust the import based on your project structure
-import { industryIdToName } from '../lib/industryMap';
+import { FeedAlgorithm } from '../lib/feedAlgorithm';
+import { useAuth } from '../context/AuthContext';
 import { CommentsModal } from './CommentsModal';
 
 interface MainFeedProps {
-  industries: string[]; 
+  industries: number[]; // Changed from string[] to number[]
   initialArticleId?: number;
 }
 
 const { height: screenHeight } = Dimensions.get('window');
 
 export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId }) => {
+  const { user } = useAuth();
   const [currentArticleIndex, setCurrentArticleIndex] = useState(0);
   const [articles, setArticles] = useState<Article[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [commentsArticleId, setCommentsArticleId] = useState<number | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const [hasScrolledToInitial, setHasScrolledToInitial] = useState(false);
+  const feedAlgorithmRef = useRef<FeedAlgorithm | null>(null);
+  const [hasMore, setHasMore] = useState(true);
 
+  // Industries are already numbers, no conversion needed
+  const industryIds = industries;
+
+  // Initialize feed algorithm when user or industries change
   useEffect(() => {
-    setIsLoading(true);
-    // Fetch articles from Supabase
-    async function fetchArticles() {
-      let query = supabase
-        .from('articles')
-        .select('id, type, title, content, authors, link, industry_id, likes_count, saves_count, comments_count')
-        .limit(10);
-      
-      if (industries.length > 0) {
-        // Convert industries to numbers for correct Supabase query
-        const industryIds = industries.map((id) => typeof id === 'string' ? parseInt(id, 10) : id).filter((id) => !isNaN(id));
-        query = query.in('industry_id', industryIds);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        setArticles([]);
-      } else {
-        // Map industry_id to industry name for display and map link to source
-        const mapped = (data || []).map((article) => ({
-          ...article,
-          industry: industryIdToName[article.industry_id] || `Industry ${article.industry_id}`,
-          source: article.link, // Use 'link' column from database
-          caption: '', // No caption column in articles table, set to empty
-          video_url: undefined, // No video_url column in articles table  
-          content: article.content,
-          authors: article.authors || [], // Ensure authors is always an array
-          likes: article.likes_count || 0,
-          saves: article.saves_count || 0,
-          comments: article.comments_count || 0,
-        }));
-        
-        setArticles(mapped);
-      }
+    console.log('🔍 MainFeed: useEffect triggered');
+    console.log('🔍 MainFeed: user exists?', !!user);
+    console.log('🔍 MainFeed: user id:', user?.id);
+    console.log('🔍 MainFeed: industries:', industries);
+    console.log('🔍 MainFeed: industryIds:', industryIds);
+    
+    if (user && industryIds.length > 0) {
+      console.log('🔍 MainFeed: Creating FeedAlgorithm and loading initial feed');
+      feedAlgorithmRef.current = new FeedAlgorithm(user.id, industryIds);
+      loadInitialFeed();
+    } else {
+      console.log('🔍 MainFeed: Missing user or industries, not loading feed');
       setIsLoading(false);
-      setCurrentArticleIndex(0);
     }
-    fetchArticles();
-  }, [industries]);
+  }, [user, industries.join(',')]);
 
-  useEffect(() => {
-    if (initialArticleId && articles.length > 0) {
-      const idx = articles.findIndex((article) => article.id === initialArticleId);
-      if (idx !== -1) setCurrentArticleIndex(idx);
+  // Load initial feed (first 10 articles)
+  const loadInitialFeed = async () => {
+    console.log('🔍 MainFeed: loadInitialFeed called');
+    if (!feedAlgorithmRef.current) {
+      console.log('🔍 MainFeed: No feedAlgorithmRef, returning');
+      setIsLoading(false);
+      return;
     }
-  }, [initialArticleId, articles]);
+    
+    setIsLoading(true);
+    try {
+      console.log('📊 FeedAlgorithm: Loading initial feed for industries:', industryIds);
+      const newArticles = await feedAlgorithmRef.current.fetchArticles(10);
+      console.log('📊 FeedAlgorithm: Fetched', newArticles.length, 'articles');
+      console.log('📊 FeedAlgorithm: Articles:', newArticles.map(a => ({ id: a.id, title: a.title, type: a.type, industry: a.industry })));
+      
+      setArticles(newArticles);
+      setHasMore(newArticles.length === 10); // Assume there's more if we got exactly 10
+      setCurrentArticleIndex(0);
+      
+      // Handle initial article ID if provided
+      if (initialArticleId && newArticles.length > 0) {
+        const idx = newArticles.findIndex((article) => article.id === initialArticleId);
+        if (idx !== -1) {
+          setCurrentArticleIndex(idx);
+        }
+      }
+    } catch (error) {
+      console.error('📊 FeedAlgorithm: Error loading initial feed:', error);
+      setArticles([]);
+    }
+    console.log('🔍 MainFeed: Setting isLoading to false');
+    setIsLoading(false);
+  };
+
+  // Load more articles for infinite scroll
+  const loadMoreArticles = async () => {
+    if (!feedAlgorithmRef.current || isLoadingMore || !hasMore) return;
+    
+    setIsLoadingMore(true);
+    try {
+      console.log('📊 FeedAlgorithm: Loading more articles...');
+      const newArticles = await feedAlgorithmRef.current.fetchArticles(10);
+      console.log('📊 FeedAlgorithm: Fetched', newArticles.length, 'more articles');
+      
+      if (newArticles.length > 0) {
+        setArticles(prev => [...prev, ...newArticles]);
+        setHasMore(newArticles.length === 10); // If we got less than 10, probably no more
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('📊 FeedAlgorithm: Error loading more articles:', error);
+    }
+    setIsLoadingMore(false);
+  };
+
+  // Pull to refresh - reset and load fresh feed
+  const handleRefresh = async () => {
+    if (!feedAlgorithmRef.current) return;
+    
+    setIsRefreshing(true);
+    try {
+      console.log('📊 FeedAlgorithm: Refreshing feed...');
+      feedAlgorithmRef.current.reset(); // Reset algorithm state
+      const newArticles = await feedAlgorithmRef.current.fetchArticles(10);
+      console.log('📊 FeedAlgorithm: Refreshed with', newArticles.length, 'articles');
+      
+      setArticles(newArticles);
+      setHasMore(newArticles.length === 10);
+      setCurrentArticleIndex(0);
+      
+      // Scroll back to top
+      if (flatListRef.current && newArticles.length > 0) {
+        flatListRef.current.scrollToIndex({ index: 0, animated: true });
+      }
+    } catch (error) {
+      console.error('📊 FeedAlgorithm: Error refreshing feed:', error);
+    }
+    setIsRefreshing(false);
+  };
 
   // Imperatively scroll to the correct index after articles are loaded
   useEffect(() => {
@@ -85,23 +144,29 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     }
   }, [initialArticleId, articles, hasScrolledToInitial]);
 
+  // Handle viewable items change - trigger infinite scroll at 6th-7th item
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
-      setCurrentArticleIndex(viewableItems[0].index);
+      const newIndex = viewableItems[0].index;
+      setCurrentArticleIndex(newIndex);
+      
+      // Trigger infinite scroll when user reaches 6th or 7th item
+      if (newIndex >= 5 && articles.length - newIndex <= 5 && hasMore && !isLoadingMore) {
+        console.log('📊 FeedAlgorithm: Triggering infinite scroll at index', newIndex);
+        loadMoreArticles();
+      }
     }
-  }, []);
+  }, [articles.length, hasMore, isLoadingMore]);
 
   const viewabilityConfig = {
     itemVisiblePercentThreshold: 50 // Item is considered viewable when 50% visible
   };
 
   const handleOpenComments = (articleId: number) => {
-    console.log('🔵 DEBUG: handleOpenComments called with articleId:', articleId);
     setCommentsArticleId(articleId);
   };
 
   const handleCloseComments = () => {
-    console.log('🔵 DEBUG: handleCloseComments called');
     setCommentsArticleId(null);
   };
 
@@ -111,20 +176,41 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     setArticles((prev) => prev.map(article => article.id === commentsArticleId ? { ...article, comments: count } : article));
   };
 
+  // Track user interactions for the algorithm
+  const handleUserInteraction = (articleId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => {
+    if (feedAlgorithmRef.current) {
+      feedAlgorithmRef.current.updateUserInteraction(articleId, action);
+      console.log('📊 FeedAlgorithm: Updated interaction -', action, 'for article', articleId);
+    }
+  };
+
   const renderItem = ({ item, index }: { item: Article; index: number }) => (
     <View style={{ height: screenHeight }}>
       <VideoCard
         video={item}
         isActive={index === currentArticleIndex}
         onOpenComments={handleOpenComments}
+        onUserInteraction={handleUserInteraction}
       />
     </View>
   );
+
+  // Render loading footer for infinite scroll
+  const renderFooter = () => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color="#3b82f6" />
+        <Text style={styles.footerText}>Loading more articles...</Text>
+      </View>
+    );
+  };
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="white" />
+        <Text style={styles.loadingText}>Curating your personalized feed...</Text>
       </View>
     );
   }
@@ -132,7 +218,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   if (articles.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No articles available for the selected industries. Please update your preferences in Onboarding or Profile.</Text>
+        <Text style={styles.emptyText}>No articles available for the selected industries. Please update your preferences in Profile or try refreshing.</Text>
       </View>
     );
   }
@@ -154,6 +240,21 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         style={styles.list}
         accessibilityHint="Scroll vertically to read articles"
         initialScrollIndex={currentArticleIndex}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#3b82f6"
+            colors={['#3b82f6']}
+          />
+        }
+        ListFooterComponent={renderFooter}
+        onEndReachedThreshold={0.1} // Backup infinite scroll trigger
+        onEndReached={() => {
+          if (hasMore && !isLoadingMore) {
+            loadMoreArticles();
+          }
+        }}
       />
       {/* CommentsModal will be rendered here, controlled by commentsArticleId */}
       <CommentsModal
@@ -172,6 +273,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#000',
+    paddingHorizontal: 20,
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 16,
+    marginTop: 16,
+    textAlign: 'center',
   },
   emptyContainer: {
     flex: 1,
@@ -187,5 +295,15 @@ const styles = StyleSheet.create({
   },
   list: {
     backgroundColor: '#000',
+  },
+  footerLoader: {
+    padding: 20,
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  footerText: {
+    color: '#fff',
+    marginTop: 8,
+    fontSize: 14,
   },
 });
