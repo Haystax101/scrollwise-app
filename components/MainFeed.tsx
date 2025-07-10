@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Dimensions, StyleSheet, RefreshControl } from 'react-native';
 import { VideoCard } from './VideoCard';
 import type { Article } from '../types';
@@ -83,7 +83,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   };
 
   // Load more articles for infinite scroll
-  const loadMoreArticles = async () => {
+  const loadMoreArticles = useCallback(async () => {
     if (!feedAlgorithmRef.current || isLoadingMore || !hasMore) return;
     
     setIsLoadingMore(true);
@@ -102,10 +102,10 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       console.error('📊 FeedAlgorithm: Error loading more articles:', error);
     }
     setIsLoadingMore(false);
-  };
+  }, [isLoadingMore, hasMore]);
 
   // Pull to refresh - reset and load fresh feed
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     if (!feedAlgorithmRef.current) return;
     
     setIsRefreshing(true);
@@ -127,7 +127,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       console.error('📊 FeedAlgorithm: Error refreshing feed:', error);
     }
     setIsRefreshing(false);
-  };
+  }, []);
 
   // Imperatively scroll to the correct index after articles are loaded
   useEffect(() => {
@@ -144,59 +144,69 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     }
   }, [initialArticleId, articles, hasScrolledToInitial]);
 
-  // Handle viewable items change - trigger infinite scroll at 6th-7th item
+  // Handle viewable items change - optimized with fewer dependencies
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
       const newIndex = viewableItems[0].index;
       setCurrentArticleIndex(newIndex);
       
       // Trigger infinite scroll when user reaches 6th or 7th item
-      if (newIndex >= 5 && articles.length - newIndex <= 5 && hasMore && !isLoadingMore) {
-        console.log('📊 FeedAlgorithm: Triggering infinite scroll at index', newIndex);
+      if (newIndex >= 5 && newIndex <= articles.length - 5) {
         loadMoreArticles();
       }
     }
-  }, [articles.length, hasMore, isLoadingMore]);
+  }, [articles.length, loadMoreArticles]);
 
-  const viewabilityConfig = {
+  // Memoize viewability config to prevent recreation
+  const viewabilityConfig = useMemo(() => ({
     itemVisiblePercentThreshold: 50 // Item is considered viewable when 50% visible
-  };
+  }), []);
 
-  const handleOpenComments = (articleId: number) => {
+  // Memoize callbacks to prevent recreation
+  const handleOpenComments = useCallback((articleId: number) => {
     setCommentsArticleId(articleId);
-  };
+  }, []);
 
-  const handleCloseComments = () => {
+  const handleCloseComments = useCallback(() => {
     setCommentsArticleId(null);
-  };
+  }, []);
 
   // Update comment count in real time
-  const handleCommentsCountChange = (count: number) => {
+  const handleCommentsCountChange = useCallback((count: number) => {
     if (commentsArticleId == null) return;
     setArticles((prev) => prev.map(article => article.id === commentsArticleId ? { ...article, comments: count } : article));
-  };
+  }, [commentsArticleId]);
 
   // Track user interactions for the algorithm
-  const handleUserInteraction = (articleId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => {
+  const handleUserInteraction = useCallback((articleId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => {
     if (feedAlgorithmRef.current) {
       feedAlgorithmRef.current.updateUserInteraction(articleId, action);
       console.log('📊 FeedAlgorithm: Updated interaction -', action, 'for article', articleId);
     }
-  };
+  }, []);
 
-  const renderItem = ({ item, index }: { item: Article; index: number }) => (
-    <View style={{ height: screenHeight }}>
-      <VideoCard
-        video={item}
-        isActive={index === currentArticleIndex}
-        onOpenComments={handleOpenComments}
-        onUserInteraction={handleUserInteraction}
-      />
-    </View>
-  );
+  // Memoized render item function - removes unnecessary View wrapper
+  const renderItem = useCallback(({ item, index }: { item: Article; index: number }) => (
+    <VideoCard
+      video={item}
+      isActive={index === currentArticleIndex}
+      onOpenComments={handleOpenComments}
+      onUserInteraction={handleUserInteraction}
+    />
+  ), [currentArticleIndex, handleOpenComments, handleUserInteraction]);
+
+  // Memoized key extractor
+  const keyExtractor = useCallback((item: Article) => item.id.toString(), []);
+
+  // Memoized getItemLayout for performance optimization
+  const getItemLayout = useCallback((_data: any, index: number) => ({
+    length: screenHeight,
+    offset: screenHeight * index,
+    index
+  }), []);
 
   // Render loading footer for infinite scroll
-  const renderFooter = () => {
+  const renderFooter = useCallback(() => {
     if (!isLoadingMore) return null;
     return (
       <View style={styles.footerLoader}>
@@ -204,7 +214,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         <Text style={styles.footerText}>Loading more articles...</Text>
       </View>
     );
-  };
+  }, [isLoadingMore]);
 
   if (isLoading) {
     return (
@@ -229,14 +239,12 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         ref={flatListRef}
         data={articles}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={keyExtractor}
         pagingEnabled // This creates the reel effect
         showsVerticalScrollIndicator={false}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
-        getItemLayout={(_data, index) => (
-          {length: screenHeight, offset: screenHeight * index, index}
-        )}
+        getItemLayout={getItemLayout}
         style={styles.list}
         accessibilityHint="Scroll vertically to read articles"
         initialScrollIndex={currentArticleIndex}
@@ -250,11 +258,14 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         }
         ListFooterComponent={renderFooter}
         onEndReachedThreshold={0.1} // Backup infinite scroll trigger
-        onEndReached={() => {
-          if (hasMore && !isLoadingMore) {
-            loadMoreArticles();
-          }
-        }}
+        onEndReached={loadMoreArticles}
+        // Performance optimization props
+        removeClippedSubviews={true} // Remove off-screen views to free up resources
+        maxToRenderPerBatch={5} // Reduce batch size for smoother scrolling
+        updateCellsBatchingPeriod={100} // Increase batching period for better responsiveness
+        initialNumToRender={3} // Only render 3 items initially to improve startup time
+        windowSize={10} // Reduce window size to save memory while maintaining smooth scrolling
+        legacyImplementation={false} // Use modern VirtualizedList implementation
       />
       {/* CommentsModal will be rendered here, controlled by commentsArticleId */}
       <CommentsModal

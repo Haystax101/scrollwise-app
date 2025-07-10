@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Linking, Image, Platform, ScrollView } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -8,10 +8,7 @@ import { StaticVisual } from './StaticVisual';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
-const { height: windowHeight } = Dimensions.get('window');
-// Height of the bottom navbar (Header) in px, must match styles.navRow height in Header.tsx
-const NAVBAR_HEIGHT = 84;
-const screenHeight = windowHeight - NAVBAR_HEIGHT;
+const { height: screenHeight } = Dimensions.get('window');
 
 
 interface VideoCardProps {
@@ -21,25 +18,58 @@ interface VideoCardProps {
   onUserInteraction?: (articleId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => void;
 }
 
+// Memoize helper functions to prevent recreation
+const getTypeIcon = React.memo((type: string) => {
+  const iconProps = { size: 16, color: 'white', style: { marginRight: 4 } };
+  switch (type) {
+    case 'paper':
+      return <MaterialCommunityIcons name="microscope" {...iconProps} />;
+    case 'book':
+      return <Feather name="book-open" {...iconProps} />;
+    case 'article':
+      return <MaterialCommunityIcons name="newspaper" {...iconProps} />;
+    default:
+      return null;
+  }
+});
 
-export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenComments, onUserInteraction }) => {
+const getSiteName = (url: string): string => {
+  try {
+    const { hostname } = new URL(url);
+    // Remove www. if present
+    return hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+};
+
+const formatTime = (seconds: number): string => {
+  if (!isFinite(seconds)) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
+export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive, onOpenComments, onUserInteraction }) => {
   const { user } = useAuth();
   const [likes, setLikes] = useState(video.likes);
   const [hasLiked, setHasLiked] = useState(false);
   const [saves, setSaves] = useState(video.saves);
   const [hasSaved, setHasSaved] = useState(false);
-  const [expanded, setExpanded] = React.useState(false);
-
-  const toggleExpanded = () => {
-    setExpanded(!expanded);
-  };
+  const [expanded, setExpanded] = useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // Only create player for videos that actually have video_url
-  const shouldCreatePlayer = !!video.video_url;
+  // Memoize expensive computations
+  const shouldCreatePlayer = useMemo(() => !!video.video_url, [video.video_url]);
+  
+  // Memoize toggle function to prevent recreation
+  const toggleExpanded = useCallback(() => {
+    setExpanded(!expanded);
+  }, [expanded]);
 
+  // Only create player for videos that actually have video_url
   const player = useVideoPlayer(
     shouldCreatePlayer && signedUrl ? { uri: signedUrl } : null, // Only pass URI if we should have a player AND have signed URL
     (player) => {
@@ -67,6 +97,19 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     }
   }, [isActive, player, shouldCreatePlayer]);
 
+  // Listen for time updates - memoized handlers
+  const handleTimeUpdate = useCallback((payload: { currentTime: number }) => {
+    setCurrentTime(payload.currentTime);
+  }, []);
+
+  const handleSourceLoad = useCallback((payload: { duration: number }) => {
+    setDuration(payload.duration);
+  }, []);
+
+  const handleStatusChange = useCallback((status: any) => {
+    // Status change handler
+  }, []);
+
   // Listen for time updates
   useEffect(() => {
     if (!player || !shouldCreatePlayer) {
@@ -74,60 +117,58 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     }
     // Set timeUpdateEventInterval for very frequent updates (smooth progress)
     player.timeUpdateEventInterval = 0.01;
-    const onTimeUpdate = (payload: { currentTime: number }) => {
-      setCurrentTime(payload.currentTime);
-    };
-    const onSourceLoad = (payload: { duration: number }) => {
-      setDuration(payload.duration);
-    };
-    const onStatusChange = (status: any) => {
-      // Status change handler
-    };
     
-    player.addListener('timeUpdate', onTimeUpdate);
-    player.addListener('sourceLoad', onSourceLoad);
-    player.addListener('statusChange', onStatusChange);
+    player.addListener('timeUpdate', handleTimeUpdate);
+    player.addListener('sourceLoad', handleSourceLoad);
+    player.addListener('statusChange', handleStatusChange);
     
     // Set initial duration if available
     if (player.duration) {
       setDuration(player.duration);
     }
     return () => {
-      player.removeListener('timeUpdate', onTimeUpdate);
-      player.removeListener('sourceLoad', onSourceLoad);
-      player.removeListener('statusChange', onStatusChange);
+      player.removeListener('timeUpdate', handleTimeUpdate);
+      player.removeListener('sourceLoad', handleSourceLoad);
+      player.removeListener('statusChange', handleStatusChange);
     };
-  }, [player, shouldCreatePlayer]);
+  }, [player, shouldCreatePlayer, handleTimeUpdate, handleSourceLoad, handleStatusChange]);
+
+  // Memoize the initial like/save check to prevent unnecessary re-runs
+  const checkInitialState = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      // Run both queries in parallel for better performance
+      const [likeResult, saveResult] = await Promise.all([
+        supabase
+          .from('article_likes')
+          .select('user_id, article_id')
+          .eq('user_id', user.id)
+          .eq('article_id', video.id)
+          .maybeSingle(),
+        supabase
+          .from('article_saves')
+          .select('user_id, article_id')
+          .eq('user_id', user.id)
+          .eq('article_id', video.id)
+          .maybeSingle()
+      ]);
+
+      setHasLiked(!!likeResult.data);
+      setHasSaved(!!saveResult.data);
+    } catch (error) {
+      console.error('Error checking initial like/save state:', error);
+    }
+  }, [user?.id, video.id]);
 
   // Check if user has already liked/saved this post on mount
-  React.useEffect(() => {
-    const checkLikedAndSaved = async () => {
-      if (!user) return;
-      // Like check
-      const { data: likeData } = await supabase
-        .from('article_likes')
-        .select('user_id, article_id')
-        .eq('user_id', user.id)
-        .eq('article_id', video.id)
-        .maybeSingle();
-      setHasLiked(!!likeData);
-      // Save check
-      const { data: saveData } = await supabase
-        .from('article_saves')
-        .select('user_id, article_id')
-        .eq('user_id', user.id)
-        .eq('article_id', video.id)
-        .maybeSingle();
-      setHasSaved(!!saveData);
-    };
-    checkLikedAndSaved();
-  }, [user, video.id]);
+  useEffect(() => {
+    checkInitialState();
+  }, [checkInitialState]);
 
-  // Save/Unsave logic
-  const savePost = async () => {
-    if (!user) {
-      return;
-    }
+  // Memoized interaction handlers
+  const savePost = useCallback(async () => {
+    if (!user) return;
 
     // Always check the database before saving to prevent race conditions
     const { data: saveData, error: checkError } = await supabase
@@ -137,9 +178,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
       .eq('article_id', video.id)
       .maybeSingle();
 
-    if (checkError) {
-        return;
-    }
+    if (checkError) return;
     
     if (saveData) {
       setHasSaved(true);
@@ -174,12 +213,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
       // Notify parent component about the save interaction
       onUserInteraction?.(video.id, 'save');
     }
-  };
+  }, [user, video.id, saves, onUserInteraction]);
 
-  const unsavePost = async () => {
-    if (!user) {
-      return;
-    }
+  const unsavePost = useCallback(async () => {
+    if (!user) return;
     
     // Always check the database before unsaving
     const { data: saveData, error: checkError } = await supabase
@@ -189,9 +226,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
       .eq('article_id', video.id)
       .maybeSingle();
 
-    if (checkError) {
-        return;
-    }
+    if (checkError) return;
 
     if (!saveData) {
       setHasSaved(false);
@@ -228,8 +263,9 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
       // Notify parent component about the unsave interaction
       onUserInteraction?.(video.id, 'unsave');
     }
-  };
+  }, [user, video.id, saves, onUserInteraction]);
 
+  // Get signed URL with proper cleanup and memoization
   useEffect(() => {
     let isMounted = true;
     const getSignedUrl = async () => {
@@ -261,10 +297,8 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     };
   }, [video.video_url, shouldCreatePlayer]);
 
-  const likePost = async () => {
-    if (!user) {
-      return;
-    }
+  const likePost = useCallback(async () => {
+    if (!user) return;
     
     // Always check the database before liking to prevent race conditions
     const { data: likeData, error: checkError } = await supabase
@@ -274,9 +308,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
       .eq('article_id', video.id)
       .maybeSingle();
 
-    if (checkError) {
-        return;
-    }
+    if (checkError) return;
     
     if (likeData) {
       setHasLiked(true);
@@ -311,12 +343,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
       // Notify parent component about the like interaction
       onUserInteraction?.(video.id, 'like');
     }
-  };
+  }, [user, video.id, likes, onUserInteraction]);
 
-  const unlikePost = async () => {
-    if (!user) {
-      return;
-    }
+  const unlikePost = useCallback(async () => {
+    if (!user) return;
 
     // Always check the database before unliking
     const { data: likeData, error: checkError } = await supabase
@@ -326,9 +356,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
       .eq('article_id', video.id)
       .maybeSingle();
     
-    if (checkError) {
-        return;
-    }
+    if (checkError) return;
 
     if (!likeData) {
       setHasLiked(false);
@@ -365,7 +393,47 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
       // Notify parent component about the unlike interaction
       onUserInteraction?.(video.id, 'unlike');
     }
-  }
+  }, [user, video.id, likes, onUserInteraction]);
+
+  // Memoize handlers to prevent recreation
+  const handleLikePress = useCallback(() => {
+    hasLiked ? unlikePost() : likePost();
+  }, [hasLiked, likePost, unlikePost]);
+
+  const handleSavePress = useCallback(() => {
+    hasSaved ? unsavePost() : savePost();
+  }, [hasSaved, savePost, unsavePost]);
+
+  const handleCommentsPress = useCallback(() => {
+    onOpenComments?.(video.id);
+  }, [onOpenComments, video.id]);
+
+  const handleReadMorePress = useCallback(() => {
+    if (video.source) {
+      Linking.openURL(video.source);
+    }
+  }, [video.source]);
+
+  // Memoize expensive computations for static content
+  const staticContentData = useMemo(() => ({
+    synopsis: video.content || '',
+    title: video.title || '',
+    source: video.source || '',
+    topSafePadding: Platform.OS === 'ios' ? 32 : 20, // Reduced from 44/24 for more consistent spacing
+    siteName: getSiteName(video.source || ''),
+    progressPercentage: duration > 0 ? (currentTime / duration) * 100 : 0
+  }), [video.content, video.title, video.source, currentTime, duration]);
+
+  // Memoize the rendered authors to prevent recreation
+  const renderedAuthors = useMemo(() => {
+    if (!video.authors || video.authors.length === 0) return null;
+    
+    return video.authors.map((author, index) => (
+      <View key={index} style={video.video_url ? styles.authorPill : styles.authorPillStatic}>
+        <Text style={video.video_url ? styles.authorText : styles.authorTextStatic}>{author}</Text>
+      </View>
+    ));
+  }, [video.authors, video.video_url]);
 
   if (video.video_url && signedUrl) {
     return (
@@ -394,23 +462,19 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
             <View style={styles.titleBlock}>
               <Text style={styles.title}>{video.title}</Text>
               {/* Authors horizontal scroll view */}
-              {video.authors && video.authors.length > 0 && (
+              {renderedAuthors && (
                 <ScrollView 
                   horizontal 
                   showsHorizontalScrollIndicator={false}
                   style={styles.authorsContainer}
                   contentContainerStyle={styles.authorsContent}
                 >
-                  {video.authors.map((author, index) => (
-                    <View key={index} style={styles.authorPill}>
-                      <Text style={styles.authorText}>{author}</Text>
-                    </View>
-                  ))}
+                  {renderedAuthors}
                 </ScrollView>
               )}
               <Text style={styles.caption}>{video.caption}</Text>
               <View style={styles.metaRow}>
-                <Text style={styles.metaSourceSite}>{getSiteName(video.source)}</Text>
+                <Text style={styles.metaSourceSite}>{staticContentData.siteName}</Text>
                 <View style={styles.metaDot} />
                 <View style={styles.industryPill}>
                   <Text style={styles.industryPillText}>{video.industry}</Text>
@@ -422,7 +486,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
               <View 
                 style={[
                   styles.progressBarFill, 
-                  { width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }
+                  { width: `${staticContentData.progressPercentage}%` }
                 ]} 
               />
             </View>
@@ -437,7 +501,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
                   style={styles.actionBtn}
                   accessibilityLabel={`Like video, ${likes} likes`}
                   accessibilityRole="button"
-                  onPress={hasLiked ? unlikePost : likePost}
+                  onPress={handleLikePress}
                 >
                   <View style={styles.actionBtnIconCircle}>
                     <FontAwesome name={hasLiked ? 'heart' : 'heart-o'} size={22} color={hasLiked ? '#3b82f6' : 'white'} />
@@ -448,21 +512,31 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
                   style={styles.actionBtn}
                   accessibilityLabel={`Save video, ${saves} saves`}
                   accessibilityRole="button"
-                  onPress={hasSaved ? unsavePost : savePost}
+                  onPress={handleSavePress}
                 >
                   <View style={styles.actionBtnIconCircle}>
                     <FontAwesome name={hasSaved ? 'bookmark' : 'bookmark-o'} size={22} color={hasSaved ? '#3b82f6' : 'white'} />
                   </View>
                   <Text style={styles.actionBtnCount}>{saves}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Comment on video, ${video.comments} comments`} accessibilityRole="button" onPress={() => onOpenComments && onOpenComments(video.id)}>
+                <TouchableOpacity 
+                  style={styles.actionBtn} 
+                  accessibilityLabel={`Comment on video, ${video.comments} comments`} 
+                  accessibilityRole="button" 
+                  onPress={handleCommentsPress}
+                >
                   <View style={styles.actionBtnIconCircle}>
                     <Feather name="message-circle" size={22} color="white" />
                   </View>
                   <Text style={styles.actionBtnCount}>{video.comments}</Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.readMoreBtn} accessibilityLabel="Read more about this video" accessibilityRole="button" onPress={() => video.source && Linking.openURL(video.source)}>
+              <TouchableOpacity 
+                style={styles.readMoreBtn} 
+                accessibilityLabel="Read more about this video" 
+                accessibilityRole="button" 
+                onPress={handleReadMorePress}
+              >
                 <Text style={styles.readMoreBtnText}>Read More</Text>
               </TouchableOpacity>
             </View>
@@ -478,28 +552,20 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
     );
   } else {
     // Render static content for non-video types, with expandable/collapsible synopsis on text press
-    // Render static content for non-video types, with expandable/collapsible synopsis on text press
-    const synopsis = video.content || '';
-    const title = video.title || '';
-    const source = video.source || '';
-    // Add safe area padding for notch
-    const topSafePadding = Platform.OS === 'ios' ? 44 : 24;
     return (
       <View style={[{ height: screenHeight, backgroundColor: '#101014' }, styles.root]}>
         <View style={styles.staticContentContainer}>
           {/* Only show visual when not expanded to maintain smooth scrolling */}
-          {!expanded && (() => {
-            return (
-              <View style={styles.visualWrapper}>
-                <StaticVisual industry={video.industry} postId={video.id} />
-              </View>
-            );
-          })()}
+          {!expanded && (
+            <View style={styles.visualWrapper}>
+              <StaticVisual industry={video.industry} postId={video.id} />
+            </View>
+          )}
           <View style={[styles.staticCardContainerV3, expanded && { flex: 1, justifyContent: 'flex-start' }]}> 
             {/* Meta row (source and topic) always at the top with safe area padding */}
-            <View style={{ paddingTop: topSafePadding, paddingBottom: 8 }}>
+            <View style={{ paddingTop: staticContentData.topSafePadding, paddingBottom: 4 }}>
               <View style={styles.staticMetaRowV3}>
-                <Text style={styles.staticCardOwnerV3}>{getSiteName(source)}</Text>
+                <Text style={styles.staticCardOwnerV3}>{staticContentData.siteName}</Text>
                 <View style={styles.metaDot} />
                 <View style={styles.industryPillV3}>
                   <Text style={styles.industryPillTextV3}>{video.industry}</Text>
@@ -509,26 +575,26 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
             {/* Title below meta row - tappable to expand/collapse */}
             <TouchableOpacity activeOpacity={0.8} onPress={toggleExpanded}>
               <Text 
-                style={styles.staticCardTitleV3}
+                style={[
+                  styles.staticCardTitleV3,
+                  // Adjust marginBottom when no authors to maintain consistent spacing
+                  !renderedAuthors && { marginBottom: 8 }
+                ]}
                 numberOfLines={expanded ? undefined : 2}
                 ellipsizeMode="tail"
               >
-                {title}
+                {staticContentData.title}
               </Text>
             </TouchableOpacity>
             {/* Authors horizontal scroll view */}
-            {video.authors && video.authors.length > 0 && (
+            {renderedAuthors && (
               <ScrollView 
                 horizontal 
                 showsHorizontalScrollIndicator={false}
                 style={styles.authorsContainerStatic}
                 contentContainerStyle={styles.authorsContent}
               >
-                {video.authors.map((author: string, index: number) => (
-                  <View key={index} style={styles.authorPillStatic}>
-                    <Text style={styles.authorTextStatic}>{author}</Text>
-                  </View>
-                ))}
+                {renderedAuthors}
               </ScrollView>
             )}
             {/* Conditional content rendering: ScrollView only when expanded */}
@@ -541,7 +607,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
                 >
                   <TouchableOpacity activeOpacity={0.8} onPress={toggleExpanded}>
                     <Text style={styles.staticCardSynopsisV3}>
-                      {synopsis}
+                      {staticContentData.synopsis}
                     </Text>
                   </TouchableOpacity>
                   <View style={{ height: 24 }} />
@@ -552,10 +618,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
                 <TouchableOpacity activeOpacity={0.8} onPress={toggleExpanded}>
                   <Text
                     style={styles.staticCardSynopsisV3}
-                    numberOfLines={4}
+                    numberOfLines={renderedAuthors ? 4 : 6} // Show more lines when no authors
                     ellipsizeMode="tail"
                   >
-                    {synopsis}
+                    {staticContentData.synopsis}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -566,7 +632,12 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
               expanded ? styles.staticActionsRowExpanded : styles.staticActionsRowCollapsed
             ]}>
               <View style={styles.actionBtnGroup}>
-                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Like post, ${likes} likes`} accessibilityRole="button"  onPress={hasLiked ? unlikePost : likePost}>
+                <TouchableOpacity 
+                  style={styles.actionBtn} 
+                  accessibilityLabel={`Like post, ${likes} likes`} 
+                  accessibilityRole="button"  
+                  onPress={handleLikePress}
+                >
                   <View style={styles.actionBtnIconCircleV3}>
                     <FontAwesome name={hasLiked ? 'heart' : 'heart-o'} size={22} color={hasLiked ? '#3b82f6' : '#3b82f6'} />
                   </View>
@@ -576,21 +647,31 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
                   style={styles.actionBtn}
                   accessibilityLabel={`Save post, ${saves} saves`}
                   accessibilityRole="button"
-                  onPress={hasSaved ? unsavePost : savePost}
+                  onPress={handleSavePress}
                 >
                   <View style={styles.actionBtnIconCircleV3}>
                     <FontAwesome name={hasSaved ? 'bookmark' : 'bookmark-o'} size={22} color={hasSaved ? '#3b82f6' : '#3b82f6'} />
                   </View>
                   <Text style={styles.actionBtnCountV3}>{saves}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn} accessibilityLabel={`Comment on post, ${video.comments} comments`} accessibilityRole="button" onPress={() => onOpenComments && onOpenComments(video.id)}>
+                <TouchableOpacity 
+                  style={styles.actionBtn} 
+                  accessibilityLabel={`Comment on post, ${video.comments} comments`} 
+                  accessibilityRole="button" 
+                  onPress={handleCommentsPress}
+                >
                   <View style={styles.actionBtnIconCircleV3}>
                     <Feather name="message-circle" size={22} color="#3b82f6" />
                   </View>
                   <Text style={styles.actionBtnCountV3}>{video.comments}</Text>
                 </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.readMoreBtnV3} accessibilityLabel="Read more about this post" accessibilityRole="button" onPress={() => video.source && Linking.openURL(video.source)}>
+              <TouchableOpacity 
+                style={styles.readMoreBtnV3} 
+                accessibilityLabel="Read more about this post" 
+                accessibilityRole="button" 
+                onPress={handleReadMorePress}
+              >
                 <Text style={styles.readMoreBtnTextV3}>Read More</Text>
               </TouchableOpacity>
             </View>
@@ -599,38 +680,21 @@ export const VideoCard: React.FC<VideoCardProps> = ({ video, isActive, onOpenCom
       </View>
     );
   }
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison function for React.memo
+  // Only re-render if critical props actually changed
+  return (
+    prevProps.video.id === nextProps.video.id &&
+    prevProps.isActive === nextProps.isActive &&
+    prevProps.video.likes === nextProps.video.likes &&
+    prevProps.video.saves === nextProps.video.saves &&
+    prevProps.video.comments === nextProps.video.comments &&
+    prevProps.onOpenComments === nextProps.onOpenComments &&
+    prevProps.onUserInteraction === nextProps.onUserInteraction
+  );
+});
 
-function getTypeIcon(type: string) {
-  const iconProps = { size: 16, color: 'white', style: { marginRight: 4 } };
-  switch (type) {
-    case 'paper':
-      return <MaterialCommunityIcons name="microscope" {...iconProps} />;
-    case 'book':
-      return <Feather name="book-open" {...iconProps} />;
-    case 'article':
-      return <MaterialCommunityIcons name="newspaper" {...iconProps} />;
-    default:
-      return null;
-  }
-}
-
-function getSiteName(url: string) {
-  try {
-    const { hostname } = new URL(url);
-    // Remove www. if present
-    return hostname.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
-}
-
-function formatTime(seconds: number) {
-  if (!isFinite(seconds)) return '0:00';
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
+VideoCard.displayName = 'VideoCard';
 
 const styles = StyleSheet.create({
   root: {
@@ -677,7 +741,7 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   bottomContent: {
-    paddingBottom: 25,
+    paddingBottom: 45, // Increased from 25 to raise action row above bottom nav
     paddingHorizontal: 0, // ensure no extra horizontal padding
   },
   titleBlock: {
@@ -831,7 +895,7 @@ const styles = StyleSheet.create({
   staticMetaRowV3: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 6, // Reduced from 10 for more consistent spacing
   },
   staticCardOwnerV3: {
     color: '#fff',
@@ -888,11 +952,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   staticActionsRowCollapsed: {
-    marginBottom: 32, // Generous bottom spacing for collapsed state
+    marginBottom: 50, // Increased from 32 to raise action row above bottom nav
     paddingBottom: 8,
   },
   staticActionsRowExpanded: {
-    marginBottom: 16, // Reduced bottom spacing for expanded state
+    marginBottom: 50, // Increased to match collapsed state for consistent clearance above nav
     paddingBottom: 4,
   },
   actionBtnIconCircleV3: {
