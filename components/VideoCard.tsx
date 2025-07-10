@@ -7,6 +7,7 @@ import type { Video as VideoType } from '../types';
 import { StaticVisual } from './StaticVisual';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -52,6 +53,7 @@ const formatTime = (seconds: number): string => {
 
 export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive, onOpenComments, onUserInteraction }) => {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [likes, setLikes] = useState(video.likes);
   const [hasLiked, setHasLiked] = useState(false);
   const [saves, setSaves] = useState(video.saves);
@@ -414,6 +416,102 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
     }
   }, [video.source]);
 
+  // Dynamic styles that respect theme
+  const dynamicStyles = StyleSheet.create({
+    root: {
+      backgroundColor: colors.background,
+    },
+    staticCardContainerV3: {
+      backgroundColor: colors.card,
+      borderRadius: 0,
+      paddingTop: 56,
+      paddingBottom: 40,
+      paddingHorizontal: 24,
+      marginHorizontal: 0,
+      marginTop: -32,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.18,
+      shadowRadius: 16,
+      elevation: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    staticCardTitleV3: {
+      color: colors.text,
+      fontSize: 22,
+      fontWeight: 'bold',
+      paddingVertical: 6,
+      alignSelf: 'flex-start',
+      marginBottom: 14,
+    },
+    staticCardSynopsisV3: {
+      color: colors.text,
+      fontSize: 17,
+      marginBottom: 14,
+      textAlign: 'left',
+      lineHeight: 22,
+    },
+    staticCardOwnerV3: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '600',
+      marginRight: 8,
+    },
+    staticAuthorsTextV3: {
+      color: colors.text,
+      fontSize: 14,
+      marginLeft: 10,
+    },
+    actionBtnIconCircleV3: {
+      backgroundColor: colors.surface,
+      padding: 10,
+      borderRadius: 999,
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    scrollableContentContainer: {
+      paddingBottom: 16,
+    },
+    authorTextStatic: {
+      color: '#3b82f6',
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    authorPillStatic: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      marginRight: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    metaDot: {
+      height: 4,
+      width: 4,
+      borderRadius: 2,
+      backgroundColor: colors.textTertiary,
+      marginHorizontal: 8,
+    },
+    industryPillV3: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 999,
+    },
+    industryPillTextV3: {
+      color: colors.surface,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+  });
+
   // Memoize expensive computations for static content
   const staticContentData = useMemo(() => ({
     synopsis: video.content || '',
@@ -429,8 +527,8 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
     if (!video.authors || video.authors.length === 0) return null;
     
     return video.authors.map((author, index) => (
-      <View key={index} style={video.video_url ? styles.authorPill : styles.authorPillStatic}>
-        <Text style={video.video_url ? styles.authorText : styles.authorTextStatic}>{author}</Text>
+              <View key={index} style={video.video_url ? styles.authorPill : dynamicStyles.authorPillStatic}>
+        <Text style={video.video_url ? styles.authorText : dynamicStyles.authorTextStatic}>{author}</Text>
       </View>
     ));
   }, [video.authors, video.video_url]);
@@ -475,7 +573,7 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
               <Text style={styles.caption}>{video.caption}</Text>
               <View style={styles.metaRow}>
                 <Text style={styles.metaSourceSite}>{staticContentData.siteName}</Text>
-                <View style={styles.metaDot} />
+                <View style={dynamicStyles.metaDot} />
                 <View style={styles.industryPill}>
                   <Text style={styles.industryPillText}>{video.industry}</Text>
                 </View>
@@ -546,14 +644,14 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
     );
   } else if (video.video_url && !signedUrl) {
     return (
-      <View style={[{ height: screenHeight, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }, styles.root]}>
-        <Text style={{ color: '#fff' }}>Loading video...</Text>
+      <View style={[{ height: screenHeight, justifyContent: 'center', alignItems: 'center' }, dynamicStyles.root]}>
+        <Text style={{ color: colors.text }}>Loading video...</Text>
       </View>
     );
   } else {
     // Render static content for non-video types, with expandable/collapsible synopsis on text press
     return (
-      <View style={[{ height: screenHeight, backgroundColor: '#101014' }, styles.root]}>
+      <View style={[{ height: screenHeight }, dynamicStyles.root]}>
         <View style={styles.staticContentContainer}>
           {/* Only show visual when not expanded to maintain smooth scrolling */}
           {!expanded && (
@@ -561,14 +659,14 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
               <StaticVisual industry={video.industry} postId={video.id} />
             </View>
           )}
-          <View style={[styles.staticCardContainerV3, expanded && { flex: 1, justifyContent: 'flex-start' }]}> 
+          <View style={[dynamicStyles.staticCardContainerV3, expanded && { flex: 1, justifyContent: 'flex-start' }]}> 
             {/* Meta row (source and topic) always at the top with safe area padding */}
             <View style={{ paddingTop: staticContentData.topSafePadding, paddingBottom: 4 }}>
               <View style={styles.staticMetaRowV3}>
-                <Text style={styles.staticCardOwnerV3}>{staticContentData.siteName}</Text>
-                <View style={styles.metaDot} />
-                <View style={styles.industryPillV3}>
-                  <Text style={styles.industryPillTextV3}>{video.industry}</Text>
+                <Text style={dynamicStyles.staticCardOwnerV3}>{staticContentData.siteName}</Text>
+                <View style={dynamicStyles.metaDot} />
+                <View style={dynamicStyles.industryPillV3}>
+                  <Text style={dynamicStyles.industryPillTextV3}>{video.industry}</Text>
                 </View>
               </View>
             </View>
@@ -576,7 +674,7 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
             <TouchableOpacity activeOpacity={0.8} onPress={toggleExpanded}>
               <Text 
                 style={[
-                  styles.staticCardTitleV3,
+                  dynamicStyles.staticCardTitleV3,
                   // Adjust marginBottom when no authors to maintain consistent spacing
                   !renderedAuthors && { marginBottom: 8 }
                 ]}
@@ -606,7 +704,7 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
                   nestedScrollEnabled={true}
                 >
                   <TouchableOpacity activeOpacity={0.8} onPress={toggleExpanded}>
-                    <Text style={styles.staticCardSynopsisV3}>
+                    <Text style={dynamicStyles.staticCardSynopsisV3}>
                       {staticContentData.synopsis}
                     </Text>
                   </TouchableOpacity>
@@ -614,10 +712,10 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
                 </ScrollView>
               </View>
             ) : (
-              <View style={styles.scrollableContentContainer}>
+              <View style={dynamicStyles.scrollableContentContainer}>
                 <TouchableOpacity activeOpacity={0.8} onPress={toggleExpanded}>
                   <Text
-                    style={styles.staticCardSynopsisV3}
+                    style={dynamicStyles.staticCardSynopsisV3}
                     numberOfLines={renderedAuthors ? 4 : 6} // Show more lines when no authors
                     ellipsizeMode="tail"
                   >
@@ -638,10 +736,10 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
                   accessibilityRole="button"  
                   onPress={handleLikePress}
                 >
-                  <View style={styles.actionBtnIconCircleV3}>
-                    <FontAwesome name={hasLiked ? 'heart' : 'heart-o'} size={22} color={hasLiked ? '#3b82f6' : '#3b82f6'} />
+                  <View style={dynamicStyles.actionBtnIconCircleV3}>
+                    <FontAwesome name={hasLiked ? 'heart' : 'heart-o'} size={22} color={colors.primary} />
                   </View>
-                  <Text style={styles.actionBtnCountV3}>{likes}</Text>
+                  <Text style={[styles.actionBtnCountV3, { color: colors.primary }]}>{likes}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionBtn}
@@ -649,10 +747,10 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
                   accessibilityRole="button"
                   onPress={handleSavePress}
                 >
-                  <View style={styles.actionBtnIconCircleV3}>
-                    <FontAwesome name={hasSaved ? 'bookmark' : 'bookmark-o'} size={22} color={hasSaved ? '#3b82f6' : '#3b82f6'} />
+                  <View style={dynamicStyles.actionBtnIconCircleV3}>
+                    <FontAwesome name={hasSaved ? 'bookmark' : 'bookmark-o'} size={22} color={colors.primary} />
                   </View>
-                  <Text style={styles.actionBtnCountV3}>{saves}</Text>
+                  <Text style={[styles.actionBtnCountV3, { color: colors.primary }]}>{saves}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={styles.actionBtn} 
@@ -660,14 +758,14 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
                   accessibilityRole="button" 
                   onPress={handleCommentsPress}
                 >
-                  <View style={styles.actionBtnIconCircleV3}>
-                    <Feather name="message-circle" size={22} color="#3b82f6" />
+                  <View style={dynamicStyles.actionBtnIconCircleV3}>
+                    <Feather name="message-circle" size={22} color={colors.primary} />
                   </View>
-                  <Text style={styles.actionBtnCountV3}>{video.comments}</Text>
+                  <Text style={[styles.actionBtnCountV3, { color: colors.primary }]}>{video.comments}</Text>
                 </TouchableOpacity>
               </View>
               <TouchableOpacity 
-                style={styles.readMoreBtnV3} 
+                style={[styles.readMoreBtnV3, { backgroundColor: colors.primary }]} 
                 accessibilityLabel="Read more about this post" 
                 accessibilityRole="button" 
                 onPress={handleReadMorePress}
@@ -1013,7 +1111,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   authorText: {
-    color: '#fff',
+    color: '#3b82f6',
     fontSize: 13,
     fontWeight: '500',
   },

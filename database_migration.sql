@@ -98,3 +98,6 @@ FOR ALL USING (auth.uid() = user_id);
 -- Allow authenticated users to save articles  
 CREATE POLICY "Users can manage their own article saves" ON article_saves
 FOR ALL USING (auth.uid() = user_id); 
+
+-- Add theme preference field to profiles table
+ALTER TABLE profiles ADD COLUMN theme_preference TEXT DEFAULT 'system' CHECK (theme_preference IN ('light', 'dark', 'system')); 

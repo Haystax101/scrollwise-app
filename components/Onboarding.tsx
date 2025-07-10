@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Industry, ExperienceLevel } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useIndustries } from '../context/IndustriesContext';
+import { useTheme } from '../context/ThemeContext';
 
 const industriesData: Industry[] = [
   {
@@ -56,6 +57,7 @@ interface OnboardingProps {
 }
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
+  const { colors } = useTheme();
   const [step, setStep] = useState(1);
   const [interests, setInterests] = useState<number[]>([]);
   const [experience, setExperience] = useState<ExperienceLevel | null>(null);
@@ -99,29 +101,175 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     onComplete(interests);
   };
 
-  return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#fff' }} contentContainerStyle={{ flexGrow: 1 }}>
-      <View style={{ paddingHorizontal: 16, paddingTop: 32, paddingBottom: 80 }}>
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    contentContainer: {
+      flexGrow: 1,
+    },
+    padding: {
+      paddingHorizontal: 16,
+      paddingTop: 32,
+      paddingBottom: 80,
+    },
+    welcomeContainer: {
+      alignItems: 'center',
+      marginBottom: 32,
+    },
+    welcomeTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    welcomeSubtitle: {
+      marginTop: 8,
+      color: colors.textSecondary,
+    },
+    progressContainer: {
+      marginBottom: 24,
+    },
+    progressRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+    },
+    progressText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textSecondary,
+    },
+    progressBarBg: {
+      width: '100%',
+      backgroundColor: colors.border,
+      borderRadius: 999,
+      height: 8,
+    },
+    progressBarFill: {
+      backgroundColor: colors.primary,
+      height: 8,
+      borderRadius: 999,
+    },
+    questionContainer: {
+      marginBottom: 24,
+    },
+    questionTitle: {
+      fontSize: 18,
+      fontWeight: '500',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    questionSubtitle: {
+      color: colors.textSecondary,
+      marginBottom: 16,
+    },
+    industryCard: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      borderRadius: 12,
+      borderWidth: 2,
+      marginBottom: 12,
+    },
+    industryCardSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '10',
+    },
+    industryCardDefault: {
+      borderColor: colors.border,
+      backgroundColor: colors.card,
+    },
+    industryIconContainer: {
+      padding: 12,
+      borderRadius: 999,
+      marginRight: 16,
+    },
+    industryTextContainer: {
+      flex: 1,
+    },
+    industryName: {
+      fontWeight: '500',
+      color: colors.text,
+    },
+    industryDescription: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    experienceCard: {
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      borderRadius: 12,
+      borderWidth: 2,
+      marginBottom: 12,
+    },
+    experienceCardSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '10',
+    },
+    experienceCardDefault: {
+      borderColor: colors.border,
+      backgroundColor: colors.card,
+    },
+    experienceText: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    buttonContainer: {
+      marginTop: 32,
+    },
+    button: {
+      width: '100%',
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    buttonEnabled: {
+      backgroundColor: colors.primary,
+    },
+    buttonDisabled: {
+      backgroundColor: colors.border,
+    },
+    buttonTextEnabled: {
+      fontWeight: '500',
+      color: colors.primaryText,
+    },
+    buttonTextDisabled: {
+      fontWeight: '500',
+      color: colors.textTertiary,
+    },
+  });
+
+      return (
+    <ScrollView style={dynamicStyles.container} contentContainerStyle={dynamicStyles.contentContainer}>
+      <View style={dynamicStyles.padding}>
         {step === 1 && (
           <>
-            <View style={{ alignItems: 'center', marginBottom: 32 }}>
-              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#111827' }}>Welcome to ScrollWise</Text>
-              <Text style={{ marginTop: 8, color: '#4B5563' }}>Let's personalize your knowledge feed</Text>
+            <View style={dynamicStyles.welcomeContainer}>
+              <Text style={dynamicStyles.welcomeTitle}>Welcome to ScrollWise</Text>
+              <Text style={dynamicStyles.welcomeSubtitle}>Let's personalize your knowledge feed</Text>
             </View>
-            <View style={{ marginBottom: 24 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ fontSize: 14, fontWeight: '500', color: '#374151' }}>Step 1 of 2</Text>
-                <Text style={{ fontSize: 14, fontWeight: '500', color: '#374151' }}>Select Industries</Text>
+            <View style={dynamicStyles.progressContainer}>
+              <View style={dynamicStyles.progressRow}>
+                <Text style={dynamicStyles.progressText}>Step 1 of 2</Text>
+                <Text style={dynamicStyles.progressText}>Select Industries</Text>
               </View>
-              <View style={{ width: '100%', backgroundColor: '#E5E7EB', borderRadius: 999, height: 8 }}>
-                <View style={{ backgroundColor: '#2563EB', height: 8, borderRadius: 999, width: '50%' }} />
+              <View style={dynamicStyles.progressBarBg}>
+                <View style={[dynamicStyles.progressBarFill, { width: '50%' }]} />
               </View>
             </View>
-            <View style={{ marginBottom: 24 }}>
-              <Text style={{ fontSize: 18, fontWeight: '500', color: '#111827', marginBottom: 8 }}>
+            <View style={dynamicStyles.questionContainer}>
+              <Text style={dynamicStyles.questionTitle}>
                 Which industries are you interested in?
               </Text>
-              <Text style={{ color: '#4B5563', marginBottom: 16 }}>
+              <Text style={dynamicStyles.questionSubtitle}>
                 Select all that apply. We'll use this to curate your feed.
               </Text>
               <View>
@@ -129,78 +277,66 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                   <TouchableOpacity
                     key={industry.id}
                     onPress={() => toggleIndustry(industry.id)}
-                    style={{
-                      width: '100%',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      padding: 16,
-                      borderRadius: 12,
-                      borderWidth: 2,
-                      borderColor: interests.includes(industry.id) ? '#2563EB' : '#E5E7EB',
-                      backgroundColor: interests.includes(industry.id) ? '#EFF6FF' : '#fff',
-                      marginBottom: 12,
-                    }}
+                    style={[
+                      dynamicStyles.industryCard,
+                      interests.includes(industry.id) 
+                        ? dynamicStyles.industryCardSelected 
+                        : dynamicStyles.industryCardDefault
+                    ]}
                     accessibilityLabel={`Select industry ${industry.name}`}
                     accessibilityState={{ selected: interests.includes(industry.id) }}
                   >
-                    <View style={{
-                      padding: 12,
-                      borderRadius: 999,
-                      marginRight: 16,
-                      backgroundColor: getIndustryBgColor(industry.id),
-                    }}>
+                    <View style={[
+                      dynamicStyles.industryIconContainer,
+                      { backgroundColor: getIndustryBgColor(industry.id) }
+                    ]}>
                       {industry.icon}
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontWeight: '500', color: '#111827' }}>{industry.name}</Text>
-                      <Text style={{ fontSize: 14, color: '#4B5563' }}>{industry.description}</Text>
+                    <View style={dynamicStyles.industryTextContainer}>
+                      <Text style={dynamicStyles.industryName}>{industry.name}</Text>
+                      <Text style={dynamicStyles.industryDescription}>{industry.description}</Text>
                     </View>
-                    {interests.includes(industry.id) && <MaterialCommunityIcons name="check-circle" size={24} color="#2563EB" />}
+                    {interests.includes(industry.id) && <MaterialCommunityIcons name="check-circle" size={24} color={colors.primary} />}
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
-            <View style={{ marginTop: 32 }}>
+            <View style={dynamicStyles.buttonContainer}>
               <TouchableOpacity
                 onPress={() => setStep(2)}
                 disabled={interests.length === 0}
-                style={{
-                  width: '100%',
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  borderRadius: 12,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: interests.length > 0 ? '#2563EB' : '#E5E7EB',
-                }}
+                style={[
+                  dynamicStyles.button,
+                  interests.length > 0 ? dynamicStyles.buttonEnabled : dynamicStyles.buttonDisabled
+                ]}
                 accessibilityLabel="Continue to experience level selection"
                 accessibilityState={{ disabled: interests.length === 0 }}
               >
-                <Text style={{ fontWeight: '500', color: interests.length > 0 ? '#fff' : '#6B7280' }}>Continue</Text>
+                <Text style={interests.length > 0 ? dynamicStyles.buttonTextEnabled : dynamicStyles.buttonTextDisabled}>Continue</Text>
               </TouchableOpacity>
             </View>
           </>
         )}
         {step === 2 && (
           <>
-            <View style={{ alignItems: 'center', marginBottom: 32 }}>
-              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#111827' }}>Almost there!</Text>
-              <Text style={{ marginTop: 8, color: '#4B5563' }}>Tell us about your experience level</Text>
+            <View style={dynamicStyles.welcomeContainer}>
+              <Text style={dynamicStyles.welcomeTitle}>Almost there!</Text>
+              <Text style={dynamicStyles.welcomeSubtitle}>Tell us about your experience level</Text>
             </View>
-            <View style={{ marginBottom: 24 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ fontSize: 14, fontWeight: '500', color: '#374151' }}>Step 2 of 2</Text>
-                <Text style={{ fontSize: 14, fontWeight: '500', color: '#374151' }}>Experience Level</Text>
+            <View style={dynamicStyles.progressContainer}>
+              <View style={dynamicStyles.progressRow}>
+                <Text style={dynamicStyles.progressText}>Step 2 of 2</Text>
+                <Text style={dynamicStyles.progressText}>Experience Level</Text>
               </View>
-              <View style={{ width: '100%', backgroundColor: '#E5E7EB', borderRadius: 999, height: 8 }}>
-                <View style={{ backgroundColor: '#2563EB', height: 8, borderRadius: 999, width: '100%' }} />
+              <View style={dynamicStyles.progressBarBg}>
+                <View style={[dynamicStyles.progressBarFill, { width: '100%' }]} />
               </View>
             </View>
-            <View style={{ marginBottom: 24 }}>
-              <Text style={{ fontSize: 18, fontWeight: '500', color: '#111827', marginBottom: 8 }}>
+            <View style={dynamicStyles.questionContainer}>
+              <Text style={dynamicStyles.questionTitle}>
                 What's your experience level?
               </Text>
-              <Text style={{ color: '#4B5563', marginBottom: 16 }}>
+              <Text style={dynamicStyles.questionSubtitle}>
                 This helps us tailor content to your knowledge level.
               </Text>
               <View>
@@ -208,68 +344,52 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                   <TouchableOpacity
                     key={level}
                     onPress={() => setExperience(level)}
-                    style={{
-                      width: '100%',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      padding: 16,
-                      borderRadius: 12,
-                      borderWidth: 2,
-                      borderColor: experience === level ? '#2563EB' : '#E5E7EB',
-                      backgroundColor: experience === level ? '#EFF6FF' : '#fff',
-                      marginBottom: 12,
-                    }}
+                    style={[
+                      dynamicStyles.experienceCard,
+                      experience === level 
+                        ? dynamicStyles.experienceCardSelected 
+                        : dynamicStyles.experienceCardDefault
+                    ]}
                     accessibilityLabel={`Select experience level ${level}`}
                     accessibilityState={{ selected: experience === level }}
                     accessibilityRole="radio"
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontWeight: '500', color: '#111827' }}>{level}</Text>
+                      <Text style={dynamicStyles.experienceText}>{level}</Text>
                     </View>
                     {experience === level ? (
-                      <MaterialCommunityIcons name="check-circle" size={24} color="#2563EB" />
+                      <MaterialCommunityIcons name="check-circle" size={24} color={colors.primary} />
                     ) : (
-                      <MaterialCommunityIcons name="checkbox-blank-circle-outline" size={24} color="#D1D5DB" />
+                      <MaterialCommunityIcons name="checkbox-blank-circle-outline" size={24} color={colors.border} />
                     )}
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
-            <View style={{ marginTop: 32 }}>
+            <View style={dynamicStyles.buttonContainer}>
               <TouchableOpacity
                 onPress={handleComplete}
                 disabled={!experience}
-                style={{
-                  width: '100%',
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  borderRadius: 12,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: experience ? '#2563EB' : '#E5E7EB',
-                  marginBottom: 12,
-                }}
+                style={[
+                  dynamicStyles.button,
+                  experience ? dynamicStyles.buttonEnabled : dynamicStyles.buttonDisabled,
+                  { marginBottom: 12 }
+                ]}
                 accessibilityLabel="Get started with onboarding"
                 accessibilityState={{ disabled: !experience }}
               >
-                <Text style={{ fontWeight: '500', color: experience ? '#fff' : '#6B7280' }}>Get Started</Text>
+                <Text style={experience ? dynamicStyles.buttonTextEnabled : dynamicStyles.buttonTextDisabled}>Get Started</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setStep(1)}
-                style={{
-                  width: '100%',
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: '#D1D5DB',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#fff',
-                }}
+                style={[
+                  dynamicStyles.button,
+                  dynamicStyles.buttonDisabled,
+                  { borderWidth: 1, borderColor: colors.border }
+                ]}
                 accessibilityLabel="Go back to industry selection"
               >
-                <Text style={{ fontWeight: '500', color: '#374151' }}>Back</Text>
+                <Text style={dynamicStyles.buttonTextDisabled}>Back</Text>
               </TouchableOpacity>
             </View>
           </>

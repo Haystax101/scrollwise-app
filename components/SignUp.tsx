@@ -4,6 +4,7 @@ import { MaterialCommunityIcons, Feather, FontAwesome } from '@expo/vector-icons
 import type { User } from '../types';
 import { CustomCheckbox } from './CustomCheckbox';
 import { supabase } from '../lib/supabase';
+import { useTheme } from '../context/ThemeContext';
 
 
 interface SignUpProps {
@@ -12,6 +13,7 @@ interface SignUpProps {
 }
 
 export const SignUp: React.FC<SignUpProps> = ({ onSignUp, onSwitchToSignIn }) => {
+  const { colors } = useTheme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -58,35 +60,107 @@ export const SignUp: React.FC<SignUpProps> = ({ onSignUp, onSwitchToSignIn }) =>
   };
   
   const termsLabel = (
-    <Text style={{ fontSize: 14, color: '#111827', lineHeight: 20 }}>
+    <Text style={{ fontSize: 14, color: colors.text, lineHeight: 20 }}>
       I agree to the{' '}
       <Text
         onPress={() => {}}
-        style={{ fontWeight: '500', color: '#2563EB', textDecorationLine: 'underline' }}
+        style={{ fontWeight: '500', color: colors.primary, textDecorationLine: 'underline' }}
       >
         Terms of Service
       </Text>
       {' '}and{' '}
       <Text
         onPress={() => {}}
-        style={{ fontWeight: '500', color: '#2563EB', textDecorationLine: 'underline' }}
+        style={{ fontWeight: '500', color: colors.primary, textDecorationLine: 'underline' }}
       >
         Privacy Policy
       </Text>
     </Text>
   );
 
+  const dynamicStyles = StyleSheet.create({
+    outerContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      paddingHorizontal: 16,
+      paddingVertical: 32,
+    },
+    innerContainer: {
+      width: '100%',
+      maxWidth: 400,
+      padding: 32,
+      backgroundColor: colors.card,
+      borderRadius: 24,
+      shadowColor: '#000',
+      shadowOpacity: 0.1,
+      shadowRadius: 10,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    iconCircle: {
+      padding: 12,
+      backgroundColor: colors.primary + '20',
+      borderRadius: 9999,
+    },
+    title: {
+      marginTop: 16,
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    subtitle: {
+      marginTop: 8,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    input: {
+      borderRadius: 8,
+      width: '100%',
+      paddingLeft: 40,
+      paddingRight: 12,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      color: colors.inputText,
+      fontSize: 16,
+      backgroundColor: colors.inputBackground,
+    },
+    signUpButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 12,
+      borderRadius: 8,
+      marginTop: 8,
+    },
+    signUpButtonText: {
+      color: colors.primaryText,
+      fontSize: 16,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    bottomText: {
+      textAlign: 'center',
+      color: colors.textSecondary,
+    },
+    signInText: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+  });
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        <View style={styles.outerContainer}>
-          <View style={styles.innerContainer}>
+        <View style={dynamicStyles.outerContainer}>
+          <View style={dynamicStyles.innerContainer}>
             <View style={styles.centerItems}>
-              <View style={styles.iconCircle}>
-                <MaterialCommunityIcons name="brain" size={40} color="#2563EB" />
+              <View style={dynamicStyles.iconCircle}>
+                <MaterialCommunityIcons name="brain" size={40} color={colors.primary} />
               </View>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>
+              <Text style={dynamicStyles.title}>Create Account</Text>
+              <Text style={dynamicStyles.subtitle}>
                 Join ScrollWise to start learning
               </Text>
             </View>
@@ -97,12 +171,12 @@ export const SignUp: React.FC<SignUpProps> = ({ onSignUp, onSwitchToSignIn }) =>
                   name="user"
                   style={styles.inputIcon}
                   size={20}
-                  color="#9CA3AF"
+                  color={colors.textTertiary}
                 />
                 <TextInput
-                  style={styles.input}
+                  style={dynamicStyles.input}
                   placeholder="Full name"
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={colors.inputPlaceholder}
                   value={name}
                   onChangeText={setName}
                   accessibilityLabel="Full name input"
@@ -113,12 +187,12 @@ export const SignUp: React.FC<SignUpProps> = ({ onSignUp, onSwitchToSignIn }) =>
                   name="at-sign"
                   style={styles.inputIcon}
                   size={20}
-                  color="#9CA3AF"
+                  color={colors.textTertiary}
                 />
                 <TextInput
-                  style={styles.input}
+                  style={dynamicStyles.input}
                   placeholder="Email address"
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={colors.inputPlaceholder}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -131,12 +205,12 @@ export const SignUp: React.FC<SignUpProps> = ({ onSignUp, onSwitchToSignIn }) =>
                   name="lock"
                   style={styles.inputIcon}
                   size={20}
-                  color="#9CA3AF"
+                  color={colors.textTertiary}
                 />
                 <TextInput
-                  style={styles.input}
+                  style={dynamicStyles.input}
                   placeholder="Password"
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={colors.inputPlaceholder}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
@@ -148,12 +222,12 @@ export const SignUp: React.FC<SignUpProps> = ({ onSignUp, onSwitchToSignIn }) =>
                   name="lock"
                   style={styles.inputIcon}
                   size={20}
-                  color="#9CA3AF"
+                  color={colors.textTertiary}
                 />
                 <TextInput
-                  style={styles.input}
+                  style={dynamicStyles.input}
                   placeholder="Confirm password"
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor={colors.inputPlaceholder}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry
@@ -165,19 +239,19 @@ export const SignUp: React.FC<SignUpProps> = ({ onSignUp, onSwitchToSignIn }) =>
 
               <TouchableOpacity
                 onPress={handleSubmit}
-                style={[styles.signUpButton, loading && { opacity: 0.6 }]}
+                style={[dynamicStyles.signUpButton, loading && { opacity: 0.6 }]}
                 accessibilityLabel="Create account button"
                 accessibilityRole="button"
                 disabled={loading}
               >
-                <Text style={styles.signUpButtonText}>{loading ? 'Creating...' : 'Create Account'}</Text>
+                <Text style={dynamicStyles.signUpButtonText}>{loading ? 'Creating...' : 'Create Account'}</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.centerTextMargin}>
-                <Text style={styles.bottomText}>
+                <Text style={dynamicStyles.bottomText}>
                 Already have an account?{' '}
-                <Text onPress={onSwitchToSignIn} style={styles.signInText} accessibilityLabel="Switch to sign in button">
+                <Text onPress={onSwitchToSignIn} style={dynamicStyles.signInText} accessibilityLabel="Switch to sign in button">
                   Sign in
                 </Text>
                 </Text>

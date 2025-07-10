@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import type { UserData, SavedContentItem } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { industryIdToName } from '../lib/industryMap';
 import { useRouter } from 'expo-router';
+import SettingsModal from './SettingsModal';
 
 interface ProfileProps {
   user: import('../types').User | null;
@@ -28,10 +31,12 @@ const defaultUserData: UserData = {
 };
 
 export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) => {
+  const { colors, isDark } = useTheme();
   const [userData, setUserData] = useState<UserData>(defaultUserData);
   const [fullName, setFullName] = useState<string>(defaultUserData.name);
   const [interests, setInterests] = useState<number[]>([]);
   const router = useRouter();
+  const settingsModalRef = useRef<BottomSheetModal>(null);
 
   useEffect(() => {
     const fetchProfileAndSaves = async () => {
@@ -85,31 +90,152 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
     fetchProfileAndSaves();
   }, [user]);
 
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    headerContainer: {
+      backgroundColor: colors.surface,
+      padding: 20,
+      paddingTop: 50,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    userInfoCard: {
+      backgroundColor: colors.card,
+      padding: 24,
+      borderRadius: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
+      marginBottom: 15,
+    },
+    userName: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    userEmail: {
+      color: colors.textSecondary,
+      fontSize: 16,
+    },
+    userJoinDate: {
+      fontSize: 13,
+      color: colors.textTertiary,
+      marginTop: 4,
+    },
+    interestText: {
+      color: colors.primary,
+      fontSize: 14,
+    },
+    statsCard: {
+      marginTop: 16,
+      backgroundColor: colors.card,
+      padding: 24,
+      borderRadius: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
+      marginBottom: 16,
+    },
+    statsTitle: {
+      fontSize: 18,
+      fontWeight: '500',
+      marginBottom: 16,
+      color: colors.text,
+    },
+    savedCard: {
+      marginTop: 16,
+      backgroundColor: colors.card,
+      padding: 24,
+      borderRadius: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 1,
+      marginBottom: 16,
+    },
+    savedTitle: {
+      fontSize: 18,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    savedItemRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      backgroundColor: colors.card,
+      marginBottom: 12,
+      shadowColor: isDark ? '#000' : '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: isDark ? 0.3 : 0.05,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    savedItemTitle: {
+      fontWeight: '500',
+      color: colors.text,
+      fontSize: 16,
+      lineHeight: 20,
+    },
+    savedItemType: {
+      textTransform: 'capitalize',
+      color: colors.textTertiary,
+      fontSize: 12,
+    },
+    savedItemDate: {
+      color: colors.textTertiary,
+      fontSize: 12,
+    },
+    savedEmptyText: {
+      color: colors.textTertiary,
+      textAlign: 'center',
+      paddingVertical: 16,
+    },
+  });
+
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
      {/* Header */}
-      <View style={styles.headerContainer}>
+      <View style={dynamicStyles.headerContainer}>
         <View style={styles.headerRow}>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <TouchableOpacity style={styles.headerSettingsBtn} accessibilityLabel="Open settings" accessibilityRole="button" onPress={() => navigateTo && navigateTo('settings')}>
-            <Feather name="settings" size={22} color="#374151" />
+          <Text style={dynamicStyles.headerTitle}>Profile</Text>
+          <TouchableOpacity style={styles.headerSettingsBtn} accessibilityLabel="Open settings" accessibilityRole="button" onPress={() => settingsModalRef.current?.present()}>
+            <Feather name="settings" size={22} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <ScrollView style={dynamicStyles.container} contentContainerStyle={styles.scrollContent}>
      
 
       <View style={styles.innerContent}>
         {/* User Info */}
-        <View style={styles.userInfoCard}>
+        <View style={dynamicStyles.userInfoCard}>
           <View style={styles.userInfoRow}>
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarInitial}>{fullName.charAt(0).toUpperCase()}</Text>
             </View>
             <View style={styles.userInfoTextCol}>
-              <Text style={styles.userName}>{fullName}</Text>
-              <Text style={styles.userEmail}>{userData.email}</Text>
-              <Text style={styles.userJoinDate}>Member since {userData.joinDate}</Text>
+              <Text style={dynamicStyles.userName}>{fullName}</Text>
+              <Text style={dynamicStyles.userEmail}>{userData.email}</Text>
+              <Text style={dynamicStyles.userJoinDate}>Member since {userData.joinDate}</Text>
             </View>
           </View>
           <View style={styles.interestsRow}>
@@ -118,15 +244,15 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
                 key={interest}
                 style={styles.interestPill}
               >
-                <Text style={styles.interestText}>{industryIdToName[interest] || interest}</Text>
+                <Text style={dynamicStyles.interestText}>{industryIdToName[interest] || interest}</Text>
               </View>
             ))}
           </View>
         </View>
 
         {/* Stats */}
-        <View style={styles.statsCard}>
-          <Text style={styles.statsTitle}>Your Learning Stats</Text>
+        <View style={dynamicStyles.statsCard}>
+          <Text style={dynamicStyles.statsTitle}>Your Learning Stats</Text>
           <View style={styles.statsGridRow}>
             <View style={styles.statsCol}><StatCard
               title="Watch Time"
@@ -156,9 +282,9 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
         </View>
 
         {/* Saved Content */}
-        <View style={styles.savedCard}>
+        <View style={dynamicStyles.savedCard}>
           <View style={styles.savedHeaderRow}>
-            <Text style={styles.savedTitle}>Saved Content</Text>
+            <Text style={dynamicStyles.savedTitle}>Saved Content</Text>
           </View>
           <ScrollView
             horizontal={true}
@@ -169,26 +295,26 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
             {userData.savedContent.map((item) => (
               <TouchableOpacity
                 key={item.id}
-                style={[styles.savedItemRow, { width: 260, marginRight: 16 }]}
+                style={[dynamicStyles.savedItemRow, { width: 260, marginRight: 16 }]}
                 accessibilityLabel={`View saved content: ${item.title}`}
                 accessibilityRole="button"
                 onPress={() => router.push({ pathname: '/feed', params: { reelId: item.id } })}
               >
                 <View style={styles.savedIconCircle}>
-                  <Feather name="bookmark" size={18} color="#2563EB" />
+                  <Feather name="bookmark" size={18} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.savedItemTitle}>{item.title}</Text>
+                  <Text style={dynamicStyles.savedItemTitle}>{item.title}</Text>
                   <View style={styles.savedItemMetaRow}>
-                    <Text style={styles.savedItemType}>{item.type}</Text>
+                    <Text style={dynamicStyles.savedItemType}>{item.type}</Text>
                     <View style={styles.savedDot} />
-                    <Text style={styles.savedItemDate}>{item.date}</Text>
+                    <Text style={dynamicStyles.savedItemDate}>{item.date}</Text>
                   </View>
                 </View>
               </TouchableOpacity>
             ))}
             {userData.savedContent.length === 0 && (
-              <Text style={styles.savedEmptyText}>No saved content yet.</Text>
+              <Text style={dynamicStyles.savedEmptyText}>No saved content yet.</Text>
             )}
           </ScrollView>
         </View>
@@ -201,6 +327,12 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
         )}
       </View>
     </ScrollView>
+    
+    <SettingsModal
+      ref={settingsModalRef}
+      navigateTo={navigateTo || (() => {})}
+      signOut={signOut || (() => Promise.resolve())}
+    />
     </View>
   );
 };

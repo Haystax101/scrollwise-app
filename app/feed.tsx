@@ -11,10 +11,6 @@ export default function FeedScreen() {
   const { industries } = useIndustries();
   const params = useSearchParams();
   const reelId = params.get('reelId');
-  
-  // Debug logging for URL parameters
-  console.log('🔍 Feed Screen: URL params received:', Object.fromEntries(params));
-  console.log('🔍 Feed Screen: reelId parameter:', reelId);
   useEffect(() => {
     if (!loading && !user) {
       router.replace('/sign-in');

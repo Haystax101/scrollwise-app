@@ -4,6 +4,7 @@ import { VideoCard } from './VideoCard';
 import type { Article } from '../types';
 import { FeedAlgorithm } from '../lib/feedAlgorithm';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { CommentsModal } from './CommentsModal';
 
 interface MainFeedProps {
@@ -15,6 +16,7 @@ const { height: screenHeight } = Dimensions.get('window');
 
 export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId }) => {
   const { user } = useAuth();
+  const { colors } = useTheme();
   const [currentArticleIndex, setCurrentArticleIndex] = useState(0);
   const [articles, setArticles] = useState<Article[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
@@ -26,39 +28,24 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   const feedAlgorithmRef = useRef<FeedAlgorithm | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
-  // Debug logging for props
-  console.log('🔍 MainFeed: Component initialized with props:', {
-    industries,
-    initialArticleId,
-    userId: user?.id
-  });
+
 
   // Industries are already numbers, no conversion needed
   const industryIds = industries;
 
   // Initialize feed algorithm when user or industries change
   useEffect(() => {
-    console.log('🔍 MainFeed: useEffect triggered');
-    console.log('🔍 MainFeed: user exists?', !!user);
-    console.log('🔍 MainFeed: user id:', user?.id);
-    console.log('🔍 MainFeed: industries:', industries);
-    console.log('🔍 MainFeed: industryIds:', industryIds);
-    
     if (user && industryIds.length > 0) {
-      console.log('🔍 MainFeed: Creating FeedAlgorithm and loading initial feed');
       feedAlgorithmRef.current = new FeedAlgorithm(user.id, industryIds);
       loadInitialFeed();
     } else {
-      console.log('🔍 MainFeed: Missing user or industries, not loading feed');
       setIsLoading(false);
     }
   }, [user, industries.join(',')]);
 
   // Load initial feed (first 3 articles for faster loading, or specific article if provided)
   const loadInitialFeed = async () => {
-    console.log('🔍 MainFeed: loadInitialFeed called');
     if (!feedAlgorithmRef.current) {
-      console.log('🔍 MainFeed: No feedAlgorithmRef, returning');
       setIsLoading(false);
       return;
     }
@@ -69,49 +56,22 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       
       // If we have an initialArticleId (from saved post), fetch that specific article first
       if (initialArticleId) {
-        console.log('🔍 MainFeed: SAVED POST FLOW - initialArticleId detected:', initialArticleId);
-        console.log('🔍 MainFeed: SAVED POST FLOW - feedAlgorithmRef exists:', !!feedAlgorithmRef.current);
-        console.log('🔍 MainFeed: SAVED POST FLOW - About to call fetchSpecificArticle...');
-        
         const specificArticle = await feedAlgorithmRef.current.fetchSpecificArticle(initialArticleId);
         
-        console.log('🔍 MainFeed: SAVED POST FLOW - fetchSpecificArticle result:', specificArticle);
-        
         if (specificArticle) {
-          console.log('🔍 MainFeed: SAVED POST FLOW - SUCCESS! Found specific article:', {
-            id: specificArticle.id,
-            title: specificArticle.title,
-            type: specificArticle.type
-          });
           newArticles.push(specificArticle);
-          console.log('🔍 MainFeed: SAVED POST FLOW - Added to newArticles, length now:', newArticles.length);
           setCurrentArticleIndex(0); // Start viewing the specific article
-        } else {
-          console.log('🔍 MainFeed: SAVED POST FLOW - FAILED! Specific article not found, loading regular feed');
         }
-      } else {
-        console.log('🔍 MainFeed: NORMAL FLOW - No initialArticleId, loading regular feed');
       }
       
       // Load additional articles from algorithm (will exclude the specific one if it was fetched)
       const remainingCount = initialArticleId ? 2 : 3; // Load 2 more if we have specific article, 3 if not
-      console.log('📊 FeedAlgorithm: Loading', remainingCount, 'additional articles for industries:', industryIds);
       const algorithmArticles = await feedAlgorithmRef.current.fetchArticles(remainingCount);
-      console.log('📊 FeedAlgorithm: Fetched', algorithmArticles.length, 'algorithm articles');
       
       // Combine specific article (if any) with algorithm articles
       newArticles = [...newArticles, ...algorithmArticles];
-      console.log('🔍 MainFeed: FINAL STEP - Total articles to set:', newArticles.length);
-      console.log('🔍 MainFeed: FINAL STEP - Articles details:', newArticles.map(a => ({ 
-        id: a.id, 
-        title: a.title?.substring(0, 50) + '...', 
-        type: a.type, 
-        industry: a.industry 
-      })));
       
-      console.log('🔍 MainFeed: FINAL STEP - Calling setArticles...');
       setArticles(newArticles);
-      console.log('🔍 MainFeed: FINAL STEP - setArticles completed');
       setHasMore(true); // Always assume there's more after initial small batch
       
       // Set initial index - 0 if we have a specific article, otherwise 0 for first algorithm article
@@ -125,10 +85,9 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       }, 100); // Small delay to ensure UI is responsive
       
     } catch (error) {
-      console.error('📊 FeedAlgorithm: Error loading initial feed:', error);
+      console.error('Error loading initial feed:', error);
       setArticles([]);
     }
-    console.log('🔍 MainFeed: Setting isLoading to false');
     setIsLoading(false);
   };
 
@@ -137,9 +96,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     if (!feedAlgorithmRef.current || isLoadingMore || !hasMore) return;
     
     try {
-      console.log('📊 FeedAlgorithm: Background prefetching articles...');
       const newArticles = await feedAlgorithmRef.current.fetchArticles(7); // Prefetch 7 more to total 10
-      console.log('📊 FeedAlgorithm: Prefetched', newArticles.length, 'articles in background');
       
       if (newArticles.length > 0) {
         setArticles(prev => [...prev, ...newArticles]);
@@ -148,7 +105,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         setHasMore(false);
       }
     } catch (error) {
-      console.error('📊 FeedAlgorithm: Error prefetching articles:', error);
+      console.error('Error prefetching articles:', error);
     }
   }, [isLoadingMore, hasMore]);
 
@@ -158,9 +115,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     
     setIsLoadingMore(true);
     try {
-      console.log('📊 FeedAlgorithm: Loading more articles...');
       const newArticles = await feedAlgorithmRef.current.fetchArticles(8); // Load 8 more for smooth scrolling
-      console.log('📊 FeedAlgorithm: Fetched', newArticles.length, 'more articles');
       
       if (newArticles.length > 0) {
         setArticles(prev => [...prev, ...newArticles]);
@@ -169,7 +124,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         setHasMore(false);
       }
     } catch (error) {
-      console.error('📊 FeedAlgorithm: Error loading more articles:', error);
+      console.error('Error loading more articles:', error);
     }
     setIsLoadingMore(false);
   }, [isLoadingMore, hasMore]);
@@ -180,18 +135,15 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     
     setIsRefreshing(true);
     try {
-      console.log('📊 FeedAlgorithm: Refreshing feed...');
       feedAlgorithmRef.current.reset(); // Reset algorithm state
       
       let newArticles: Article[] = [];
       
       // If we have an initialArticleId, fetch it first again (in case it was updated)
       if (initialArticleId) {
-        console.log('📊 FeedAlgorithm: Re-fetching specific saved article on refresh:', initialArticleId);
         const specificArticle = await feedAlgorithmRef.current.fetchSpecificArticle(initialArticleId);
         
         if (specificArticle) {
-          console.log('📊 FeedAlgorithm: Re-found specific article:', specificArticle.title);
           newArticles.push(specificArticle);
         }
       }
@@ -200,8 +152,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       const remainingCount = initialArticleId ? 2 : 3;
       const algorithmArticles = await feedAlgorithmRef.current.fetchArticles(remainingCount);
       newArticles = [...newArticles, ...algorithmArticles];
-      
-      console.log('📊 FeedAlgorithm: Refreshed with', newArticles.length, 'total articles');
       
       setArticles(newArticles);
       setHasMore(true); // Always assume more after refresh
@@ -218,7 +168,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       }, 200); // Slightly longer delay for refresh
       
     } catch (error) {
-      console.error('📊 FeedAlgorithm: Error refreshing feed:', error);
+      console.error('Error refreshing feed:', error);
     }
     setIsRefreshing(false);
   }, [prefetchMoreArticles, initialArticleId]);
@@ -262,7 +212,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   const handleUserInteraction = useCallback((articleId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => {
     if (feedAlgorithmRef.current) {
       feedAlgorithmRef.current.updateUserInteraction(articleId, action);
-      console.log('📊 FeedAlgorithm: Updated interaction -', action, 'for article', articleId);
     }
   }, []);
 
@@ -290,26 +239,67 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   const renderFooter = useCallback(() => {
     if (!isLoadingMore) return null;
     return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color="#3b82f6" />
-        <Text style={styles.footerText}>Loading more articles...</Text>
+      <View style={dynamicStyles.footerLoader}>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={dynamicStyles.footerText}>Loading more articles...</Text>
       </View>
     );
-  }, [isLoadingMore]);
+  }, [isLoadingMore, colors.primary]);
+
+  const dynamicStyles = StyleSheet.create({
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      paddingHorizontal: 20,
+    },
+    loadingText: {
+      color: colors.text,
+      fontSize: 16,
+      marginTop: 16,
+      textAlign: 'center',
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      paddingHorizontal: 16,
+    },
+    emptyText: {
+      color: colors.text,
+      fontSize: 18,
+      textAlign: 'center',
+    },
+    list: {
+      backgroundColor: colors.background,
+    },
+    footerLoader: {
+      padding: 20,
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    footerText: {
+      color: colors.text,
+      marginTop: 8,
+      fontSize: 14,
+    },
+  });
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="white" />
-        <Text style={styles.loadingText}>Curating your personalized feed...</Text>
+      <View style={dynamicStyles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={dynamicStyles.loadingText}>Curating your personalized feed...</Text>
       </View>
     );
   }
 
   if (articles.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No articles available for the selected industries. Please update your preferences in Profile or try refreshing.</Text>
+      <View style={dynamicStyles.emptyContainer}>
+        <Text style={dynamicStyles.emptyText}>No articles available for the selected industries. Please update your preferences in Profile or try refreshing.</Text>
       </View>
     );
   }
@@ -326,15 +316,15 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         getItemLayout={getItemLayout}
-        style={styles.list}
+        style={dynamicStyles.list}
         accessibilityHint="Scroll vertically to read articles"
         initialScrollIndex={currentArticleIndex}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            tintColor="#3b82f6"
-            colors={['#3b82f6']}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         ListFooterComponent={renderFooter}
@@ -359,43 +349,4 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   );
 };
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000',
-    paddingHorizontal: 20,
-  },
-  loadingText: {
-    color: '#fff',
-    fontSize: 16,
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#000',
-    paddingHorizontal: 16,
-  },
-  emptyText: {
-    color: '#fff',
-    fontSize: 18,
-    textAlign: 'center',
-  },
-  list: {
-    backgroundColor: '#000',
-  },
-  footerLoader: {
-    padding: 20,
-    alignItems: 'center',
-    backgroundColor: '#000',
-  },
-  footerText: {
-    color: '#fff',
-    marginTop: 8,
-    fontSize: 14,
-  },
-});
+// Static styles removed - now using dynamic theme-based styles

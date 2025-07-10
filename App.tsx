@@ -9,6 +9,7 @@ import { Header } from './components/Header';
 import { Discover } from './components/Discover';
 import Settings from './components/Settings';
 import { useAuth } from './context/AuthContext';
+import { useTheme } from './context/ThemeContext';
 import type { User, ScreenName } from './types';
 // Removed: import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // Removed: import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -19,6 +20,7 @@ import type { User, ScreenName } from './types';
 
 export default function App() {
   const { user, loading, signOut } = useAuth();
+  const { colors, isDark } = useTheme();
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('signIn');
   const [selectedIndustries, setSelectedIndustries] = useState<number[]>([]);
 
@@ -76,28 +78,27 @@ export default function App() {
   };
 
   const showHeader = currentScreen !== 'signIn' && currentScreen !== 'signUp' && currentScreen !== 'onboarding';
-  const isAuthOrOnboarding = currentScreen === 'signIn' || currentScreen === 'signUp' || currentScreen === 'onboarding';
-  const isMainFeed = currentScreen === 'feed';
+
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+  });
 
   return (
-    isMainFeed ? (
-      <View style={[styles.flex1, { backgroundColor: '#000' }]}> 
-        <StatusBar barStyle="light-content" backgroundColor="black" />
-        {renderScreen()}
-        {showHeader && <Header currentScreen={currentScreen} navigateTo={navigateTo} dark />}
-      </View>
-    ) : (
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar 
-          barStyle={isAuthOrOnboarding ? "dark-content" : "light-content"} 
-          backgroundColor={isAuthOrOnboarding ? '#F9FAFB' : 'white'} 
-        />
-        <View style={styles.flex1}>
+    <View style={dynamicStyles.container}>
+      <StatusBar 
+        barStyle={colors.statusBarStyle} 
+        backgroundColor={colors.statusBarBackground} 
+      />
+      <SafeAreaView style={dynamicStyles.container}>
+        <View style={dynamicStyles.container}>
           {renderScreen()}
         </View>
         {showHeader && <Header currentScreen={currentScreen} navigateTo={navigateTo} />}
       </SafeAreaView>
-    )
+    </View>
   );
 }
 

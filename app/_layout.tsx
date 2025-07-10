@@ -1,5 +1,6 @@
 import { AuthProvider } from '@/context/AuthContext';
 import { IndustriesProvider } from '../context/IndustriesContext';
+import { ThemeProvider } from '../context/ThemeContext';
 import { Slot } from 'expo-router';
 import AppHeader from '../components/AppHeader';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -11,10 +12,12 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
         <AuthProvider>
-          <IndustriesProvider>
-            <Slot />
-            <AppHeader />
-          </IndustriesProvider>
+          <ThemeProvider>
+            <IndustriesProvider>
+              <Slot />
+              <AppHeader />
+            </IndustriesProvider>
+          </ThemeProvider>
         </AuthProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
