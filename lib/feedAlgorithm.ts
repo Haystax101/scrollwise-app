@@ -282,6 +282,73 @@ export class FeedAlgorithm {
   });
 
   /**
+   * Fetch a specific article by ID (used for saved posts)
+   */
+  async fetchSpecificArticle(articleId: number): Promise<Article | null> {
+    console.log('🔍 FeedAlgorithm: fetchSpecificArticle called for article:', articleId);
+    console.log('🔍 FeedAlgorithm: userId:', this.userId);
+    console.log('🔍 FeedAlgorithm: userIndustries:', this.userIndustries);
+    
+    try {
+      console.log('🔍 FeedAlgorithm: Starting database query for article ID:', articleId);
+      
+      const { data, error } = await supabase
+        .from('articles')
+        .select('id, type, title, content, authors, link, industry_id, likes_count, saves_count, comments_count, created_at')
+        .eq('id', articleId)
+        .single();
+
+      console.log('🔍 FeedAlgorithm: Database query result:', {
+        data: data ? `Found article: ${data.id} - ${data.title}` : 'No data',
+        error: error ? error.message : 'No error'
+      });
+
+      if (error) {
+        console.error('🔍 FeedAlgorithm: DATABASE ERROR in fetchSpecificArticle:', error);
+        return null;
+      }
+
+      if (!data) {
+        console.log('🔍 FeedAlgorithm: NO ARTICLE FOUND with ID:', articleId);
+        return null;
+      }
+
+      console.log('🔍 FeedAlgorithm: SUCCESS! Found specific article:', {
+        id: data.id,
+        title: data.title,
+        type: data.type,
+        industry_id: data.industry_id,
+        likes_count: data.likes_count,
+        saves_count: data.saves_count
+      });
+      
+      // Initialize user interactions if not already done
+      if (this.likedIds.size === 0 && this.savedIds.size === 0 && this.userId) {
+        console.log('🔍 FeedAlgorithm: Initializing user interactions...');
+        await this.initializeUserInteractions();
+      }
+      
+      // Add to fetched IDs to avoid duplicates in regular feed
+      this.fetchedIds.add(data.id);
+      console.log('🔍 FeedAlgorithm: Added to fetchedIds, current size:', this.fetchedIds.size);
+      
+      // Convert to Article format
+      const article = this.mapToArticle(data);
+      console.log('🔍 FeedAlgorithm: Mapped article result:', {
+        id: article.id,
+        title: article.title,
+        type: article.type,
+        industry: article.industry
+      });
+      
+      return article;
+    } catch (error) {
+      console.error('🔍 FeedAlgorithm: EXCEPTION in fetchSpecificArticle:', error);
+      return null;
+    }
+  }
+
+  /**
    * Reset the algorithm state for fresh fetch (pull-to-refresh)
    */
   reset(): void {

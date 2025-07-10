@@ -22,9 +22,16 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [commentsArticleId, setCommentsArticleId] = useState<number | null>(null);
   const flatListRef = useRef<FlatList>(null);
-  const [hasScrolledToInitial, setHasScrolledToInitial] = useState(false);
+
   const feedAlgorithmRef = useRef<FeedAlgorithm | null>(null);
   const [hasMore, setHasMore] = useState(true);
+
+  // Debug logging for props
+  console.log('🔍 MainFeed: Component initialized with props:', {
+    industries,
+    initialArticleId,
+    userId: user?.id
+  });
 
   // Industries are already numbers, no conversion needed
   const industryIds = industries;
@@ -47,7 +54,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     }
   }, [user, industries.join(',')]);
 
-  // Load initial feed (first 10 articles)
+  // Load initial feed (first 3 articles for faster loading, or specific article if provided)
   const loadInitialFeed = async () => {
     console.log('🔍 MainFeed: loadInitialFeed called');
     if (!feedAlgorithmRef.current) {
@@ -58,22 +65,65 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     
     setIsLoading(true);
     try {
-      console.log('📊 FeedAlgorithm: Loading initial feed for industries:', industryIds);
-      const newArticles = await feedAlgorithmRef.current.fetchArticles(10);
-      console.log('📊 FeedAlgorithm: Fetched', newArticles.length, 'articles');
-      console.log('📊 FeedAlgorithm: Articles:', newArticles.map(a => ({ id: a.id, title: a.title, type: a.type, industry: a.industry })));
+      let newArticles: Article[] = [];
       
-      setArticles(newArticles);
-      setHasMore(newArticles.length === 10); // Assume there's more if we got exactly 10
-      setCurrentArticleIndex(0);
-      
-      // Handle initial article ID if provided
-      if (initialArticleId && newArticles.length > 0) {
-        const idx = newArticles.findIndex((article) => article.id === initialArticleId);
-        if (idx !== -1) {
-          setCurrentArticleIndex(idx);
+      // If we have an initialArticleId (from saved post), fetch that specific article first
+      if (initialArticleId) {
+        console.log('🔍 MainFeed: SAVED POST FLOW - initialArticleId detected:', initialArticleId);
+        console.log('🔍 MainFeed: SAVED POST FLOW - feedAlgorithmRef exists:', !!feedAlgorithmRef.current);
+        console.log('🔍 MainFeed: SAVED POST FLOW - About to call fetchSpecificArticle...');
+        
+        const specificArticle = await feedAlgorithmRef.current.fetchSpecificArticle(initialArticleId);
+        
+        console.log('🔍 MainFeed: SAVED POST FLOW - fetchSpecificArticle result:', specificArticle);
+        
+        if (specificArticle) {
+          console.log('🔍 MainFeed: SAVED POST FLOW - SUCCESS! Found specific article:', {
+            id: specificArticle.id,
+            title: specificArticle.title,
+            type: specificArticle.type
+          });
+          newArticles.push(specificArticle);
+          console.log('🔍 MainFeed: SAVED POST FLOW - Added to newArticles, length now:', newArticles.length);
+          setCurrentArticleIndex(0); // Start viewing the specific article
+        } else {
+          console.log('🔍 MainFeed: SAVED POST FLOW - FAILED! Specific article not found, loading regular feed');
         }
+      } else {
+        console.log('🔍 MainFeed: NORMAL FLOW - No initialArticleId, loading regular feed');
       }
+      
+      // Load additional articles from algorithm (will exclude the specific one if it was fetched)
+      const remainingCount = initialArticleId ? 2 : 3; // Load 2 more if we have specific article, 3 if not
+      console.log('📊 FeedAlgorithm: Loading', remainingCount, 'additional articles for industries:', industryIds);
+      const algorithmArticles = await feedAlgorithmRef.current.fetchArticles(remainingCount);
+      console.log('📊 FeedAlgorithm: Fetched', algorithmArticles.length, 'algorithm articles');
+      
+      // Combine specific article (if any) with algorithm articles
+      newArticles = [...newArticles, ...algorithmArticles];
+      console.log('🔍 MainFeed: FINAL STEP - Total articles to set:', newArticles.length);
+      console.log('🔍 MainFeed: FINAL STEP - Articles details:', newArticles.map(a => ({ 
+        id: a.id, 
+        title: a.title?.substring(0, 50) + '...', 
+        type: a.type, 
+        industry: a.industry 
+      })));
+      
+      console.log('🔍 MainFeed: FINAL STEP - Calling setArticles...');
+      setArticles(newArticles);
+      console.log('🔍 MainFeed: FINAL STEP - setArticles completed');
+      setHasMore(true); // Always assume there's more after initial small batch
+      
+      // Set initial index - 0 if we have a specific article, otherwise 0 for first algorithm article
+      if (!initialArticleId) {
+        setCurrentArticleIndex(0);
+      }
+      
+      // Start background prefetching immediately after initial load
+      setTimeout(() => {
+        prefetchMoreArticles();
+      }, 100); // Small delay to ensure UI is responsive
+      
     } catch (error) {
       console.error('📊 FeedAlgorithm: Error loading initial feed:', error);
       setArticles([]);
@@ -82,6 +132,26 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     setIsLoading(false);
   };
 
+  // Background prefetch function for smoother experience
+  const prefetchMoreArticles = useCallback(async () => {
+    if (!feedAlgorithmRef.current || isLoadingMore || !hasMore) return;
+    
+    try {
+      console.log('📊 FeedAlgorithm: Background prefetching articles...');
+      const newArticles = await feedAlgorithmRef.current.fetchArticles(7); // Prefetch 7 more to total 10
+      console.log('📊 FeedAlgorithm: Prefetched', newArticles.length, 'articles in background');
+      
+      if (newArticles.length > 0) {
+        setArticles(prev => [...prev, ...newArticles]);
+        setHasMore(newArticles.length === 7); // If we got less than 7, probably no more
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('📊 FeedAlgorithm: Error prefetching articles:', error);
+    }
+  }, [isLoadingMore, hasMore]);
+
   // Load more articles for infinite scroll
   const loadMoreArticles = useCallback(async () => {
     if (!feedAlgorithmRef.current || isLoadingMore || !hasMore) return;
@@ -89,12 +159,12 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     setIsLoadingMore(true);
     try {
       console.log('📊 FeedAlgorithm: Loading more articles...');
-      const newArticles = await feedAlgorithmRef.current.fetchArticles(10);
+      const newArticles = await feedAlgorithmRef.current.fetchArticles(8); // Load 8 more for smooth scrolling
       console.log('📊 FeedAlgorithm: Fetched', newArticles.length, 'more articles');
       
       if (newArticles.length > 0) {
         setArticles(prev => [...prev, ...newArticles]);
-        setHasMore(newArticles.length === 10); // If we got less than 10, probably no more
+        setHasMore(newArticles.length === 8); // If we got less than 8, probably no more
       } else {
         setHasMore(false);
       }
@@ -104,7 +174,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     setIsLoadingMore(false);
   }, [isLoadingMore, hasMore]);
 
-  // Pull to refresh - reset and load fresh feed
+  // Pull to refresh - reset and load fresh feed (maintaining specific article if present)
   const handleRefresh = useCallback(async () => {
     if (!feedAlgorithmRef.current) return;
     
@@ -112,37 +182,48 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     try {
       console.log('📊 FeedAlgorithm: Refreshing feed...');
       feedAlgorithmRef.current.reset(); // Reset algorithm state
-      const newArticles = await feedAlgorithmRef.current.fetchArticles(10);
-      console.log('📊 FeedAlgorithm: Refreshed with', newArticles.length, 'articles');
+      
+      let newArticles: Article[] = [];
+      
+      // If we have an initialArticleId, fetch it first again (in case it was updated)
+      if (initialArticleId) {
+        console.log('📊 FeedAlgorithm: Re-fetching specific saved article on refresh:', initialArticleId);
+        const specificArticle = await feedAlgorithmRef.current.fetchSpecificArticle(initialArticleId);
+        
+        if (specificArticle) {
+          console.log('📊 FeedAlgorithm: Re-found specific article:', specificArticle.title);
+          newArticles.push(specificArticle);
+        }
+      }
+      
+      // Load additional fresh articles
+      const remainingCount = initialArticleId ? 2 : 3;
+      const algorithmArticles = await feedAlgorithmRef.current.fetchArticles(remainingCount);
+      newArticles = [...newArticles, ...algorithmArticles];
+      
+      console.log('📊 FeedAlgorithm: Refreshed with', newArticles.length, 'total articles');
       
       setArticles(newArticles);
-      setHasMore(newArticles.length === 10);
+      setHasMore(true); // Always assume more after refresh
       setCurrentArticleIndex(0);
       
       // Scroll back to top
       if (flatListRef.current && newArticles.length > 0) {
         flatListRef.current.scrollToIndex({ index: 0, animated: true });
       }
+      
+      // Background prefetch after refresh
+      setTimeout(() => {
+        prefetchMoreArticles();
+      }, 200); // Slightly longer delay for refresh
+      
     } catch (error) {
       console.error('📊 FeedAlgorithm: Error refreshing feed:', error);
     }
     setIsRefreshing(false);
-  }, []);
+  }, [prefetchMoreArticles, initialArticleId]);
 
-  // Imperatively scroll to the correct index after articles are loaded
-  useEffect(() => {
-    if (
-      initialArticleId &&
-      articles.length > 0 &&
-      !hasScrolledToInitial
-    ) {
-      const idx = articles.findIndex((article) => article.id === initialArticleId);
-      if (idx !== -1 && flatListRef.current) {
-        flatListRef.current.scrollToIndex({ index: idx, animated: false });
-        setHasScrolledToInitial(true);
-      }
-    }
-  }, [initialArticleId, articles, hasScrolledToInitial]);
+  // Note: Removed scroll-to-index logic since specific articles are now positioned at the top of the feed
 
   // Handle viewable items change - optimized with fewer dependencies
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
@@ -150,8 +231,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       const newIndex = viewableItems[0].index;
       setCurrentArticleIndex(newIndex);
       
-      // Trigger infinite scroll when user reaches 6th or 7th item
-      if (newIndex >= 5 && newIndex <= articles.length - 5) {
+      // Trigger infinite scroll earlier for smoother experience (when 2-3 items remain)
+      if (newIndex >= 2 && newIndex >= articles.length - 3) {
         loadMoreArticles();
       }
     }
@@ -257,14 +338,14 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
           />
         }
         ListFooterComponent={renderFooter}
-        onEndReachedThreshold={0.1} // Backup infinite scroll trigger
+        onEndReachedThreshold={0.3} // Earlier trigger for smoother loading
         onEndReached={loadMoreArticles}
         // Performance optimization props
         removeClippedSubviews={true} // Remove off-screen views to free up resources
-        maxToRenderPerBatch={5} // Reduce batch size for smoother scrolling
-        updateCellsBatchingPeriod={100} // Increase batching period for better responsiveness
-        initialNumToRender={3} // Only render 3 items initially to improve startup time
-        windowSize={10} // Reduce window size to save memory while maintaining smooth scrolling
+        maxToRenderPerBatch={4} // Reduced further for faster initial rendering
+        updateCellsBatchingPeriod={50} // Faster batching for immediate responsiveness
+        initialNumToRender={2} // Only render 2 items initially for fastest startup
+        windowSize={8} // Smaller window for faster initial load
         legacyImplementation={false} // Use modern VirtualizedList implementation
       />
       {/* CommentsModal will be rendered here, controlled by commentsArticleId */}

@@ -172,7 +172,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
                 style={[styles.savedItemRow, { width: 260, marginRight: 16 }]}
                 accessibilityLabel={`View saved content: ${item.title}`}
                 accessibilityRole="button"
-                onPress={() => router.push({ pathname: '/feed', params: { articleId: item.id } })}
+                onPress={() => router.push({ pathname: '/feed', params: { reelId: item.id } })}
               >
                 <View style={styles.savedIconCircle}>
                   <Feather name="bookmark" size={18} color="#2563EB" />
