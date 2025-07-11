@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { View, Animated, StyleSheet, Dimensions } from 'react-native';
+import { View, Animated, StyleSheet, Dimensions, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
@@ -2196,7 +2196,1340 @@ function GeometricMorphing() {
   );
 }
 
-function HealthcareFallback() {
+function StockMarket() {
+  const chartAnim = useRef(new Animated.Value(0)).current;
+  const candlestickAnim = useRef(new Animated.Value(0)).current;
+  const trendAnim = useRef(new Animated.Value(0)).current;
+  const volumeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Chart line animation
+    Animated.loop(
+      Animated.timing(chartAnim, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Candlestick movement
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(candlestickAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(candlestickAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Trend indicators
+    Animated.loop(
+      Animated.timing(trendAnim, {
+        toValue: 1,
+        duration: 4000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Volume bars
+    Animated.loop(
+      Animated.timing(volumeAnim, {
+        toValue: 1,
+        duration: 2500,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  return (
+    <View style={styles.visualContainer}>
+      <LinearGradient
+        colors={["#0f172a", "#1e293b", "#334155"]}
+        style={styles.gradientBg}
+      />
+      
+      {/* Stock chart grid */}
+      {[...Array(5)].map((_, index) => (
+        <View
+          key={`grid-h-${index}`}
+          style={{
+            position: 'absolute',
+            width: '100%',
+            height: 1,
+            backgroundColor: '#374151',
+            top: `${20 + index * 15}%`,
+            opacity: 0.3,
+          }}
+        />
+      ))}
+      {[...Array(6)].map((_, index) => (
+        <View
+          key={`grid-v-${index}`}
+          style={{
+            position: 'absolute',
+            height: '100%',
+            width: 1,
+            backgroundColor: '#374151',
+            left: `${10 + index * 15}%`,
+            opacity: 0.3,
+          }}
+        />
+      ))}
+      
+      {/* Animated chart line */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            top: '40%',
+            left: '10%',
+            width: '80%',
+            height: 3,
+            backgroundColor: '#10b981',
+            borderRadius: 2,
+            shadowColor: '#10b981',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.8,
+            shadowRadius: 8,
+            elevation: 8,
+          },
+          {
+            transform: [
+              {
+                scaleX: chartAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 1],
+                }),
+              },
+            ],
+            opacity: chartAnim.interpolate({
+              inputRange: [0, 0.3, 1],
+              outputRange: [0, 1, 0.8],
+            }),
+          },
+        ]}
+      />
+      
+      {/* Candlestick charts */}
+      {[...Array(8)].map((_, index) => (
+        <Animated.View
+          key={`candle-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: 8,
+              height: 20 + Math.random() * 30,
+              backgroundColor: Math.random() > 0.5 ? '#10b981' : '#ef4444',
+              left: `${15 + index * 10}%`,
+              top: `${35 + Math.random() * 20}%`,
+              borderRadius: 2,
+            },
+            {
+              transform: [
+                {
+                  scaleY: candlestickAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.5, 1.2],
+                  }),
+                },
+              ],
+              opacity: candlestickAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.6, 1, 0.6],
+              }),
+            },
+          ]}
+        />
+      ))}
+      
+      {/* Volume bars at bottom */}
+      {[...Array(12)].map((_, index) => (
+        <Animated.View
+          key={`volume-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: 6,
+              height: 10 + Math.random() * 15,
+              backgroundColor: '#6366f1',
+              left: `${10 + index * 7}%`,
+              bottom: '15%',
+              borderRadius: 1,
+              opacity: 0.7,
+            },
+            {
+              transform: [
+                {
+                  scaleY: volumeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.3, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      ))}
+      
+      {/* Floating financial indicators */}
+      {['$', '€', '¥', '£'].map((symbol, index) => (
+        <Animated.View
+          key={`symbol-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              top: `${20 + index * 15}%`,
+              right: '10%',
+              opacity: 0.4,
+            },
+            {
+              transform: [
+                {
+                  translateY: trendAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, -10],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={{ color: '#64748b', fontSize: 18, fontWeight: 'bold' }}>
+            {symbol}
+          </Text>
+        </Animated.View>
+      ))}
+    </View>
+  );
+}
+
+function CurrencyFlow() {
+  const flowAnim = useRef(new Animated.Value(0)).current;
+  const exchangeAnim = useRef(new Animated.Value(0)).current;
+  const globalAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Money flow animation
+    Animated.loop(
+      Animated.timing(flowAnim, {
+        toValue: 1,
+        duration: 4000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Exchange rate animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(exchangeAnim, {
+          toValue: 1,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(exchangeAnim, {
+          toValue: 0,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Global network pulse
+    Animated.loop(
+      Animated.timing(globalAnim, {
+        toValue: 1,
+        duration: 6000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Currency pulse
+    Animated.loop(
+      Animated.timing(pulseAnim, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  return (
+    <View style={styles.visualContainer}>
+      <LinearGradient
+        colors={["#064e3b", "#065f46", "#047857"]}
+        style={styles.gradientBg}
+      />
+      
+      {/* Central financial hub */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: '#10b981',
+            top: '50%',
+            left: '50%',
+            marginTop: -20,
+            marginLeft: -20,
+            shadowColor: '#10b981',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.8,
+            shadowRadius: 15,
+            elevation: 10,
+          },
+          {
+            transform: [
+              {
+                scale: pulseAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 1.3],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
+      
+      {/* Currency streams */}
+      {[...Array(6)].map((_, index) => {
+        const angle = (index * 60) * (Math.PI / 180);
+        return (
+          <View key={`stream-${index}`}>
+            {[...Array(8)].map((_, dotIndex) => (
+              <Animated.View
+                key={`dot-${index}-${dotIndex}`}
+                style={[
+                  {
+                    position: 'absolute',
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: '#34d399',
+                    top: '50%',
+                    left: '50%',
+                    marginTop: -3,
+                    marginLeft: -3,
+                  },
+                  {
+                    transform: [
+                      {
+                        translateX: flowAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [
+                            Math.cos(angle) * (30 + dotIndex * 8),
+                            Math.cos(angle) * (30 + dotIndex * 8 + 100),
+                          ],
+                        }),
+                      },
+                      {
+                        translateY: flowAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [
+                            Math.sin(angle) * (30 + dotIndex * 8),
+                            Math.sin(angle) * (30 + dotIndex * 8 + 100),
+                          ],
+                        }),
+                      },
+                    ],
+                    opacity: flowAnim.interpolate({
+                      inputRange: [0, 0.3, 0.7, 1],
+                      outputRange: [0, 1, 0.8, 0],
+                    }),
+                  },
+                ]}
+              />
+            ))}
+          </View>
+        );
+      })}
+      
+      {/* Exchange rate indicators */}
+      {[
+        { from: 'USD', to: 'EUR', rate: '0.85' },
+        { from: 'GBP', to: 'USD', rate: '1.27' },
+        { from: 'JPY', to: 'USD', rate: '0.007' }
+      ].map((exchange, index) => (
+        <Animated.View
+          key={`exchange-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              top: `${25 + index * 20}%`,
+              left: '10%',
+              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: '#10b981',
+            },
+            {
+              opacity: exchangeAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.5, 1, 0.5],
+              }),
+              transform: [
+                {
+                  scale: exchangeAnim.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0.9, 1, 0.9],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 'bold' }}>
+            {exchange.from}/{exchange.to}
+          </Text>
+          <Text style={{ color: '#34d399', fontSize: 8 }}>
+            {exchange.rate}
+          </Text>
+        </Animated.View>
+      ))}
+      
+      {/* Global network connections */}
+      {[...Array(4)].map((_, index) => (
+        <Animated.View
+          key={`connection-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: 80 + index * 20,
+              height: 80 + index * 20,
+              borderRadius: 40 + index * 10,
+              borderWidth: 1,
+              borderColor: '#059669',
+              top: '50%',
+              left: '50%',
+              marginTop: -(40 + index * 10),
+              marginLeft: -(40 + index * 10),
+            },
+            {
+              opacity: globalAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.3 - index * 0.05, 0.1, 0],
+              }),
+              transform: [
+                {
+                  scale: globalAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1.5],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+function EconomicGrowth() {
+  const growthAnim = useRef(new Animated.Value(0)).current;
+  const chartAnim = useRef(new Animated.Value(0)).current;
+  const arrowAnim = useRef(new Animated.Value(0)).current;
+  const dataAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Growth animation
+    Animated.loop(
+      Animated.timing(growthAnim, {
+        toValue: 1,
+        duration: 3500,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Chart building animation
+    Animated.loop(
+      Animated.timing(chartAnim, {
+        toValue: 1,
+        duration: 4000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Arrow movement
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(arrowAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(arrowAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Data flow
+    Animated.loop(
+      Animated.timing(dataAnim, {
+        toValue: 1,
+        duration: 5000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  return (
+    <View style={styles.visualContainer}>
+      <LinearGradient
+        colors={["#1e3a8a", "#3730a3", "#581c87"]}
+        style={styles.gradientBg}
+      />
+      
+      {/* Growth bars */}
+      {[...Array(7)].map((_, index) => (
+        <Animated.View
+          key={`bar-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: 20,
+              height: 40 + index * 15,
+              backgroundColor: '#3b82f6',
+              left: `${15 + index * 11}%`,
+              bottom: '20%',
+              borderRadius: 4,
+              shadowColor: '#3b82f6',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.6,
+              shadowRadius: 6,
+              elevation: 6,
+            },
+            {
+              transform: [
+                {
+                  scaleY: growthAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.1, 1],
+                  }),
+                },
+              ],
+              opacity: growthAnim.interpolate({
+                inputRange: [0, 0.3, 1],
+                outputRange: [0.4, 1, 0.8],
+              }),
+            },
+          ]}
+        />
+      ))}
+      
+      {/* Trend line overlay */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            bottom: '20%',
+            left: '15%',
+            width: '70%',
+            height: 3,
+            backgroundColor: '#fbbf24',
+            borderRadius: 2,
+            shadowColor: '#fbbf24',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.8,
+            shadowRadius: 8,
+            elevation: 8,
+          },
+          {
+            transform: [
+              {
+                scaleX: chartAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 1],
+                }),
+              },
+              {
+                translateY: chartAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -50],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
+      
+      {/* Upward trending arrows */}
+      {[...Array(3)].map((_, index) => (
+        <Animated.View
+          key={`arrow-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              top: `${30 + index * 15}%`,
+              right: '15%',
+              width: 0,
+              height: 0,
+              borderLeftWidth: 8,
+              borderRightWidth: 8,
+              borderBottomWidth: 15,
+              borderLeftColor: 'transparent',
+              borderRightColor: 'transparent',
+              borderBottomColor: '#10b981',
+            },
+            {
+              transform: [
+                {
+                  translateY: arrowAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [10, -5],
+                  }),
+                },
+              ],
+              opacity: arrowAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.4, 1, 0.4],
+              }),
+            },
+          ]}
+        />
+      ))}
+      
+      {/* Economic indicators */}
+      {['GDP', 'INF', 'UNE', 'INT'].map((indicator, index) => (
+        <Animated.View
+          key={`indicator-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              top: `${15 + index * 8}%`,
+              left: '10%',
+              backgroundColor: 'rgba(59, 130, 246, 0.3)',
+              paddingHorizontal: 6,
+              paddingVertical: 3,
+              borderRadius: 6,
+              borderWidth: 1,
+              borderColor: '#3b82f6',
+            },
+                       {
+             opacity: dataAnim.interpolate({
+               inputRange: [0, 0.2 + index * 0.15, 0.4 + index * 0.15, 1],
+               outputRange: [0.3, 1, 1, 0.3],
+             }),
+           },
+          ]}
+        >
+          <Text style={{ color: '#93c5fd', fontSize: 8, fontWeight: 'bold' }}>
+            {indicator}
+          </Text>
+        </Animated.View>
+      ))}
+      
+      {/* Data points */}
+      {[...Array(12)].map((_, index) => (
+        <Animated.View
+          key={`point-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: 4,
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: '#f59e0b',
+              top: `${25 + Math.random() * 50}%`,
+              left: `${15 + Math.random() * 70}%`,
+            },
+            {
+              opacity: dataAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, 0.8, 0],
+              }),
+              transform: [
+                {
+                  scale: dataAnim.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0.5, 1.5, 0.5],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+function BookLearning() {
+  const networkPulseAnim = useRef(new Animated.Value(0)).current;
+  const knowledgeFlowAnim = useRef(new Animated.Value(0)).current;
+  const nodeActivationAnim = useRef(new Animated.Value(0)).current;
+  const synapseAnim = useRef(new Animated.Value(0)).current;
+  const learningWaveAnim = useRef(new Animated.Value(0)).current;
+
+  // Pre-calculate evenly distributed node positions
+  const nodePositions = useMemo(() => [
+    { x: 50, y: 20 }, // Top center
+    { x: 20, y: 35 }, // Left upper
+    { x: 80, y: 35 }, // Right upper
+    { x: 35, y: 50 }, // Left center
+    { x: 65, y: 50 }, // Right center
+    { x: 50, y: 65 }, // Bottom center
+    { x: 25, y: 80 }, // Left lower
+    { x: 75, y: 80 }, // Right lower
+  ], []);
+
+  // Connection paths between nodes (creating a balanced network)
+  const connections = useMemo(() => [
+    [0, 1], [0, 2], [1, 3], [2, 4], [3, 5], [4, 5], [5, 6], [5, 7], [1, 6], [2, 7]
+  ], []);
+
+  useEffect(() => {
+    // Network pulse animation
+    Animated.loop(
+      Animated.timing(networkPulseAnim, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Knowledge flowing through network
+    Animated.loop(
+      Animated.timing(knowledgeFlowAnim, {
+        toValue: 1,
+        duration: 4000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Node activation waves
+    Animated.loop(
+      Animated.timing(nodeActivationAnim, {
+        toValue: 1,
+        duration: 5000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Synapse firing
+    Animated.loop(
+      Animated.timing(synapseAnim, {
+        toValue: 1,
+        duration: 2500,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Learning wave propagation
+    Animated.loop(
+      Animated.timing(learningWaveAnim, {
+        toValue: 1,
+        duration: 6000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  return (
+    <View style={styles.visualContainer}>
+      <LinearGradient
+        colors={["#451a03", "#78350f", "#a16207", "#ca8a04"]}
+        style={styles.gradientBg}
+      />
+      
+      {/* Knowledge Network Nodes */}
+      {nodePositions.map((node, index) => (
+        <Animated.View
+          key={`node-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: 24,
+              height: 24,
+              borderRadius: 12,
+              backgroundColor: '#fbbf24',
+              left: `${node.x}%`,
+              top: `${node.y}%`,
+              marginLeft: -12,
+              marginTop: -12,
+              shadowColor: '#f59e0b',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.8,
+              shadowRadius: 8,
+              elevation: 8,
+            },
+            {
+              transform: [
+                {
+                  scale: nodeActivationAnim.interpolate({
+                    inputRange: [0, Math.min(index * 0.125, 0.6), Math.min(index * 0.125 + 0.25, 0.8), 1],
+                    outputRange: [1, 1.5, 1.2, 1],
+                  }),
+                },
+              ],
+              opacity: nodeActivationAnim.interpolate({
+                inputRange: [0, Math.min(index * 0.125, 0.6), Math.min(index * 0.125 + 0.25, 0.8), 1],
+                outputRange: [0.7, 1, 0.9, 0.7],
+              }),
+            },
+          ]}
+        >
+          {/* Node core */}
+          <View style={{
+            position: 'absolute',
+            width: 12,
+            height: 12,
+            borderRadius: 6,
+            backgroundColor: '#fffbeb',
+            top: 6,
+            left: 6,
+          }} />
+        </Animated.View>
+      ))}
+      
+      {/* Connection Lines between nodes */}
+      {connections.map((connection, index) => {
+        const fromNode = nodePositions[connection[0]];
+        const toNode = nodePositions[connection[1]];
+        const deltaX = toNode.x - fromNode.x;
+        const deltaY = toNode.y - fromNode.y;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+        
+        return (
+          <Animated.View
+            key={`connection-${index}`}
+            style={[
+              {
+                position: 'absolute',
+                left: `${fromNode.x}%`,
+                top: `${fromNode.y}%`,
+                width: distance * 2.8, // Scaling factor for percentage to pixels
+                height: 3,
+                backgroundColor: '#f59e0b',
+                transformOrigin: 'left center',
+                borderRadius: 2,
+              },
+              {
+                transform: [
+                  { rotate: `${angle}deg` },
+                ],
+                opacity: synapseAnim.interpolate({
+                  inputRange: [0, Math.min(index * 0.1, 0.5), Math.min(index * 0.1 + 0.2, 0.7), 1],
+                  outputRange: [0.3, 0.8, 0.6, 0.3],
+                }),
+              },
+            ]}
+          />
+        );
+      })}
+      
+      {/* Knowledge particles flowing through network */}
+      {connections.map((connection, index) => {
+        const fromNode = nodePositions[connection[0]];
+        const toNode = nodePositions[connection[1]];
+        
+        // Calculate the translation distance in pixels (approximate conversion from percentage)
+        const deltaX = (toNode.x - fromNode.x) * 3; // Rough conversion factor for percentage to pixels
+        const deltaY = (toNode.y - fromNode.y) * 3; // Rough conversion factor for percentage to pixels
+        
+        return (
+          <Animated.View
+            key={`flow-particle-${index}`}
+            style={[
+              {
+                position: 'absolute',
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: '#fde047',
+                left: `${fromNode.x}%`,
+                top: `${fromNode.y}%`,
+                marginLeft: -3,
+                marginTop: -3,
+              },
+              {
+                opacity: knowledgeFlowAnim.interpolate({
+                  inputRange: [0, 0.1, 0.9, 1],
+                  outputRange: [0, 1, 1, 0],
+                }),
+                transform: [
+                  {
+                    translateX: knowledgeFlowAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, deltaX],
+                    }),
+                  },
+                  {
+                    translateY: knowledgeFlowAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, deltaY],
+                    }),
+                  },
+                  {
+                    scale: knowledgeFlowAnim.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [0.5, 1.2, 0.5],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+        );
+      })}
+      
+      {/* Learning wave pulses */}
+      {[...Array(4)].map((_, index) => (
+        <Animated.View
+          key={`wave-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: 100 + index * 40,
+              height: 100 + index * 40,
+              borderRadius: 50 + index * 20,
+              borderWidth: 2,
+              borderColor: '#fbbf24',
+              marginTop: -(50 + index * 20),
+              marginLeft: -(50 + index * 20),
+            },
+            {
+              transform: [
+                {
+                  scale: learningWaveAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.5, 1.8],
+                  }),
+                },
+              ],
+              opacity: learningWaveAnim.interpolate({
+                inputRange: [0, 0.2, 0.8, 1],
+                outputRange: [0, 0.6 - index * 0.1, 0.3 - index * 0.05, 0],
+              }),
+            },
+          ]}
+        />
+      ))}
+      
+      {/* Floating learning symbols */}
+      {['📚', '🧠', '💡', '🎓', '📖', '⚗️', '🔬', '📊'].map((symbol, index) => (
+        <Animated.View
+          key={`learning-symbol-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              top: `${15 + (index % 4) * 25}%`,
+              left: `${10 + Math.floor(index / 4) * 80}%`,
+            },
+            {
+              transform: [
+                {
+                  translateY: networkPulseAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, -10 - Math.random() * 15],
+                  }),
+                },
+                {
+                  rotate: networkPulseAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', `${(Math.random() - 0.5) * 20}deg`],
+                  }),
+                },
+              ],
+              opacity: networkPulseAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.6, 1, 0.6],
+              }),
+            },
+          ]}
+        >
+          <Text style={{
+            fontSize: 20,
+            textShadowColor: '#f59e0b',
+            textShadowOffset: { width: 1, height: 1 },
+            textShadowRadius: 3,
+          }}>
+            {symbol}
+          </Text>
+        </Animated.View>
+      ))}
+      
+      {/* Central knowledge hub */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: '#f59e0b',
+            top: '50%',
+            left: '50%',
+            marginTop: -20,
+            marginLeft: -20,
+            shadowColor: '#fbbf24',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 1,
+            shadowRadius: 15,
+            elevation: 15,
+          },
+          {
+            transform: [
+              {
+                scale: networkPulseAnim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [1, 1.3, 1],
+                }),
+              },
+            ],
+            opacity: networkPulseAnim.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [0.9, 1, 0.9],
+            }),
+          },
+        ]}
+      >
+        <View style={{
+          position: 'absolute',
+          width: 20,
+          height: 20,
+          borderRadius: 10,
+          backgroundColor: '#fffbeb',
+          top: 10,
+          left: 10,
+        }} />
+      </Animated.View>
+    </View>
+  );
+}
+
+function DigitalClassroom() {
+  const screenAnim = useRef(new Animated.Value(0)).current;
+  const dataTransferAnim = useRef(new Animated.Value(0)).current;
+  const interactionAnim = useRef(new Animated.Value(0)).current;
+  const cloudAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Screen/device animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(screenAnim, {
+          toValue: 1,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(screenAnim, {
+          toValue: 0,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Data transfer between devices
+    Animated.loop(
+      Animated.timing(dataTransferAnim, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Interactive elements
+    Animated.loop(
+      Animated.timing(interactionAnim, {
+        toValue: 1,
+        duration: 4000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Cloud connectivity
+    Animated.loop(
+      Animated.timing(cloudAnim, {
+        toValue: 1,
+        duration: 5000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  return (
+    <View style={styles.visualContainer}>
+      <LinearGradient
+        colors={["#1e3a8a", "#2563eb", "#3b82f6"]}
+        style={styles.gradientBg}
+      />
+      
+      {/* Central tablet/screen */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            width: 70,
+            height: 90,
+            backgroundColor: '#1f2937',
+            borderRadius: 12,
+            top: '40%',
+            left: '50%',
+            marginTop: -45,
+            marginLeft: -35,
+            shadowColor: '#3b82f6',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.6,
+            shadowRadius: 12,
+            elevation: 12,
+          },
+          {
+            transform: [
+              {
+                scale: screenAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 1.1],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        {/* Screen content */}
+        <View style={{
+          position: 'absolute',
+          width: '85%',
+          height: '80%',
+          top: '10%',
+          left: '7.5%',
+          backgroundColor: '#3b82f6',
+          borderRadius: 8,
+        }} />
+        
+        {/* Screen elements */}
+        {[...Array(4)].map((_, index) => (
+          <Animated.View
+            key={`screen-element-${index}`}
+            style={[
+              {
+                position: 'absolute',
+                width: '70%',
+                height: 3,
+                backgroundColor: '#e5e7eb',
+                left: '15%',
+                top: `${25 + index * 15}%`,
+                borderRadius: 2,
+              },
+              {
+                opacity: screenAnim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0.5, 1, 0.5],
+                }),
+              },
+            ]}
+          />
+        ))}
+      </Animated.View>
+      
+      {/* Surrounding devices */}
+      {[
+        { x: 25, y: 25, size: 40 },
+        { x: 75, y: 25, size: 45 },
+        { x: 20, y: 70, size: 35 },
+        { x: 80, y: 70, size: 38 }
+      ].map((device, index) => (
+        <Animated.View
+          key={`device-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: device.size,
+              height: device.size * 1.2,
+              backgroundColor: '#374151',
+              borderRadius: 8,
+              left: `${device.x}%`,
+              top: `${device.y}%`,
+              marginLeft: -device.size / 2,
+              marginTop: -device.size * 0.6,
+            },
+            {
+              opacity: interactionAnim.interpolate({
+                inputRange: [0, index * 0.2, index * 0.2 + 0.2, 1],
+                outputRange: [0.6, 1, 0.8, 0.6],
+              }),
+            },
+          ]}
+        >
+          <View style={{
+            position: 'absolute',
+            width: '80%',
+            height: '70%',
+            top: '15%',
+            left: '10%',
+            backgroundColor: '#60a5fa',
+            borderRadius: 4,
+          }} />
+        </Animated.View>
+      ))}
+      
+      {/* Data transfer streams */}
+      {[...Array(8)].map((_, index) => {
+        const angle = (index * 45) * (Math.PI / 180);
+        return (
+          <Animated.View
+            key={`data-${index}`}
+            style={[
+              {
+                position: 'absolute',
+                width: 4,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: '#fbbf24',
+                top: '50%',
+                left: '50%',
+                marginTop: -2,
+                marginLeft: -2,
+              },
+              {
+                transform: [
+                  {
+                    translateX: dataTransferAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [
+                        Math.cos(angle) * 20,
+                        Math.cos(angle) * 80,
+                      ],
+                    }),
+                  },
+                  {
+                    translateY: dataTransferAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [
+                        Math.sin(angle) * 20,
+                        Math.sin(angle) * 80,
+                      ],
+                    }),
+                  },
+                ],
+                opacity: dataTransferAnim.interpolate({
+                  inputRange: [0, 0.3, 0.7, 1],
+                  outputRange: [0, 1, 0.8, 0],
+                }),
+              },
+            ]}
+          />
+        );
+      })}
+      
+      {/* Cloud connectivity at top */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            top: '10%',
+            left: '50%',
+            width: 60,
+            height: 35,
+            marginLeft: -30,
+          },
+          {
+            opacity: cloudAnim.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [0.5, 1, 0.5],
+            }),
+            transform: [
+              {
+                scale: cloudAnim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0.9, 1.1, 0.9],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        {/* Cloud shape */}
+        <View style={{
+          width: 60,
+          height: 35,
+          backgroundColor: '#e5e7eb',
+          borderRadius: 20,
+        }} />
+        <View style={{
+          position: 'absolute',
+          width: 25,
+          height: 25,
+          backgroundColor: '#e5e7eb',
+          borderRadius: 15,
+          top: -8,
+          left: 15,
+        }} />
+        <View style={{
+          position: 'absolute',
+          width: 20,
+          height: 20,
+          backgroundColor: '#e5e7eb',
+          borderRadius: 12,
+          top: -5,
+          right: 10,
+        }} />
+      </Animated.View>
+      
+      {/* Learning progress indicators */}
+      {[...Array(3)].map((_, index) => (
+        <Animated.View
+          key={`progress-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              bottom: '15%',
+              left: `${25 + index * 25}%`,
+              width: 40,
+              height: 6,
+              backgroundColor: 'rgba(251, 191, 36, 0.3)',
+              borderRadius: 3,
+            },
+            {
+              opacity: interactionAnim.interpolate({
+                inputRange: [0, index * 0.25, index * 0.25 + 0.25, 1],
+                outputRange: [0.4, 1, 0.8, 0.4],
+              }),
+            },
+          ]}
+        >
+          <Animated.View
+            style={[
+              {
+                height: '100%',
+                backgroundColor: '#fbbf24',
+                borderRadius: 3,
+                alignSelf: 'flex-start',
+              },
+              {
+                transform: [{
+                  scaleX: interactionAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.2, 1],
+                  }),
+                }],
+              },
+            ]}
+          />
+        </Animated.View>
+      ))}
+    </View>
+  );
+}
+
+function AuroraInspiration() {
   const starTwinkleAnim = useRef(new Animated.Value(0)).current;
   const auroraAnim = useRef(new Animated.Value(0)).current;
   const floatingAnim = useRef(new Animated.Value(0)).current;
@@ -2233,83 +3566,76 @@ function HealthcareFallback() {
   return (
     <View style={styles.visualContainer}>
       <LinearGradient
-        colors={['#0a0a1a', '#1a1a3a', '#2a2a5a', '#3a3a6a']}
+        colors={["#0c0a09", "#1c1917", "#292524"]}
         style={styles.gradientBg}
       />
       
-      {/* Aurora background layers */}
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            top: '20%',
-            left: '-20%',
-            right: '-20%',
-            height: '60%',
-            borderRadius: 100,
-          },
-          {
-            transform: [
-              {
-                translateY: auroraAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, -30],
-                }),
-              },
-              {
-                scaleX: auroraAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 1.2],
-                }),
-              },
-            ],
-            opacity: auroraAnim.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [0.3, 0.6, 0.3],
-            }),
-          },
-        ]}
-      >
-        <LinearGradient
-          colors={['rgba(64, 224, 208, 0.2)', 'rgba(138, 43, 226, 0.2)', 'rgba(75, 0, 130, 0.1)']}
-          style={{ flex: 1, borderRadius: 100 }}
-        />
-      </Animated.View>
-
-      {/* Twinkling stars */}
-      {[...Array(15)].map((_, index) => (
+      {/* Aurora waves */}
+      {[...Array(4)].map((_, index) => (
+        <Animated.View
+          key={`aurora-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: '120%',
+              height: 40,
+              top: `${30 + index * 15}%`,
+              left: '-10%',
+              borderRadius: 20,
+            },
+            {
+              opacity: auroraAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.3, 0.6, 0.3],
+              }),
+              transform: [
+                {
+                  translateX: auroraAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 20],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={
+              index % 2 === 0
+                ? ['#065f46', '#10b981', '#34d399']
+                : ['#7c2d12', '#ea580c', '#fb923c']
+            }
+            style={{ flex: 1, borderRadius: 20 }}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+        </Animated.View>
+      ))}
+      
+      {/* Floating stars */}
+      {[...Array(30)].map((_, index) => (
         <Animated.View
           key={`star-${index}`}
           style={[
             {
               position: 'absolute',
-              top: `${10 + (index * 7) % 80}%`,
-              left: `${5 + (index * 11) % 90}%`,
-              width: 2 + (index % 3),
-              height: 2 + (index % 3),
-              borderRadius: 50,
-              backgroundColor: '#ffffff',
-              shadowColor: '#ffffff',
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 0.8,
-              shadowRadius: 4,
+              width: Math.random() > 0.7 ? 4 : 2,
+              height: Math.random() > 0.7 ? 4 : 2,
+              borderRadius: 2,
+              backgroundColor: '#f3f4f6',
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
             },
             {
               opacity: starTwinkleAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [
-                  0.3 + Math.sin(index * 0.5) * 0.3,
-                  1 - Math.sin(index * 0.5) * 0.3,
-                ],
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.3, 1, 0.3],
               }),
               transform: [
                 {
                   scale: starTwinkleAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [
-                      0.8 + Math.cos(index * 0.3) * 0.2,
-                      1.2 - Math.cos(index * 0.3) * 0.2,
-                    ],
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0.8, 1.2, 0.8],
                   }),
                 },
               ],
@@ -2317,33 +3643,27 @@ function HealthcareFallback() {
           ]}
         />
       ))}
-
-      {/* Floating cosmic dust particles */}
-      {[...Array(8)].map((_, index) => (
+      
+      {/* Floating inspiration particles */}
+      {[...Array(15)].map((_, index) => (
         <Animated.View
-          key={`dust-${index}`}
+          key={`particle-${index}`}
           style={[
             {
               position: 'absolute',
-              top: `${20 + (index * 9) % 60}%`,
-              left: `${10 + (index * 13) % 80}%`,
-              width: 1 + (index % 2),
-              height: 1 + (index % 2),
-              borderRadius: 50,
-              backgroundColor: 'rgba(255, 255, 255, 0.6)',
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: '#fbbf24',
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
             },
             {
               transform: [
                 {
-                  translateX: floatingAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, Math.sin(index * 0.8) * 30],
-                  }),
-                },
-                {
                   translateY: floatingAnim.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [0, Math.cos(index * 0.6) * 20],
+                    outputRange: [0, -20 - Math.random() * 30],
                   }),
                 },
               ],
@@ -2351,42 +3671,6 @@ function HealthcareFallback() {
                 inputRange: [0, 0.5, 1],
                 outputRange: [0.4, 0.8, 0.4],
               }),
-            },
-          ]}
-        />
-      ))}
-
-      {/* Large bright stars */}
-      {[...Array(4)].map((_, index) => (
-        <Animated.View
-          key={`bright-star-${index}`}
-          style={[
-            {
-              position: 'absolute',
-              top: `${25 + index * 20}%`,
-              left: `${20 + index * 18}%`,
-              width: 6,
-              height: 6,
-              borderRadius: 3,
-              backgroundColor: '#ffffff',
-              shadowColor: '#ffffff',
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 1,
-              shadowRadius: 8,
-            },
-            {
-              opacity: starTwinkleAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.6, 1],
-              }),
-              transform: [
-                {
-                  rotate: starTwinkleAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['0deg', '360deg'],
-                  }),
-                },
-              ],
             },
           ]}
         />
@@ -2399,42 +3683,43 @@ function HealthcareFallback() {
 const ALL_ANIMATIONS = [
   QuantumParticles, SpaceCosmos, CircuitBoard, NeuralNetwork, 
   DNAHelix, FireEnergy, MatrixDataStream, OceanWaves, 
-  GeometricMorphing, CrystalFormation, HealthcareFallback
+  GeometricMorphing, CrystalFormation, AuroraInspiration,
+  StockMarket, CurrencyFlow, EconomicGrowth, BookLearning, DigitalClassroom
 ];
 
 // Map industries to preferred animation variations, with comprehensive fallbacks
 const INDUSTRY_ANIMATIONS: Record<string, (() => React.ReactNode | null)[]> = {
   // Computer Science & Technology
-  CS: [NeuralNetwork, QuantumParticles, CircuitBoard],
-  'Computer Science': [NeuralNetwork, QuantumParticles, CircuitBoard],
-  Technology: [CircuitBoard, QuantumParticles, MatrixDataStream],
-  'Tech': [CircuitBoard, QuantumParticles, MatrixDataStream],
-  AI: [NeuralNetwork, QuantumParticles, MatrixDataStream],
-  'Artificial Intelligence': [NeuralNetwork, QuantumParticles, MatrixDataStream],
+  CS: [NeuralNetwork, CircuitBoard, MatrixDataStream],
+  'Computer Science': [NeuralNetwork, CircuitBoard, MatrixDataStream],
+  Technology: [CircuitBoard, MatrixDataStream, NeuralNetwork],
+  'Tech': [CircuitBoard, MatrixDataStream, NeuralNetwork],
+  AI: [NeuralNetwork, MatrixDataStream, CircuitBoard],
+  'Artificial Intelligence': [NeuralNetwork, MatrixDataStream, CircuitBoard],
   
   // Finance & Business
-  'Finance & Economics': [CircuitBoard, MatrixDataStream, QuantumParticles],
-  Finance: [CircuitBoard, MatrixDataStream, QuantumParticles],
-  Economics: [CircuitBoard, MatrixDataStream, QuantumParticles],
-  Business: [MatrixDataStream, CircuitBoard, SpaceCosmos],
+  'Finance & Economics': [StockMarket, CurrencyFlow, EconomicGrowth],
+  Finance: [StockMarket, CurrencyFlow, EconomicGrowth],
+  Economics: [EconomicGrowth, StockMarket, CurrencyFlow],
+  Business: [EconomicGrowth, StockMarket, CurrencyFlow],
   
   // Sciences
-  Maths: [DNAHelix, OceanWaves, QuantumParticles],
-  Mathematics: [DNAHelix, OceanWaves, QuantumParticles],
-  Physics: [QuantumParticles, SpaceCosmos, GeometricMorphing],
-  Chemistry: [DNAHelix, CrystalFormation, QuantumParticles],
-  Biology: [DNAHelix, OceanWaves, HealthcareFallback],
-  'Life Sciences': [DNAHelix, OceanWaves, HealthcareFallback],
+  Maths: [GeometricMorphing, OceanWaves, CrystalFormation],
+  Mathematics: [GeometricMorphing, OceanWaves, CrystalFormation],
+  Physics: [FireEnergy, SpaceCosmos, QuantumParticles],
+  Chemistry: [DNAHelix, CrystalFormation, AuroraInspiration],
+  Biology: [DNAHelix, OceanWaves, AuroraInspiration],
+  'Life Sciences': [DNAHelix, OceanWaves, AuroraInspiration],
   
   // Health & Medicine
-  Medicine: [DNAHelix, HealthcareFallback, CrystalFormation],
-  Health: [DNAHelix, HealthcareFallback, OceanWaves],
-  Healthcare: [HealthcareFallback, DNAHelix, OceanWaves],
+  Medicine: [DNAHelix, AuroraInspiration, CrystalFormation],
+  Health: [DNAHelix, AuroraInspiration, OceanWaves],
+  Healthcare: [AuroraInspiration, DNAHelix, OceanWaves],
   
   // Education & Learning
-  EdTech: [SpaceCosmos, FireEnergy, NeuralNetwork],
-  Education: [SpaceCosmos, FireEnergy, NeuralNetwork],
-  Learning: [NeuralNetwork, SpaceCosmos, FireEnergy],
+  EdTech: [DNAHelix, BookLearning, DigitalClassroom],
+  Education: [BookLearning, DigitalClassroom, DNAHelix],
+  Learning: [DigitalClassroom, BookLearning, DNAHelix],
   
   // Engineering & Physical Sciences
   Engineering: [CircuitBoard, GeometricMorphing, QuantumParticles],
@@ -2533,4 +3818,4 @@ const styles = StyleSheet.create({
   },
 });
 
-INDUSTRY_ANIMATIONS.Maths.push(HealthcareFallback);
+
