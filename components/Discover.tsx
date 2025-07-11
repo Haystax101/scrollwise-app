@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, FlatList } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
 import { useIndustries } from '../context/IndustriesContext';
 import { searchArticles, getSearchSuggestions, SearchResult, SearchFilters } from '../lib/searchService';
@@ -26,6 +27,7 @@ function useDebounce<T>(value: T, delay: number): T {
 export const Discover: React.FC = () => {
   const { colors } = useTheme();
   const { industries } = useIndustries();
+  const router = useRouter();
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -142,8 +144,8 @@ export const Discover: React.FC = () => {
       accessibilityLabel={`View article: ${item.title}`}
       accessibilityRole="button"
       onPress={() => {
-        // Handle article navigation - you can integrate with your existing navigation
-        console.log('Navigate to article:', item.id);
+        // Navigate to feed with the specific article at the top
+        router.push({ pathname: '/feed', params: { reelId: item.id.toString() } });
       }}
     >
       <View style={styles.resultHeader}>
