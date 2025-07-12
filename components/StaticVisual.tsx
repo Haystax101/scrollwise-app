@@ -3566,11 +3566,11 @@ function AuroraInspiration() {
   return (
     <View style={styles.visualContainer}>
       <LinearGradient
-        colors={["#0c0a09", "#1c1917", "#292524"]}
+        colors={['#0a0a0a', '#1a1a2e', '#16213e', '#0f3460']}
         style={styles.gradientBg}
       />
       
-      {/* Aurora waves */}
+      {/* Aurora bands */}
       {[...Array(4)].map((_, index) => (
         <Animated.View
           key={`aurora-${index}`}
@@ -3579,41 +3579,47 @@ function AuroraInspiration() {
               position: 'absolute',
               width: '120%',
               height: 40,
-              top: `${30 + index * 15}%`,
+              top: `${20 + index * 15}%`,
               left: '-10%',
               borderRadius: 20,
             },
             {
-              opacity: auroraAnim.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0.3, 0.6, 0.3],
-              }),
               transform: [
                 {
                   translateX: auroraAnim.interpolate({
                     inputRange: [0, 1],
-                    outputRange: [-20, 20],
+                    outputRange: [0, 30 - index * 10],
+                  }),
+                },
+                {
+                  scaleY: auroraAnim.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [1, 1.2, 1],
                   }),
                 },
               ],
+              opacity: auroraAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.3, 0.8, 0.3],
+              }),
             },
           ]}
         >
           <LinearGradient
             colors={
               index % 2 === 0
-                ? ['#065f46', '#10b981', '#34d399']
-                : ['#7c2d12', '#ea580c', '#fb923c']
+                ? ['transparent', '#00ff88', '#00ccff', 'transparent']
+                : ['transparent', '#ff6b6b', '#4ecdc4', 'transparent']
             }
-            style={{ flex: 1, borderRadius: 20 }}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            end={{ x: 1, y: 0 }}
+            style={{ flex: 1, borderRadius: 20 }}
           />
         </Animated.View>
       ))}
       
-      {/* Floating stars */}
-      {[...Array(30)].map((_, index) => (
+      {/* Stars */}
+      {[...Array(25)].map((_, index) => (
         <Animated.View
           key={`star-${index}`}
           style={[
@@ -3679,12 +3685,942 @@ function AuroraInspiration() {
   );
 }
 
+function FractalGeometry() {
+  const fractalAnim = useRef(new Animated.Value(0)).current;
+  const spiralAnim = useRef(new Animated.Value(0)).current;
+  const recursiveAnim = useRef(new Animated.Value(0)).current;
+  const goldenRatioAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Main fractal animation
+    Animated.loop(
+      Animated.timing(fractalAnim, {
+        toValue: 1,
+        duration: 8000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Fibonacci spiral animation
+    Animated.loop(
+      Animated.timing(spiralAnim, {
+        toValue: 1,
+        duration: 12000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Recursive pattern animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(recursiveAnim, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(recursiveAnim, {
+          toValue: 0,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Golden ratio animation
+    Animated.loop(
+      Animated.timing(goldenRatioAnim, {
+        toValue: 1,
+        duration: 6000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  return (
+    <View style={styles.visualContainer}>
+      <LinearGradient
+        colors={['#0f0f23', '#1a1a2e', '#16213e', '#0f3460']}
+        style={styles.gradientBg}
+      />
+      
+      {/* Main fractal structure - Mandelbrot-inspired */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            width: 100,
+            height: 100,
+            top: '50%',
+            left: '50%',
+            marginTop: -50,
+            marginLeft: -50,
+          },
+          {
+            transform: [
+              {
+                rotate: fractalAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '360deg'],
+                }),
+              },
+              {
+                scale: fractalAnim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0.8, 1.2, 0.8],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        {/* Recursive geometric patterns */}
+        {[...Array(8)].map((_, index) => {
+          const angle = (index * 45) * (Math.PI / 180);
+          const radius = 30;
+          
+          return (
+            <Animated.View
+              key={`fractal-${index}`}
+              style={[
+                {
+                  position: 'absolute',
+                  width: 20 - index * 2,
+                  height: 20 - index * 2,
+                  borderRadius: 10 - index,
+                  backgroundColor: '#ffd700',
+                  top: '50%',
+                  left: '50%',
+                  marginTop: -(10 - index),
+                  marginLeft: -(10 - index),
+                  borderWidth: 1,
+                  borderColor: '#ffeb3b',
+                  shadowColor: '#ffd700',
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.8,
+                  shadowRadius: 5,
+                  elevation: 5,
+                },
+                {
+                  transform: [
+                    {
+                      translateX: recursiveAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [
+                          Math.cos(angle) * (radius - index * 3),
+                          Math.cos(angle) * (radius + index * 2),
+                        ],
+                      }),
+                    },
+                    {
+                      translateY: recursiveAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [
+                          Math.sin(angle) * (radius - index * 3),
+                          Math.sin(angle) * (radius + index * 2),
+                        ],
+                      }),
+                    },
+                    {
+                      rotate: recursiveAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', `${360 + index * 45}deg`],
+                      }),
+                    },
+                  ],
+                  opacity: recursiveAnim.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0.9 - index * 0.1, 1, 0.9 - index * 0.1],
+                  }),
+                },
+              ]}
+            />
+          );
+        })}
+      </Animated.View>
+      
+      {/* Fibonacci spiral */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            width: 150,
+            height: 150,
+            top: '30%',
+            left: '20%',
+            marginTop: -75,
+            marginLeft: -75,
+          },
+          {
+            transform: [
+              {
+                rotate: spiralAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '360deg'],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        {/* Golden ratio spiral points */}
+        {[...Array(13)].map((_, index) => { // 13 is a Fibonacci number
+          const phi = 1.618; // Golden ratio
+          const theta = index * 0.5;
+          const r = index * 3;
+          const x = r * Math.cos(theta);
+          const y = r * Math.sin(theta);
+          
+          return (
+            <Animated.View
+              key={`spiral-${index}`}
+              style={[
+                {
+                  position: 'absolute',
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: '#00ff88',
+                  top: '50%',
+                  left: '50%',
+                  marginTop: -4,
+                  marginLeft: -4,
+                  shadowColor: '#00ff88',
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.9,
+                  shadowRadius: 3,
+                  elevation: 3,
+                },
+                {
+                  transform: [
+                    { translateX: x },
+                    { translateY: y },
+                    {
+                      scale: goldenRatioAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1.5],
+                      }),
+                    },
+                  ],
+                  opacity: goldenRatioAnim.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0.6, 1, 0.6],
+                  }),
+                },
+              ]}
+            />
+          );
+        })}
+      </Animated.View>
+      
+      {/* Mathematical symbols floating */}
+      {['∞', '∑', '∫', '∂', '∆', '∇', 'π', 'φ', '√', '∞'].map((symbol, index) => (
+        <Animated.View
+          key={`symbol-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              top: `${15 + (index % 3) * 30}%`,
+              left: `${10 + Math.floor(index / 3) * 25}%`,
+            },
+            {
+              transform: [
+                {
+                  translateY: fractalAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, -20 - Math.random() * 10],
+                  }),
+                },
+                {
+                  rotate: fractalAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', `${(Math.random() - 0.5) * 30}deg`],
+                  }),
+                },
+              ],
+              opacity: fractalAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.4, 0.8, 0.4],
+              }),
+            },
+          ]}
+        >
+          <Text style={{
+            fontSize: 24,
+            color: '#ffd700',
+            fontWeight: 'bold',
+            textShadowColor: '#ffeb3b',
+            textShadowOffset: { width: 1, height: 1 },
+            textShadowRadius: 3,
+          }}>
+            {symbol}
+          </Text>
+        </Animated.View>
+      ))}
+      
+      {/* Geometric patterns */}
+      {[...Array(6)].map((_, index) => (
+        <Animated.View
+          key={`pattern-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              borderWidth: 2,
+              borderColor: '#00ccff',
+              top: `${20 + index * 12}%`,
+              left: `${70 + Math.sin(index) * 20}%`,
+            },
+            {
+              transform: [
+                {
+                  rotate: fractalAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', `${360 + index * 60}deg`],
+                  }),
+                },
+                {
+                  scale: recursiveAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1.2],
+                  }),
+                },
+              ],
+              opacity: recursiveAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.3, 0.7, 0.3],
+              }),
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+function CalculusFlow() {
+  const derivativeAnim = useRef(new Animated.Value(0)).current;
+  const integralAnim = useRef(new Animated.Value(0)).current;
+  const functionAnim = useRef(new Animated.Value(0)).current;
+  const flowAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Derivative animation
+    Animated.loop(
+      Animated.timing(derivativeAnim, {
+        toValue: 1,
+        duration: 4000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Integral animation
+    Animated.loop(
+      Animated.timing(integralAnim, {
+        toValue: 1,
+        duration: 6000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Function curve animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(functionAnim, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(functionAnim, {
+          toValue: 0,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Flow animation
+    Animated.loop(
+      Animated.timing(flowAnim, {
+        toValue: 1,
+        duration: 5000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  return (
+    <View style={styles.visualContainer}>
+      <LinearGradient
+        colors={['#0a0a1a', '#1a1a2e', '#2d1b69', '#11998e']}
+        style={styles.gradientBg}
+      />
+      
+      {/* Function curve visualization */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            width: '90%',
+            height: 3,
+            backgroundColor: '#00ff88',
+            top: '60%',
+            left: '5%',
+            borderRadius: 2,
+            shadowColor: '#00ff88',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 1,
+            shadowRadius: 5,
+            elevation: 5,
+          },
+          {
+            transform: [
+              {
+                scaleY: functionAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 3],
+                }),
+              },
+            ],
+            opacity: functionAnim.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [0.8, 1, 0.8],
+            }),
+          },
+        ]}
+      />
+      
+      {/* Derivative tangent lines */}
+      {[...Array(8)].map((_, index) => {
+        const xPos = 10 + index * 10;
+        return (
+          <Animated.View
+            key={`tangent-${index}`}
+            style={[
+              {
+                position: 'absolute',
+                width: 40,
+                height: 2,
+                backgroundColor: '#ff6b6b',
+                top: '60%',
+                left: `${xPos}%`,
+                borderRadius: 1,
+                shadowColor: '#ff6b6b',
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.8,
+                shadowRadius: 3,
+                elevation: 3,
+              },
+              {
+                transform: [
+                  {
+                    rotate: derivativeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', `${Math.sin(index * 0.5) * 45}deg`],
+                    }),
+                  },
+                  {
+                    translateY: derivativeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, Math.sin(index * 0.8) * 20],
+                    }),
+                  },
+                ],
+                opacity: derivativeAnim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0.5, 1, 0.5],
+                }),
+              },
+            ]}
+          />
+        );
+      })}
+      
+      {/* Integral area visualization */}
+      {[...Array(12)].map((_, index) => (
+        <Animated.View
+          key={`integral-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: 25,
+              height: 30 + Math.sin(index * 0.5) * 20,
+              backgroundColor: '#4ecdc4',
+              bottom: '35%',
+              left: `${15 + index * 6}%`,
+              borderRadius: 2,
+              opacity: 0.6,
+            },
+            {
+              transform: [
+                {
+                  scaleY: integralAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.5, 1.5],
+                  }),
+                },
+              ],
+              opacity: integralAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.3, 0.7, 0.3],
+              }),
+            },
+          ]}
+        />
+      ))}
+      
+             {/* Mathematical expressions */}
+       {[
+         { text: "f'(x)", top: '20%', left: '20%' },
+         { text: "∫f(x)dx", top: '25%', left: '60%' },
+         { text: "∂f/∂x", top: '40%', left: '10%' },
+         { text: "lim", top: '45%', left: '75%' },
+         { text: "dx/dt", top: '70%', left: '85%' },
+         { text: "∆y/∆x", top: '80%', left: '25%' },
+       ].map((expr, index) => (
+         <Animated.View
+           key={`expr-${index}`}
+           style={[
+             {
+               position: 'absolute',
+               top: expr.top,
+               left: expr.left,
+             },
+            {
+              transform: [
+                {
+                  translateY: flowAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, -15 - Math.random() * 10],
+                  }),
+                },
+                {
+                  scale: flowAnim.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [1, 1.2, 1],
+                  }),
+                },
+              ],
+              opacity: flowAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.7, 1, 0.7],
+              }),
+            },
+          ]}
+        >
+          <Text style={{
+            fontSize: 18,
+            color: '#ffd700',
+            fontWeight: 'bold',
+            textShadowColor: '#ffeb3b',
+            textShadowOffset: { width: 1, height: 1 },
+            textShadowRadius: 2,
+          }}>
+            {expr.text}
+          </Text>
+        </Animated.View>
+      ))}
+      
+      {/* Flow particles */}
+      {[...Array(20)].map((_, index) => (
+        <Animated.View
+          key={`particle-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: '#ffffff',
+              top: `${20 + Math.random() * 60}%`,
+              left: '-5%',
+              shadowColor: '#ffffff',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.8,
+              shadowRadius: 4,
+              elevation: 4,
+            },
+            {
+              transform: [
+                {
+                  translateX: flowAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 400],
+                  }),
+                },
+                {
+                  translateY: flowAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, Math.sin(index * 0.3) * 40],
+                  }),
+                },
+              ],
+              opacity: flowAnim.interpolate({
+                inputRange: [0, 0.1, 0.9, 1],
+                outputRange: [0, 1, 1, 0],
+              }),
+            },
+          ]}
+        />
+      ))}
+      
+      {/* Coordinate system */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            width: 2,
+            height: '60%',
+            backgroundColor: '#ffffff',
+            top: '20%',
+            left: '15%',
+            opacity: 0.4,
+          },
+          {
+            opacity: functionAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.2, 0.6],
+            }),
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            width: '70%',
+            height: 2,
+            backgroundColor: '#ffffff',
+            top: '60%',
+            left: '15%',
+            opacity: 0.4,
+          },
+          {
+            opacity: functionAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.2, 0.6],
+            }),
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+function StatisticalDistribution() {
+  const distributionAnim = useRef(new Animated.Value(0)).current;
+  const dataPointAnim = useRef(new Animated.Value(0)).current;
+  const bellCurveAnim = useRef(new Animated.Value(0)).current;
+  const probabilityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Distribution animation
+    Animated.loop(
+      Animated.timing(distributionAnim, {
+        toValue: 1,
+        duration: 6000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Data point animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(dataPointAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dataPointAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Bell curve animation
+    Animated.loop(
+      Animated.timing(bellCurveAnim, {
+        toValue: 1,
+        duration: 4000,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Probability animation
+    Animated.loop(
+      Animated.timing(probabilityAnim, {
+        toValue: 1,
+        duration: 5000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  return (
+    <View style={styles.visualContainer}>
+      <LinearGradient
+        colors={['#0a0a1a', '#1a1a2e', '#2d1b69', '#8b5cf6']}
+        style={styles.gradientBg}
+      />
+      
+      {/* Bell curve visualization */}
+      <Animated.View
+        style={[
+          {
+            position: 'absolute',
+            width: '80%',
+            height: 100,
+            top: '45%',
+            left: '10%',
+            borderRadius: 50,
+            borderWidth: 3,
+            borderColor: '#00ff88',
+            backgroundColor: 'rgba(0, 255, 136, 0.1)',
+            shadowColor: '#00ff88',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.8,
+            shadowRadius: 10,
+            elevation: 10,
+          },
+          {
+            transform: [
+              {
+                scaleY: bellCurveAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.8, 1.2],
+                }),
+              },
+              {
+                scaleX: bellCurveAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 0.9],
+                }),
+              },
+            ],
+            opacity: bellCurveAnim.interpolate({
+              inputRange: [0, 0.5, 1],
+              outputRange: [0.7, 1, 0.7],
+            }),
+          },
+        ]}
+      />
+      
+      {/* Data points following normal distribution */}
+      {[...Array(25)].map((_, index) => {
+        // Generate positions following normal distribution pattern
+        const normalValue = Math.random() + Math.random() + Math.random() + Math.random() + Math.random() + Math.random() - 3; // Approximates normal distribution
+        const xPos = 50 + (normalValue * 15); // Center at 50% with spread
+        const yPos = 45 + Math.exp(-(normalValue * normalValue) / 2) * 20; // Bell curve height
+        
+        return (
+          <Animated.View
+            key={`data-${index}`}
+            style={[
+              {
+                position: 'absolute',
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: '#ffd700',
+                top: `${yPos}%`,
+                left: `${Math.max(5, Math.min(95, xPos))}%`,
+                shadowColor: '#ffd700',
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.8,
+                shadowRadius: 4,
+                elevation: 4,
+              },
+              {
+                transform: [
+                  {
+                    scale: dataPointAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1.4],
+                    }),
+                  },
+                  {
+                    translateY: dataPointAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, -10],
+                    }),
+                  },
+                ],
+                opacity: dataPointAnim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0.6, 1, 0.6],
+                }),
+              },
+            ]}
+          />
+        );
+      })}
+      
+      {/* Histogram bars */}
+      {[...Array(10)].map((_, index) => {
+        const height = Math.exp(-((index - 5) * (index - 5)) / 8) * 60; // Bell curve shape
+        return (
+          <Animated.View
+            key={`bar-${index}`}
+            style={[
+              {
+                position: 'absolute',
+                width: 25,
+                height: height,
+                backgroundColor: '#ff6b6b',
+                bottom: '25%',
+                left: `${15 + index * 7}%`,
+                borderRadius: 2,
+                borderWidth: 1,
+                borderColor: '#ff8e8e',
+                shadowColor: '#ff6b6b',
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.6,
+                shadowRadius: 3,
+                elevation: 3,
+              },
+              {
+                transform: [
+                  {
+                    scaleY: distributionAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.3, 1],
+                    }),
+                  },
+                ],
+                opacity: distributionAnim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0.6, 1, 0.6],
+                }),
+              },
+            ]}
+          />
+        );
+      })}
+      
+             {/* Statistical symbols and formulas */}
+       {[
+         { text: "μ", top: '15%', left: '20%' },
+         { text: "σ", top: '20%', left: '70%' },
+         { text: "P(X)", top: '30%', left: '10%' },
+         { text: "∑", top: '35%', left: '85%' },
+         { text: "χ²", top: '70%', left: '15%' },
+         { text: "n!", top: '75%', left: '75%' },
+         { text: "r", top: '85%', left: '45%' },
+         { text: "±", top: '10%', left: '50%' },
+       ].map((stat, index) => (
+         <Animated.View
+           key={`stat-${index}`}
+           style={[
+             {
+               position: 'absolute',
+               top: stat.top,
+               left: stat.left,
+             },
+            {
+              transform: [
+                {
+                  translateY: probabilityAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, -15 + Math.sin(index * 0.5) * 5],
+                  }),
+                },
+                {
+                  rotate: probabilityAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', `${Math.sin(index) * 10}deg`],
+                  }),
+                },
+              ],
+              opacity: probabilityAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.6, 1, 0.6],
+              }),
+            },
+          ]}
+        >
+          <Text style={{
+            fontSize: 22,
+            color: '#4ecdc4',
+            fontWeight: 'bold',
+            textShadowColor: '#4ecdc4',
+            textShadowOffset: { width: 1, height: 1 },
+            textShadowRadius: 3,
+          }}>
+            {stat.text}
+          </Text>
+        </Animated.View>
+      ))}
+      
+      {/* Probability flow lines */}
+      {[...Array(6)].map((_, index) => (
+        <Animated.View
+          key={`flow-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: 60,
+              height: 2,
+              backgroundColor: '#ffffff',
+              top: `${25 + index * 10}%`,
+              left: '20%',
+              borderRadius: 1,
+              opacity: 0.6,
+            },
+            {
+              transform: [
+                {
+                  translateX: probabilityAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 50],
+                  }),
+                },
+              ],
+              opacity: probabilityAnim.interpolate({
+                inputRange: [0, 0.3, 0.7, 1],
+                outputRange: [0, 0.8, 0.8, 0],
+              }),
+            },
+          ]}
+        />
+      ))}
+      
+      {/* Confidence intervals */}
+      {[68, 95, 99].map((confidence, index) => (
+        <Animated.View
+          key={`confidence-${index}`}
+          style={[
+            {
+              position: 'absolute',
+              width: `${confidence * 0.8}%`,
+              height: 1,
+              backgroundColor: '#00ccff',
+              top: `${55 + index * 5}%`,
+              left: `${(100 - confidence * 0.8) / 2}%`,
+              borderRadius: 1,
+            },
+            {
+              opacity: distributionAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.3, 0.8],
+              }),
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
 // All available high-quality animations
 const ALL_ANIMATIONS = [
   QuantumParticles, SpaceCosmos, CircuitBoard, NeuralNetwork, 
   DNAHelix, FireEnergy, MatrixDataStream, OceanWaves, 
   GeometricMorphing, CrystalFormation, AuroraInspiration,
-  StockMarket, CurrencyFlow, EconomicGrowth, BookLearning, DigitalClassroom
+  StockMarket, CurrencyFlow, EconomicGrowth, BookLearning, DigitalClassroom,
+  FractalGeometry, CalculusFlow, StatisticalDistribution
 ];
 
 // Map industries to preferred animation variations, with comprehensive fallbacks
@@ -3704,8 +4640,8 @@ const INDUSTRY_ANIMATIONS: Record<string, (() => React.ReactNode | null)[]> = {
   Business: [EconomicGrowth, StockMarket, CurrencyFlow],
   
   // Sciences
-  Maths: [GeometricMorphing, OceanWaves, CrystalFormation],
-  Mathematics: [GeometricMorphing, OceanWaves, CrystalFormation],
+  Maths: [FractalGeometry, CalculusFlow, StatisticalDistribution],
+  Mathematics: [FractalGeometry, CalculusFlow, StatisticalDistribution],
   Physics: [FireEnergy, SpaceCosmos, QuantumParticles],
   Chemistry: [DNAHelix, CrystalFormation, AuroraInspiration],
   Biology: [DNAHelix, OceanWaves, AuroraInspiration],
@@ -3722,18 +4658,18 @@ const INDUSTRY_ANIMATIONS: Record<string, (() => React.ReactNode | null)[]> = {
   Learning: [DigitalClassroom, BookLearning, DNAHelix],
   
   // Engineering & Physical Sciences
-  Engineering: [CircuitBoard, GeometricMorphing, QuantumParticles],
-  'Mechanical Engineering': [GeometricMorphing, CircuitBoard, FireEnergy],
+  Engineering: [CircuitBoard, FractalGeometry, QuantumParticles],
+  'Mechanical Engineering': [FractalGeometry, CircuitBoard, FireEnergy],
   'Electrical Engineering': [CircuitBoard, QuantumParticles, MatrixDataStream],
   
   // Arts & Design
-  Art: [GeometricMorphing, CrystalFormation, SpaceCosmos],
-  Design: [GeometricMorphing, CrystalFormation, FireEnergy],
+  Art: [FractalGeometry, CrystalFormation, SpaceCosmos],
+  Design: [FractalGeometry, CrystalFormation, FireEnergy],
   
   // Environmental & Natural Sciences
   Environment: [OceanWaves, DNAHelix, SpaceCosmos],
   'Environmental Science': [OceanWaves, DNAHelix, SpaceCosmos],
-  Geology: [CrystalFormation, OceanWaves, GeometricMorphing],
+  Geology: [CrystalFormation, OceanWaves, FractalGeometry],
   
   // Energy & Space
   Energy: [FireEnergy, QuantumParticles, CircuitBoard],
