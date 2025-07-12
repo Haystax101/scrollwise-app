@@ -56,6 +56,7 @@ RETURNS TABLE(
   likes_count bigint,
   saves_count bigint,
   comments_count bigint,
+  views_count bigint,
   site_name text,
   rank real
 ) AS $$
@@ -73,6 +74,7 @@ BEGIN
     a.likes_count,
     a.saves_count,
     a.comments_count,
+    a.views_count,
     a.site_name,
     ts_rank(a.search_vector, plainto_tsquery('english', search_query)) as rank
   FROM articles a

@@ -732,10 +732,12 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
             {/* Meta row (source and topic) always at the top with safe area padding */}
             <View style={{ paddingTop: staticContentData.topSafePadding, paddingBottom: 4 }}>
               <View style={styles.staticMetaRowV3}>
-                <Text style={dynamicStyles.staticCardOwnerV3}>{staticContentData.siteName}</Text>
+                <Text style={dynamicStyles.staticCardOwnerV3} numberOfLines={1}>{staticContentData.siteName}</Text>
                 <View style={dynamicStyles.metaDot} />
                 <View style={dynamicStyles.industryPillV3}>
-                  <Text style={dynamicStyles.industryPillTextV3}>{video.industry}</Text>
+                  <Text style={dynamicStyles.industryPillTextV3} numberOfLines={1}>
+                    {video.industry === 'Finance & Economics' ? 'Finance' : video.industry}
+                  </Text>
                 </View>
                 <View style={dynamicStyles.metaDot} />
                 <View style={styles.viewCountMeta}>
@@ -1069,12 +1071,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6, // Reduced from 10 for more consistent spacing
+    flexWrap: 'nowrap',
+    overflow: 'hidden',
   },
   staticCardOwnerV3: {
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
     marginRight: 8,
+    flexShrink: 1,
+    maxWidth: '40%',
   },
   industryPillV3: {
     backgroundColor: '#2563eb',
@@ -1082,6 +1088,8 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 999,
     marginLeft: 8,
+    flexShrink: 1,
+    maxWidth: '30%',
   },
   industryPillTextV3: {
     color: '#fff',
@@ -1225,11 +1233,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 8,
+    flexShrink: 0,
+    minWidth: 'auto',
   },
   viewCountText: {
     color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
-    marginLeft: 4,
+    marginLeft: 3,
   },
 });
