@@ -188,6 +188,10 @@ export const Discover: React.FC = () => {
             <Feather name="message-circle" size={14} color={colors.textTertiary} />
             <Text style={dynamicStyles.statText}>{item.comments_count}</Text>
           </View>
+          <View style={styles.stat}>
+            <Feather name="eye" size={14} color={colors.textTertiary} />
+            <Text style={dynamicStyles.statText}>{item.views_count}</Text>
+          </View>
         </View>
         {item.rank && (
           <Text style={dynamicStyles.relevanceText}>

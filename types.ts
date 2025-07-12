@@ -29,6 +29,7 @@ export interface Article {
   likes: number;
   saves: number;
   comments: number;
+  views: number; // Add view count
   content: string; // Article text content
   authors: string[]; // Array of author names
 }
@@ -45,6 +46,7 @@ export interface Video {
   likes: number;
   saves: number;
   comments: number;
+  views: number; // Add view count
   content: string; // Add content field
   authors: string[]; // Array of author names
 }

@@ -13,6 +13,7 @@ export interface FetchedArticle {
   likes_count: number;
   saves_count: number;
   comments_count: number;
+  views_count: number;
   created_at: string;
 }
 
@@ -172,7 +173,7 @@ export class FeedAlgorithm {
     try {
       let query = supabase
         .from('articles')
-        .select('id, type, title, content, authors, link, industry_id, likes_count, saves_count, comments_count, created_at')
+        .select('id, type, title, content, authors, link, industry_id, likes_count, saves_count, comments_count, views_count, created_at')
         .eq('type', type)
         .eq('industry_id', industryId)
         .order('created_at', { ascending: false })
@@ -246,6 +247,7 @@ export class FeedAlgorithm {
     likes: article.likes_count || 0,
     saves: article.saves_count || 0,
     comments: article.comments_count || 0,
+    views: article.views_count || 0,
     content: article.content,
     authors: article.authors || [],
   });
@@ -257,7 +259,7 @@ export class FeedAlgorithm {
     try {
       const { data, error } = await supabase
         .from('articles')
-        .select('id, type, title, content, authors, link, industry_id, likes_count, saves_count, comments_count, created_at')
+        .select('id, type, title, content, authors, link, industry_id, likes_count, saves_count, comments_count, views_count, created_at')
         .eq('id', articleId)
         .single();
 

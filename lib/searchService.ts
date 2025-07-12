@@ -12,6 +12,7 @@ export interface SearchResult {
   likes_count: number; // bigint in DB but number in TS (within safe range)
   saves_count: number; // bigint in DB but number in TS (within safe range)
   comments_count: number; // bigint in DB but number in TS (within safe range)
+  views_count: number; // bigint in DB but number in TS (within safe range)
   site_name: string;
   rank: number;
 }

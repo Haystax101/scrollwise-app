@@ -58,6 +58,9 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
   const [hasLiked, setHasLiked] = useState(false);
   const [saves, setSaves] = useState(video.saves);
   const [hasSaved, setHasSaved] = useState(false);
+  const [views, setViews] = useState(video.views);
+  const [hasViewed, setHasViewed] = useState(false);
+  const [initialStateLoaded, setInitialStateLoaded] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -135,13 +138,13 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
     };
   }, [player, shouldCreatePlayer, handleTimeUpdate, handleSourceLoad, handleStatusChange]);
 
-  // Memoize the initial like/save check to prevent unnecessary re-runs
+  // Memoize the initial like/save/view check to prevent unnecessary re-runs
   const checkInitialState = useCallback(async () => {
     if (!user) return;
     
     try {
-      // Run both queries in parallel for better performance
-      const [likeResult, saveResult] = await Promise.all([
+      // Run all queries in parallel for better performance
+      const [likeResult, saveResult, viewResult] = await Promise.all([
         supabase
           .from('article_likes')
           .select('user_id, article_id')
@@ -153,20 +156,75 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
           .select('user_id, article_id')
           .eq('user_id', user.id)
           .eq('article_id', video.id)
+          .maybeSingle(),
+        supabase
+          .from('article_views')
+          .select('user_id, article_id')
+          .eq('user_id', user.id)
+          .eq('article_id', video.id)
           .maybeSingle()
       ]);
 
       setHasLiked(!!likeResult.data);
       setHasSaved(!!saveResult.data);
+      setHasViewed(!!viewResult.data);
+      setInitialStateLoaded(true);
     } catch (error) {
-      console.error('Error checking initial like/save state:', error);
+      console.error('Error checking initial like/save/view state:', error);
+      setInitialStateLoaded(true); // Still set to true even on error to avoid blocking
     }
   }, [user?.id, video.id]);
 
+  // Reset state when video changes
+  useEffect(() => {
+    setInitialStateLoaded(false);
+    setLikes(video.likes);
+    setSaves(video.saves);
+    setViews(video.views);
+    setHasLiked(false);
+    setHasSaved(false);
+    setHasViewed(false);
+  }, [video.id, video.likes, video.saves, video.views]);
+
   // Check if user has already liked/saved this post on mount
   useEffect(() => {
-    checkInitialState();
-  }, [checkInitialState]);
+    if (user && !initialStateLoaded) {
+      checkInitialState();
+    }
+  }, [user, initialStateLoaded, checkInitialState]);
+
+  // Track view when post becomes active (visible)
+  const trackView = useCallback(async () => {
+    if (!user || hasViewed) return;
+    
+    try {
+      const { data, error } = await supabase.rpc('increment_article_view_count', {
+        article_id_param: video.id,
+        user_id_param: user.id
+      });
+      
+      if (!error && data) {
+        setHasViewed(true);
+        setViews(prev => prev + 1);
+        // Notify parent component about the view interaction
+        onUserInteraction?.(video.id, 'view' as any);
+      }
+    } catch (error) {
+      console.error('Error tracking view:', error);
+    }
+  }, [user, hasViewed, video.id, onUserInteraction]);
+
+  // Track view when post becomes active
+  useEffect(() => {
+    if (isActive && user && !hasViewed && initialStateLoaded) {
+      // Add a small delay to ensure the user actually sees the content
+      const timer = setTimeout(() => {
+        trackView();
+      }, 1000); // 1 second delay
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isActive, user, hasViewed, initialStateLoaded, trackView]);
 
   // Memoized interaction handlers
   const savePost = useCallback(async () => {
@@ -628,6 +686,17 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
                   </View>
                   <Text style={styles.actionBtnCount}>{video.comments}</Text>
                 </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.actionBtn} 
+                  accessibilityLabel={`Views, ${views} views`} 
+                  accessibilityRole="button" 
+                  disabled={true}
+                >
+                  <View style={styles.actionBtnIconCircle}>
+                    <Feather name="eye" size={22} color="white" />
+                  </View>
+                  <Text style={styles.actionBtnCount}>{views}</Text>
+                </TouchableOpacity>
               </View>
               <TouchableOpacity 
                 style={styles.readMoreBtn} 
@@ -667,6 +736,11 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
                 <View style={dynamicStyles.metaDot} />
                 <View style={dynamicStyles.industryPillV3}>
                   <Text style={dynamicStyles.industryPillTextV3}>{video.industry}</Text>
+                </View>
+                <View style={dynamicStyles.metaDot} />
+                <View style={styles.viewCountMeta}>
+                  <Feather name="eye" size={14} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.viewCountText}>{views}</Text>
                 </View>
               </View>
             </View>
@@ -787,6 +861,7 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
     prevProps.video.likes === nextProps.video.likes &&
     prevProps.video.saves === nextProps.video.saves &&
     prevProps.video.comments === nextProps.video.comments &&
+    prevProps.video.views === nextProps.video.views &&
     prevProps.onOpenComments === nextProps.onOpenComments &&
     prevProps.onUserInteraction === nextProps.onUserInteraction
   );
@@ -1144,5 +1219,17 @@ const styles = StyleSheet.create({
   visualWrapperExpanded: {
     height: 120, // Smaller height when expanded
     minHeight: 120,
+  },
+  // View count meta styles
+  viewCountMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  viewCountText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 4,
   },
 });
