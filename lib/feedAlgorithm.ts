@@ -250,6 +250,7 @@ export class FeedAlgorithm {
     views: article.views_count || 0,
     content: article.content,
     authors: article.authors || [],
+    created_at: article.created_at,
   });
 
   /**

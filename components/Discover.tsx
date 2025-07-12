@@ -138,6 +138,25 @@ export const Discover: React.FC = () => {
     return text.substring(0, maxLength) + '...';
   };
 
+  const formatDate = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffTime = now.getTime() - date.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays} days ago`;
+      if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+      if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+      
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    } catch {
+      return 'Unknown date';
+    }
+  };
+
   const renderSearchResult = ({ item }: { item: SearchResult }) => (
     <TouchableOpacity 
       style={dynamicStyles.resultCard}
@@ -191,6 +210,10 @@ export const Discover: React.FC = () => {
           <View style={styles.stat}>
             <Feather name="eye" size={14} color={colors.textTertiary} />
             <Text style={dynamicStyles.statText}>{item.views_count}</Text>
+          </View>
+          <View style={styles.stat}>
+            <Feather name="calendar" size={14} color={colors.textTertiary} />
+            <Text style={dynamicStyles.statText}>{formatDate(item.created_at)}</Text>
           </View>
         </View>
         {item.rank && (

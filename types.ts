@@ -32,6 +32,7 @@ export interface Article {
   views: number; // Add view count
   content: string; // Article text content
   authors: string[]; // Array of author names
+  created_at: string; // Publication date
 }
 
 // Keep Video interface for backward compatibility if needed
@@ -49,6 +50,7 @@ export interface Video {
   views: number; // Add view count
   content: string; // Add content field
   authors: string[]; // Array of author names
+  created_at: string; // Publication date
 }
 
 export interface SavedContentItem {

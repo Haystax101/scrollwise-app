@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Linking, Image, Platform, ScrollView } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -51,6 +51,19 @@ const formatTime = (seconds: number): string => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+const formatDate = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear().toString().slice(-2);
+    
+    return `${day}/${month}/${year}`;
+  } catch {
+    return 'Unknown date';
+  }
+};
+
 export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive, onOpenComments, onUserInteraction }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -58,13 +71,12 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
   const [hasLiked, setHasLiked] = useState(false);
   const [saves, setSaves] = useState(video.saves);
   const [hasSaved, setHasSaved] = useState(false);
-  const [views, setViews] = useState(video.views);
-  const [hasViewed, setHasViewed] = useState(false);
-  const [initialStateLoaded, setInitialStateLoaded] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const metaScrollViewRef = useRef<ScrollView>(null);
+  const staticMetaScrollViewRef = useRef<ScrollView>(null);
 
   // Memoize expensive computations
   const shouldCreatePlayer = useMemo(() => !!video.video_url, [video.video_url]);
@@ -73,6 +85,8 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
   const toggleExpanded = useCallback(() => {
     setExpanded(!expanded);
   }, [expanded]);
+
+
 
   // Only create player for videos that actually have video_url
   const player = useVideoPlayer(
@@ -138,13 +152,13 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
     };
   }, [player, shouldCreatePlayer, handleTimeUpdate, handleSourceLoad, handleStatusChange]);
 
-  // Memoize the initial like/save/view check to prevent unnecessary re-runs
+  // Memoize the initial like/save check to prevent unnecessary re-runs
   const checkInitialState = useCallback(async () => {
     if (!user) return;
     
     try {
       // Run all queries in parallel for better performance
-      const [likeResult, saveResult, viewResult] = await Promise.all([
+      const [likeResult, saveResult] = await Promise.all([
         supabase
           .from('article_likes')
           .select('user_id, article_id')
@@ -156,75 +170,30 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
           .select('user_id, article_id')
           .eq('user_id', user.id)
           .eq('article_id', video.id)
-          .maybeSingle(),
-        supabase
-          .from('article_views')
-          .select('user_id, article_id')
-          .eq('user_id', user.id)
-          .eq('article_id', video.id)
           .maybeSingle()
       ]);
 
       setHasLiked(!!likeResult.data);
       setHasSaved(!!saveResult.data);
-      setHasViewed(!!viewResult.data);
-      setInitialStateLoaded(true);
     } catch (error) {
-      console.error('Error checking initial like/save/view state:', error);
-      setInitialStateLoaded(true); // Still set to true even on error to avoid blocking
+      console.error('Error checking initial like/save state:', error);
     }
   }, [user?.id, video.id]);
 
   // Reset state when video changes
   useEffect(() => {
-    setInitialStateLoaded(false);
     setLikes(video.likes);
     setSaves(video.saves);
-    setViews(video.views);
     setHasLiked(false);
     setHasSaved(false);
-    setHasViewed(false);
-  }, [video.id, video.likes, video.saves, video.views]);
+  }, [video.id, video.likes, video.saves]);
 
   // Check if user has already liked/saved this post on mount
   useEffect(() => {
-    if (user && !initialStateLoaded) {
+    if (user) {
       checkInitialState();
     }
-  }, [user, initialStateLoaded, checkInitialState]);
-
-  // Track view when post becomes active (visible)
-  const trackView = useCallback(async () => {
-    if (!user || hasViewed) return;
-    
-    try {
-      const { data, error } = await supabase.rpc('increment_article_view_count', {
-        article_id_param: video.id,
-        user_id_param: user.id
-      });
-      
-      if (!error && data) {
-        setHasViewed(true);
-        setViews(prev => prev + 1);
-        // Notify parent component about the view interaction
-        onUserInteraction?.(video.id, 'view' as any);
-      }
-    } catch (error) {
-      console.error('Error tracking view:', error);
-    }
-  }, [user, hasViewed, video.id, onUserInteraction]);
-
-  // Track view when post becomes active
-  useEffect(() => {
-    if (isActive && user && !hasViewed && initialStateLoaded) {
-      // Add a small delay to ensure the user actually sees the content
-      const timer = setTimeout(() => {
-        trackView();
-      }, 1000); // 1 second delay
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isActive, user, hasViewed, initialStateLoaded, trackView]);
+  }, [user, checkInitialState]);
 
   // Memoized interaction handlers
   const savePost = useCallback(async () => {
@@ -629,13 +598,24 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
                 </ScrollView>
               )}
               <Text style={styles.caption}>{video.caption}</Text>
-              <View style={styles.metaRow}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.metaRow}
+                contentContainerStyle={styles.metaRowContent}
+                ref={metaScrollViewRef}
+              >
                 <Text style={styles.metaSourceSite}>{staticContentData.siteName}</Text>
-                <View style={dynamicStyles.metaDot} />
+                <View style={styles.metaDot} />
                 <View style={styles.industryPill}>
                   <Text style={styles.industryPillText}>{video.industry}</Text>
                 </View>
-              </View>
+                <View style={styles.metaDot} />
+                <View style={styles.dateMeta}>
+                  <Feather name="calendar" size={14} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.dateText}>{formatDate(video.created_at)}</Text>
+                </View>
+              </ScrollView>
             </View>
             {/* Progress Bar - Real */}
             <View style={[styles.progressBarBg, { height: 4, justifyContent: 'center' }]}>
@@ -686,17 +666,12 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
                   </View>
                   <Text style={styles.actionBtnCount}>{video.comments}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.actionBtn} 
-                  accessibilityLabel={`Views, ${views} views`} 
-                  accessibilityRole="button" 
-                  disabled={true}
-                >
+                <View style={styles.actionBtn}>
                   <View style={styles.actionBtnIconCircle}>
-                    <Feather name="eye" size={22} color="white" />
+                    <Feather name="calendar" size={22} color="white" />
                   </View>
-                  <Text style={styles.actionBtnCount}>{views}</Text>
-                </TouchableOpacity>
+                  <Text style={styles.actionBtnCount}>{formatDate(video.created_at)}</Text>
+                </View>
               </View>
               <TouchableOpacity 
                 style={styles.readMoreBtn} 
@@ -731,7 +706,13 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
           <View style={[dynamicStyles.staticCardContainerV3, expanded && { flex: 1, justifyContent: 'flex-start' }]}> 
             {/* Meta row (source and topic) always at the top with safe area padding */}
             <View style={{ paddingTop: staticContentData.topSafePadding, paddingBottom: 4 }}>
-              <View style={styles.staticMetaRowV3}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.staticMetaRowV3}
+                contentContainerStyle={styles.staticMetaRowContent}
+                ref={staticMetaScrollViewRef}
+              >
                 <Text style={dynamicStyles.staticCardOwnerV3} numberOfLines={1}>{staticContentData.siteName}</Text>
                 <View style={dynamicStyles.metaDot} />
                 <View style={dynamicStyles.industryPillV3}>
@@ -740,11 +721,11 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
                   </Text>
                 </View>
                 <View style={dynamicStyles.metaDot} />
-                <View style={styles.viewCountMeta}>
-                  <Feather name="eye" size={14} color="rgba(255,255,255,0.8)" />
-                  <Text style={styles.viewCountText}>{views}</Text>
+                <View style={styles.dateMeta}>
+                  <Feather name="calendar" size={14} color={colors.textTertiary} />
+                  <Text style={[styles.dateText, { color: colors.textTertiary }]}>{formatDate(video.created_at)}</Text>
                 </View>
-              </View>
+              </ScrollView>
             </View>
             {/* Title below meta row - tappable to expand/collapse */}
             <TouchableOpacity activeOpacity={0.8} onPress={toggleExpanded}>
@@ -863,7 +844,7 @@ export const VideoCard: React.FC<VideoCardProps> = React.memo(({ video, isActive
     prevProps.video.likes === nextProps.video.likes &&
     prevProps.video.saves === nextProps.video.saves &&
     prevProps.video.comments === nextProps.video.comments &&
-    prevProps.video.views === nextProps.video.views &&
+    prevProps.video.created_at === nextProps.video.created_at &&
     prevProps.onOpenComments === nextProps.onOpenComments &&
     prevProps.onUserInteraction === nextProps.onUserInteraction
   );
@@ -935,9 +916,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   metaRow: {
+    marginTop: 4,
+  },
+  metaRowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    paddingRight: 16,
   },
   metaSourceSite: {
     color: 'rgba(255,255,255,0.8)',
@@ -1068,11 +1052,12 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   staticMetaRowV3: {
+    marginBottom: 6, // Reduced from 10 for more consistent spacing
+  },
+  staticMetaRowContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6, // Reduced from 10 for more consistent spacing
-    flexWrap: 'nowrap',
-    overflow: 'hidden',
+    paddingRight: 16,
   },
   staticCardOwnerV3: {
     color: '#fff',
@@ -1228,7 +1213,21 @@ const styles = StyleSheet.create({
     height: 120, // Smaller height when expanded
     minHeight: 120,
   },
-  // View count meta styles
+  // Date meta styles
+  dateMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+    flexShrink: 0,
+    minWidth: 'auto',
+  },
+  dateText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    fontWeight: '500',
+    marginLeft: 3,
+  },
+  // Keep old view count styles for backward compatibility
   viewCountMeta: {
     flexDirection: 'row',
     alignItems: 'center',

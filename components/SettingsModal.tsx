@@ -1,5 +1,6 @@
 import React, { forwardRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useTheme, ThemeMode } from '../context/ThemeContext';
@@ -12,8 +13,10 @@ interface SettingsModalProps {
 const SettingsModal = forwardRef<BottomSheetModal, SettingsModalProps>(
   ({ navigateTo, signOut }, ref) => {
     const { colors, themeMode, setThemeMode } = useTheme();
-
-    const snapPoints = useMemo(() => ['75%'], []);
+    const insets = useSafeAreaInsets();
+    
+    const { height: screenHeight } = Dimensions.get('window');
+    const snapPoints = useMemo(() => [screenHeight], [screenHeight]);
 
     const handleContentPreferences = () => {
       if (ref && 'current' in ref && ref.current) {
@@ -58,7 +61,8 @@ const SettingsModal = forwardRef<BottomSheetModal, SettingsModalProps>(
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingVertical: 16,
+        paddingTop: insets.top + 16,
+        paddingBottom: 16,
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
       },
@@ -74,6 +78,7 @@ const SettingsModal = forwardRef<BottomSheetModal, SettingsModalProps>(
       scrollContent: {
         paddingVertical: 20,
         paddingHorizontal: 20,
+        paddingBottom: 100, // Extra bottom padding to clear the bottom navigation
       },
       section: {
         marginBottom: 24,
@@ -191,6 +196,7 @@ const SettingsModal = forwardRef<BottomSheetModal, SettingsModalProps>(
         backdropComponent={renderBackdrop}
         backgroundStyle={{ backgroundColor: colors.background }}
         handleIndicatorStyle={{ backgroundColor: colors.textTertiary }}
+        topInset={0}
       >
         <BottomSheetView style={dynamicStyles.container}>
           {/* Header */}
@@ -210,7 +216,11 @@ const SettingsModal = forwardRef<BottomSheetModal, SettingsModalProps>(
             </TouchableOpacity>
           </View>
 
-          <View style={dynamicStyles.scrollContent}>
+          <ScrollView 
+            style={{ flex: 1 }}
+            contentContainerStyle={dynamicStyles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Theme Settings */}
             <View style={dynamicStyles.section}>
               <Text style={dynamicStyles.sectionTitle}>Appearance</Text>
@@ -287,7 +297,7 @@ const SettingsModal = forwardRef<BottomSheetModal, SettingsModalProps>(
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </ScrollView>
         </BottomSheetView>
       </BottomSheetModal>
     );

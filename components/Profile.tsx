@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -9,6 +9,13 @@ import { supabase } from '../lib/supabase';
 import { industryIdToName } from '../lib/industryMap';
 import { useRouter } from 'expo-router';
 import SettingsModal from './SettingsModal';
+
+interface LearningStats {
+  videosWatched: number;
+  postsLiked: number;
+  postsSaved: number;
+  daysActive: number;
+}
 
 interface ProfileProps {
   user: import('../types').User | null;
@@ -22,12 +29,19 @@ const defaultUserData: UserData = {
   joinDate: 'September 2023',
   interests: ['CS', 'Finance & Economics', 'Maths'],
   stats: {
-    videosWatched: 247,
-    minutesLearned: 823,
-    topicsExplored: 18,
-    daysStreak: 14,
+    videosWatched: 0,
+    minutesLearned: 0,
+    topicsExplored: 0,
+    daysStreak: 0,
   },
   savedContent: [],
+};
+
+const defaultLearningStats: LearningStats = {
+  videosWatched: 0,
+  postsLiked: 0,
+  postsSaved: 0,
+  daysActive: 0,
 };
 
 export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) => {
@@ -35,8 +49,38 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
   const [userData, setUserData] = useState<UserData>(defaultUserData);
   const [fullName, setFullName] = useState<string>(defaultUserData.name);
   const [interests, setInterests] = useState<number[]>([]);
+  const [learningStats, setLearningStats] = useState<LearningStats>(defaultLearningStats);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
   const router = useRouter();
   const settingsModalRef = useRef<BottomSheetModal>(null);
+
+  const fetchLearningStats = async (userId: string) => {
+    try {
+      setIsLoadingStats(true);
+      
+      // Use the comprehensive stats function for better performance
+      const { data: statsData, error: statsError } = await supabase
+        .rpc('get_user_learning_stats', { user_id_param: userId });
+
+      if (statsError) {
+        console.error('Error fetching learning stats:', statsError);
+        // Keep default stats on error
+      } else if (statsData && statsData.length > 0) {
+        const stats = statsData[0];
+        setLearningStats({
+          videosWatched: parseInt(stats.videos_watched) || 0,
+          postsLiked: parseInt(stats.posts_liked) || 0,
+          postsSaved: parseInt(stats.posts_saved) || 0,
+          daysActive: stats.days_active || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching learning stats:', error);
+      // Keep default stats on error
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
 
   useEffect(() => {
     const fetchProfileAndSaves = async () => {
@@ -64,26 +108,29 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
         const { data: authUser } = await supabase.auth.getUser();
         const userId = authUser?.user?.id;
         if (userId) {
-                  // Join article_saves and articles to get saved content
-        const { data: savedRows, error: savedError } = await supabase
-          .from('article_saves')
-          .select('article_id, created_at, articles (id, title, type, created_at)')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
-        if (!savedError && savedRows) {
-          const savedContent: SavedContentItem[] = savedRows.map((row: any) => {
-            const article = row.articles;
-            return {
-              id: article?.id,
-              title: article?.title || 'Untitled',
-              type: article?.type || 'unknown',
-              date: article?.created_at
-                ? new Date(article.created_at).toLocaleDateString()
-                : '',
-            };
-          });
-          setUserData((prev) => ({ ...prev, savedContent }));
-        }
+          // Join article_saves and articles to get saved content
+          const { data: savedRows, error: savedError } = await supabase
+            .from('article_saves')
+            .select('article_id, created_at, articles (id, title, type, created_at)')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+          if (!savedError && savedRows) {
+            const savedContent: SavedContentItem[] = savedRows.map((row: any) => {
+              const article = row.articles;
+              return {
+                id: article?.id,
+                title: article?.title || 'Untitled',
+                type: article?.type || 'unknown',
+                date: article?.created_at
+                  ? new Date(article.created_at).toLocaleDateString()
+                  : '',
+              };
+            });
+            setUserData((prev) => ({ ...prev, savedContent }));
+          }
+          
+          // Fetch learning stats
+          await fetchLearningStats(userId);
         }
       }
     };
@@ -136,8 +183,9 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
       marginTop: 4,
     },
     interestText: {
-      color: colors.primary,
+      color: '#3b82f6',
       fontSize: 14,
+      fontWeight: '500',
     },
     statsCard: {
       marginTop: 16,
@@ -209,6 +257,16 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
       textAlign: 'center',
       paddingVertical: 16,
     },
+    interestPill: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      marginRight: 8,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
   });
 
   return (
@@ -242,7 +300,7 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
             {interests.map((interest) => (
               <View
                 key={interest}
-                style={styles.interestPill}
+                style={dynamicStyles.interestPill}
               >
                 <Text style={dynamicStyles.interestText}>{industryIdToName[interest] || interest}</Text>
               </View>
@@ -253,31 +311,43 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
         {/* Stats */}
         <View style={dynamicStyles.statsCard}>
           <Text style={dynamicStyles.statsTitle}>Your Learning Stats</Text>
-          <View style={styles.statsGridRow}>
-            <View style={styles.statsCol}><StatCard
-              title="Watch Time"
-              value={`${userData.stats.minutesLearned} min`}
-              icon={<Feather name="clock" size={20} color="#2563EB" />}
-              color="blue"
-            /></View>
-            <View style={styles.statsCol}><StatCard
-              title="Videos Watched"
-              value={userData.stats.videosWatched.toString()}
-              icon={<MaterialCommunityIcons name="chart-bar" size={20} color="#16A34A" />}
-              color="green"
-            /></View>
-            <View style={styles.statsCol}><StatCard
-              title="Topics Explored"
-              value={userData.stats.topicsExplored.toString()}
-              icon={<Feather name="book-open" size={20} color="#9333EA" />}
-              color="purple"
-            /></View>
-            <View style={styles.statsCol}><StatCard
-              title="Day Streak"
-              value={`${userData.stats.daysStreak} days`}
-              icon={<Feather name="trending-up" size={20} color="#F59E42" />}
-              color="yellow"
-            /></View>
+          <View style={styles.statsContainer}>
+            <View style={styles.statsRow}>
+              <View style={styles.statsCol}>
+                <StatCard
+                  title="Insights Gained"
+                  value={isLoadingStats ? '...' : learningStats.videosWatched.toString()}
+                  icon={<Feather name="play-circle" size={20} color="#2563EB" />}
+                  color="blue"
+                />
+              </View>
+              <View style={styles.statsCol}>
+                <StatCard
+                  title="Posts Liked"
+                  value={isLoadingStats ? '...' : learningStats.postsLiked.toString()}
+                  icon={<Feather name="heart" size={20} color="#16A34A" />}
+                  color="green"
+                />
+              </View>
+            </View>
+            <View style={styles.statsRow}>
+              <View style={styles.statsCol}>
+                <StatCard
+                  title="Posts Saved"
+                  value={isLoadingStats ? '...' : learningStats.postsSaved.toString()}
+                  icon={<Feather name="bookmark" size={20} color="#9333EA" />}
+                  color="purple"
+                />
+              </View>
+              <View style={styles.statsCol}>
+                <StatCard
+                  title="Days Active"
+                  value={isLoadingStats ? '...' : `${learningStats.daysActive} days`}
+                  icon={<Feather name="calendar" size={20} color="#F59E42" />}
+                  color="yellow"
+                />
+              </View>
+            </View>
           </View>
         </View>
 
@@ -367,7 +437,9 @@ const statStyles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     flex: 1,
+    height: '100%',
     marginBottom: 0,
+    justifyContent: 'space-between',
   },
   row: {
     flexDirection: 'row',
@@ -393,7 +465,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 80,
-    paddingTop: 30,
+    paddingTop: 17,
   },
   headerContainer: {
     backgroundColor: '#fff',
@@ -508,14 +580,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: '#111827',
   },
-  statsGridRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  statsContainer: {
     marginHorizontal: -8,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+    height: 110,
   },
   statsCol: {
     width: '50%',
     padding: 8,
+    alignItems: 'stretch',
   },
   savedCard: {
     marginTop: 16,
