@@ -60,7 +60,7 @@ export interface SavedContentItem {
   date: string;
 }
 
-export type ScreenName = 'signIn' | 'signUp' | 'onboarding' | 'feed' | 'discover' | 'profile' | 'settings';
+export type ScreenName = 'signIn' | 'signUp' | 'onboarding' | 'feed' | 'discover' | 'profile' | 'settings' | 'chats';
 
 export interface UserData {
   name: string;

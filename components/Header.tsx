@@ -12,6 +12,7 @@ interface HeaderProps {
 const NAV_ITEMS = [
   { name: 'Home', screen: 'feed' as ScreenName, icon: (props: any) => <Feather name="home" {...props} />, accessibilityLabel: "Navigate to Home screen" },
   { name: 'Discover', screen: 'discover' as ScreenName, icon: (props: any) => <Feather name="search" {...props} />, accessibilityLabel: "Navigate to Discover screen" },
+  { name: 'Chats', screen: 'chats' as ScreenName, icon: (props: any) => <Feather name="message-square" {...props} />, accessibilityLabel: "Navigate to Chats screen" },
   { name: 'Profile', screen: 'profile' as ScreenName, icon: (props: any) => <Feather name="user" {...props} />, accessibilityLabel: "Navigate to Profile screen" },
 ];
 

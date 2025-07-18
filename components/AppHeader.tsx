@@ -11,7 +11,6 @@ export default function AppHeader() {
 
   // Map pathname to ScreenName for Header
   let currentScreen: any = 'feed';
-  let dark = false;
   let useSafeArea = false;
   if (pathname === '/discover') {
     currentScreen = 'discover';
@@ -21,14 +20,15 @@ export default function AppHeader() {
     useSafeArea = true;
   } else if (pathname === '/settings') {
     currentScreen = 'settings';
-  } else if (pathname === '/feed') {
-    dark = true;
+  } else if (pathname === '/chats') {
+    currentScreen = 'chats';
+    useSafeArea = true;
   }
 
   // Only apply SafeAreaView to the top, not the bottom (header is fixed at bottom)
   const header = (
     <View style={styles.headerContainer}>
-      <Header currentScreen={currentScreen} navigateTo={router.replace} dark={dark} />
+      <Header currentScreen={currentScreen} navigateTo={router.replace} />
     </View>
   );
 
