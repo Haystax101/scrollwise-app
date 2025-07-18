@@ -1,17 +1,17 @@
-import React, { forwardRef, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Dimensions } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Dimensions, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 import { useTheme, ThemeMode } from '../context/ThemeContext';
 
 interface SettingsModalProps {
+  visible: boolean;
+  onClose: () => void;
   navigateTo: (screen: string) => void;
   signOut: () => Promise<void>;
 }
 
-const SettingsModal = forwardRef<BottomSheetModal, SettingsModalProps>(
-  ({ navigateTo, signOut }, ref) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigateTo, signOut }) => {
     const { colors, themeMode, setThemeMode } = useTheme();
     const insets = useSafeAreaInsets();
     
@@ -19,9 +19,7 @@ const SettingsModal = forwardRef<BottomSheetModal, SettingsModalProps>(
     const snapPoints = useMemo(() => [screenHeight], [screenHeight]);
 
     const handleContentPreferences = () => {
-      if (ref && 'current' in ref && ref.current) {
-        ref.current.dismiss();
-      }
+      onClose();
       setTimeout(() => navigateTo('onboarding'), 100);
     };
 
@@ -35,9 +33,7 @@ const SettingsModal = forwardRef<BottomSheetModal, SettingsModalProps>(
             text: 'Sign Out', 
             style: 'destructive', 
             onPress: () => {
-              if (ref && 'current' in ref && ref.current) {
-                ref.current.dismiss();
-              }
+              onClose();
               setTimeout(() => signOut(), 100);
             }
           },
@@ -183,32 +179,20 @@ const SettingsModal = forwardRef<BottomSheetModal, SettingsModalProps>(
       },
     });
 
-    const renderBackdrop = (props: any) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
-    );
-
     return (
-      <BottomSheetModal
-        ref={ref}
-        index={0}
-        snapPoints={snapPoints}
-        enablePanDownToClose={true}
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: colors.background }}
-        handleIndicatorStyle={{ backgroundColor: colors.textTertiary }}
-        topInset={0}
+      <Modal
+        visible={visible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={onClose}
       >
-        <BottomSheetView style={dynamicStyles.container}>
+        <View style={dynamicStyles.container}>
           {/* Header */}
           <View style={dynamicStyles.header}>
             <Text style={dynamicStyles.headerTitle}>Settings</Text>
             <TouchableOpacity
               style={dynamicStyles.closeButton}
-              onPress={() => {
-                if (ref && 'current' in ref && ref.current) {
-                  ref.current.dismiss();
-                }
-              }}
+              onPress={onClose}
               accessibilityLabel="Close settings"
               accessibilityRole="button"
             >
@@ -298,12 +282,9 @@ const SettingsModal = forwardRef<BottomSheetModal, SettingsModalProps>(
               </View>
             </View>
           </ScrollView>
-        </BottomSheetView>
-      </BottomSheetModal>
+        </View>
+      </Modal>
     );
-  }
-);
-
-SettingsModal.displayName = 'SettingsModal';
+};
 
 export default SettingsModal; 

@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Image } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import type { UserData, SavedContentItem } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { industryIdToName } from '../lib/industryMap';
 import { useRouter } from 'expo-router';
 import SettingsModal from './SettingsModal';
+import { LinearGradient } from 'expo-linear-gradient';
+import type { UserData, SavedContentItem } from '../types';
 
 interface LearningStats {
   videosWatched: number;
@@ -51,8 +51,8 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
   const [interests, setInterests] = useState<number[]>([]);
   const [learningStats, setLearningStats] = useState<LearningStats>(defaultLearningStats);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const router = useRouter();
-  const settingsModalRef = useRef<BottomSheetModal>(null);
 
   const fetchLearningStats = async (userId: string) => {
     try {
@@ -142,85 +142,89 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
       flex: 1,
       backgroundColor: colors.background,
     },
-    headerContainer: {
-      backgroundColor: colors.surface,
-      padding: 20,
-      paddingTop: 50,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 1,
+    profileHeader: {
+      paddingTop: 60,
+      paddingHorizontal: 20,
+      paddingBottom: 20,
+      alignItems: 'center',
     },
-    headerTitle: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: colors.text,
+    settingsButton: {
+      position: 'absolute',
+      top: 60,
+      right: 20,
+      zIndex: 1,
     },
-    userInfoCard: {
-      backgroundColor: colors.card,
-      padding: 24,
-      borderRadius: 16,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 1,
-      marginBottom: 15,
+    avatar: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      borderWidth: 3,
+      borderColor: 'white',
+      marginBottom: 12,
     },
     userName: {
-      fontSize: 20,
+      fontSize: 24,
       fontWeight: 'bold',
-      color: colors.text,
+      color: 'white',
     },
     userEmail: {
-      color: colors.textSecondary,
       fontSize: 16,
+      color: 'rgba(255, 255, 255, 0.8)',
     },
-    userJoinDate: {
-      fontSize: 13,
-      color: colors.textTertiary,
-      marginTop: 4,
+    statsContainer: {
+      paddingHorizontal: 16,
+      marginTop: 20,
+    },
+    interestContainer: {
+      paddingHorizontal: 20,
+      marginTop: 20,
+    },
+    interestTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    interestTagContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    interestTag: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: 20,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      marginRight: 8,
+      marginBottom: 8,
     },
     interestText: {
-      color: '#3b82f6',
+      color: colors.primary,
       fontSize: 14,
       fontWeight: '500',
     },
-    statsCard: {
-      marginTop: 16,
-      backgroundColor: colors.card,
-      padding: 24,
-      borderRadius: 16,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 1,
-      marginBottom: 16,
-    },
-    statsTitle: {
-      fontSize: 18,
-      fontWeight: '500',
-      marginBottom: 16,
-      color: colors.text,
-    },
     savedCard: {
-      marginTop: 16,
+      marginTop: 20,
+      marginHorizontal: 16,
       backgroundColor: colors.card,
-      padding: 24,
+      padding: 20,
       borderRadius: 16,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 1,
-      marginBottom: 16,
     },
     savedTitle: {
       fontSize: 18,
-      fontWeight: '500',
+      fontWeight: '600',
       color: colors.text,
+      marginBottom: 12,
+    },
+    signOutButton: {
+      marginTop: 20,
+      alignSelf: 'center',
+    },
+    signOutText: {
+      color: '#EF4444',
+      fontSize: 16,
+      fontWeight: '600',
     },
     savedItemRow: {
       flexDirection: 'row',
@@ -231,17 +235,13 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
       borderRadius: 12,
       backgroundColor: colors.card,
       marginBottom: 12,
-      shadowColor: isDark ? '#000' : '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: isDark ? 0.3 : 0.05,
-      shadowRadius: 2,
-      elevation: 2,
+      width: 300,
+      marginRight: 12,
     },
     savedItemTitle: {
       fontWeight: '500',
       color: colors.text,
       fontSize: 16,
-      lineHeight: 20,
     },
     savedItemType: {
       textTransform: 'capitalize',
@@ -252,157 +252,123 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
       color: colors.textTertiary,
       fontSize: 12,
     },
-    savedEmptyText: {
-      color: colors.textTertiary,
-      textAlign: 'center',
-      paddingVertical: 16,
-    },
-    interestPill: {
-      backgroundColor: colors.surface,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 999,
-      marginRight: 8,
-      marginBottom: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
+    contentContainer: {
+      paddingBottom: 120,
     },
   });
 
-  return (
-    <View style={dynamicStyles.container}>
-     {/* Header */}
-      <View style={dynamicStyles.headerContainer}>
-        <View style={styles.headerRow}>
-          <Text style={dynamicStyles.headerTitle}>Profile</Text>
-          <TouchableOpacity style={styles.headerSettingsBtn} accessibilityLabel="Open settings" accessibilityRole="button" onPress={() => settingsModalRef.current?.present()}>
-            <Feather name="settings" size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
+  const renderInterests = () => {
+      if (!interests || interests.length === 0) return null;
+      return (
+        <View style={dynamicStyles.interestContainer}>
+          <Text style={dynamicStyles.interestTitle}>Interests</Text>
+          <View style={dynamicStyles.interestTagContainer}>
+            {interests.map((id) => (
+              <View key={id} style={dynamicStyles.interestTag}>
+                <Text style={dynamicStyles.interestText}>{industryIdToName[id]}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      );
+    };
+
+  const renderStats = () => (
+    <View style={dynamicStyles.statsContainer}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <StatCard
+          title="Insights Gained"
+          value={isLoadingStats ? '...' : learningStats.videosWatched.toString()}
+          icon={<Feather name="play-circle" size={24} color={colors.text} />}
+          color="blue"
+        />
+        <StatCard
+          title="Posts Liked"
+          value={isLoadingStats ? '...' : learningStats.postsLiked.toString()}
+          icon={<Feather name="heart" size={24} color={colors.text} />}
+          color="green"
+        />
+        <StatCard
+          title="Posts Saved"
+          value={isLoadingStats ? '...' : learningStats.postsSaved.toString()}
+          icon={<Feather name="bookmark" size={24} color={colors.text} />}
+          color="purple"
+        />
+        <StatCard
+          title="Days Active"
+          value={learningStats.daysActive.toString()}
+          icon={<Feather name="calendar" size={24} color={colors.text} />}
+          color="yellow"
+        />
+      </ScrollView>
+    </View>
+  );
+
+  const renderSavedItem = (item: SavedContentItem) => (
+    <TouchableOpacity
+      key={item.id}
+      style={[dynamicStyles.savedItemRow, { width: 260, marginRight: 16 }]}
+      accessibilityLabel={`View saved content: ${item.title}`}
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/feed', params: { reelId: item.id } })}
+    >
+      <View style={styles.savedIconCircle}>
+        <Feather name="bookmark" size={18} color={colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={dynamicStyles.savedItemTitle}>{item.title}</Text>
+        <View style={styles.savedItemMetaRow}>
+          <Text style={dynamicStyles.savedItemType}>{item.type}</Text>
+          <View style={styles.savedDot} />
+          <Text style={dynamicStyles.savedItemDate}>{item.date}</Text>
         </View>
       </View>
-    <ScrollView style={dynamicStyles.container} contentContainerStyle={styles.scrollContent}>
-     
+    </TouchableOpacity>
+  );
 
-      <View style={styles.innerContent}>
-        {/* User Info */}
-        <View style={dynamicStyles.userInfoCard}>
-          <View style={styles.userInfoRow}>
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarInitial}>{fullName.charAt(0).toUpperCase()}</Text>
-            </View>
-            <View style={styles.userInfoTextCol}>
-              <Text style={dynamicStyles.userName}>{fullName}</Text>
-              <Text style={dynamicStyles.userEmail}>{userData.email}</Text>
-              <Text style={dynamicStyles.userJoinDate}>Member since {userData.joinDate}</Text>
-            </View>
-          </View>
-          <View style={styles.interestsRow}>
-            {interests.map((interest) => (
-              <View
-                key={interest}
-                style={dynamicStyles.interestPill}
-              >
-                <Text style={dynamicStyles.interestText}>{industryIdToName[interest] || interest}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
+  const handleSignOut = async () => {
+    if (signOut) {
+      await signOut();
+    }
+  };
 
-        {/* Stats */}
-        <View style={dynamicStyles.statsCard}>
-          <Text style={dynamicStyles.statsTitle}>Your Learning Stats</Text>
-          <View style={styles.statsContainer}>
-            <View style={styles.statsRow}>
-              <View style={styles.statsCol}>
-                <StatCard
-                  title="Insights Gained"
-                  value={isLoadingStats ? '...' : learningStats.videosWatched.toString()}
-                  icon={<Feather name="play-circle" size={20} color="#2563EB" />}
-                  color="blue"
-                />
-              </View>
-              <View style={styles.statsCol}>
-                <StatCard
-                  title="Posts Liked"
-                  value={isLoadingStats ? '...' : learningStats.postsLiked.toString()}
-                  icon={<Feather name="heart" size={20} color="#16A34A" />}
-                  color="green"
-                />
-              </View>
-            </View>
-            <View style={styles.statsRow}>
-              <View style={styles.statsCol}>
-                <StatCard
-                  title="Posts Saved"
-                  value={isLoadingStats ? '...' : learningStats.postsSaved.toString()}
-                  icon={<Feather name="bookmark" size={20} color="#9333EA" />}
-                  color="purple"
-                />
-              </View>
-              <View style={styles.statsCol}>
-                <StatCard
-                  title="Days Active"
-                  value={isLoadingStats ? '...' : `${learningStats.daysActive} days`}
-                  icon={<Feather name="calendar" size={20} color="#F59E42" />}
-                  color="yellow"
-                />
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Saved Content */}
+  return (
+    <View style={dynamicStyles.container}>
+      <ScrollView contentContainerStyle={dynamicStyles.contentContainer}>
+        <LinearGradient
+          colors={['#4F46E5', '#8B5CF6']}
+          style={dynamicStyles.profileHeader}
+        >
+          <TouchableOpacity style={dynamicStyles.settingsButton} onPress={() => setIsSettingsModalVisible(true)}>
+            <Feather name="settings" size={24} color="white" />
+          </TouchableOpacity>
+          <Image
+            source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} // Placeholder
+            style={dynamicStyles.avatar}
+          />
+          <Text style={dynamicStyles.userName}>{fullName}</Text>
+          <Text style={dynamicStyles.userEmail}>{userData.email}</Text>
+        </LinearGradient>
+        {renderStats()}
+        {renderInterests()}
         <View style={dynamicStyles.savedCard}>
-          <View style={styles.savedHeaderRow}>
-            <Text style={dynamicStyles.savedTitle}>Saved Content</Text>
-          </View>
-          <ScrollView
-            horizontal={true}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingVertical: 4 }}
-            style={{ marginTop: 8 }}
-          >
-            {userData.savedContent.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[dynamicStyles.savedItemRow, { width: 260, marginRight: 16 }]}
-                accessibilityLabel={`View saved content: ${item.title}`}
-                accessibilityRole="button"
-                onPress={() => router.push({ pathname: '/feed', params: { reelId: item.id } })}
-              >
-                <View style={styles.savedIconCircle}>
-                  <Feather name="bookmark" size={18} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={dynamicStyles.savedItemTitle}>{item.title}</Text>
-                  <View style={styles.savedItemMetaRow}>
-                    <Text style={dynamicStyles.savedItemType}>{item.type}</Text>
-                    <View style={styles.savedDot} />
-                    <Text style={dynamicStyles.savedItemDate}>{item.date}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-            {userData.savedContent.length === 0 && (
-              <Text style={dynamicStyles.savedEmptyText}>No saved content yet.</Text>
+          <Text style={dynamicStyles.savedTitle}>Saved Content</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {userData.savedContent.length > 0 ? (
+              userData.savedContent.map(renderSavedItem)
+            ) : (
+              <Text style={{ color: colors.textSecondary, marginTop: 10 }}>No saved content yet.</Text>
             )}
           </ScrollView>
         </View>
+      </ScrollView>
 
-        {/* Add a logout button if signOut is provided */}
-        {signOut && (
-          <TouchableOpacity style={{marginTop: 16, alignSelf: 'center'}} onPress={signOut} accessibilityLabel="Log out" accessibilityRole="button">
-            <Text style={{color: 'red', fontWeight: 'bold'}}>Log Out</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </ScrollView>
-    
-    <SettingsModal
-      ref={settingsModalRef}
-      navigateTo={navigateTo || (() => {})}
-      signOut={signOut || (() => Promise.resolve())}
-    />
+      <SettingsModal
+        visible={isSettingsModalVisible}
+        onClose={() => setIsSettingsModalVisible(false)}
+        navigateTo={router.push}
+        signOut={signOut || (async () => {})}
+      />
     </View>
   );
 };
@@ -415,48 +381,61 @@ interface StatCardProps {
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => {
-  const bgColors = {
-    blue: '#EFF6FF',
-    green: '#ECFDF5',
-    purple: '#F3E8FF',
-    yellow: '#FEF9C3',
+  const { colors } = useTheme();
+
+  const colorMap = {
+    blue: {
+      background: 'rgba(79, 70, 229, 0.1)',
+      border: 'rgba(79, 70, 229, 0.2)',
+    },
+    green: {
+      background: 'rgba(16, 185, 129, 0.1)',
+      border: 'rgba(16, 185, 129, 0.2)',
+    },
+    purple: {
+      background: 'rgba(139, 92, 246, 0.1)',
+      border: 'rgba(139, 92, 246, 0.2)',
+    },
+    yellow: {
+      background: 'rgba(245, 158, 11, 0.1)',
+      border: 'rgba(245, 158, 11, 0.2)',
+    },
   };
+
+  const selectedColor = colorMap[color];
+
+  const styles = StyleSheet.create({
+    card: {
+      backgroundColor: selectedColor.background,
+      borderColor: selectedColor.border,
+      borderWidth: 1,
+      borderRadius: 16,
+      padding: 16,
+      alignItems: 'center',
+      width: 150,
+      marginRight: 12,
+      marginBottom: 12,
+    },
+    value: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    title: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+  });
+
   return (
-    <View style={[statStyles.card, { backgroundColor: bgColors[color] }]}> 
-      <View style={statStyles.row}>
-        {icon}
-        <Text style={statStyles.title}>{title}</Text>
-      </View>
-      <Text style={statStyles.value}>{value}</Text>
+    <View style={styles.card}>
+      <Text style={styles.value}>{value}</Text>
+      <Text style={styles.title}>{title}</Text>
     </View>
   );
 };
-
-const statStyles = StyleSheet.create({
-  card: {
-    padding: 16,
-    borderRadius: 12,
-    flex: 1,
-    height: '100%',
-    marginBottom: 0,
-    justifyContent: 'space-between',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  title: {
-    fontWeight: '500',
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  value: {
-    fontWeight: 'bold',
-    fontSize: 24,
-    color: '#1F2937',
-  },
-});
 
 const styles = StyleSheet.create({
   container: {

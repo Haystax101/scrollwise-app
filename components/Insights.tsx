@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const dummyInsights = [
   {
@@ -23,7 +24,7 @@ const dummyInsights = [
 ];
 
 const Insights = () => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   const handleAccept = (insightId: string) => {
     console.log(`Accepted insight ${insightId}`);
@@ -39,13 +40,13 @@ const Insights = () => {
       backgroundColor: colors.background,
     },
     insightCard: {
-      backgroundColor: colors.card,
-      borderRadius: 8,
-      padding: 16,
+      borderRadius: 16,
       marginVertical: 8,
       marginHorizontal: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
+      overflow: 'hidden',
+    },
+    gradient: {
+      padding: 20,
     },
     cardHeader: {
       flexDirection: 'row',
@@ -99,60 +100,88 @@ const Insights = () => {
     actions: {
       flexDirection: 'row',
       justifyContent: 'flex-end',
-      marginTop: 12,
+      marginTop: 20,
     },
     actionButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: 20,
-      marginLeft: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+      marginLeft: 12,
     },
     replyButton: {
       backgroundColor: colors.primary,
     },
-    rejectButton: {
-      backgroundColor: '#E57373',
+    dismissButton: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: colors.error,
     },
     actionButtonText: {
-      color: 'white',
-      fontWeight: 'bold',
-      marginLeft: 6,
+      color: colors.text,
+      fontWeight: '600',
+      marginLeft: 8,
+    },
+    replyButtonText: {
+      color: colors.primaryText,
     },
     button: {
         marginLeft: 8,
     }
   });
 
+  const InsightCard = ({ item }: { item: any }) => {
+    const cardContent = (
+      <View style={isDark ? styles.gradient : [styles.insightCard, { padding: 20 }]}>
+        <View style={styles.cardHeader}>
+          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{item.userName}</Text>
+            <Text style={styles.jobTitle}>{item.jobTitle}</Text>
+          </View>
+        </View>
+        <Text style={styles.messageText}>"{item.userMessage}"</Text>
+        <Text style={styles.insightContext}>Response to your insight: {item.insightTitle}</Text>
+        <View style={styles.actions}>
+          <TouchableOpacity style={[styles.actionButton, styles.replyButton]} onPress={() => handleAccept(item.id)}>
+            <Feather name="message-square" size={18} color={colors.primaryText} />
+            <Text style={[styles.actionButtonText, styles.replyButtonText]}>Reply</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.actionButton, styles.dismissButton]} onPress={() => handleReject(item.id)}>
+            <Feather name="x" size={18} color={colors.error} />
+            <Text style={[styles.actionButtonText, { color: colors.error }]}>Dismiss</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+
+    if (isDark) {
+      return (
+        <View style={styles.insightCard}>
+          <LinearGradient
+            colors={['#1A1B2E', '#2D2D3A']}
+            style={styles.gradient}
+          >
+            {cardContent}
+          </LinearGradient>
+        </View>
+      );
+    }
+
+    return (
+      <View style={[styles.insightCard, { backgroundColor: colors.card }]}>
+        {cardContent}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <FlatList
         data={dummyInsights}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.insightCard}>
-            <View style={styles.cardHeader}>
-              <Image source={{ uri: item.avatar }} style={styles.avatar} />
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>{item.userName}</Text>
-                <Text style={styles.jobTitle}>{item.jobTitle}</Text>
-              </View>
-            </View>
-            <Text style={styles.messageText}>"{item.userMessage}"</Text>
-            <Text style={styles.insightContext}>Response to your insight: {item.insightTitle}</Text>
-            <View style={styles.actions}>
-              <TouchableOpacity style={[styles.actionButton, styles.replyButton]} onPress={() => handleAccept(item.id)}>
-                <Feather name="message-square" size={16} color="white" />
-                <Text style={styles.actionButtonText}>Reply</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionButton, styles.rejectButton]} onPress={() => handleReject(item.id)}>
-                <Feather name="x" size={16} color="white" />
-                <Text style={styles.actionButtonText}>Dismiss</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        renderItem={({ item }) => <InsightCard item={item} />}
       />
     </View>
   );

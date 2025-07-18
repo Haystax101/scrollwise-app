@@ -26,6 +26,7 @@ export interface ThemeColors {
   primary: string;
   primaryText: string;
   accent: string;
+  error: string;
   
   // Status bar
   statusBarStyle: 'light-content' | 'dark-content';
@@ -47,63 +48,65 @@ export interface ThemeColors {
 const lightTheme: ThemeColors = {
   background: '#F9FAFB',
   surface: '#FFFFFF',
-  card: '#FFFFFF', 
+  card: '#FFFFFF',
   overlay: 'rgba(0,0,0,0.1)',
   
-  text: '#111827',
-  textSecondary: '#4B5563',
-  textTertiary: '#6B7280',
+  text: '#1F2937',
+  textSecondary: '#6B7280',
+  textTertiary: '#9CA3AF',
   
   border: '#E5E7EB',
   separator: '#F3F4F6',
   
-  primary: '#2563EB',
+  primary: '#4F46E5',
   primaryText: '#FFFFFF',
-  accent: '#3B82F6',
+  accent: '#8B5CF6',
+  error: '#EF4444',
   
   statusBarStyle: 'dark-content',
   statusBarBackground: '#F9FAFB',
   
   navigationBackground: '#FFFFFF',
   navigationBorder: '#E5E7EB',
-  navigationActive: '#2563EB',
+  navigationActive: '#4F46E5',
   navigationInactive: '#6B7280',
   
   inputBackground: '#F3F4F6',
   inputBorder: '#E5E7EB',
-  inputText: '#111827',
+  inputText: '#1F2937',
   inputPlaceholder: '#9CA3AF',
 };
 
 const darkTheme: ThemeColors = {
-  background: '#000000',
-  surface: '#111111',
-  card: '#1a1a1a',
-  overlay: 'rgba(0,0,0,0.6)',
-  
+  background: '#0A0B1E',
+  surface: '#1A1B2E',
+  card: '#1A1B2E',
+  overlay: 'rgba(0, 0, 0, 0.5)',
+
   text: '#FFFFFF',
-  textSecondary: '#E5E5E5',
-  textTertiary: '#B3B3B3',
-  
-  border: '#333333',
-  separator: '#222222',
-  
-  primary: '#60A5FA',
+  textSecondary: '#A1A1AA',
+  textTertiary: '#71717A',
+
+  border: '#2D2D3A',
+  separator: '#2D2D3A',
+
+  primary: '#4F46E5',
   primaryText: '#FFFFFF',
-  accent: '#818CF8',
+  accent: '#8B5CF6',
+  error: '#EF4444',
   
   statusBarStyle: 'light-content',
-  statusBarBackground: '#000000',
+  statusBarBackground: '#0A0B1E',
   
-  navigationBackground: '#111111',
-  navigationBorder: '#333333',
-  navigationActive: '#FFFFFF',
-  navigationInactive: '#888888',
+  navigationBackground: '#0A0B1E',
+  navigationBorder: '#2D2D3A',
+  navigationActive: '#4F46E5',
+  navigationInactive: '#71717A',
   
-  inputBackground: '#1a1a1a',
-  inputBorder: '#404040',
+  inputBackground: '#1A1B2E',
+  inputBorder: '#2D2D3A',
   inputText: '#FFFFFF',
-  inputPlaceholder: '#888888',
+  inputPlaceholder: '#71717A',
 };
 
 interface ThemeContextType {

@@ -60,16 +60,19 @@ const Chats = () => {
     },
     conversationItem: {
       flexDirection: 'row',
+      alignItems: 'center',
       padding: 16,
+      backgroundColor: colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
-      alignItems: 'center',
     },
     avatar: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
       marginRight: 16,
+      borderWidth: 2,
+      borderColor: colors.primary,
     },
     conversationText: {
       flex: 1,

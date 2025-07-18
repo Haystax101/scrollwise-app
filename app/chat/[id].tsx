@@ -6,15 +6,15 @@ import { useTheme } from '../../context/ThemeContext';
 import { Feather } from '@expo/vector-icons';
 
 const dummyMessages = [
-  { id: '1', text: 'Hey, how are you?', sender: 'John Doe' },
-  { id: '2', text: 'I am good, thanks! How about you?', sender: 'Me' },
-  { id: '3', text: 'Doing great! Are we still on for tomorrow?', sender: 'John Doe' },
-  { id: '4', text: 'Yes, absolutely!', sender: 'Me' },
+  { id: '1', text: 'Hey, how are you?', sender: 'John Doe', timestamp: '10:00 AM' },
+  { id: '2', text: 'I am good, thanks! How about you?', sender: 'Me', timestamp: '10:01 AM' },
+  { id: '3', text: 'Doing great! Are we still on for tomorrow?', sender: 'John Doe', timestamp: '10:01 AM' },
+  { id: '4', text: 'Yes, absolutely!', sender: 'Me', timestamp: '10:02 AM' },
 ];
 
 const ChatDetailScreen = () => {
   const { id } = useLocalSearchParams();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
 
   const styles = StyleSheet.create({
@@ -48,32 +48,46 @@ const ChatDetailScreen = () => {
       flex: 1,
       padding: 16,
     },
-    messageContainer: {
+    messageRow: {
+      flexDirection: 'row',
       marginVertical: 4,
+    },
+    messageContainer: {
       maxWidth: '80%',
+      borderRadius: 18,
     },
     myMessage: {
       alignSelf: 'flex-end',
       backgroundColor: colors.primary,
-      borderRadius: 20,
-      padding: 12,
+      borderBottomRightRadius: 4,
     },
     theirMessage: {
       alignSelf: 'flex-start',
-      backgroundColor: colors.card,
-      borderRadius: 20,
-      padding: 12,
-      borderWidth: 1,
+      backgroundColor: isDark ? colors.border : colors.surface,
+      borderBottomLeftRadius: 4,
+      borderWidth: isDark ? 0 : 1,
       borderColor: colors.border,
     },
     messageText: {
       fontSize: 16,
+      padding: 12,
     },
     myMessageText: {
       color: colors.primaryText,
     },
     theirMessageText: {
       color: colors.text,
+    },
+    timestamp: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginTop: 4,
+    },
+    myTimestamp: {
+      alignSelf: 'flex-end',
+    },
+    theirTimestamp: {
+      alignSelf: 'flex-start',
     },
     inputContainer: {
       flexDirection: 'row',
@@ -117,16 +131,23 @@ const ChatDetailScreen = () => {
           data={dummyMessages}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={[
-              styles.messageContainer,
-              item.sender === 'Me' ? styles.myMessage : styles.theirMessage
-            ]}>
-              <Text style={[
-                styles.messageText,
-                item.sender === 'Me' ? styles.myMessageText : styles.theirMessageText
-              ]}>
-                {item.text}
-              </Text>
+            <View style={[styles.messageRow, { justifyContent: item.sender === 'Me' ? 'flex-end' : 'flex-start' }]}>
+              <View>
+                <View style={[
+                  styles.messageContainer,
+                  item.sender === 'Me' ? styles.myMessage : styles.theirMessage
+                ]}>
+                  <Text style={[
+                    styles.messageText,
+                    item.sender === 'Me' ? styles.myMessageText : styles.theirMessageText
+                  ]}>
+                    {item.text}
+                  </Text>
+                </View>
+                <Text style={[styles.timestamp, item.sender === 'Me' ? styles.myTimestamp : styles.theirTimestamp]}>
+                  {item.timestamp}
+                </Text>
+              </View>
             </View>
           )}
           contentContainerStyle={styles.messageList}

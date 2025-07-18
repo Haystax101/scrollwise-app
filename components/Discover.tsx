@@ -25,7 +25,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export const Discover: React.FC = () => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { industries } = useIndustries();
   const router = useRouter();
   
@@ -37,6 +37,7 @@ export const Discover: React.FC = () => {
   const [selectedIndustry, setSelectedIndustry] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   
   // Debounce search query for better performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -231,72 +232,46 @@ export const Discover: React.FC = () => {
       backgroundColor: colors.background,
     },
     searchHeader: {
-      backgroundColor: colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
       padding: 16,
       paddingTop: 60,
       zIndex: 10,
     },
+    searchContainer: {
+      position: 'relative',
+    },
     searchInput: {
-      width: '100%',
+      backgroundColor: colors.surface,
+      borderRadius: 24,
+      paddingVertical: 12,
       paddingLeft: 40,
       paddingRight: 40,
-      paddingVertical: 12,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: 999,
-      backgroundColor: colors.inputBackground,
       fontSize: 16,
-      color: colors.inputText,
-    },
-    clearButton: {
-      position: 'absolute',
-      right: 12,
-      top: '50%',
-      marginTop: -12,
-      padding: 4,
-    },
-    filtersContainer: {
-      marginTop: 12,
-    },
-    industryScroll: {
-      paddingVertical: 8,
-    },
-    industryChip: {
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 20,
-      marginRight: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.card,
-    },
-    industryChipActive: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    industryChipText: {
-      fontSize: 14,
-      fontWeight: '500',
       color: colors.text,
-    },
-    industryChipTextActive: {
-      color: colors.surface,
-    },
-    suggestionsContainer: {
-      position: 'absolute',
-      top: '100%',
-      left: 0,
-      right: 0,
-      backgroundColor: colors.surface,
-      borderBottomLeftRadius: 12,
-      borderBottomRightRadius: 12,
       borderWidth: 1,
-      borderTopWidth: 0,
+      borderColor: isFocused ? colors.primary : colors.surface,
+    },
+    searchIcon: {
+      position: 'absolute',
+      top: 14,
+      left: 12,
+      zIndex: 1,
+    },
+    clearIcon: {
+      position: 'absolute',
+      top: 14,
+      right: 12,
+      zIndex: 1,
+    },
+    suggestionList: {
+      position: 'absolute',
+      top: 65,
+      left: 16,
+      right: 16,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
       borderColor: colors.border,
-      maxHeight: 200,
-      zIndex: 20,
+      zIndex: 9,
     },
     suggestionItem: {
       padding: 12,
@@ -304,52 +279,76 @@ export const Discover: React.FC = () => {
       borderBottomColor: colors.border,
     },
     suggestionText: {
-      fontSize: 14,
       color: colors.text,
+      fontSize: 16,
     },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
+    filtersContainer: {
+      paddingHorizontal: 16,
+      height: 50,
       alignItems: 'center',
-      paddingTop: 40,
     },
-    loadingText: {
-      marginTop: 12,
+    categoryPill: {
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 20,
+      marginRight: 8,
+      justifyContent: 'center',
+    },
+    activeCategory: {
+      backgroundColor: colors.primary,
+    },
+    inactiveCategory: {
+      backgroundColor: isDark ? colors.surface : colors.inputBackground,
+    },
+    categoryText: {
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    activeCategoryText: {
+      color: colors.primaryText,
+    },
+    inactiveCategoryText: {
       color: colors.textSecondary,
-      fontSize: 16,
     },
-    errorContainer: {
-      padding: 20,
-      alignItems: 'center',
-    },
-         errorText: {
-       color: '#ef4444',
-       fontSize: 16,
-       textAlign: 'center',
-     },
-    emptyContainer: {
+    resultsContainer: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingTop: 40,
     },
-    emptyText: {
-      fontSize: 16,
-      color: colors.textTertiary,
-      textAlign: 'center',
+    resultsListContent: {
+      paddingHorizontal: 16,
+      paddingBottom: 100,
     },
     resultCard: {
       backgroundColor: colors.card,
-      borderRadius: 12,
+      borderRadius: 16,
       padding: 16,
-      marginBottom: 12,
+      marginBottom: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 1,
+    },
+    resultHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    typeIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    resultFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 8,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    stat: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginRight: 16,
     },
     resultTitle: {
       fontSize: 16,
@@ -392,138 +391,109 @@ export const Discover: React.FC = () => {
     relevanceText: {
       fontSize: 12,
       color: colors.primary,
-      fontWeight: '500',
+      fontWeight: '600',
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    errorText: {
+      color: '#EF4444',
+      fontSize: 16,
+      textAlign: 'center',
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingTop: 40,
+    },
+    emptyText: {
+      fontSize: 16,
+      color: colors.textTertiary,
+      textAlign: 'center',
     },
   });
 
   return (
     <View style={dynamicStyles.root}>
-      {/* Search Header */}
       <View style={dynamicStyles.searchHeader}>
-        <View style={styles.searchInputWrapper}>
-          <Feather
-            name="search"
-            style={styles.searchIcon}
-            size={20}
-            color={colors.textTertiary}
-          />
+        <View style={dynamicStyles.searchContainer}>
+          <Feather name="search" size={20} color={colors.textTertiary} style={dynamicStyles.searchIcon} />
           <TextInput
-            placeholder="Search articles, papers, authors..."
-            placeholderTextColor={colors.inputPlaceholder}
             style={dynamicStyles.searchInput}
+            placeholder="Search articles, papers, and more..."
+            placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            returnKeyType="search"
-            accessibilityLabel="Search input for articles and papers"
-            onFocus={() => setShowSuggestions(suggestions.length > 0)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity
-              style={dynamicStyles.clearButton}
-              onPress={clearSearch}
-              accessibilityLabel="Clear search"
-            >
-              <Feather name="x" size={18} color={colors.textTertiary} />
+            <TouchableOpacity onPress={clearSearch} style={dynamicStyles.clearIcon}>
+              <Feather name="x-circle" size={20} color={colors.textTertiary} />
             </TouchableOpacity>
           )}
-          
-          {/* Search Suggestions */}
-          {showSuggestions && suggestions.length > 0 && (
-            <View style={dynamicStyles.suggestionsContainer}>
-              {suggestions.map((suggestion, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={dynamicStyles.suggestionItem}
-                  onPress={() => handleSuggestionPress(suggestion)}
-                >
-                  <Text style={dynamicStyles.suggestionText}>{suggestion}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
         </View>
+      </View>
 
-        {/* Industry Filters */}
-        <View style={dynamicStyles.filtersContainer}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={dynamicStyles.industryScroll}
+      {showSuggestions && (
+        <View style={dynamicStyles.suggestionList}>
+          {suggestions.map((item, index) => (
+            <TouchableOpacity key={index} style={dynamicStyles.suggestionItem} onPress={() => handleSuggestionPress(item)}>
+              <Text style={dynamicStyles.suggestionText}>{item}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      <View style={dynamicStyles.filtersContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ alignItems: 'center' }}
+        >
+          <TouchableOpacity
+            style={[dynamicStyles.categoryPill, selectedIndustry === null ? dynamicStyles.activeCategory : dynamicStyles.inactiveCategory]}
+            onPress={() => setSelectedIndustry(null)}
           >
+            <Text style={[dynamicStyles.categoryText, selectedIndustry === null ? dynamicStyles.activeCategoryText : dynamicStyles.inactiveCategoryText]}>All</Text>
+          </TouchableOpacity>
+          {industries.map((industryId) => (
             <TouchableOpacity
-              style={[
-                dynamicStyles.industryChip,
-                selectedIndustry === null && dynamicStyles.industryChipActive
-              ]}
-              onPress={() => setSelectedIndustry(null)}
+              key={industryId}
+              style={[dynamicStyles.categoryPill, selectedIndustry === industryId ? dynamicStyles.activeCategory : dynamicStyles.inactiveCategory]}
+              onPress={() => setSelectedIndustry(industryId)}
             >
-              <Text style={[
-                dynamicStyles.industryChipText,
-                selectedIndustry === null && dynamicStyles.industryChipTextActive
-              ]}>
-                All
-              </Text>
+              <Text style={[dynamicStyles.categoryText, selectedIndustry === industryId ? dynamicStyles.activeCategoryText : dynamicStyles.inactiveCategoryText]}>{industryIdToName[industryId]}</Text>
             </TouchableOpacity>
-            {industries.map((industryId) => (
-              <TouchableOpacity
-                key={industryId}
-                style={[
-                  dynamicStyles.industryChip,
-                  selectedIndustry === industryId && dynamicStyles.industryChipActive
-                ]}
-                onPress={() => setSelectedIndustry(industryId)}
-              >
-                <Text style={[
-                  dynamicStyles.industryChipText,
-                  selectedIndustry === industryId && dynamicStyles.industryChipTextActive
-                                 ]}>
-                   {industryIdToName[industryId]}
-                 </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+          ))}
+        </ScrollView>
       </View>
 
-      {/* Results */}
-      <View style={{ flex: 1 }}>
-        {loading ? (
-          <View style={dynamicStyles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={dynamicStyles.loadingText}>Searching...</Text>
-          </View>
-        ) : error ? (
-                     <View style={dynamicStyles.errorContainer}>
-             <Feather name="alert-circle" size={48} color={'#ef4444'} />
-             <Text style={dynamicStyles.errorText}>{error}</Text>
-            <TouchableOpacity 
-              style={{ marginTop: 16, padding: 12 }}
-              onPress={() => performSearch(searchQuery)}
-            >
-              <Text style={{ color: colors.primary }}>Try Again</Text>
-            </TouchableOpacity>
-          </View>
-        ) : searchResults.length === 0 && debouncedSearchQuery ? (
-          <View style={dynamicStyles.emptyContainer}>
-            <Feather name="search" size={48} color={colors.textTertiary} />
-            <Text style={dynamicStyles.emptyText}>
-              No articles found for "{debouncedSearchQuery}"
-            </Text>
-            <Text style={[dynamicStyles.emptyText, { marginTop: 8, fontSize: 14 }]}>
-              Try different keywords or check your spelling
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={searchResults}
-            renderItem={renderSearchResult}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
-      </View>
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
+      ) : error ? (
+        <View style={dynamicStyles.errorContainer}>
+          <Feather name="alert-triangle" size={40} color="#EF4444" />
+          <Text style={dynamicStyles.errorText}>{error}</Text>
+        </View>
+      ) : searchResults.length === 0 && debouncedSearchQuery.length > 0 ? (
+        <View style={dynamicStyles.emptyContainer}>
+          <Feather name="search" size={40} color={colors.textTertiary} />
+          <Text style={dynamicStyles.emptyText}>No results found for "{debouncedSearchQuery}"</Text>
+          <Text style={dynamicStyles.emptyText}>Try a different search term.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={searchResults}
+          renderItem={renderSearchResult}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={dynamicStyles.resultsListContent}
+        />
+      )}
     </View>
   );
 };
