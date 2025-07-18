@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Dimensions, StyleSheet, RefreshControl } from 'react-native';
 import { VideoCard } from './VideoCard';
-import type { Article } from '../types';
+import InsightCard from './InsightCard';
+import type { Article, Insight, FeedItem } from '../types';
 import { FeedAlgorithm } from '../lib/feedAlgorithm';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -18,7 +19,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   const { user } = useAuth();
   const { colors } = useTheme();
   const [currentArticleIndex, setCurrentArticleIndex] = useState(0);
-  const [articles, setArticles] = useState<Article[]>([]); 
+  const [articles, setArticles] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -68,10 +69,28 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       const remainingCount = initialArticleId ? 2 : 3; // Load 2 more if we have specific article, 3 if not
       const algorithmArticles = await feedAlgorithmRef.current.fetchArticles(remainingCount);
       
-      // Combine specific article (if any) with algorithm articles
-      newArticles = [...newArticles, ...algorithmArticles];
+      // Add a dummy insight for testing
+      const dummyInsight: Insight = {
+        id: 9999,
+        type: 'insight',
+        author: {
+          name: 'Morgan Taylor',
+          handle: 'fintech_innovator',
+          avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
+          role: 'Chief Product Officer',
+          company: 'NexusPay',
+          industry: 'Financial Technology',
+          location: 'Singapore',
+          currentProject: 'Developing a cross-border payment system using stablecoins.',
+          projectTags: ['Fintech', 'Blockchain', 'Payments'],
+        },
+        body: "The line between traditional financial services and modern technology is blurring faster than ever. The real question is, are we building bridges or just taller silos?",
+      };
+
+      // Combine specific article, dummy insight, and algorithm articles
+      const feedItems: FeedItem[] = [...newArticles, dummyInsight, ...algorithmArticles];
       
-      setArticles(newArticles);
+      setArticles(feedItems);
       setHasMore(true); // Always assume there's more after initial small batch
       
       // Set initial index - 0 if we have a specific article, otherwise 0 for first algorithm article
@@ -215,18 +234,24 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     }
   }, []);
 
-  // Memoized render item function - removes unnecessary View wrapper
-  const renderItem = useCallback(({ item, index }: { item: Article; index: number }) => (
-    <VideoCard
-      video={item}
-      isActive={index === currentArticleIndex}
-      onOpenComments={handleOpenComments}
-      onUserInteraction={handleUserInteraction}
-    />
-  ), [currentArticleIndex, handleOpenComments, handleUserInteraction]);
+  // Memoized render item function - now with conditional rendering
+  const renderItem = useCallback(({ item, index }: { item: FeedItem; index: number }) => {
+    if (item.type === 'insight') {
+      return <InsightCard insight={item as Insight} />;
+    }
+
+    return (
+      <VideoCard
+        video={item}
+        isActive={index === currentArticleIndex}
+        onOpenComments={handleOpenComments}
+        onUserInteraction={handleUserInteraction}
+      />
+    );
+  }, [currentArticleIndex, handleOpenComments, handleUserInteraction]);
 
   // Memoized key extractor
-  const keyExtractor = useCallback((item: Article) => item.id.toString(), []);
+  const keyExtractor = useCallback((item: FeedItem) => item.id.toString(), []);
 
   // Memoized getItemLayout for performance optimization
   const getItemLayout = useCallback((_data: any, index: number) => ({

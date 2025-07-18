@@ -18,40 +18,56 @@ export interface Industry {
 
 export type ExperienceLevel = 'Student' | 'Working Professional' | 'Researcher' | 'Enthusiast';
 
-export interface Article {
-  id: number;
-  type: 'paper' | 'book' | 'article';
-  title: string;
-  caption: string;
-  source: string; // This will be the source_url from Supabase
+export type ContentType = 'research' | 'book' | 'news' | 'article' | 'insight';
+
+export interface InsightAuthor {
+  name: string;
+  handle: string;
+  avatar: string;
+  // Expanded details
+  role: string;
+  company: string;
   industry: string;
-  video_url?: string; // Optional video support
-  likes: number;
-  saves: number;
-  comments: number;
-  views: number; // Add view count
-  content: string; // Article text content
-  authors: string[]; // Array of author names
-  created_at: string; // Publication date
+  location: string;
+  currentProject: string;
+  projectTags: string[];
 }
 
-// Keep Video interface for backward compatibility if needed
+export interface Insight {
+  id: number;
+  type: 'insight';
+  author: InsightAuthor;
+  body: string;
+}
+
 export interface Video {
   id: number;
-  type: 'paper' | 'book' | 'article';
   title: string;
-  caption: string;
-  source: string; // This will be the source_url from Supabase
-  industry: string;
-  video_url?: string; // Optional video support
+  description: string;
+  source_url: string;
+  video_url?: string;
+  thumbnail_url?: string;
+  authors: string[];
+  content: string;
   likes: number;
   saves: number;
   comments: number;
-  views: number; // Add view count
-  content: string; // Add content field
-  authors: string[]; // Array of author names
-  created_at: string; // Publication date
+  views: number;
+  type: ContentType;
+  created_at: string;
+  date: string;
+  file_name?: string;
+  industry_id: number;
+  likes_count: number;
+  saves_count: number;
+  comments_count: number;
+  // Insight-specific fields
+  author?: InsightAuthor;
+  question?: string;
 }
+
+export type Article = Video;
+export type FeedItem = Article | Insight;
 
 export interface SavedContentItem {
   id: number;
