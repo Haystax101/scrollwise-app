@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import type { ScreenName } from '../types';
 
-interface HeaderProps {
+type ScreenName = 'home' | 'discover' | 'profile' | 'chats' | 'saved-feed';
+
+type HeaderProps = {
   currentScreen: ScreenName;
-  navigateTo: (screen: ScreenName) => void;
-}
+  navigateTo: (path: string) => void;
+};
 
 const NAV_ITEMS = [
   { name: 'Home', screen: 'feed' as ScreenName, icon: (props: any) => <Feather name="home" {...props} />, accessibilityLabel: "Navigate to Home screen" },

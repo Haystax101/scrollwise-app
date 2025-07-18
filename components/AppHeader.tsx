@@ -1,3 +1,4 @@
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Header } from '../components/Header';
 import { useRouter, usePathname } from 'expo-router';
@@ -7,25 +8,25 @@ export default function AppHeader() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  if (loading || !user) return null;
 
-  // Map pathname to ScreenName for Header
-  let currentScreen: any = 'feed';
-  let useSafeArea = false;
-  if (pathname === '/discover') {
-    currentScreen = 'discover';
-    useSafeArea = true;
-  } else if (pathname === '/profile') {
-    currentScreen = 'profile';
-    useSafeArea = true;
-  } else if (pathname === '/settings') {
-    currentScreen = 'settings';
-  } else if (pathname === '/chats') {
-    currentScreen = 'chats';
-    useSafeArea = true;
+  if (loading) {
+    return null;
   }
 
-  // Only apply SafeAreaView to the top, not the bottom (header is fixed at bottom)
+  const noHeaderScreens = ['/sign-in', '/sign-up', '/onboarding'];
+  if (noHeaderScreens.includes(pathname) || !user) {
+    return null;
+  }
+
+  let currentScreen: 'home' | 'discover' | 'profile' | 'chats' | 'saved-feed' = 'home';
+  if (pathname === '/feed') currentScreen = 'home';
+  if (pathname === '/discover') currentScreen = 'discover';
+  if (pathname === '/profile') currentScreen = 'profile';
+  if (pathname === '/chats') currentScreen = 'chats';
+  if (pathname === '/saved-feed') currentScreen = 'saved-feed';
+
+  const useSafeArea = !['/feed'].includes(pathname);
+
   const header = (
     <View style={styles.headerContainer}>
       <Header currentScreen={currentScreen} navigateTo={router.replace} />
