@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet, TextStyle } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 
@@ -9,9 +9,16 @@ interface CustomCheckboxProps {
   onChange: (checked: boolean) => void;
   required?: boolean; // Currently not used for validation display
   accessibilityLabelText?: string;
+  labelStyle?: TextStyle; // Add style prop for label text
 }
 
-export const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ label, checked, onChange, accessibilityLabelText }) => {
+export const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ 
+  label, 
+  checked, 
+  onChange, 
+  accessibilityLabelText,
+  labelStyle 
+}) => {
   const labelText = typeof label === 'string' ? label : accessibilityLabelText || "Checkbox";
   return (
     <TouchableOpacity 
@@ -27,7 +34,11 @@ export const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ label, checked, 
         {checked && <Feather name="check" color="white" size={12} />}
       </View>
       <View style={styles.labelContainer}>
-        {typeof label === 'string' ? <Text style={styles.labelText}>{label}</Text> : label}
+        {typeof label === 'string' ? (
+          <Text style={[styles.labelText, labelStyle]}>{label}</Text>
+        ) : (
+          label
+        )}
       </View>
     </TouchableOpacity>
   );

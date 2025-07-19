@@ -96,7 +96,19 @@ This phase focuses on building out the core social features of the app, enabling
 
 This phase focuses on making the user profile more detailed, interactive, and personalized.
 
-### 2.1. Profile Picture Management
+### 2.1. Fix Profile Data Fetching
+
+**Goal:** Ensure name and email are properly fetched and displayed from the profiles table.
+
+- **Files to Modify:** `components/Profile.tsx`
+- **Issue:** The current profile query doesn't filter by the current user's ID, which may cause incorrect or missing data.
+- **Implementation:**
+  1. **Fix Profile Query:** Update the profile data fetching in the `useEffect` to properly filter by the current user's ID.
+  2. **Add User ID Filter:** Modify the Supabase query to include `.eq('id', userId)` where `userId` is obtained from `supabase.auth.getUser()`.
+  3. **Error Handling:** Add proper error handling for cases where the profile data is not found or the query fails.
+  4. **Loading States:** Add loading states to prevent displaying default data while the actual profile data is being fetched.
+
+### 2.2. Profile Picture Management
 
 **Goal:** Allow users to upload and change their profile picture.
 
@@ -107,6 +119,17 @@ This phase focuses on making the user profile more detailed, interactive, and pe
   2.  **Image Picker:** In the `Profile` component, add an "Edit" button over the avatar. On press, use `expo-image-picker` to launch the device's image gallery.
   3.  **Upload Logic:** Once an image is selected, get its file data and upload it to the `avatars` bucket in Supabase Storage. The file should be named uniquely, e.g., `${userId}.png`. Use the `upload` method with `upsert: true` to handle both new uploads and replacements.
   4.  **Update Profile:** After a successful upload, get the public URL for the file and update the `avatar_url` column in the user's `profiles` row.
+
+### 2.3. Consistent Saved Content Height
+
+**Goal:** Ensure all saved content items have consistent height for better visual alignment.
+
+- **Files to Modify:** `components/Profile.tsx`
+- **Implementation:**
+  1. **Fixed Height Container:** Update the `savedItemRow` style to have a fixed height (e.g., 80px) instead of allowing dynamic height based on content.
+  2. **Title Truncation:** Add `numberOfLines={2}` and `ellipsizeMode="tail"` to the saved item title text to ensure it doesn't exceed the fixed height.
+  3. **Content Layout:** Ensure the icon, title, and metadata are properly aligned within the fixed height container.
+  4. **Visual Consistency:** This will create a uniform grid-like appearance for the saved content horizontal scroll view.
 
 ### 2.2. Onboarding & Profile Expansion
 
@@ -119,7 +142,7 @@ This phase focuses on making the user profile more detailed, interactive, and pe
   3.  **Display on Profile:** Fetch and display all new fields in the expandable details section of the `Profile` component.
   4.  **Create "Edit Profile" Screen:** Create a new screen/modal for editing profile details. This will be a form pre-filled with the user's current data that calls `supabase.from('profiles').update()` upon submission.
   5.  **Profile Completion Logic:** In the `Profile` component, create a function that calculates a completion percentage based on which of the key fields are filled out. Display this value in a new UI element, such as a progress bar, to incentivize users to complete their profiles.
-
+ 
 ---
 
 ## Phase 3: Feed & Content Refinement
@@ -146,6 +169,17 @@ This phase focuses on improving the quality and presentation of content in the m
   1.  **Update `profiles` Table:** Add a new column, `hidden_content_types` (type: `text[]`), to the `profiles` table.
   2.  **Update Settings UI:** In the `SettingsModal`, add a new section with checkboxes for each content type (e.g., "Research", "News", "Book"). When a user checks a box, add that type to their `hidden_content_types` array in Supabase.
   3.  **Update Feed Algorithm:** In `feedAlgorithm.ts`, fetch the user's `hidden_content_types`. When querying for articles, add a `.not('type', 'in', `(${hidden_content_types.join(',')})`)` filter to the Supabase query to exclude the hidden types.
+
+### 3.3. Display User Names in Comments
+
+**Goal:** Show actual user names instead of generic "User" labels in comments.
+
+- **Files to Modify:** `components/CommentsModal.tsx`, `components/CommentsSheet.tsx`
+- **Implementation:**
+  1. **Update Comments Query:** Modify the `fetchComments` function in both components to join with the `profiles` table to get user names.
+  2. **Join with Profiles Table:** Update the Supabase query to include `profiles!comments_user_id_fkey(full_name)` in the select statement.
+  3. **Display Logic:** Replace the current mapping logic that shows "User" for all non-current users with the actual `full_name` from the profiles table.
+  4. **Fallback Handling:** If a user's profile doesn't exist or `full_name` is null, display a fallback like "Anonymous User" or the first part of their email address.
 
 ---
 

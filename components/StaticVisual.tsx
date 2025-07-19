@@ -865,12 +865,12 @@ function NeuralNetwork() {
         Animated.timing(nodeAnim, {
           toValue: 1,
           duration: 2000,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(nodeAnim, {
           toValue: 0,
           duration: 2000,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ])
     ).start();
@@ -886,11 +886,18 @@ function NeuralNetwork() {
 
     // Signal propagation
     Animated.loop(
-      Animated.timing(signalAnim, {
-        toValue: 1,
-        duration: 2500,
-        useNativeDriver: true,
-      })
+      Animated.sequence([
+        Animated.timing(signalAnim, {
+          toValue: 1,
+          duration: 2500,
+          useNativeDriver: false, // Required for color changes
+        }),
+        Animated.timing(signalAnim, {
+          toValue: 0,
+          duration: 2500,
+          useNativeDriver: false,
+        }),
+      ])
     ).start();
 
     // Brain wave pattern
@@ -984,6 +991,7 @@ function NeuralNetwork() {
                   shadowOpacity: 0.8,
                   shadowRadius: 8,
                   elevation: 8,
+                  borderWidth: 2,
                 },
                 {
                   transform: [
@@ -998,6 +1006,15 @@ function NeuralNetwork() {
                     inputRange: [0, 1],
                     outputRange: [0.7, 1],
                   }),
+                  borderColor: signalAnim.interpolate({
+                    inputRange: [
+                      layerIndex * 0.25,
+                      layerIndex * 0.25 + 0.1,
+                      (layerIndex + 1) * 0.25,
+                    ],
+                    outputRange: ['transparent', '#fefce8', 'transparent'],
+                    extrapolate: 'clamp',
+                  }),
                 },
               ]}
             />
@@ -1005,101 +1022,56 @@ function NeuralNetwork() {
         })
       )}
       
-      {/* Signal propagation particles */}
-      {[...Array(8)].map((_, index) => (
-        <Animated.View
-          key={`signal-${index}`}
-          style={[
-            {
-              position: 'absolute',
-              width: 4,
-              height: 4,
-              borderRadius: 2,
-              backgroundColor: '#ffff00',
-              top: '40%',
-              shadowColor: '#ffff00',
-              shadowOffset: { width: 0, height: 0 },
-              shadowOpacity: 1,
-              shadowRadius: 6,
-              elevation: 6,
-            },
-            {
-              transform: [
-                {
-                  translateX: signalAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [15, 280],
-                  }),
-                },
-                {
-                  translateY: signalAnim.interpolate({
-                    inputRange: [0, 0.33, 0.66, 1],
-                    outputRange: [
-                      Math.sin(index) * 20,
-                      Math.sin(index + 1) * 25,
-                      Math.sin(index + 2) * 15,
-                      Math.sin(index + 3) * 10,
-                    ],
-                  }),
-                },
-              ],
-              opacity: signalAnim.interpolate({
-                inputRange: [0, 0.1, 0.9, 1],
-                outputRange: [0, 1, 1, 0],
-              }),
-            },
-          ]}
-        />
-      ))}
+      {/* Signal propagation particles - REMOVED */}
       
-             {/* Brain wave visualization */}
-       <View
-         style={{
-           position: 'absolute',
-           bottom: '10%',
-           left: '10%',
-           right: '10%',
-           height: 40,
-           borderWidth: 1,
-           borderColor: '#4a90e2',
-           borderRadius: 4,
-           opacity: 0.6,
-         }}
-       >
-         {/* Wave pattern */}
-         {[...Array(20)].map((_, index) => (
-           <Animated.View
-             key={`wave-${index}`}
-             style={[
-               {
-                 position: 'absolute',
-                 width: 2,
-                 height: 15,
-                 backgroundColor: '#00ff88',
-                 left: `${index * 5}%`,
-                 bottom: 0,
-               },
-               {
-                 transform: [
-                   {
-                     scaleY: brainWaveAnim.interpolate({
-                       inputRange: [0, 1],
-                       outputRange: [
-                         0.5 + Math.sin(index * 0.5) * 0.3,
-                         2 + Math.sin(index * 0.5 + (index * 0.1)) * 0.5,
-                       ],
-                     }),
-                   },
-                 ],
-                 opacity: brainWaveAnim.interpolate({
-                   inputRange: [0, 1],
-                   outputRange: [0.4, 1],
-                 }),
-               },
-             ]}
-           />
-         ))}
-       </View>
+      {/* Brain wave visualization */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: '10%',
+          left: '10%',
+          right: '10%',
+          height: 40,
+          borderWidth: 1,
+          borderColor: '#4a90e2',
+          borderRadius: 4,
+          opacity: 0.6,
+        }}
+      >
+        {/* Wave pattern */}
+        {[...Array(20)].map((_, index) => (
+          <Animated.View
+            key={`wave-${index}`}
+            style={[
+              {
+                position: 'absolute',
+                width: 2,
+                height: 15,
+                backgroundColor: '#00ff88',
+                left: `${index * 5}%`,
+                bottom: 0,
+              },
+              {
+                transform: [
+                  {
+                    scaleY: brainWaveAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [
+                        0.5 + Math.sin(index * 0.5) * 0.3,
+                        2 + Math.sin(index * 0.5 + (index * 0.1)) * 0.5,
+                      ],
+                    }),
+                  },
+                ],
+                opacity: brainWaveAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.4, 1],
+                }),
+              },
+            ]}
+          />
+        ))}
+      </View>
       
       {/* Neural activation indicators */}
       {[...Array(6)].map((_, index) => (
@@ -2418,11 +2390,18 @@ function CurrencyFlow() {
   useEffect(() => {
     // Money flow animation
     Animated.loop(
-      Animated.timing(flowAnim, {
-        toValue: 1,
-        duration: 4000,
-        useNativeDriver: true,
-      })
+      Animated.sequence([
+        Animated.timing(flowAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(flowAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
     ).start();
 
     // Exchange rate animation
@@ -2503,7 +2482,7 @@ function CurrencyFlow() {
       {[...Array(6)].map((_, index) => {
         const angle = (index * 60) * (Math.PI / 180);
         return (
-          <View key={`stream-${index}`}>
+          <View key={`stream-${index}`} style={StyleSheet.absoluteFill}>
             {[...Array(8)].map((_, dotIndex) => (
               <Animated.View
                 key={`dot-${index}-${dotIndex}`}
@@ -2525,8 +2504,8 @@ function CurrencyFlow() {
                         translateX: flowAnim.interpolate({
                           inputRange: [0, 1],
                           outputRange: [
-                            Math.cos(angle) * (30 + dotIndex * 8),
-                            Math.cos(angle) * (30 + dotIndex * 8 + 100),
+                            Math.cos(angle) * (25 + dotIndex * 10),
+                            Math.cos(angle) * (25 + dotIndex * 10 + 80),
                           ],
                         }),
                       },
@@ -2534,8 +2513,8 @@ function CurrencyFlow() {
                         translateY: flowAnim.interpolate({
                           inputRange: [0, 1],
                           outputRange: [
-                            Math.sin(angle) * (30 + dotIndex * 8),
-                            Math.sin(angle) * (30 + dotIndex * 8 + 100),
+                            Math.sin(angle) * (25 + dotIndex * 10),
+                            Math.sin(angle) * (25 + dotIndex * 10 + 80),
                           ],
                         }),
                       },
@@ -2636,39 +2615,21 @@ function CurrencyFlow() {
 }
 
 function EconomicGrowth() {
-  const growthAnim = useRef(new Animated.Value(0)).current;
   const chartAnim = useRef(new Animated.Value(0)).current;
-  const arrowAnim = useRef(new Animated.Value(0)).current;
-  const dataAnim = useRef(new Animated.Value(0)).current;
+  const trendAnim = useRef(new Animated.Value(0)).current;
+  const symbolAnim = useRef(new Animated.Value(0)).current;
+  const globalPulseAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Growth animation
-    Animated.loop(
-      Animated.timing(growthAnim, {
-        toValue: 1,
-        duration: 3500,
-        useNativeDriver: true,
-      })
-    ).start();
-
-    // Chart building animation
-    Animated.loop(
-      Animated.timing(chartAnim, {
-        toValue: 1,
-        duration: 4000,
-        useNativeDriver: true,
-      })
-    ).start();
-
-    // Arrow movement
+    // Bar chart growth animation
     Animated.loop(
       Animated.sequence([
-        Animated.timing(arrowAnim, {
+        Animated.timing(chartAnim, {
           toValue: 1,
           duration: 2000,
           useNativeDriver: true,
         }),
-        Animated.timing(arrowAnim, {
+        Animated.timing(chartAnim, {
           toValue: 0,
           duration: 2000,
           useNativeDriver: true,
@@ -2676,11 +2637,43 @@ function EconomicGrowth() {
       ])
     ).start();
 
-    // Data flow
+    // Trend line animation
     Animated.loop(
-      Animated.timing(dataAnim, {
+      Animated.sequence([
+        Animated.timing(trendAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(trendAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Symbol animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(symbolAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(symbolAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Global network pulse
+    Animated.loop(
+      Animated.timing(globalPulseAnim, {
         toValue: 1,
-        duration: 5000,
+        duration: 6000,
         useNativeDriver: true,
       })
     ).start();
@@ -2715,13 +2708,13 @@ function EconomicGrowth() {
             {
               transform: [
                 {
-                  scaleY: growthAnim.interpolate({
+                  scaleY: chartAnim.interpolate({
                     inputRange: [0, 1],
                     outputRange: [0.1, 1],
                   }),
                 },
               ],
-              opacity: growthAnim.interpolate({
+              opacity: chartAnim.interpolate({
                 inputRange: [0, 0.3, 1],
                 outputRange: [0.4, 1, 0.8],
               }),
@@ -2730,41 +2723,7 @@ function EconomicGrowth() {
         />
       ))}
       
-      {/* Trend line overlay */}
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            bottom: '20%',
-            left: '15%',
-            width: '70%',
-            height: 3,
-            backgroundColor: '#fbbf24',
-            borderRadius: 2,
-            shadowColor: '#fbbf24',
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.8,
-            shadowRadius: 8,
-            elevation: 8,
-          },
-          {
-            transform: [
-              {
-                scaleX: chartAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 1],
-                }),
-              },
-              {
-                translateY: chartAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, -50],
-                }),
-              },
-            ],
-          },
-        ]}
-      />
+      
       
       {/* Upward trending arrows */}
       {[...Array(3)].map((_, index) => (
@@ -2787,13 +2746,13 @@ function EconomicGrowth() {
             {
               transform: [
                 {
-                  translateY: arrowAnim.interpolate({
+                  translateY: trendAnim.interpolate({
                     inputRange: [0, 1],
                     outputRange: [10, -5],
                   }),
                 },
               ],
-              opacity: arrowAnim.interpolate({
+              opacity: trendAnim.interpolate({
                 inputRange: [0, 0.5, 1],
                 outputRange: [0.4, 1, 0.4],
               }),
@@ -2819,7 +2778,7 @@ function EconomicGrowth() {
               borderColor: '#3b82f6',
             },
                        {
-             opacity: dataAnim.interpolate({
+             opacity: globalPulseAnim.interpolate({
                inputRange: [0, 0.2 + index * 0.15, 0.4 + index * 0.15, 1],
                outputRange: [0.3, 1, 1, 0.3],
              }),
@@ -2847,13 +2806,13 @@ function EconomicGrowth() {
               left: `${15 + Math.random() * 70}%`,
             },
             {
-              opacity: dataAnim.interpolate({
+              opacity: globalPulseAnim.interpolate({
                 inputRange: [0, 0.5, 1],
                 outputRange: [0, 0.8, 0],
               }),
               transform: [
                 {
-                  scale: dataAnim.interpolate({
+                  scale: globalPulseAnim.interpolate({
                     inputRange: [0, 0.5, 1],
                     outputRange: [0.5, 1.5, 0.5],
                   }),
@@ -4182,11 +4141,6 @@ function CalculusFlow() {
          <Animated.View
            key={`expr-${index}`}
            style={[
-             {
-               position: 'absolute',
-               top: expr.top,
-               left: expr.left,
-             },
             {
               transform: [
                 {
@@ -4514,11 +4468,6 @@ function StatisticalDistribution() {
          <Animated.View
            key={`stat-${index}`}
            style={[
-             {
-               position: 'absolute',
-               top: stat.top,
-               left: stat.left,
-             },
             {
               transform: [
                 {

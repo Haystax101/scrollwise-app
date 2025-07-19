@@ -12,5 +12,5 @@ export default function SignUpScreen() {
     }
   }, [user, loading]);
   if (loading || user) return null;
-  return <SignUp onSignUp={() => router.replace('/onboarding')} onSwitchToSignIn={() => router.replace('/sign-in')} />;
+  return <SignUp onSignUp={() => router.replace('/sign-in')} onSwitchToSignIn={() => router.replace('/sign-in')} />;
 }

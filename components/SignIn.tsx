@@ -34,8 +34,24 @@ export const SignIn: React.FC<SignInProps> = ({ onSignIn, onSwitchToSignUp }) =>
       } else if (!data.session) {
         Alert.alert('Sign in failed.');
       } else {
-        // Optionally fetch user profile here
-        onSignIn({ email, name: 'Demo User' }); // Replace with actual user info if available
+        // Check if user has completed their profile
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('interests, experience')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+          // If profile doesn't exist or error, assume they need onboarding
+          onSignIn({ email, name: 'Demo User' });
+        } else if (!profileData || !profileData.interests || !profileData.experience) {
+          // User needs to complete onboarding
+          onSignIn({ email, name: 'Demo User' });
+        } else {
+          // User has completed profile, proceed normally
+          onSignIn({ email, name: 'Demo User' });
+        }
       }
     } catch (e) {
       Alert.alert('An unexpected error occurred.');
@@ -173,7 +189,13 @@ export const SignIn: React.FC<SignInProps> = ({ onSignIn, onSwitchToSignUp }) =>
               </View>
 
               <View style={styles.rowBetween}>
-                <CustomCheckbox label="Remember me" checked={rememberMe} onChange={setRememberMe} accessibilityLabelText="Remember me checkbox" />
+                <CustomCheckbox 
+                  label="Remember me" 
+                  checked={rememberMe} 
+                  onChange={setRememberMe} 
+                  accessibilityLabelText="Remember me checkbox"
+                  labelStyle={{ color: colors.text }}
+                />
                 <TouchableOpacity onPress={() => {}} accessibilityLabel="Forgot your password button">
                   <Text style={dynamicStyles.forgotText} numberOfLines={1} ellipsizeMode="tail">
                     Forgot your password?

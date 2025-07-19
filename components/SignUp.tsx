@@ -46,10 +46,18 @@ export const SignUp: React.FC<SignUpProps> = ({ onSignUp, onSwitchToSignIn }) =>
       if (error) {
         Alert.alert(error.message);
       } else if (!data.session) {
-        Alert.alert('Please check your inbox for email verification!');
-        // Optionally, you can still call onSignUp here if you want to move to the next screen
+        Alert.alert(
+          'Account Created!', 
+          'Please check your inbox for email verification. You can sign in once you verify your email.',
+          [
+            {
+              text: 'OK',
+              onPress: () => onSignUp({ email, name })
+            }
+          ]
+        );
       } else {
-        // Signed up and session created
+        // Signed up and session created (rare case)
         onSignUp({ email, name });
       }
     } catch (e) {
