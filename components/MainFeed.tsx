@@ -7,6 +7,7 @@ import { FeedAlgorithm } from '../lib/feedAlgorithm';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { CommentsModal } from './CommentsModal';
+import { supabase } from '../lib/supabase';
 
 interface MainFeedProps {
   industries: number[]; // Changed from string[] to number[]
@@ -65,33 +66,47 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         }
       }
       
-      // Load additional articles from algorithm (will exclude the specific one if it was fetched)
-      const remainingCount = initialArticleId ? 2 : 3; // Load 2 more if we have specific article, 3 if not
-      const algorithmArticles = await feedAlgorithmRef.current.fetchArticles(remainingCount);
+      // Load additional articles from algorithm
+      const algorithmArticles = await feedAlgorithmRef.current.fetchArticles(3);
       
-      // Add a dummy insight for testing
-      const dummyInsight: Insight = {
-        id: 9999,
-        type: 'insight',
-        author: {
-          name: 'Morgan Taylor',
-          handle: 'fintech_innovator',
-          avatar: 'https://randomuser.me/api/portraits/women/45.jpg',
-          role: 'Chief Product Officer',
-          company: 'NexusPay',
-          industry: 'Financial Technology',
-          location: 'Singapore',
-          currentProject: 'Developing a cross-border payment system using stablecoins.',
-          projectTags: ['Fintech', 'Blockchain', 'Payments'],
-        },
-        body: "The line between traditional financial services and modern technology is blurring faster than ever. The real question is, are we building bridges or just taller silos?",
-      };
-
-      // Combine specific article, dummy insight, and algorithm articles
-      const feedItems: FeedItem[] = [...newArticles, dummyInsight, ...algorithmArticles];
+      // Fetch insights from other users
+      if (user) {
+        const { data: insightsData, error: insightsError } = await supabase
+          .from('insights')
+          .select(`
+            id,
+            content,
+            author_id,
+            author:profiles!author_id (
+              full_name,
+              avatar_url
+            )
+          `)
+          .not('author_id', 'eq', user.id);
+          
+        if (insightsError) {
+          console.error('Error fetching insights for feed:', insightsError);
+        }
+        
+        const insights: Insight[] = (insightsData || []).map((item: any) => ({
+          id: item.id,
+          type: 'insight',
+          content: item.content,
+          author_id: item.author_id,
+          author_name: item.author.full_name,
+          author_avatar: item.author.avatar_url,
+        }));
+        
+        // Combine insights and articles, with insights at the top
+        const combinedFeed: FeedItem[] = [...insights, ...newArticles, ...algorithmArticles];
+        
+        setArticles(combinedFeed);
+      } else {
+        // If no user, just show articles
+        setArticles([...newArticles, ...algorithmArticles]);
+      }
       
-      setArticles(feedItems);
-      setHasMore(true); // Always assume there's more after initial small batch
+      setHasMore(true);
       
       // Set initial index - 0 if we have a specific article, otherwise 0 for first algorithm article
       if (!initialArticleId) {
@@ -237,12 +252,19 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   // Memoized render item function - now with conditional rendering
   const renderItem = useCallback(({ item, index }: { item: FeedItem; index: number }) => {
     if (item.type === 'insight') {
-      return <InsightCard insight={item as Insight} />;
+      const insightProps = {
+        id: String(item.id),
+        content: (item as Insight).content,
+        author_id: (item as Insight).author_id,
+        author_name: (item as Insight).author_name,
+        author_avatar: (item as Insight).author_avatar,
+      };
+      return <InsightCard insight={insightProps} />;
     }
 
     return (
       <VideoCard
-        video={item}
+        video={item as Article}
         isActive={index === currentArticleIndex}
         onOpenComments={handleOpenComments}
         onUserInteraction={handleUserInteraction}

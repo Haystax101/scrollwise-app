@@ -34,10 +34,12 @@ export interface InsightAuthor {
 }
 
 export interface Insight {
-  id: number;
+  id: string;
   type: 'insight';
-  author: InsightAuthor;
-  body: string;
+  content: string;
+  author_id: string;
+  author_name: string;
+  author_avatar: string;
 }
 
 export interface Video {

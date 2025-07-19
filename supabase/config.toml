@@ -1,0 +1,3 @@
+# supabase/config.toml
+[functions."create-chat-on-insight-reply"]
+  import_map = "./import_map.json" 
