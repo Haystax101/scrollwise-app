@@ -58,17 +58,9 @@ DROP POLICY IF EXISTS "Users can only see connections they are a part of" ON con
 CREATE POLICY "Users can only see connections they are a part of" ON connections
 FOR SELECT USING (auth.uid() = user_id_1 OR auth.uid() = user_id_2);
 
-DROP POLICY IF EXISTS "Users can create their own connections" ON connections;
-CREATE POLICY "Users can create their own connections" ON connections
-FOR INSERT WITH CHECK (auth.uid() = user_id_1 OR auth.uid() = user_id_2);
-
 DROP POLICY IF EXISTS "Users can only see chats they are a part of" ON chats;
 CREATE POLICY "Users can only see chats they are a part of" ON chats
 FOR SELECT USING (auth.uid() = ANY(participant_ids));
-
-DROP POLICY IF EXISTS "Users can create chats they are a part of" ON chats;
-CREATE POLICY "Users can create chats they are a part of" ON chats
-FOR INSERT WITH CHECK (auth.uid() = ANY(participant_ids));
 
 DROP POLICY IF EXISTS "Users can only see messages in their chats" ON chat_messages;
 CREATE POLICY "Users can only see messages in their chats" ON chat_messages
@@ -82,10 +74,6 @@ DROP POLICY IF EXISTS "Users can create their own insights" ON insights;
 CREATE POLICY "Users can create their own insights" ON insights
 FOR INSERT WITH CHECK (auth.uid() = author_id);
 
-DROP POLICY IF EXISTS "Users can delete their own insights" ON insights;
-CREATE POLICY "Users can delete their own insights" ON insights
-FOR DELETE USING (auth.uid() = author_id);
-
 DROP POLICY IF EXISTS "Users can only see responses to their own insights" ON insight_responses;
 CREATE POLICY "Users can only see responses to their own insights" ON insight_responses
 FOR SELECT USING (auth.uid() = original_author_id);
@@ -93,10 +81,6 @@ FOR SELECT USING (auth.uid() = original_author_id);
 DROP POLICY IF EXISTS "Users can create responses to insights" ON insight_responses;
 CREATE POLICY "Users can create responses to insights" ON insight_responses
 FOR INSERT WITH CHECK (auth.uid() = responder_id);
-
-DROP POLICY IF EXISTS "Users can delete responses to their own insights" ON insight_responses;
-CREATE POLICY "Users can delete responses to their own insights" ON insight_responses
-FOR DELETE USING (auth.uid() = original_author_id);
 
 -- Create indexes if they don't exist
 CREATE INDEX IF NOT EXISTS idx_connections_user_id_1 ON connections(user_id_1);

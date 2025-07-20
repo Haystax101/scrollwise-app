@@ -5,110 +5,152 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 
 serve(async (req: Request) => {
   try {
-    const { responderId, authorId, insightResponseId, insightResponseContent } = await req.json();
-    console.log('Function received request with:', { responderId, authorId, insightResponseId, insightResponseContent });
-
+    const {
+      responderId,
+      authorId,
+      insightResponseId,
+      insightResponseContent,
+    } = await req.json();
     const supabase: SupabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('User is not authenticated.');
-      return new Response(JSON.stringify({ error: 'User is not authenticated.' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-    console.log('Authenticated user:', user.id);
-
     // Check for existing connection
-    console.log('Checking for existing connection...');
     const { data: connection, error: connectionError } = await supabase
       .from('connections')
       .select('*')
-      .or(`and(user_id_1.eq.${responderId},user_id_2.eq.${authorId}),and(user_id_1.eq.${authorId},user_id_2.eq.${responderId})`);
+      .or(
+        `and(user_id_1.eq.${responderId},user_id_2.eq.${authorId}),and(user_id_1.eq.${authorId},user_id_2.eq.${responderId})`
+      );
 
-    if (connectionError) {
-      console.error('Error checking for connection:', connectionError);
-      throw connectionError;
-    }
-    console.log('Existing connection check complete. Found:', connection);
+    if (connectionError) throw connectionError;
 
     if (!connection || connection.length === 0) {
       // Create new connection
-      console.log('No existing connection found. Creating new connection...');
-      const { error: insertConnectionError } = await supabase.from('connections').insert([{ user_id_1: responderId, user_id_2: authorId }]);
-      if (insertConnectionError) {
-        console.error('Error creating new connection:', insertConnectionError);
-        throw insertConnectionError;
-      }
-      console.log('New connection created.');
+      await supabase.from('connections').insert([{ user_id_1: responderId, user_id_2: authorId }]);
     }
 
     // Check for existing chat
-    console.log('Checking for existing chat...');
     const { data: chat, error: chatError } = await supabase
       .from('chats')
       .select('id')
       .contains('participant_ids', [responderId, authorId]);
 
-    if (chatError) {
-      console.error('Error checking for chat:', chatError);
-      throw chatError;
+    if (chatError) throw chatError;
+
+    if (chat && chat.length > 0) {
+      // Insert the initial insight message and the response as labeled messages if not already present
+      if (insightResponseContent && insightResponseId) {
+        // Fetch the original insight content
+        const { data: insightData, error: insightError } = await supabase
+          .from('insight_responses')
+          .select('insight_id, content, original_author_id')
+          .eq('id', insightResponseId)
+          .single();
+        if (insightError) throw insightError;
+
+        // Insert the original insight as a labeled message if not already present
+        if (insightData && insightData.insight_content) {
+          const labeledInsight = `[INSIGHT] ${insightData.insight_content}`;
+          const { data: existingInsightMsg, error: existingInsightError } = await supabase
+            .from('chat_messages')
+            .select('id')
+            .eq('chat_id', chat[0].id)
+            .eq('content', labeledInsight)
+            .eq('sender_id', insightData.author_id);
+          if (existingInsightError) throw existingInsightError;
+          if (!existingInsightMsg || existingInsightMsg.length === 0) {
+            await supabase.from('chat_messages').insert([
+              {
+                chat_id: chat[0].id,
+                sender_id: insightData.author_id,
+                content: labeledInsight,
+              },
+            ]);
+          }
+        }
+
+        // Insert the insight response as a labeled message if not already present
+        const labeledResponse = `[INSIGHT] ${insightResponseContent}`;
+        const { data: existingMsg, error: msgError } = await supabase
+          .from('chat_messages')
+          .select('id')
+          .eq('chat_id', chat[0].id)
+          .eq('content', labeledResponse)
+          .eq('sender_id', responderId);
+        if (msgError) throw msgError;
+        if (!existingMsg || existingMsg.length === 0) {
+          await supabase.from('chat_messages').insert([
+            {
+              chat_id: chat[0].id,
+              sender_id: responderId,
+              content: labeledResponse,
+            },
+          ]);
+        }
+        // Optionally delete the insight response
+        await supabase.from('insight_responses').delete().eq('id', insightResponseId);
+      }
+      return new Response(JSON.stringify({ chatId: chat[0].id }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
-    console.log('Existing chat check complete. Found:', chat);
 
-    let chatId = chat && chat.length > 0 ? chat[0].id : null;
+    // Create new chat
+    const { data: newChat, error: newChatError } = await supabase
+      .from('chats')
+      .insert([{ participant_ids: [responderId, authorId] }])
+      .select('id')
+      .single();
 
-    if (!chatId) {
-      // Create new chat
-      console.log('No existing chat found. Creating new chat...');
-      const { data: newChat, error: newChatError } = await supabase
-        .from('chats')
-        .insert([{ participant_ids: [responderId, authorId] }])
-        .select('id')
+    if (newChatError) throw newChatError;
+
+    // Insert the initial insight message and the response as labeled messages
+    if (insightResponseContent && insightResponseId) {
+      // Fetch the original insight content
+      const { data: insightData, error: insightError } = await supabase
+        .from('insight_responses')
+        .select('insight_id, content, original_author_id')
+        .eq('id', insightResponseId)
         .single();
+      if (insightError) throw insightError;
 
-      if (newChatError) {
-        console.error('Error creating new chat:', newChatError);
-        throw newChatError;
+      if (insightData && insightData.insight_content) {
+        const labeledInsight = `[INSIGHT] ${insightData.insight_content}`;
+        await supabase.from('chat_messages').insert([
+          {
+            chat_id: newChat.id,
+            sender_id: insightData.author_id,
+            content: labeledInsight,
+          },
+        ]);
       }
-      chatId = newChat.id;
-      console.log(`New chat created with id: ${chatId}.`);
 
-      // Add the insight response as the first message
-      console.log('Adding insight response as the first message...');
-      const { error: messageError } = await supabase.from('chat_messages').insert([
-        { chat_id: chatId, sender_id: responderId, content: insightResponseContent },
+      const labeledResponse = `[INSIGHT] ${insightResponseContent}`;
+      await supabase.from('chat_messages').insert([
+        {
+          chat_id: newChat.id,
+          sender_id: responderId,
+          content: labeledResponse,
+        },
       ]);
-
-      if (messageError) {
-        console.error('Error creating first message:', messageError);
-        throw messageError;
-      }
-      console.log('First message added.');
+      // Optionally delete the insight response
+      await supabase.from('insight_responses').delete().eq('id', insightResponseId);
     }
 
-    // Delete the original insight response
-    console.log(`Deleting insight response with id: ${insightResponseId}`);
-    const { error: deleteError } = await supabase.from('insight_responses').delete().eq('id', insightResponseId);
-    if (deleteError) {
-      console.error('Error deleting insight response:', deleteError);
-      throw deleteError;
-    }
-    console.log('Insight response deleted.');
-
-    return new Response(JSON.stringify({ chatId }), {
+    return new Response(JSON.stringify({ chatId: newChat.id }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('An unexpected error occurred:', error);
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Edge Function Error:', error);
+    return new Response(
+      JSON.stringify({ error: typeof error === 'object' ? JSON.stringify(error) : String(error) }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
-}); 
+});

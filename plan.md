@@ -92,6 +92,88 @@ This phase focuses on building out the core social features of the app, enabling
 
 ---
 
+## Phase 1.5: Real Chat Logic for Testing (Supabase Realtime)
+
+### Goal
+
+Enable real chat interactions for all user pairs (no group chats) using Supabase Realtime, replacing dummy data in `chats.tsx`.
+
+### Steps
+
+1. **Database Setup**
+
+   - Ensure `chat_messages` table exists with columns: `id`, `chat_id`, `sender_id`, `content`, `created_at`.
+   - Ensure `chats` table exists with columns: `id`, `participant_ids` (array of UUIDs), `created_at`.
+   - Enable Row Level Security (RLS) on both tables so users can only access their own chats/messages.
+   - [Optional] Add indexes for performance if needed.
+
+2. **Supabase Client Setup in `chats.tsx`**
+
+   - Remove all dummy data.
+   - Use Supabase client to fetch all users except the current user from the `profiles` table.
+   - For each other user, check if a chat exists between the current user and that user in the `chats` table.
+   - If a chat exists, fetch the latest message from `chat_messages`.
+   - If no chat exists, display a button to start a new chat (insert into `chats`).
+
+3. **Realtime Subscriptions**
+
+   - Subscribe to changes in the `chat_messages` table for all chats involving the current user.
+   - Update the chat list in real time when new messages arrive.
+
+4. **UI Implementation**
+
+   - Display a list of all possible user pairs (current user + each other user).
+   - For each chat, show the other user's name, avatar, and the latest message (if any).
+   - Tapping a chat navigates to `/chat/[id]`.
+
+5. **Testing**
+
+   - With 3 users, verify each user can see and start chats with the other two.
+   - Confirm messages sent in `/chat/[id]` are visible to both users in real time.
+
+6. **Future Improvements**
+   - Add support for group chats if needed.
+   - Add presence tracking, message editing, and media attachments.
+
+### SQL Checklist
+
+Ensure the following tables and RLS policies exist:
+
+```sql
+-- chat_messages table
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  chat_id uuid REFERENCES chats(id),
+  sender_id uuid REFERENCES profiles(id),
+  content text,
+  created_at timestamptz DEFAULT now()
+);
+
+-- chats table
+CREATE TABLE IF NOT EXISTS chats (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  participant_ids uuid[] NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Example RLS policy for chat_messages
+-- Only allow users to see messages in chats they participate in
+CREATE POLICY "Chat participants can view messages" ON chat_messages
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM chats
+      WHERE chats.id = chat_messages.chat_id
+      AND auth.uid() = ANY(chats.participant_ids)
+    )
+  );
+
+-- Enable RLS
+ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chats ENABLE ROW LEVEL SECURITY;
+```
+
+---
+
 ## Phase 2: Profile Enhancement
 
 This phase focuses on making the user profile more detailed, interactive, and personalized.
@@ -142,7 +224,7 @@ This phase focuses on making the user profile more detailed, interactive, and pe
   3.  **Display on Profile:** Fetch and display all new fields in the expandable details section of the `Profile` component.
   4.  **Create "Edit Profile" Screen:** Create a new screen/modal for editing profile details. This will be a form pre-filled with the user's current data that calls `supabase.from('profiles').update()` upon submission.
   5.  **Profile Completion Logic:** In the `Profile` component, create a function that calculates a completion percentage based on which of the key fields are filled out. Display this value in a new UI element, such as a progress bar, to incentivize users to complete their profiles.
- 
+
 ---
 
 ## Phase 3: Feed & Content Refinement

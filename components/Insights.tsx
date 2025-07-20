@@ -79,12 +79,7 @@ const Insights = () => {
   }, [fetchData]);
 
   const handleAccept = async (item: InsightItem) => {
-    if (item.type !== 'response' || !item.responder_id || !item.original_author_id) {
-      console.error('Attempted to accept an insight without a responder or author ID.', item);
-      Alert.alert('Error', 'Could not process this response due to missing information.');
-      return;
-    }
-
+    if (item.type !== 'response') return;
     try {
       const { data, error } = await supabase.functions.invoke('create-chat-on-insight-reply', {
         body: {
@@ -95,38 +90,20 @@ const Insights = () => {
         },
       });
       if (error) throw error;
-      if (data.chatId) {
-        setItems(items.filter(i => i.id !== item.id));
-        router.push(`/chat/${data.chatId}`);
-      }
+      if (data.chatId) router.push(`/chat/${data.chatId}`);
     } catch (error) {
       console.error('Error creating chat:', error);
-      Alert.alert('Error', 'An unexpected error occurred while creating the chat.');
     }
   };
 
   const handleDismiss = async (itemId: string) => {
-    console.log('Attempting to dismiss insight with id:', itemId);
-    const { error } = await supabase.from('insight_responses').delete().eq('id', itemId);
-    if (error) {
-      console.error('Error dismissing insight:', error);
-      Alert.alert('Error', 'Could not dismiss the insight. Please try again.');
-    } else {
-      console.log('Successfully deleted from Supabase. Updating state.');
-      setItems(items.filter(i => i.id !== itemId));
-    }
+    await supabase.from('insight_responses').delete().eq('id', itemId);
+    setItems(items.filter(i => i.id !== itemId));
   };
 
   const handleDelete = async (itemId: string) => {
-    console.log('Attempting to delete insight with id:', itemId);
-    const { error } = await supabase.from('insights').delete().eq('id', itemId);
-    if (error) {
-      console.error('Error deleting insight:', error);
-      Alert.alert('Error', 'Could not delete the insight. Please try again.');
-    } else {
-      console.log('Successfully deleted from Supabase. Updating state.');
-      setItems(items.filter(i => i.id !== itemId));
-    }
+    await supabase.from('insights').delete().eq('id', itemId);
+    setItems(items.filter(i => i.id !== itemId));
   };
 
   const handlePublishInsight = async () => {
