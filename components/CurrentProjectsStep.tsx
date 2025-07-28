@@ -1,30 +1,33 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 
 interface CurrentProjectsStepProps {
   onNext: () => void;
   onPrev: () => void;
+  setData: (data: any) => void;
+  data: any;
 }
 
-const CurrentProjectsStep: React.FC<CurrentProjectsStepProps> = ({ onNext, onPrev }) => {
-  const [projects, setProjects] = useState([{ name: '', description: '' }]);
+const CurrentProjectsStep: React.FC<CurrentProjectsStepProps> = ({ onNext, onPrev, setData, data }) => {
+  // Ensure projects is always an array
+  const projects = Array.isArray(data.projects) ? data.projects : [];
 
   const handleAddProject = () => {
-    setProjects([...projects, { name: '', description: '' }]);
+    setData({ ...data, projects: [...projects, { name: '', description: '' }] });
   };
 
   const handleProjectChange = (index: number, field: string, value: string) => {
     const newProjects = [...projects];
     newProjects[index][field] = value;
-    setProjects(newProjects);
+    setData({ ...data, projects: newProjects });
   };
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content}>
         <Text style={styles.title}>Current Projects</Text>
-        {projects.map((project, index) => (
+        {projects.map((project: any, index: number) => (
           <View key={index}>
             <TextInput
               style={styles.input}

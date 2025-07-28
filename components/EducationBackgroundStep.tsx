@@ -1,26 +1,36 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import {Picker} from '@react-native-picker/picker';
 
 interface EducationBackgroundStepProps {
   onNext: () => void;
+  setData: (data: any) => void;
+  data: any;
 }
 
-const EducationBackgroundStep: React.FC<EducationBackgroundStepProps> = ({ onNext }) => {
-  const [stage, setStage] = useState();
-
+const EducationBackgroundStep: React.FC<EducationBackgroundStepProps> = ({ onNext, setData, data }) => {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content}>
         <Text style={styles.title}>Education Background</Text>
-        <TextInput style={styles.input} placeholder="University/Institution" />
-        <TextInput style={styles.input} placeholder="Degree/Subject/Discipline" />
+        <TextInput 
+          style={styles.input} 
+          placeholder="University/Institution" 
+          value={data.institution}
+          onChangeText={(text) => setData({ ...data, institution: text })}
+        />
+        <TextInput 
+          style={styles.input} 
+          placeholder="Degree/Subject/Discipline" 
+          value={data.degree}
+          onChangeText={(text) => setData({ ...data, degree: text })}
+        />
         <View style={styles.pickerContainer}>
           <Picker
-            selectedValue={stage}
+            selectedValue={data.stage}
             onValueChange={(itemValue, itemIndex) =>
-            setStage(itemValue)
+            setData({ ...data, stage: itemValue })
           }>
             <Picker.Item label="Bachelors" value="Bachelors" />
             <Picker.Item label="Masters" value="Masters" />

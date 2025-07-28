@@ -1,26 +1,31 @@
 
 import { Picker } from '@react-native-picker/picker';
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 
 interface CareerGoalsStepProps {
   onComplete: () => void;
   onPrev: () => void;
+  setData: (data: any) => void;
+  data: any;
 }
 
-const CareerGoalsStep: React.FC<CareerGoalsStepProps> = ({ onComplete, onPrev }) => {
-  const [timeframe, setTimeframe] = useState(null);
-
+const CareerGoalsStep: React.FC<CareerGoalsStepProps> = ({ onComplete, onPrev, setData, data }) => {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content}>
         <Text style={styles.title}>Career Path & Goals</Text>
-        <TextInput style={styles.input} placeholder="Long-term Career Goal" />
+        <TextInput 
+          style={styles.input} 
+          placeholder="Long-term Career Goal" 
+          value={data.goal}
+          onChangeText={(text) => setData({ ...data, goal: text })}
+        />
         <View style={styles.pickerContainer}>
           <Picker
-            selectedValue={timeframe}
+            selectedValue={data.timeframe}
             onValueChange={(itemValue, itemIndex) =>
-            setTimeframe(itemValue)
+            setData({ ...data, timeframe: itemValue })
           }>
             <Picker.Item label="Select Timeframe" value={null} />
             <Picker.Item label="1 year" value="1 year" />

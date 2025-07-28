@@ -1,19 +1,18 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { supabase } from '../lib/supabase';
 
 interface IndustryStepProps {
   onNext: () => void;
   onPrev: () => void;
+  setData: (data: any) => void;
+  data: any;
 }
 
-const IndustryStep: React.FC<IndustryStepProps> = ({ onNext, onPrev }) => {
+const IndustryStep: React.FC<IndustryStepProps> = ({ onNext, onPrev, setData, data }) => {
   const [industries, setIndustries] = useState<any[]>([]);
-  const [selectedIndustries, setSelectedIndustries] = useState<any[]>([]);
-  const { user } = useAuth();
 
   useEffect(() => {
     const fetchIndustries = async () => {
@@ -24,32 +23,15 @@ const IndustryStep: React.FC<IndustryStepProps> = ({ onNext, onPrev }) => {
     fetchIndustries();
   }, []);
 
-  const handleSelectIndustry = (industry: any) => {
-    if (selectedIndustries.find((item) => item.id === industry.id)) {
-      setSelectedIndustries(selectedIndustries.filter((item) => item.id !== industry.id));
-    } else {
-      setSelectedIndustries([...selectedIndustries, industry]);
-    }
-  };
+  // Ensure selectedIndustries is always an array
+  const selectedIndustries = Array.isArray(data.selectedIndustries) ? data.selectedIndustries : [];
 
-  const handleNext = async () => {
-    if (!user?.id) {
-      alert('User not found. Please sign in again.');
-      return;
+  const handleSelectIndustry = (industry: any) => {
+    if (selectedIndustries.find((item: any) => item.id === industry.id)) {
+      setData({ ...data, selectedIndustries: selectedIndustries.filter((item: any) => item.id !== industry.id) });
+    } else {
+      setData({ ...data, selectedIndustries: [...selectedIndustries, industry] });
     }
-    if (selectedIndustries.length === 0) {
-      alert('Please select at least one industry.');
-      return;
-    }
-    // Save industries to user_industries (normalized, canonical)
-    for (const industry of selectedIndustries) {
-      // If your canonical table is industries_canonical, adjust accordingly
-      await supabase.from('user_industries').upsert({
-        user_id: user.id,
-        industry_id: industry.id,
-      }, { onConflict: 'user_id,industry_id' });
-    }
-    onNext();
   };
 
   return (
@@ -59,7 +41,7 @@ const IndustryStep: React.FC<IndustryStepProps> = ({ onNext, onPrev }) => {
         <Text style={styles.subtitle}>Your industry selections will be used to populate your feed.</Text>
         <View style={styles.industryList}>
           {industries.map((industry) => {
-            const isSelected = selectedIndustries.some((item) => item.id === industry.id);
+            const isSelected = selectedIndustries.some((item: any) => item.id === industry.id);
             return (
               <TouchableOpacity
                 key={industry.id}
@@ -82,7 +64,7 @@ const IndustryStep: React.FC<IndustryStepProps> = ({ onNext, onPrev }) => {
         <TouchableOpacity style={[styles.button, styles.prevButton]} onPress={onPrev}>
           <Text style={styles.buttonText}>Previous</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.nextButton]} onPress={handleNext}>
+        <TouchableOpacity style={[styles.button, styles.nextButton]} onPress={onNext}>
           <Text style={styles.buttonText}>Next Step</Text>
         </TouchableOpacity>
       </View>

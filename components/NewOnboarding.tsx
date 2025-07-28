@@ -11,24 +11,100 @@ interface NewOnboardingProps {
   onComplete: () => void;
 }
 
+interface OnboardingData {
+  education: {
+    institution: string;
+    degree: string;
+    stage: string | null;
+  };
+  industries: any[]; // Array of selected industry objects
+  workExperience: {
+    company: string;
+    description: string;
+    experienceLevel: string | null;
+  };
+  projects: Array<{
+    name: string;
+    description: string;
+  }>;
+  careerGoals: {
+    goal: string;
+    timeframe: string | null;
+  };
+}
+
 const NewOnboarding: React.FC<NewOnboardingProps> = ({ onComplete }) => {
   const [step, setStep] = useState(1);
+  const [onboardingData, setOnboardingData] = useState<OnboardingData>({
+    education: { institution: '', degree: '', stage: null },
+    industries: [],
+    workExperience: { company: '', description: '', experienceLevel: null },
+    projects: [{ name: '', description: '' }],
+    careerGoals: { goal: '', timeframe: null },
+  });
 
   const nextStep = () => setStep(step + 1);
   const prevStep = () => setStep(step - 1);
 
+  const handleSetData = (stepName: keyof OnboardingData, data: any) => {
+    setOnboardingData((prevData) => ({
+      ...prevData,
+      [stepName]: data,
+    }));
+  };
+
+  const handleSubmit = () => {
+    // This function will be implemented later to send all data to Supabase
+    console.log('Submitting onboarding data:', onboardingData);
+    onComplete();
+  };
+
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <EducationBackgroundStep onNext={nextStep} />;
+        return (
+          <EducationBackgroundStep
+            onNext={nextStep}
+            data={onboardingData.education}
+            setData={(data) => handleSetData('education', data)}
+          />
+        );
       case 2:
-        return <IndustryStep onNext={nextStep} onPrev={prevStep} />;
+        return (
+          <IndustryStep
+            onNext={nextStep}
+            onPrev={prevStep}
+            data={onboardingData.industries}
+            setData={(data) => handleSetData('industries', data)}
+          />
+        );
       case 3:
-        return <WorkExperienceStep onNext={nextStep} onPrev={prevStep} />;
+        return (
+          <WorkExperienceStep
+            onNext={nextStep}
+            onPrev={prevStep}
+            data={onboardingData.workExperience}
+            setData={(data) => handleSetData('workExperience', data)}
+          />
+        );
       case 4:
-        return <CurrentProjectsStep onNext={nextStep} onPrev={prevStep} />;
+        return (
+          <CurrentProjectsStep
+            onNext={nextStep}
+            onPrev={prevStep}
+            data={onboardingData.projects}
+            setData={(data) => handleSetData('projects', data)}
+          />
+        );
       case 5:
-        return <CareerGoalsStep onComplete={onComplete} onPrev={prevStep} />;
+        return (
+          <CareerGoalsStep
+            onComplete={handleSubmit}
+            onPrev={prevStep}
+            data={onboardingData.careerGoals}
+            setData={(data) => handleSetData('careerGoals', data)}
+          />
+        );
       default:
         return null;
     }
