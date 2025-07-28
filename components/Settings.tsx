@@ -8,7 +8,8 @@ interface SettingsProps {
   signOut: () => Promise<void>;
 }
 
-const Settings: React.FC<SettingsProps> = ({ navigateTo, signOut }) => {
+
+function Settings({ navigateTo, signOut }: SettingsProps) {
   const { colors, themeMode, setThemeMode } = useTheme();
 
   const handleContentPreferences = () => {
@@ -244,6 +245,6 @@ const Settings: React.FC<SettingsProps> = ({ navigateTo, signOut }) => {
       </ScrollView>
     </SafeAreaView>
   );
-};
+}
 
 export default Settings;

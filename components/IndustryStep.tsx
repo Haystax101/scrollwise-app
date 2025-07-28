@@ -1,0 +1,163 @@
+
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { supabase } from '../lib/supabase';
+
+interface IndustryStepProps {
+  onNext: () => void;
+  onPrev: () => void;
+}
+
+const IndustryStep: React.FC<IndustryStepProps> = ({ onNext, onPrev }) => {
+  const [industries, setIndustries] = useState<any[]>([]);
+  const [selectedIndustries, setSelectedIndustries] = useState<any[]>([]);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchIndustries = async () => {
+      const { data, error } = await supabase.from('industries').select('*');
+      if (data) setIndustries(data);
+    };
+
+    fetchIndustries();
+  }, []);
+
+  const handleSelectIndustry = (industry: any) => {
+    if (selectedIndustries.find((item) => item.id === industry.id)) {
+      setSelectedIndustries(selectedIndustries.filter((item) => item.id !== industry.id));
+    } else {
+      setSelectedIndustries([...selectedIndustries, industry]);
+    }
+  };
+
+  const handleNext = async () => {
+    if (!user?.id) {
+      alert('User not found. Please sign in again.');
+      return;
+    }
+    if (selectedIndustries.length === 0) {
+      alert('Please select at least one industry.');
+      return;
+    }
+    // Save industries to user_industries (normalized, canonical)
+    for (const industry of selectedIndustries) {
+      // If your canonical table is industries_canonical, adjust accordingly
+      await supabase.from('user_industries').upsert({
+        user_id: user.id,
+        industry_id: industry.id,
+      }, { onConflict: 'user_id,industry_id' });
+    }
+    onNext();
+  };
+
+  return (
+    <View style={styles.container}>
+      <ScrollView style={styles.content}>
+        <Text style={styles.title}>Industry</Text>
+        <Text style={styles.subtitle}>Your industry selections will be used to populate your feed.</Text>
+        <View style={styles.industryList}>
+          {industries.map((industry) => {
+            const isSelected = selectedIndustries.some((item) => item.id === industry.id);
+            return (
+              <TouchableOpacity
+                key={industry.id}
+                style={[styles.industryItem, isSelected && styles.industryItemSelected]}
+                onPress={() => handleSelectIndustry(industry)}
+              >
+                <View style={styles.iconContainer}>
+                  {/* Placeholder for icon */}
+                </View>
+                <View>
+                  <Text style={styles.industryName}>{industry.name}</Text>
+                  <Text style={styles.industryDescription}>{industry.description}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ScrollView>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity style={[styles.button, styles.prevButton]} onPress={onPrev}>
+          <Text style={styles.buttonText}>Previous</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.button, styles.nextButton]} onPress={handleNext}>
+          <Text style={styles.buttonText}>Next Step</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  subtitle: {
+    marginBottom: 20,
+  },
+  industryList: {
+    marginBottom: 20,
+  },
+  industryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+    marginBottom: 10,
+  },
+  industryItemSelected: {
+    borderColor: '#007AFF',
+    backgroundColor: '#F0F8FF',
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#eee',
+    marginRight: 15,
+  },
+  industryName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  industryDescription: {
+    fontSize: 14,
+    color: '#666',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  button: {
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    width: '48%',
+  },
+  prevButton: {
+    backgroundColor: '#ccc',
+  },
+  nextButton: {
+    backgroundColor: '#6A0DAD',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+});
+
+export default IndustryStep;
+

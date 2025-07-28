@@ -44,7 +44,7 @@ const defaultLearningStats: LearningStats = {
   daysActive: 0,
 };
 
-export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) => {
+export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, signOut }) => {
   const { colors, isDark } = useTheme();
   const [userData, setUserData] = useState<UserData>(defaultUserData);
   const [fullName, setFullName] = useState<string>(defaultUserData.name);
@@ -53,6 +53,16 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const router = useRouter();
+
+  // Always get the current user from supabase.auth to ensure we have the right id
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  useEffect(() => {
+    const getUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      setCurrentUser(data?.user || null);
+    };
+    getUser();
+  }, []);
 
   const fetchLearningStats = async (userId: string) => {
     try {
@@ -84,12 +94,17 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
 
   useEffect(() => {
     const fetchProfileAndSaves = async () => {
-      // Fetch profile info
-      const { data: profileData } = await supabase
+      if (!currentUser) return;
+      // Fetch profile
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('full_name, email, created_at, interests')
+        .eq('id', currentUser.id)
         .single();
-      if (profileData) {
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+      } else if (profileData) {
         setFullName(profileData.full_name || defaultUserData.name);
         setInterests(profileData.interests || defaultUserData.interests);
         setUserData((prev) => ({
@@ -103,39 +118,34 @@ export const Profile: React.FC<ProfileProps> = ({ user, navigateTo, signOut }) =
       }
 
       // Fetch saved reels for this user
-      if (user && user.email) {
-        // Get user id from supabase.auth
-        const { data: authUser } = await supabase.auth.getUser();
-        const userId = authUser?.user?.id;
-        if (userId) {
-          // Join article_saves and articles to get saved content
-          const { data: savedRows, error: savedError } = await supabase
-            .from('article_saves')
-            .select('article_id, created_at, articles (id, title, type, created_at)')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
-          if (!savedError && savedRows) {
-            const savedContent: SavedContentItem[] = savedRows.map((row: any) => {
-              const article = row.articles;
-              return {
-                id: article?.id,
-                title: article?.title || 'Untitled',
-                type: article?.type || 'unknown',
-                date: article?.created_at
-                  ? new Date(article.created_at).toLocaleDateString()
-                  : '',
-              };
-            });
-            setUserData((prev) => ({ ...prev, savedContent }));
-          }
-          
-          // Fetch learning stats
-          await fetchLearningStats(userId);
+      const userId = currentUser.id;
+      if (userId) {
+        // Join article_saves and articles to get saved content
+        const { data: savedRows, error: savedError } = await supabase
+          .from('article_saves')
+          .select('article_id, created_at, articles (id, title, type, created_at)')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        if (!savedError && savedRows) {
+          const savedContent: SavedContentItem[] = savedRows.map((row: any) => {
+            const article = row.articles;
+            return {
+              id: article?.id,
+              title: article?.title || 'Untitled',
+              type: article?.type || 'unknown',
+              date: article?.created_at
+                ? new Date(article.created_at).toLocaleDateString()
+                : '',
+            };
+          });
+          setUserData((prev) => ({ ...prev, savedContent }));
         }
+        // Fetch learning stats
+        await fetchLearningStats(userId);
       }
     };
     fetchProfileAndSaves();
-  }, [user]);
+  }, [currentUser]);
 
   const dynamicStyles = StyleSheet.create({
     container: {

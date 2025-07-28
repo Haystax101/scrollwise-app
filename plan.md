@@ -2,198 +2,156 @@
 
 This document outlines the technical steps required to implement the features described in the development plan. It is based on the existing application architecture and best practices for the tech stack involved (React Native, Expo Router, Supabase).
 
----
 
-## Phase 1: Real-Time Chat & Insights Integration
+## Phase 2: Profile & Onboarding Overhaul (PRIORITY)
 
-This phase focuses on building out the core social features of the app, enabling real-time interaction between users.
+### 2.1. Profile Data Model & Matching Foundations
 
-### 1.1. Data Seeding & User Setup
+- [ ] **Introduce canonical tables for skills, industries, degrees, companies**
+    - See SQL migration below for table structure.
+-- [ ] **Introduce join tables for normalized, queryable relationships**
+    - User's universities (normalized, canonical table + join table)
+    - User's degrees/subjects/disciplines + stage
+    - User's industries + stage (with experience level: Student, Intern, Entry-Level, Mid-Level, Senior, Executive)
+    - User's current projects
+    - User's work experiences (multiple, each linked to a company from canonical table, with title, description, start/end date, experience level)
+    - User's current and desired roles + timeframe
+    - User's long-term career goals and target companies (companies selected from canonical table)
+- [ ] **Introduce more input fields in onboarding to ensure user can add details**
+- [ ] **Introduce ability to update details in profile**
+- [ ] **Introduce tracker of how much of their profile is completed**
 
-**Goal:** Create multiple user accounts for realistic testing.
-
-- **Manual Seeding:** Create 3-5 user accounts manually via the app's sign-up flow. This is the simplest method for initial testing.
-- **Recommendation (Advanced):** For long-term testing, create a simple Node.js script (`/scripts/seed.js`) that uses the `supabase-js` client to programmatically create users. This ensures a repeatable test environment.
-
-### 1.2. Supabase Schema for Chat & Insights
-
-**Goal:** Create the necessary backend tables to store conversations and insight responses.
-
-- **New Table: `chats`**
-  - Purpose: Represents a single conversation thread between two or more users.
-  - Columns:
-    - `id` (uuid, primary key)
-    - `created_at` (timestamp with time zone)
-    - `participant_ids` (array of uuid, references `profiles.id`) - Stores the IDs of the two users in the chat.
-- **New Table: `chat_messages`**
-  - Purpose: Stores an individual message within a chat.
-  - Columns:
-    - `id` (uuid, primary key)
-    - `chat_id` (uuid, foreign key to `chats.id`)
-    - `sender_id` (uuid, foreign key to `profiles.id`)
-    - `content` (text, not null)
-    - `created_at` (timestamp with time zone)
-- **New Table: `insight_responses`**
-  - Purpose: Stores user replies to feed insights.
-  - Columns:
-    - `id` (uuid, primary key)
-    - `insight_id` (integer) - This will eventually reference a formal `insights` table.
-    - `responder_id` (uuid, foreign key to `profiles.id`)
-    - `original_author_id` (uuid, foreign key to `profiles.id`)
-    - `content` (text, not null)
-    - `created_at` (timestamp with time zone)
-- **Row Level Security (RLS):** Immediately after creation, enable RLS on all three tables.
-  - `chats`: Users can only see chats where their `auth.uid()` is in the `participant_ids` array.
-  - `chat_messages`: Users can only see messages belonging to chats they are a part of.
-  - `insight_responses`: Users can only see responses to their own insights.
-
-### 1.3. Real-Time Chat Implementation
-
-**Goal:** Enable users to send and receive messages in real time.
-
-- **File to Modify:** `app/chat/[id].tsx`
-- **Implementation:**
-  1.  On screen load, query the `chat_messages` table for all messages where `chat_id` matches the ID from the route.
-  2.  Use the Supabase client to create a **Realtime Subscription**. Listen for `INSERT` events on the `chat_messages` table where the `chat_id` matches.
-  3.  When a new message event is received, update the component's state to append the new message to the screen, creating the real-time effect.
-  4.  The "Send" button will trigger a function that inserts the new message into the `chat_messages` table, which will then be broadcast to the other user via the subscription.
-
-### 1.4. Insight Reply → Friend Connection Flow
-
-**Goal:** Create a connection and chat thread when a user replies to an insight.
-
-- **New Table: `connections`**
-  - Purpose: A simple join table to represent a friendship or connection.
-  - Columns:
-    - `user_id_1` (uuid, foreign key to `profiles.id`)
-    - `user_id_2` (uuid, foreign key to `profiles.id`)
-    - `created_at` (timestamp with time zone)
-- **Implementation:**
-  1.  When a user taps reply in `components\Insights.tsx` , trigger a new Supabase Edge Function.
-  2.  This function will:
-      a. Check the `connections` table to see if a friendship already exists. If not, create one.
-      b. Check the `chats` table to see if a chat thread already exists between the two users. If not, create one.
-      c. Use Expo Router (`router.push`) to navigate the user to the appropriate chat screen (`/chat/[id]`).
-
-### 1.5. Insight Response Flow (Feed to Chat Tab)
-
-**Goal:** Ensure a response submitted on an `InsightCard` in the feed appears in the original author's "Insights" tab.
-
-- **Files to Modify:** `components/InsightCard.tsx`, `components/Insights.tsx`
-- **Implementation:**
-  1.  **Submit Logic (`InsightCard.tsx`):** The "Submit" button next to the text input on the `InsightCard` will trigger a function.
-  2.  This function will perform an `INSERT` into the `insight_responses` table. The row will contain:
-      - `responder_id`: The ID of the current user submitting the response.
-      - `original_author_id`: The ID of the author of the insight.
-      - `content`: The text from the input field.
-      - `insight_id`: A reference to the original insight (once an `insights` table is formalized).
-  3.  **Data Fetching (`Insights.tsx`):** The `Insights` component (in the chat tab) will be modified. Instead of using `dummyInsights`, it will now fetch data from the `insight_responses` table.
-  4.  The query will select all rows where the `original_author_id` matches the current user's ID. This ensures users only see responses to their own insights.
-
----
-
-## Phase 1.5: Real Chat Logic for Testing (Supabase Realtime)
-
-### Goal
-
-Enable real chat interactions for all user pairs (no group chats) using Supabase Realtime, replacing dummy data in `chats.tsx`.
-
-### Steps
-
-1. **Database Setup**
-
-   - Ensure `chat_messages` table exists with columns: `id`, `chat_id`, `sender_id`, `content`, `created_at`.
-   - Ensure `chats` table exists with columns: `id`, `participant_ids` (array of UUIDs), `created_at`.
-   - Enable Row Level Security (RLS) on both tables so users can only access their own chats/messages.
-   - [Optional] Add indexes for performance if needed.
-
-2. **Supabase Client Setup in `chats.tsx`**
-
-   - Remove all dummy data.
-   - Use Supabase client to fetch all users except the current user from the `profiles` table.
-   - For each other user, check if a chat exists between the current user and that user in the `chats` table.
-   - If a chat exists, fetch the latest message from `chat_messages`.
-   - If no chat exists, display a button to start a new chat (insert into `chats`).
-
-3. **Realtime Subscriptions**
-
-   - Subscribe to changes in the `chat_messages` table for all chats involving the current user.
-   - Update the chat list in real time when new messages arrive.
-
-4. **UI Implementation**
-
-   - Display a list of all possible user pairs (current user + each other user).
-   - For each chat, show the other user's name, avatar, and the latest message (if any).
-   - Tapping a chat navigates to `/chat/[id]`.
-
-5. **Testing**
-
-   - With 3 users, verify each user can see and start chats with the other two.
-   - Confirm messages sent in `/chat/[id]` are visible to both users in real time.
-
-6. **Future Improvements**
-   - Add support for group chats if needed.
-   - Add presence tracking, message editing, and media attachments.
-
-### SQL Checklist
-
-Ensure the following tables and RLS policies exist:
-
+#### SQL Migration Example
 ```sql
--- chat_messages table
-CREATE TABLE IF NOT EXISTS chat_messages (
+-- Canonical tables
+CREATE TABLE universities (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  chat_id uuid REFERENCES chats(id),
-  sender_id uuid REFERENCES profiles(id),
-  content text,
-  created_at timestamptz DEFAULT now()
+  name TEXT UNIQUE NOT NULL
+);
+CREATE TABLE industries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT UNIQUE NOT NULL
+);
+CREATE TABLE degrees (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT UNIQUE NOT NULL
+);
+CREATE TABLE companies (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT UNIQUE NOT NULL
 );
 
--- chats table
-CREATE TABLE IF NOT EXISTS chats (
+-- Join tables
+CREATE TABLE user_universities (
+  user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  university_id uuid REFERENCES universities(id),
+  PRIMARY KEY (user_id, university_id)
+);
+CREATE TABLE user_degrees (
+  user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  degree_id uuid REFERENCES degrees(id),
+  stage TEXT,
+  PRIMARY KEY (user_id, degree_id)
+);
+CREATE TABLE user_industries (
+  user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  industry_id uuid REFERENCES industries(id),
+  stage TEXT, -- Student, Intern, Entry-Level, Mid-Level, Senior, Executive
+  PRIMARY KEY (user_id, industry_id)
+);
+CREATE TABLE user_projects (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  participant_ids uuid[] NOT NULL,
-  created_at timestamptz DEFAULT now()
+  user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  title TEXT,
+  description TEXT
+);
+CREATE TABLE user_experiences (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  company_id uuid REFERENCES companies(id),
+  title TEXT,
+  description TEXT,
+  start_date DATE,
+  end_date DATE,
+  experience_level TEXT -- Student, Intern, Entry-Level, Mid-Level, Senior, Executive
+);
+CREATE TABLE user_roles (
+  user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  role TEXT,
+  type TEXT, -- 'current' or 'desired'
+  timeframe TEXT,
+  PRIMARY KEY (user_id, type)
+);
+CREATE TABLE user_goals (
+  user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  goal TEXT,
+  PRIMARY KEY (user_id)
+);
+CREATE TABLE user_goal_companies (
+  user_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  company_id uuid REFERENCES companies(id),
+  PRIMARY KEY (user_id, company_id)
 );
 
--- Example RLS policy for chat_messages
--- Only allow users to see messages in chats they participate in
-CREATE POLICY "Chat participants can view messages" ON chat_messages
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM chats
-      WHERE chats.id = chat_messages.chat_id
-      AND auth.uid() = ANY(chats.participant_ids)
-    )
-  );
+-- RLS policies
+ALTER TABLE universities ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read access" ON universities FOR SELECT USING (true);
+ALTER TABLE industries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read access" ON industries FOR SELECT USING (true);
+ALTER TABLE degrees ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read access" ON degrees FOR SELECT USING (true);
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read access" ON companies FOR SELECT USING (true);
 
--- Enable RLS
-ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE chats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_universities ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own university links"
+  ON user_universities
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+ALTER TABLE user_degrees ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own degrees"
+  ON user_degrees
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+ALTER TABLE user_industries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own industries"
+  ON user_industries
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+ALTER TABLE user_projects ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own projects"
+  ON user_projects
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+ALTER TABLE user_experiences ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own experiences"
+  ON user_experiences
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own roles"
+  ON user_roles
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+ALTER TABLE user_goals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own goals"
+  ON user_goals
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+ALTER TABLE user_goal_companies ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage their own goal companies"
+  ON user_goal_companies
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 ```
 
 ---
-
-## Phase 2: Profile Enhancement
-
-This phase focuses on making the user profile more detailed, interactive, and personalized.
-
-### 2.1. Fix Profile Data Fetching
-
-**Goal:** Ensure name and email are properly fetched and displayed from the profiles table.
-
-- **Files to Modify:** `components/Profile.tsx`
-- **Issue:** The current profile query doesn't filter by the current user's ID, which may cause incorrect or missing data.
-- **Implementation:**
-  1. **Fix Profile Query:** Update the profile data fetching in the `useEffect` to properly filter by the current user's ID.
-  2. **Add User ID Filter:** Modify the Supabase query to include `.eq('id', userId)` where `userId` is obtained from `supabase.auth.getUser()`.
-  3. **Error Handling:** Add proper error handling for cases where the profile data is not found or the query fails.
-  4. **Loading States:** Add loading states to prevent displaying default data while the actual profile data is being fetched.
 
 ### 2.2. Profile Picture Management
 
 **Goal:** Allow users to upload and change their profile picture.
 
+- [ ] Allow user to change their profile picture + store it!
 - **Files to Modify:** `components/Profile.tsx`, `lib/supabase.ts`
 - **Dependencies:** `expo-image-picker`
 - **Implementation:**
@@ -202,16 +160,19 @@ This phase focuses on making the user profile more detailed, interactive, and pe
   3.  **Upload Logic:** Once an image is selected, get its file data and upload it to the `avatars` bucket in Supabase Storage. The file should be named uniquely, e.g., `${userId}.png`. Use the `upload` method with `upsert: true` to handle both new uploads and replacements.
   4.  **Update Profile:** After a successful upload, get the public URL for the file and update the `avatar_url` column in the user's `profiles` row.
 
-### 2.3. Consistent Saved Content Height
 
-**Goal:** Ensure all saved content items have consistent height for better visual alignment.
+### 2.3. Onboarding & Profile Expansion
 
-- **Files to Modify:** `components/Profile.tsx`
-- **Implementation:**
-  1. **Fixed Height Container:** Update the `savedItemRow` style to have a fixed height (e.g., 80px) instead of allowing dynamic height based on content.
-  2. **Title Truncation:** Add `numberOfLines={2}` and `ellipsizeMode="tail"` to the saved item title text to ensure it doesn't exceed the fixed height.
-  3. **Content Layout:** Ensure the icon, title, and metadata are properly aligned within the fixed height container.
-  4. **Visual Consistency:** This will create a uniform grid-like appearance for the saved content horizontal scroll view.
+- [ ] Modify onboarding to accept additional information (see below for field mapping and UI types)
+    - All fields optional except name/email; users can fill in later via profile
+    - All company/university/industry/degree fields are autocomplete/search from canonical tables
+    - Experience level options: Student, Intern, Entry-Level, Mid-Level, Senior, Executive
+    - Work experience: allow multiple, each linked to a company from canonical table
+    - Remove skills from onboarding
+- [ ] Modify profile section to display all a user’s information as well as allow them to update / add more information. **Also fetch name and email in profile properly**
+    - [ ] Display what percentage complete their profile is, like how LinkedIn do
+
+---
 
 ### 2.2. Onboarding & Profile Expansion
 

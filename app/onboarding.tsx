@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
-import { Onboarding } from '../components/Onboarding';
+import NewOnboarding from '../components/NewOnboarding';
 import { useEffect } from 'react';
 
 export default function OnboardingScreen() {
@@ -15,5 +15,5 @@ export default function OnboardingScreen() {
     }
   }, [user, loading]);
   if (loading || !user) return null;
-  return <Onboarding onComplete={onComplete} />;
+  return <NewOnboarding onComplete={onComplete} />;
 }
