@@ -35,13 +35,23 @@ const Insights = () => {
     // Fetch responses to user's insights
     const { data: responses, error: responsesError } = await supabase
       .from('insight_responses')
-      .select(`*, responder:profiles!responder_id(full_name, avatar_url, experience)`)
+      .select(`*,
+        responder:profiles!responder_id(
+          full_name,
+          avatar_url
+        )
+      `)
       .eq('original_author_id', user.id);
 
     // Fetch user's own insights
     const { data: ownInsights, error: ownInsightsError } = await supabase
       .from('insights')
-      .select(`*, author:profiles!author_id(full_name, avatar_url, experience)`)
+      .select(`*,
+        author:profiles!author_id(
+          full_name,
+          avatar_url
+        )
+      `)
       .eq('author_id', user.id);
 
     if (responsesError || ownInsightsError) {
@@ -51,7 +61,7 @@ const Insights = () => {
         id: item.id,
         type: 'response' as const,
         userName: item.responder.full_name,
-        jobTitle: item.responder.experience,
+        jobTitle: 'Researcher', // Placeholder
         avatar: item.responder.avatar_url,
         userMessage: item.content,
         insightTitle: 'Your Insight', // Placeholder
@@ -63,7 +73,7 @@ const Insights = () => {
         id: item.id,
         type: 'own' as const,
         userName: item.author.full_name,
-        jobTitle: item.author.experience,
+        jobTitle: 'Researcher', // Placeholder
         avatar: item.author.avatar_url,
         userMessage: item.content,
         insightTitle: 'Your Insight',

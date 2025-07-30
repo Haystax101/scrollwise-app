@@ -8,17 +8,17 @@ export interface SearchResult {
   link: string;
   created_at: string;
   type: string;
-  industry_id: number;
-  likes_count: number; // bigint in DB but number in TS (within safe range)
-  saves_count: number; // bigint in DB but number in TS (within safe range)
-  comments_count: number; // bigint in DB but number in TS (within safe range)
-  views_count: number; // bigint in DB but number in TS (within safe range)
+  industry_id: string; // Changed from number to string for UUID
+  likes_count: number;
+  saves_count: number;
+  comments_count: number;
+  views_count: number;
   site_name: string;
   rank: number;
 }
 
 export interface SearchFilters {
-  industryId?: number; // smallint in DB but number in TS
+  industryId?: string; // Changed from number to string for UUID
   type?: string;
   dateRange?: {
     start: Date;
@@ -144,7 +144,7 @@ export async function getPopularSearches(
 
 // Search within a specific industry
 export async function searchByIndustry(
-  industryId: number,
+  industryId: string, // Changed from number to string
   query?: string,
   limit: number = 20
 ): Promise<{ articles: SearchResult[]; error: string | null }> {

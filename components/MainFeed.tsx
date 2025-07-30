@@ -6,11 +6,12 @@ import type { Article, Insight, FeedItem } from '../types';
 import { FeedAlgorithm } from '../lib/feedAlgorithm';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useIndustries } from '../context/IndustriesContext'; // <-- ADD THIS LINE
 import { CommentsModal } from './CommentsModal';
 import { supabase } from '../lib/supabase';
 
 interface MainFeedProps {
-  industries: number[]; // Changed from string[] to number[]
+  industries: Industry[]; // Changed from number[] to Industry[]
   initialArticleId?: number;
 }
 
@@ -19,6 +20,7 @@ const { height: screenHeight } = Dimensions.get('window');
 export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { allIndustries } = useIndustries(); // Get all industries
   const [currentArticleIndex, setCurrentArticleIndex] = useState(0);
   const [articles, setArticles] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,20 +32,18 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   const feedAlgorithmRef = useRef<FeedAlgorithm | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
-
-
-  // Industries are already numbers, no conversion needed
-  const industryIds = industries;
+  // Extract just the industry IDs for the algorithm
+  const industryIds = useMemo(() => industries.map(ind => ind.id), [industries]);
 
   // Initialize feed algorithm when user or industries change
   useEffect(() => {
-    if (user && industryIds.length > 0) {
-      feedAlgorithmRef.current = new FeedAlgorithm(user.id, industryIds);
+    if (user && industryIds.length > 0 && allIndustries.length > 0) {
+      feedAlgorithmRef.current = new FeedAlgorithm(user.id, industryIds, allIndustries);
       loadInitialFeed();
-    } else {
+    } else if (!user || industryIds.length === 0) {
       setIsLoading(false);
     }
-  }, [user, industries.join(',')]);
+  }, [user, industryIds.join(','), allIndustries]);
 
   // Load initial feed (first 3 articles for faster loading, or specific article if provided)
   const loadInitialFeed = async () => {
@@ -88,14 +88,16 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
           console.error('Error fetching insights for feed:', insightsError);
         }
         
-        const insights: Insight[] = (insightsData || []).map((item: any) => ({
-          id: item.id,
-          type: 'insight',
-          content: item.content,
-          author_id: item.author_id,
-          author_name: item.author.full_name,
-          author_avatar: item.author.avatar_url,
-        }));
+        const insights: Insight[] = (insightsData || [])
+          .filter((item: any) => item.author) // Filter out insights with no author
+          .map((item: any) => ({
+            id: item.id,
+            type: 'insight',
+            content: item.content,
+            author_id: item.author_id,
+            author_name: item.author.full_name,
+            author_avatar: item.author.avatar_url,
+          }));
         
         // Combine insights and articles, with insights at the top
         const combinedFeed: FeedItem[] = [...insights, ...newArticles, ...algorithmArticles];

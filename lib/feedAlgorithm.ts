@@ -1,6 +1,5 @@
 import { supabase } from './supabase';
-import { industryIdToName } from './industryMap';
-import type { Article } from '../types';
+import type { Article, Industry } from '../types'; // Assuming Industry type is in types.ts
 
 export interface FetchedArticle {
   id: number;
@@ -9,7 +8,7 @@ export interface FetchedArticle {
   content: string;
   authors: string[];
   link: string;
-  industry_id: number;
+  industry_id: string;
   likes_count: number;
   saves_count: number;
   comments_count: number;
@@ -29,14 +28,16 @@ export interface FeedState {
 
 export class FeedAlgorithm {
   private userId: string;
-  private userIndustries: number[];
+  private userIndustries: string[];
+  private allIndustries: Industry[]; // Add this
   private fetchedIds: Set<number> = new Set();
   private likedIds: Set<number> = new Set();
   private savedIds: Set<number> = new Set();
 
-  constructor(userId: string, userIndustries: number[]) {
+  constructor(userId: string, userIndustries: string[], allIndustries: Industry[]) { // Add this
     this.userId = userId;
     this.userIndustries = userIndustries;
+    this.allIndustries = allIndustries; // Add this
   }
 
   /**
@@ -166,14 +167,14 @@ export class FeedAlgorithm {
    */
   private async fetchArticleByTypeAndIndustry(
     type: 'paper' | 'book' | 'article',
-    industryId: number,
+    industryId: string,
     excludeInteracted: boolean,
     attemptedIds: Set<number>
   ): Promise<FetchedArticle | null> {
     try {
       let query = supabase
         .from('articles')
-        .select('id, type, title, content, authors, link, industry_id, likes_count, saves_count, comments_count, views_count, created_at')
+        .select('*')
         .eq('type', type)
         .eq('industry_id', industryId)
         .order('created_at', { ascending: false })
@@ -236,22 +237,25 @@ export class FeedAlgorithm {
   /**
    * Convert FetchedArticle to Article format
    */
-  private mapToArticle = (article: FetchedArticle): Article => ({
-    id: article.id,
-    type: article.type,
-    title: article.title,
-    caption: '', // No caption in articles table
-    source: article.link,
-    industry: industryIdToName[article.industry_id] || `Industry ${article.industry_id}`,
-    video_url: undefined, // No video_url in articles table
-    likes: article.likes_count || 0,
-    saves: article.saves_count || 0,
-    comments: article.comments_count || 0,
-    views: article.views_count || 0,
-    content: article.content,
-    authors: article.authors || [],
-    created_at: article.created_at,
-  });
+  private mapToArticle = (article: FetchedArticle): Article => {
+    const industryName = this.allIndustries.find(ind => ind.id === article.industry_id)?.name || `Industry ${article.industry_id}`;
+    return {
+      id: article.id,
+      type: article.type,
+      title: article.title,
+      caption: '', // No caption in articles table
+      source: article.link,
+      industry: industryName,
+      video_url: undefined, // No video_url in articles table
+      likes: article.likes_count || 0,
+      saves: article.saves_count || 0,
+      comments: article.comments_count || 0,
+      views: article.views_count || 0,
+      content: article.content,
+      authors: article.authors || [],
+      created_at: article.created_at,
+    };
+  };
 
   /**
    * Fetch a specific article by ID (used for saved posts)
@@ -260,7 +264,7 @@ export class FeedAlgorithm {
     try {
       const { data, error } = await supabase
         .from('articles')
-        .select('id, type, title, content, authors, link, industry_id, likes_count, saves_count, comments_count, views_count, created_at')
+        .select('*')
         .eq('id', articleId)
         .single();
 

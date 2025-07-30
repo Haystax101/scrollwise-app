@@ -1,132 +1,196 @@
-// components/InsightCard.tsx
-
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvoidingView, Platform, Alert, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Feather } from '@expo/vector-icons';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../context/AuthContext';
-
-interface InsightCardProps {
-  insight: {
-    id: string;
-    content: string;
-    author_id: string;
-    author_name: string;
-    author_avatar: string;
-  };
-}
+import type { Insight } from '../types';
 
 const { height: screenHeight } = Dimensions.get('window');
 
+interface InsightCardProps {
+  insight: Insight;
+}
+
 const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const [isExpanded, setIsExpanded] = useState(false);
   const [response, setResponse] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmitResponse = async () => {
-    if (!user || response.trim() === '') return;
-    setIsSubmitting(true);
-    try {
-      const { error } = await supabase.from('insight_responses').insert({
-        insight_id: insight.id,
-        responder_id: user.id,
-        original_author_id: insight.author_id,
-        content: response.trim(),
-      });
-
-      if (error) throw error;
-
-      Alert.alert('Success', 'Your response has been sent.');
-      setResponse('');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to send response.');
-      console.error('Error submitting insight response:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const styles = StyleSheet.create({
-    container: {
-      padding: 16,
-      marginVertical: 8,
-      marginHorizontal: 16,
-      backgroundColor: colors.card,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
+  const dynamicStyles = StyleSheet.create({
+    wrapper: {
+      height: screenHeight,
     },
-    header: {
-      flexDirection: 'row',
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      padding: 16,
+      paddingBottom: 120, // Initial offset for bottom nav
+    },
+    profileSection: {
       alignItems: 'center',
-      marginBottom: 12,
+      marginBottom: 24,
     },
     avatar: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      marginRight: 12,
-    },
-    authorInfo: {
-      flex: 1,
+      width: 90,
+      height: 90,
+      borderRadius: 45,
+      marginBottom: 12,
+      borderWidth: 2,
+      borderColor: colors.accent,
     },
     authorName: {
-      fontSize: 16,
+      fontSize: 24,
       fontWeight: 'bold',
       color: colors.text,
     },
-    insightContent: {
+    authorHandle: {
       fontSize: 16,
-      color: colors.text,
-      marginBottom: 16,
-      lineHeight: 24,
+      color: colors.textSecondary,
+      marginBottom: 8,
     },
-    responseContainer: {
+    profileDetailsToggle: {
       flexDirection: 'row',
       alignItems: 'center',
     },
-    input: {
-      flex: 1,
-      height: 40,
-      borderRadius: 20,
-      paddingHorizontal: 16,
-      backgroundColor: colors.inputBackground,
-      color: colors.inputText,
-      borderColor: colors.inputBorder,
-      borderWidth: 1,
-      marginRight: 8,
+    toggleText: {
+      color: colors.textSecondary,
     },
-    sendButton: {
-      padding: 8,
+    expandedDetails: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 16,
+      width: '100%',
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: colors.accent,
+    },
+    detailRow: {
+      flexDirection: 'row',
+      marginBottom: 10,
+    },
+    detailItem: {
+      flex: 1,
+      paddingRight: 10,
+    },
+    detailLabel: {
+      fontSize: 14,
+      color: colors.accent,
+      marginBottom: 2,
+    },
+    detailValue: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    projectSection: {
+      marginTop: 4,
+    },
+    insightCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 20,
+      width: '100%',
+      marginBottom: 24,
+      borderWidth: 1,
+      borderColor: colors.accent,
+    },
+    insightBody: {
+      fontSize: 18,
+      color: colors.text,
+      lineHeight: 26,
+      textAlign: 'center',
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      width: '100%',
+    },
+    textInput: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      fontSize: 16,
+      color: colors.inputText,
+      marginRight: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    submitButton: {
+      backgroundColor: colors.primary,
+      padding: 12,
+      borderRadius: 12,
     },
   });
 
   return (
-    <View style={{ height: screenHeight, justifyContent: 'center' }}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Image source={{ uri: insight.author_avatar || 'https://randomuser.me/api/portraits/lego/1.jpg' }} style={styles.avatar} />
-            <View style={styles.authorInfo}>
-              <Text style={styles.authorName}>{insight.author_name}</Text>
+    <View style={dynamicStyles.wrapper}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={dynamicStyles.container}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View>
+            <View style={dynamicStyles.profileSection}>
+              {!isExpanded && (
+                <Image source={{ uri: insight.author.avatar }} style={dynamicStyles.avatar} />
+              )}
+              <Text style={dynamicStyles.authorName}>{insight.author.name}</Text>
+              <Text style={dynamicStyles.authorHandle}>@{insight.author.handle}</Text>
+              <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)} style={dynamicStyles.profileDetailsToggle}>
+                <Text style={dynamicStyles.toggleText}>{isExpanded ? 'Hide' : 'View'} profile details </Text>
+                <Feather name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {isExpanded && (
+              <View style={dynamicStyles.expandedDetails}>
+                <View style={dynamicStyles.detailRow}>
+                  <View style={dynamicStyles.detailItem}>
+                    <Text style={dynamicStyles.detailLabel}>Industry</Text>
+                    <Text style={dynamicStyles.detailValue}>{insight.author.industry}</Text>
+                  </View>
+                  <View style={dynamicStyles.detailItem}>
+                    <Text style={dynamicStyles.detailLabel}>Company</Text>
+                    <Text style={dynamicStyles.detailValue}>{insight.author.company}</Text>
+                  </View>
+                </View>
+                <View style={dynamicStyles.detailRow}>
+                  <View style={dynamicStyles.detailItem}>
+                    <Text style={dynamicStyles.detailLabel}>Role</Text>
+                    <Text style={dynamicStyles.detailValue}>{insight.author.role}</Text>
+                  </View>
+                  <View style={dynamicStyles.detailItem}>
+                    <Text style={dynamicStyles.detailLabel}>Location</Text>
+                    <Text style={dynamicStyles.detailValue}>{insight.author.location}</Text>
+                  </View>
+                </View>
+                <View style={dynamicStyles.projectSection}>
+                  <Text style={dynamicStyles.detailLabel}>Current Project</Text>
+                  <Text style={dynamicStyles.detailValue}>{insight.author.currentProject}</Text>
+                </View>
+              </View>
+            )}
+
+            <View style={dynamicStyles.insightCard}>
+              <Text style={dynamicStyles.insightBody}>"{insight.body}"</Text>
+            </View>
+
+            <View style={dynamicStyles.inputContainer}>
+              <TextInput
+                style={dynamicStyles.textInput}
+                placeholder="Share your thoughts..."
+                placeholderTextColor={colors.textSecondary}
+                value={response}
+                onChangeText={setResponse}
+                onFocus={() => setIsExpanded(false)}
+              />
+              <TouchableOpacity style={dynamicStyles.submitButton}>
+                <Feather name="send" size={20} color={colors.primaryText} />
+              </TouchableOpacity>
             </View>
           </View>
-          <Text style={styles.insightContent}>{insight.content}</Text>
-          <View style={styles.responseContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Share your thoughts..."
-              placeholderTextColor={colors.inputPlaceholder}
-              value={response}
-              onChangeText={setResponse}
-            />
-            <TouchableOpacity style={styles.sendButton} onPress={handleSubmitResponse} disabled={isSubmitting}>
-              <Feather name="send" size={24} color={isSubmitting ? colors.textSecondary : colors.primary} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </View>
   );

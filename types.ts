@@ -9,11 +9,8 @@ export interface User {
 }
 
 export interface Industry {
-  id: number; // Changed to number to match new usage in Onboarding and database
+  id: string; // Changed to string for UUID
   name: string;
-  description: string;
-  icon: ReactElement; // lucide-react-native icons are ReactElements
-  color: string; // Tailwind background color class for icon container
 }
 
 export type ExperienceLevel = 'Student' | 'Working Professional' | 'Researcher' | 'Enthusiast';
@@ -113,6 +110,6 @@ export interface SearchResultPost {
 export type SearchResult = SearchResultUser | SearchResultPost;
 
 export interface MainFeedProps {
-  industries: number[];
+  industries: Industry[];
   initialReelId?: number;
 }

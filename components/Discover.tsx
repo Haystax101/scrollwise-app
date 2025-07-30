@@ -3,9 +3,8 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Activi
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
-import { useIndustries } from '../context/IndustriesContext';
+import { useIndustries, Industry } from '../context/IndustriesContext'; // Import Industry type
 import { searchArticles, getSearchSuggestions, SearchResult, SearchFilters } from '../lib/searchService';
-import { industryIdToName } from '../lib/industryMap';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -26,7 +25,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export const Discover: React.FC = () => {
   const { colors, isDark } = useTheme();
-  const { industries } = useIndustries();
+  const { allIndustries } = useIndustries(); // Use allIndustries from the context
   const router = useRouter();
   
   // Search state
@@ -34,13 +33,19 @@ export const Discover: React.FC = () => {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedIndustry, setSelectedIndustry] = useState<number | null>(null);
+  const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null); // Changed to string for UUID
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   
   // Debounce search query for better performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // Get the name of an industry from its ID
+  const getIndustryName = (id: string) => {
+    const industry = allIndustries.find(ind => ind.id === id);
+    return industry ? industry.name : 'General';
+  };
 
   // Perform search when debounced query changes
   useEffect(() => {
@@ -177,7 +182,7 @@ export const Discover: React.FC = () => {
         </View>
                  {item.industry_id && (
            <Text style={dynamicStyles.industryTag}>
-             {industryIdToName[item.industry_id] || 'General'}
+             {getIndustryName(item.industry_id)}
            </Text>
          )}
       </View>
@@ -461,13 +466,13 @@ export const Discover: React.FC = () => {
           >
             <Text style={[dynamicStyles.categoryText, selectedIndustry === null ? dynamicStyles.activeCategoryText : dynamicStyles.inactiveCategoryText]}>All</Text>
           </TouchableOpacity>
-          {industries.map((industryId) => (
+          {allIndustries.map((industry) => (
             <TouchableOpacity
-              key={industryId}
-              style={[dynamicStyles.categoryPill, selectedIndustry === industryId ? dynamicStyles.activeCategory : dynamicStyles.inactiveCategory]}
-              onPress={() => setSelectedIndustry(industryId)}
+              key={industry.id}
+              style={[dynamicStyles.categoryPill, selectedIndustry === industry.id ? dynamicStyles.activeCategory : dynamicStyles.inactiveCategory]}
+              onPress={() => setSelectedIndustry(industry.id)}
             >
-              <Text style={[dynamicStyles.categoryText, selectedIndustry === industryId ? dynamicStyles.activeCategoryText : dynamicStyles.inactiveCategoryText]}>{industryIdToName[industryId]}</Text>
+              <Text style={[dynamicStyles.categoryText, selectedIndustry === industry.id ? dynamicStyles.activeCategoryText : dynamicStyles.inactiveCategoryText]}>{industry.name}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>

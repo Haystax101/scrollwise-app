@@ -1,180 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, FlatList, StyleSheet, Image, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React from 'react';
+import { View, Text, TextInput, FlatList, StyleSheet, Image, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { Feather } from '@expo/vector-icons';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../context/AuthContext';
 
-interface ChatMessage {
-  id: string;
-  content: string;
-  sender_id: string;
-  created_at: string;
-}
-
-interface OtherUser {
-  full_name: string;
-  avatar_url: string;
-}
+const dummyMessages = [
+  { id: '1', text: 'Hey, how are you?', sender: 'John Doe', timestamp: '10:00 AM' },
+  { id: '2', text: 'I am good, thanks! How about you?', sender: 'Me', timestamp: '10:01 AM' },
+  { id: '3', text: 'Doing great! Are we still on for tomorrow?', sender: 'John Doe', timestamp: '10:01 AM' },
+  { id: '4', text: 'Yes, absolutely!', sender: 'Me', timestamp: '10:02 AM' },
+];
 
 const ChatDetailScreen = () => {
-  const { id: chatId } = useLocalSearchParams();
-  const { user } = useAuth();
+  const { id } = useLocalSearchParams();
   const { colors, isDark } = useTheme();
   const router = useRouter();
-
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [newMessage, setNewMessage] = useState('');
-  const [otherUser, setOtherUser] = useState<OtherUser | null>(null);
-
-  // Helper to detect and label insight messages
-  const formatMessageContent = (content: string) => {
-    if (content.startsWith('[INSIGHT]')) {
-      return <Text><Text style={{ fontWeight: 'bold', color: colors.primary }}>[INSIGHT]</Text> {content.replace(/^\[INSIGHT\]\s*/, '')}</Text>;
-    }
-    return content;
-  };
-
-  const fetchChatInfo = useCallback(async () => {
-    if (!chatId || !user) return;
-
-    // Fetch chat participants
-    const { data: chatData, error: chatError } = await supabase
-      .from('chats')
-      .select('participant_ids')
-      .eq('id', Array.isArray(chatId) ? chatId[0] : chatId)
-      .single();
-
-    if (chatError || !chatData) {
-      // Handle error or no chat found
-      setLoading(false);
-      return;
-    }
-
-    // Identify the other user
-    const otherUserId = chatData.participant_ids.find((id: string) => id !== user.id);
-    if (otherUserId) {
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url')
-        .eq('id', otherUserId)
-        .single();
-      if (!userError) {
-        setOtherUser(userData);
-      }
-    }
-
-    // Fetch messages
-    const { data: messageData, error: messageError } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('chat_id', Array.isArray(chatId) ? chatId[0] : chatId)
-      .order('created_at', { ascending: false });
-
-    if (!messageError) {
-      setMessages(messageData);
-    }
-    setLoading(false);
-  }, [chatId, user]);
-
-  useEffect(() => {
-    fetchChatInfo();
-
-    console.log('Setting up Supabase Realtime subscription for chat:', chatId);
-    const channel = supabase
-      .channel(`chat:${chatId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `chat_id=eq.${Array.isArray(chatId) ? chatId[0] : chatId}`,
-        },
-        (payload) => {
-          console.log('Realtime payload received:', payload);
-          setMessages((currentMessages) => [payload.new as ChatMessage, ...currentMessages]);
-        }
-      )
-      .subscribe((status) => {
-        console.log('Subscription status:', status);
-      });
-
-    return () => {
-      console.log('Removing Supabase Realtime subscription for chat:', chatId);
-      supabase.removeChannel(channel);
-    };
-  }, [chatId, fetchChatInfo]);
-
-  const handleSend = async () => {
-    console.log('Send pressed:', { newMessage, user });
-    if (newMessage.trim() === '' || !user) {
-      console.log('Message is empty or user is not defined.');
-      return;
-    }
-
-    const chat_id_val = Array.isArray(chatId) ? chatId[0] : chatId;
-    console.log('Attempting to insert message:', {
-      chat_id: chat_id_val,
-      sender_id: user.id,
-      content: newMessage.trim(),
-    });
-
-    // Optimistically add message to UI
-    const optimisticMessage: ChatMessage = {
-      id: `optimistic-${Date.now()}`,
-      content: newMessage.trim(),
-      sender_id: user.id,
-      created_at: new Date().toISOString(),
-    };
-    setMessages((msgs) => [optimisticMessage, ...msgs]);
-
-    const { error } = await supabase
-      .from('chat_messages')
-      .insert({
-        chat_id: chat_id_val,
-        sender_id: user.id,
-        content: newMessage.trim(),
-      });
-
-    if (error) {
-      console.log('Error inserting message:', error);
-      // Remove optimistic message if failed
-      setMessages((msgs) => msgs.filter((m) => m.id !== optimisticMessage.id));
-    } else {
-      console.log('Message sent successfully.');
-    }
-    setNewMessage('');
-  };
-
-  const renderItem = ({ item }: { item: ChatMessage }) => {
-    const isMyMessage = item.sender_id === user?.id;
-    return (
-      <View style={[styles.messageRow, { justifyContent: isMyMessage ? 'flex-end' : 'flex-start' }]}> 
-        <View>
-          <View style={[styles.messageContainer, isMyMessage ? styles.myMessage : styles.theirMessage]}>
-            <Text style={[styles.messageText, isMyMessage ? styles.myMessageText : styles.theirMessageText]}>
-              {typeof item.content === 'string' ? formatMessageContent(item.content) : item.content}
-            </Text>
-          </View>
-          <Text style={[styles.timestamp, isMyMessage ? styles.myTimestamp : styles.theirTimestamp]}>
-            {new Date(item.created_at).toLocaleString()}
-          </Text>
-        </View>
-      </View>
-    );
-  };
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
 
   const styles = StyleSheet.create({
     container: {
@@ -274,37 +115,50 @@ const ChatDetailScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
+      <KeyboardAvoidingView 
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -500}
       >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Feather name="chevron-down" size={28} color={colors.text} />
           </TouchableOpacity>
-          <Image
-            source={{ uri: otherUser?.avatar_url || `https://randomuser.me/api/portraits/men/${chatId}.jpg` }}
-            style={styles.avatar}
-          />
-          <Text style={styles.userName}>{otherUser?.full_name || 'Chat'}</Text>
+          <Image source={{ uri: `https://randomuser.me/api/portraits/men/${id}.jpg` }} style={styles.avatar} />
+          <Text style={styles.userName}>John Doe</Text>
         </View>
         <FlatList
-          data={messages}
+          data={dummyMessages}
           keyExtractor={(item) => item.id}
-          renderItem={renderItem}
+          renderItem={({ item }) => (
+            <View style={[styles.messageRow, { justifyContent: item.sender === 'Me' ? 'flex-end' : 'flex-start' }]}>
+              <View>
+                <View style={[
+                  styles.messageContainer,
+                  item.sender === 'Me' ? styles.myMessage : styles.theirMessage
+                ]}>
+                  <Text style={[
+                    styles.messageText,
+                    item.sender === 'Me' ? styles.myMessageText : styles.theirMessageText
+                  ]}>
+                    {item.text}
+                  </Text>
+                </View>
+                <Text style={[styles.timestamp, item.sender === 'Me' ? styles.myTimestamp : styles.theirTimestamp]}>
+                  {item.timestamp}
+                </Text>
+              </View>
+            </View>
+          )}
           contentContainerStyle={styles.messageList}
-          inverted
         />
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
             placeholder="Type a message..."
             placeholderTextColor={colors.inputPlaceholder}
-            value={newMessage}
-            onChangeText={setNewMessage}
           />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
+          <TouchableOpacity style={styles.sendButton}>
             <Feather name="send" size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>

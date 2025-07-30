@@ -4,7 +4,6 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { industryIdToName } from '../lib/industryMap';
 import { useRouter } from 'expo-router';
 import SettingsModal from './SettingsModal';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -48,7 +47,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
   const { colors, isDark } = useTheme();
   const [userData, setUserData] = useState<UserData>(defaultUserData);
   const [fullName, setFullName] = useState<string>(defaultUserData.name);
-  const [interests, setInterests] = useState<number[]>([]);
+  const [interests, setInterests] = useState<string[]>([]);
   const [learningStats, setLearningStats] = useState<LearningStats>(defaultLearningStats);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
@@ -98,7 +97,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       // Fetch profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('full_name, email, created_at, interests')
+        .select('full_name, email, created_at')
         .eq('id', currentUser.id)
         .single();
 
@@ -106,7 +105,6 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
         console.error('Error fetching profile:', profileError);
       } else if (profileData) {
         setFullName(profileData.full_name || defaultUserData.name);
-        setInterests(profileData.interests || defaultUserData.interests);
         setUserData((prev) => ({
           ...prev,
           name: profileData.full_name || defaultUserData.name,
@@ -117,13 +115,25 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
         }));
       }
 
+      // Fetch user interests
+      const { data: industriesData, error: industriesError } = await supabase
+        .from('user_industries')
+        .select('industries (name)')
+        .eq('user_id', currentUser.id);
+
+      if (industriesError) {
+        console.error('Error fetching user industries:', industriesError);
+      } else if (industriesData) {
+        setInterests(industriesData.map((i: any) => i.industries.name));
+      }
+
       // Fetch saved reels for this user
       const userId = currentUser.id;
       if (userId) {
         // Join article_saves and articles to get saved content
         const { data: savedRows, error: savedError } = await supabase
           .from('article_saves')
-          .select('article_id, created_at, articles (id, title, type, created_at)')
+          .select('articles (*)')
           .eq('user_id', userId)
           .order('created_at', { ascending: false });
         if (!savedError && savedRows) {
@@ -273,9 +283,9 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
         <View style={dynamicStyles.interestContainer}>
           <Text style={dynamicStyles.interestTitle}>Interests</Text>
           <View style={dynamicStyles.interestTagContainer}>
-            {interests.map((id) => (
-              <View key={id} style={dynamicStyles.interestTag}>
-                <Text style={dynamicStyles.interestText}>{industryIdToName[id]}</Text>
+            {interests.map((interest) => (
+              <View key={interest} style={dynamicStyles.interestTag}>
+                <Text style={dynamicStyles.interestText}>{interest}</Text>
               </View>
             ))}
           </View>

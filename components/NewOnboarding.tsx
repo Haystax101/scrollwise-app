@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { supabase } from '../lib/supabase';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import EducationBackgroundStep from './EducationBackgroundStep';
 import IndustryStep from './IndustryStep';
@@ -53,10 +54,23 @@ const NewOnboarding: React.FC<NewOnboardingProps> = ({ onComplete }) => {
     }));
   };
 
-  const handleSubmit = () => {
-    // This function will be implemented later to send all data to Supabase
-    console.log('Submitting onboarding data:', onboardingData);
-    onComplete();
+  const handleSubmit = async () => {
+    try {
+      // You may want to transform onboardingData to match your edge function's expected payload
+      const { data, error } = await supabase.functions.invoke('onboarding', {
+        body: JSON.stringify(onboardingData),
+      });
+      if (error) {
+        console.error('Onboarding function error:', error);
+        alert('There was an error submitting your onboarding data.');
+        return;
+      }
+      console.log('Onboarding function response:', data);
+      onComplete();
+    } catch (err) {
+      console.error('Onboarding submission failed:', err);
+      alert('There was an error submitting your onboarding data.');
+    }
   };
 
   const renderStep = () => {
