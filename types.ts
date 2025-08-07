@@ -11,11 +11,14 @@ export interface User {
 export interface Industry {
   id: string; // Changed to string for UUID
   name: string;
+  description?: string;
+  icon_name?: string;
+  color?: string;
 }
 
 export type ExperienceLevel = 'Student' | 'Working Professional' | 'Researcher' | 'Enthusiast';
 
-export type ContentType = 'research' | 'book' | 'news' | 'article' | 'insight';
+export type ContentType = 'paper' | 'book' | 'article' | 'insight';
 
 export interface InsightAuthor {
   name: string;
@@ -34,11 +37,55 @@ export interface Insight {
   id: string;
   type: 'insight';
   content: string;
-  author_id: string;
-  author_name: string;
-  author_avatar: string;
+  author: InsightAuthor;
+  title: string;
+  site_name?: string;
+  industry_id?: string;
+  likes_count?: number;
+  saves_count?: number;
+  comments_count?: number;
+  views_count?: number;
+  created_at?: string;
+  link?: string;
 }
 
+// Base interface for all content types
+export interface BaseContent {
+  id: number;
+  title: string;
+  link: string;
+  created_at: string;
+  date?: string;
+  site_name?: string;
+  industry_id: string; // UUID
+  likes_count: number;
+  saves_count: number;
+  comments_count: number;
+  views_count: number;
+}
+
+export interface Article extends BaseContent {
+  type: 'article';
+  summary: string;
+  author?: string;
+}
+
+export interface Paper extends BaseContent {
+  type: 'paper';
+  content_simple: string;
+  content_complex: string;
+  authors: string[];
+}
+
+export interface Book extends BaseContent {
+  type: 'book';
+  author: string;
+  year?: number;
+  short_summary: string;
+  key_insights?: string[];
+}
+
+// Legacy Video interface for backward compatibility
 export interface Video {
   id: number;
   title: string;
@@ -56,7 +103,7 @@ export interface Video {
   created_at: string;
   date: string;
   file_name?: string;
-  industry_id: number;
+  industry_id: string; // Changed to string for UUID
   likes_count: number;
   saves_count: number;
   comments_count: number;
@@ -65,8 +112,7 @@ export interface Video {
   question?: string;
 }
 
-export type Article = Video;
-export type FeedItem = Article | Insight;
+export type FeedItem = Article | Paper | Book | Insight;
 
 export interface SavedContentItem {
   id: number;

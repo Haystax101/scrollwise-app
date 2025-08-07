@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Dimensions, StyleSheet, RefreshControl } from 'react-native';
-import { VideoCard } from './VideoCard';
+import { ArticleCard } from './ArticleCard';
+import { PaperCard } from './PaperCard';
+import { BookCard } from './BookCard';
 import InsightCard from './InsightCard';
-import type { Article, Insight, FeedItem } from '../types';
+import type { Article, Insight, FeedItem, Industry, Paper, Book } from '../types';
 import { FeedAlgorithm } from '../lib/feedAlgorithm';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -58,10 +60,10 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       
       // If we have an initialArticleId (from saved post), fetch that specific article first
       if (initialArticleId) {
-        const specificArticle = await feedAlgorithmRef.current.fetchSpecificArticle(initialArticleId);
+        const specificArticle = await feedAlgorithmRef.current.fetchSpecificContent(initialArticleId, 'article');
         
         if (specificArticle) {
-          newArticles.push(specificArticle);
+          newArticles.push(specificArticle as Article);
           setCurrentArticleIndex(0); // Start viewing the specific article
         }
       }
@@ -93,10 +95,19 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
           .map((item: any) => ({
             id: item.id,
             type: 'insight',
+            title: item.content.substring(0, 50) + (item.content.length > 50 ? '...' : ''), // Add a title
             content: item.content,
-            author_id: item.author_id,
-            author_name: item.author.full_name,
-            author_avatar: item.author.avatar_url,
+            author: {
+              name: item.author.full_name,
+              handle: item.author.full_name.toLowerCase().replace(/\s/g, ''),
+              avatar: item.author.avatar_url,
+              role: 'Software Engineer',
+              company: 'Google',
+              industry: 'Technology',
+              location: 'Mountain View, CA',
+              currentProject: 'Gemini',
+              projectTags: ['AI', 'Machine Learning'],
+            },
           }));
         
         // Combine insights and articles, with insights at the top
@@ -177,17 +188,17 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       
       // If we have an initialArticleId, fetch it first again (in case it was updated)
       if (initialArticleId) {
-        const specificArticle = await feedAlgorithmRef.current.fetchSpecificArticle(initialArticleId);
+        const specificArticle = await feedAlgorithmRef.current.fetchSpecificContent(initialArticleId, 'article');
         
         if (specificArticle) {
-          newArticles.push(specificArticle);
+          newArticles.push(specificArticle as Article);
         }
       }
       
       // Load additional fresh articles
       const remainingCount = initialArticleId ? 2 : 3;
       const algorithmArticles = await feedAlgorithmRef.current.fetchArticles(remainingCount);
-      newArticles = [...newArticles, ...algorithmArticles];
+      newArticles = [...newArticles, ...algorithmArticles] as Article[];
       
       setArticles(newArticles);
       setHasMore(true); // Always assume more after refresh
@@ -241,7 +252,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   // Update comment count in real time
   const handleCommentsCountChange = useCallback((count: number) => {
     if (commentsArticleId == null) return;
-    setArticles((prev) => prev.map(article => article.id === commentsArticleId ? { ...article, comments: count } : article));
+    setArticles((prev) => prev.map(article => article.id === commentsArticleId ? { ...article, comments_count: count } : article));
   }, [commentsArticleId]);
 
   // Track user interactions for the algorithm
@@ -253,25 +264,39 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
 
   // Memoized render item function - now with conditional rendering
   const renderItem = useCallback(({ item, index }: { item: FeedItem; index: number }) => {
-    if (item.type === 'insight') {
-      const insightProps = {
-        id: String(item.id),
-        content: (item as Insight).content,
-        author_id: (item as Insight).author_id,
-        author_name: (item as Insight).author_name,
-        author_avatar: (item as Insight).author_avatar,
-      };
-      return <InsightCard insight={insightProps} />;
+    switch (item.type) {
+      case 'insight':
+        return <InsightCard insight={item as Insight} />;
+      case 'article':
+        return (
+          <ArticleCard
+            article={item as Article}
+            isActive={index === currentArticleIndex}
+            onOpenComments={handleOpenComments}
+            onUserInteraction={handleUserInteraction}
+          />
+        );
+      case 'paper':
+        return (
+          <PaperCard
+            paper={item as Paper}
+            isActive={index === currentArticleIndex}
+            onOpenComments={handleOpenComments}
+            onUserInteraction={handleUserInteraction}
+          />
+        );
+      case 'book':
+        return (
+          <BookCard
+            book={item as Book}
+            isActive={index === currentArticleIndex}
+            onOpenComments={handleOpenComments}
+            onUserInteraction={handleUserInteraction}
+          />
+        );
+      default:
+        return null;
     }
-
-    return (
-      <VideoCard
-        video={item as Article}
-        isActive={index === currentArticleIndex}
-        onOpenComments={handleOpenComments}
-        onUserInteraction={handleUserInteraction}
-      />
-    );
   }, [currentArticleIndex, handleOpenComments, handleUserInteraction]);
 
   // Memoized key extractor
@@ -393,6 +418,11 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         visible={!!commentsArticleId}
         onClose={handleCloseComments}
         onCommentsCountChange={handleCommentsCountChange}
+        contentType={
+          commentsArticleId 
+            ? (articles.find(article => article.id === commentsArticleId)?.type as 'article' | 'paper' | 'book') || 'article'
+            : 'article'
+        }
       />
     </>
   );

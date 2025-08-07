@@ -34,24 +34,7 @@ export const SignIn: React.FC<SignInProps> = ({ onSignIn, onSwitchToSignUp }) =>
       } else if (!data.session) {
         Alert.alert('Sign in failed.');
       } else {
-        // Check if user has completed their profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('interests, experience')
-          .eq('id', data.user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-          // If profile doesn't exist or error, assume they need onboarding
-          onSignIn({ email, name: 'Demo User' });
-        } else if (!profileData || !profileData.interests || !profileData.experience) {
-          // User needs to complete onboarding
-          onSignIn({ email, name: 'Demo User' });
-        } else {
-          // User has completed profile, proceed normally
-          onSignIn({ email, name: 'Demo User' });
-        }
+        onSignIn({ email, name: 'Demo User' });
       }
     } catch (e) {
       Alert.alert('An unexpected error occurred.');

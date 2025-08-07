@@ -127,16 +127,19 @@ export const Discover: React.FC = () => {
     }
   };
 
-  const formatAuthors = (authors: string[], siteName?: string) => {
+  const formatAuthors = (authors?: string[] | string, siteName?: string) => {
     if (!authors || authors.length === 0) {
       if (siteName) {
         return `From ${siteName}`;
       }
       return 'By Unknown Author';
     }
-    if (authors.length === 1) return `By ${authors[0]}`;
-    if (authors.length === 2) return `By ${authors[0]} & ${authors[1]}`;
-    return `By ${authors[0]} et al.`;
+    if (Array.isArray(authors)) {
+      if (authors.length === 1) return `By ${authors[0]}`;
+      if (authors.length === 2) return `By ${authors[0]} & ${authors[1]}`;
+      return `By ${authors[0]} et al.`;
+    }
+    return `By ${authors}`;
   };
 
   const truncateText = (text: string, maxLength: number) => {
@@ -160,6 +163,19 @@ export const Discover: React.FC = () => {
       return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
     } catch {
       return 'Unknown date';
+    }
+  };
+
+  const getResultContent = (item: SearchResult) => {
+    switch (item.type) {
+      case 'article':
+        return item.summary || '';
+      case 'paper':
+        return item.content_simple || '';
+      case 'book':
+        return item.short_summary || '';
+      default:
+        return '';
     }
   };
 
@@ -196,7 +212,7 @@ export const Discover: React.FC = () => {
       </Text>
       
       <Text style={dynamicStyles.resultContent} numberOfLines={3}>
-        {truncateText(item.content, 150)}
+        {truncateText(getResultContent(item), 150)}
       </Text>
       
       <View style={styles.resultFooter}>
@@ -219,7 +235,7 @@ export const Discover: React.FC = () => {
           </View>
           <View style={styles.stat}>
             <Feather name="calendar" size={14} color={colors.textTertiary} />
-            <Text style={dynamicStyles.statText}>{formatDate(item.created_at)}</Text>
+            <Text style={dynamicStyles.statText}>{formatDate(item.created_at || '')}</Text>
           </View>
         </View>
         {item.rank && (

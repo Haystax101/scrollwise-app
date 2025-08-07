@@ -173,7 +173,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
             )}
 
             <View style={dynamicStyles.insightCard}>
-              <Text style={dynamicStyles.insightBody}>"{insight.body}"</Text>
+              <Text style={dynamicStyles.insightBody}>"{insight.content}"</Text>
             </View>
 
             <View style={dynamicStyles.inputContainer}>

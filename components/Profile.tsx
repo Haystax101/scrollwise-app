@@ -69,7 +69,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       
       // Use the comprehensive stats function for better performance
       const { data: statsData, error: statsError } = await supabase
-        .rpc('get_user_learning_stats', { user_id_param: userId });
+        .rpc('get_user_stats', { user_id_param: userId });
 
       if (statsError) {
         console.error('Error fetching learning stats:', statsError);
@@ -127,32 +127,63 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
         setInterests(industriesData.map((i: any) => i.industries.name));
       }
 
-      // Fetch saved reels for this user
       const userId = currentUser.id;
-      if (userId) {
-        // Join article_saves and articles to get saved content
-        const { data: savedRows, error: savedError } = await supabase
-          .from('article_saves')
-          .select('articles (*)')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
-        if (!savedError && savedRows) {
-          const savedContent: SavedContentItem[] = savedRows.map((row: any) => {
-            const article = row.articles;
-            return {
-              id: article?.id,
-              title: article?.title || 'Untitled',
-              type: article?.type || 'unknown',
-              date: article?.created_at
-                ? new Date(article.created_at).toLocaleDateString()
-                : '',
-            };
-          });
-          setUserData((prev) => ({ ...prev, savedContent }));
-        }
-        // Fetch learning stats
-        await fetchLearningStats(userId);
+
+      // Fetch saved content from all three tables
+      const [savedArticles, savedPapers, savedBooks] = await Promise.all([
+        supabase.from('article_saves').select('articles(*)')
+          .eq('user_id', userId).order('created_at', { ascending: false }),
+        supabase.from('paper_saves').select('papers(*)')
+          .eq('user_id', userId).order('created_at', { ascending: false }),
+        supabase.from('book_saves').select('books(*)')
+          .eq('user_id', userId).order('created_at', { ascending: false }),
+      ]);
+
+      const savedContent: SavedContentItem[] = [];
+
+      if (savedArticles.data) {
+        savedContent.push(...savedArticles.data.map((row: any) => {
+          const item = row.articles;
+          return {
+            id: item?.id,
+            title: item?.title || 'Untitled',
+            type: 'article',
+            date: item?.created_at ? new Date(item.created_at).toLocaleDateString() : '',
+          };
+        }));
       }
+
+      if (savedPapers.data) {
+        savedContent.push(...savedPapers.data.map((row: any) => {
+          const item = row.papers;
+          return {
+            id: item?.id,
+            title: item?.title || 'Untitled',
+            type: 'paper',
+            date: item?.created_at ? new Date(item.created_at).toLocaleDateString() : '',
+          };
+        }));
+      }
+
+      if (savedBooks.data) {
+        savedContent.push(...savedBooks.data.map((row: any) => {
+          const item = row.books;
+          return {
+            id: item?.id,
+            title: item?.title || 'Untitled',
+            type: 'book',
+            date: item?.created_at ? new Date(item.created_at).toLocaleDateString() : '',
+          };
+        }));
+      }
+
+      // Sort all saved content by date
+      savedContent.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      setUserData((prev) => ({ ...prev, savedContent }));
+      
+      // Fetch learning stats
+      await fetchLearningStats(userId);
     };
     fetchProfileAndSaves();
   }, [currentUser]);

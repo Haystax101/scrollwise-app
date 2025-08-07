@@ -3,71 +3,53 @@ import { supabase } from './supabase';
 export interface SearchResult {
   id: number;
   title: string;
-  content: string;
-  authors: string[];
+  summary?: string; // for articles
+  content_simple?: string; // for papers
+  short_summary?: string; // for books
+  authors?: string[] | string; // papers have array, books/articles have string
   link: string;
-  created_at: string;
-  type: string;
-  industry_id: string; // Changed from number to string for UUID
-  likes_count: number;
-  saves_count: number;
-  comments_count: number;
-  views_count: number;
-  site_name: string;
-  rank: number;
+  type: 'article' | 'paper' | 'book';
+  site_name?: string;
+  date?: string;
+  industry_id?: string;
+  likes_count?: number;
+  saves_count?: number;
+  comments_count?: number;
+  views_count?: number;
+  created_at?: string;
+  rank?: number;
 }
 
 export interface SearchFilters {
-  industryId?: string; // Changed from number to string for UUID
-  type?: string;
+  industryId?: string;
+  type?: 'article' | 'paper' | 'book';
   dateRange?: {
-    start: Date;
-    end: Date;
+    start: string;
+    end: string;
   };
 }
 
-// Main search function using full-text search
 export async function searchArticles(
-  query: string,
+  query: string = '',
   filters: SearchFilters = {},
   page: number = 1,
   limit: number = 20
 ): Promise<{ articles: SearchResult[]; error: string | null; totalCount?: number }> {
-  const offset = (page - 1) * limit;
-
   try {
+    const offset = (page - 1) * limit;
+
+    // If no search query, return recent content with filters
     if (!query.trim()) {
-      // If no search query, return recent articles with filters
-      let queryBuilder = supabase
-        .from('articles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (filters.industryId) {
-        queryBuilder = queryBuilder.eq('industry_id', filters.industryId);
-      }
-
-      if (filters.type) {
-        queryBuilder = queryBuilder.eq('type', filters.type);
-      }
-
-      const { data, error } = await queryBuilder
-        .range(offset, offset + limit - 1);
-
-      if (error) {
-        console.error('Search error:', error);
-        return { articles: [], error: error.message };
-      }
-
-      return { articles: data || [], error: null };
+      return await searchRecentContent(filters, limit, offset);
     }
 
-    // Use the database search function for text queries
-    const { data, error } = await supabase.rpc('search_articles', {
+    // Search across all content types using the search function
+    const { data, error } = await supabase.rpc('search_all_content', {
       search_query: query,
       industry_filter: filters.industryId || null,
-      limit_count: limit,
-      offset_count: offset
+      content_type_filter: filters.type || null,
+      result_limit: limit,
+      result_offset: offset
     });
 
     if (error) {
@@ -75,13 +57,143 @@ export async function searchArticles(
       return { articles: [], error: error.message };
     }
 
-    // Log the search for analytics (optional)
-    await logSearch(query, data?.length || 0);
-
     return { articles: data || [], error: null };
   } catch (error) {
-    console.error('Search error:', error);
+    console.error('Search exception:', error);
     return { articles: [], error: 'An error occurred while searching' };
+  }
+}
+
+/**
+ * Search recent content when no query is provided
+ */
+async function searchRecentContent(
+  filters: SearchFilters,
+  limit: number,
+  offset: number
+): Promise<{ articles: SearchResult[]; error: string | null }> {
+  try {
+    const results: SearchResult[] = [];
+    
+    // Define which tables to search based on filter
+    const tablesToSearch = filters.type 
+      ? [filters.type === 'paper' ? 'papers' : filters.type === 'book' ? 'books' : 'articles']
+      : ['articles', 'papers', 'books'];
+    
+    for (const table of tablesToSearch) {
+      const contentType = table === 'papers' ? 'paper' : table === 'books' ? 'book' : 'article';
+      
+      let query = supabase
+        .from(table)
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (filters.industryId) {
+        query = query.eq('industry_id', filters.industryId);
+      }
+      
+      if (filters.dateRange) {
+        query = query
+          .gte('created_at', filters.dateRange.start)
+          .lte('created_at', filters.dateRange.end);
+      }
+      
+      const { data, error } = await query.limit(Math.ceil(limit / tablesToSearch.length));
+      
+      if (error) {
+        console.error(`Error fetching from ${table}:`, error);
+        continue;
+      }
+      
+      if (data) {
+        const mappedResults = data.map(item => ({
+          ...item,
+          type: contentType,
+          authors: item.authors || (item.author ? [item.author] : [])
+        })) as SearchResult[];
+        
+        results.push(...mappedResults);
+      }
+    }
+    
+    // Sort all results by created_at and apply pagination
+    const sortedResults = results
+      .sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime())
+      .slice(offset, offset + limit);
+    
+    return { articles: sortedResults, error: null };
+  } catch (error) {
+    console.error('Error in searchRecentContent:', error);
+    return { articles: [], error: 'Failed to fetch recent content' };
+  }
+}
+
+/**
+ * Search by industry
+ */
+export async function searchByIndustry(
+  industryId: string,
+  limit: number = 10
+): Promise<{ articles: SearchResult[]; error: string | null }> {
+  return searchArticles('', { industryId }, 1, limit);
+}
+
+/**
+ * Search by content type
+ */
+export async function searchByType(
+  type: 'article' | 'paper' | 'book',
+  query?: string,
+  limit: number = 10
+): Promise<{ articles: SearchResult[]; error: string | null }> {
+  return searchArticles(query || '', { type }, 1, limit);
+}
+
+/**
+ * Advanced search with multiple filters
+ */
+export async function advancedSearch(
+  query: string,
+  filters: SearchFilters & {
+    minLikes?: number;
+    minSaves?: number;
+    minViews?: number;
+  },
+  page: number = 1,
+  limit: number = 20
+): Promise<{ articles: SearchResult[]; error: string | null }> {
+  try {
+    const { articles, error } = await searchArticles(query, filters, page, limit);
+
+    if (error || !articles) {
+      return { articles: [], error };
+    }
+
+    // Apply additional filters
+    let filteredArticles = articles;
+
+    if (filters.minLikes !== undefined) {
+      filteredArticles = filteredArticles.filter(article =>
+        (article.likes_count || 0) >= filters.minLikes!
+      );
+    }
+
+    if (filters.minSaves !== undefined) {
+      filteredArticles = filteredArticles.filter(article =>
+        (article.saves_count || 0) >= filters.minSaves!
+      );
+    }
+
+    if (filters.minViews !== undefined) {
+      filteredArticles = filteredArticles.filter(article =>
+        (article.views_count || 0) >= filters.minViews!
+      );
+    }
+
+    return { articles: filteredArticles, error: null };
+  } catch (error) {
+    console.error('Advanced search failed:', error);
+    return { articles: [], error: 'Advanced search failed' };
   }
 }
 
@@ -139,81 +251,6 @@ export async function getPopularSearches(
   } catch (error) {
     console.error('Popular searches error:', error);
     return { searches: [], error: null };
-  }
-}
-
-// Search within a specific industry
-export async function searchByIndustry(
-  industryId: string, // Changed from number to string
-  query?: string,
-  limit: number = 20
-): Promise<{ articles: SearchResult[]; error: string | null }> {
-  return searchArticles(query || '', { industryId }, 1, limit);
-}
-
-// Search by article type (research, book, article, etc.)
-export async function searchByType(
-  type: string,
-  query?: string,
-  limit: number = 20
-): Promise<{ articles: SearchResult[]; error: string | null }> {
-  return searchArticles(query || '', { type }, 1, limit);
-}
-
-// Advanced search with multiple filters
-export async function advancedSearch(
-  query: string,
-  filters: SearchFilters & {
-    authorName?: string;
-    minLikes?: number;
-    minSaves?: number;
-  },
-  page: number = 1,
-  limit: number = 20
-): Promise<{ articles: SearchResult[]; error: string | null }> {
-  try {
-    // Start with basic search
-    const { articles, error } = await searchArticles(query, filters, page, limit);
-    
-    if (error || !articles) {
-      return { articles: [], error };
-    }
-
-    // Apply additional client-side filters
-    let filteredArticles = articles;
-
-    if (filters.authorName) {
-      filteredArticles = filteredArticles.filter(article =>
-        article.authors.some(author =>
-          author.toLowerCase().includes(filters.authorName!.toLowerCase())
-        )
-      );
-    }
-
-    if (filters.minLikes) {
-      filteredArticles = filteredArticles.filter(article =>
-        article.likes_count >= filters.minLikes!
-      );
-    }
-
-    if (filters.minSaves) {
-      filteredArticles = filteredArticles.filter(article =>
-        article.saves_count >= filters.minSaves!
-      );
-    }
-
-    if (filters.dateRange) {
-      filteredArticles = filteredArticles.filter(article => {
-        const articleDate = new Date(article.created_at);
-        return articleDate >= filters.dateRange!.start && 
-               articleDate <= filters.dateRange!.end;
-      });
-    }
-
-    return { articles: filteredArticles, error: null };
-  } catch (error) {
-    console.error('Advanced search error:', error);
-    return { articles: [], error: 'Advanced search failed' };
   }
 }
 

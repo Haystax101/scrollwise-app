@@ -1,12 +1,10 @@
 import { supabase } from './supabase';
-import type { Article, Industry } from '../types'; // Assuming Industry type is in types.ts
+import type { FeedItem, Article, Paper, Book, Industry } from '../types';
 
-export interface FetchedArticle {
+export interface FetchedContent {
   id: number;
   type: 'paper' | 'book' | 'article';
   title: string;
-  content: string;
-  authors: string[];
   link: string;
   industry_id: string;
   likes_count: number;
@@ -14,10 +12,21 @@ export interface FetchedArticle {
   comments_count: number;
   views_count: number;
   created_at: string;
+  date?: string;
+  site_name?: string;
+  // Type-specific fields
+  summary?: string; // article
+  author?: string; // article, book
+  content_simple?: string; // paper
+  content_complex?: string; // paper
+  authors?: string[]; // paper
+  year?: number; // book
+  short_summary?: string; // book
+  key_insights?: string[]; // book
 }
 
 export interface FeedState {
-  articles: Article[];
+  articles: FeedItem[];
   fetchedArticleIds: Set<number>;
   likedArticleIds: Set<number>;
   savedArticleIds: Set<number>;
@@ -29,19 +38,19 @@ export interface FeedState {
 export class FeedAlgorithm {
   private userId: string;
   private userIndustries: string[];
-  private allIndustries: Industry[]; // Add this
+  private allIndustries: Industry[];
   private fetchedIds: Set<number> = new Set();
   private likedIds: Set<number> = new Set();
   private savedIds: Set<number> = new Set();
 
-  constructor(userId: string, userIndustries: string[], allIndustries: Industry[]) { // Add this
+  constructor(userId: string, userIndustries: string[], allIndustries: Industry[]) {
     this.userId = userId;
     this.userIndustries = userIndustries;
-    this.allIndustries = allIndustries; // Add this
+    this.allIndustries = allIndustries;
   }
 
   /**
-   * Initialize user interaction data (liked and saved articles)
+   * Initialize user interaction data (liked and saved content)
    */
   async initializeUserInteractions(): Promise<void> {
     if (!this.userId) {
@@ -50,27 +59,59 @@ export class FeedAlgorithm {
 
     try {
       // Fetch user's liked articles
-      const { data: likedData, error: likedError } = await supabase
+      const { data: likedArticles, error: likedArticlesError } = await supabase
         .from('article_likes')
         .select('article_id')
         .eq('user_id', this.userId);
       
-      if (likedError) {
-        console.error('Error fetching liked articles:', likedError);
+      // Fetch user's liked papers
+      const { data: likedPapers, error: likedPapersError } = await supabase
+        .from('paper_likes')
+        .select('paper_id')
+        .eq('user_id', this.userId);
+      
+      // Fetch user's liked books
+      const { data: likedBooks, error: likedBooksError } = await supabase
+        .from('book_likes')
+        .select('book_id')
+        .eq('user_id', this.userId);
+
+      if (likedArticlesError || likedPapersError || likedBooksError) {
+        console.error('Error fetching liked content:', { likedArticlesError, likedPapersError, likedBooksError });
       } else {
-        this.likedIds = new Set(likedData?.map(item => item.article_id) || []);
+        const allLikedIds = [
+          ...(likedArticles?.map(item => item.article_id) || []),
+          ...(likedPapers?.map(item => item.paper_id) || []),
+          ...(likedBooks?.map(item => item.book_id) || [])
+        ];
+        this.likedIds = new Set(allLikedIds);
       }
 
-      // Fetch user's saved articles
-      const { data: savedData, error: savedError } = await supabase
+      // Fetch user's saved content
+      const { data: savedArticles, error: savedArticlesError } = await supabase
         .from('article_saves')
         .select('article_id')
         .eq('user_id', this.userId);
       
-      if (savedError) {
-        console.error('Error fetching saved articles:', savedError);
+      const { data: savedPapers, error: savedPapersError } = await supabase
+        .from('paper_saves')
+        .select('paper_id')
+        .eq('user_id', this.userId);
+      
+      const { data: savedBooks, error: savedBooksError } = await supabase
+        .from('book_saves')
+        .select('book_id')
+        .eq('user_id', this.userId);
+      
+      if (savedArticlesError || savedPapersError || savedBooksError) {
+        console.error('Error fetching saved content:', { savedArticlesError, savedPapersError, savedBooksError });
       } else {
-        this.savedIds = new Set(savedData?.map(item => item.article_id) || []);
+        const allSavedIds = [
+          ...(savedArticles?.map(item => item.article_id) || []),
+          ...(savedPapers?.map(item => item.paper_id) || []),
+          ...(savedBooks?.map(item => item.book_id) || [])
+        ];
+        this.savedIds = new Set(allSavedIds);
       }
     } catch (error) {
       console.error('Error in initializeUserInteractions:', error);
@@ -78,84 +119,66 @@ export class FeedAlgorithm {
   }
 
   /**
-   * Core algorithm: For each industry, try to fetch one paper and one article (book/article)
-   * Repeat until we have the desired number of articles
+   * Core algorithm: For each industry, try to fetch one paper, one book, and one article
+   * Repeat until we have the desired number of items
    */
-  async fetchArticles(targetCount: number = 10, excludeInteracted: boolean = true): Promise<Article[]> {
+  async fetchArticles(targetCount: number = 10, excludeInteracted: boolean = true): Promise<FeedItem[]> {
     try {
       await this.initializeUserInteractions();
       
-      const fetchedArticles: FetchedArticle[] = [];
-      const articleTypes: ('paper' | 'book' | 'article')[] = ['paper', 'book', 'article'];
+      const fetchedContent: FetchedContent[] = [];
+      const contentTypes: ('paper' | 'book' | 'article')[] = ['paper', 'book', 'article'];
       
-      // Track which articles we've tried to fetch to avoid infinite loops
+      // Track which items we've tried to fetch to avoid infinite loops
       const attemptedIds = new Set<number>();
       
-      // Continue fetching until we have enough articles
+      // Continue fetching until we have enough content
       let attempts = 0;
       const maxAttempts = 50; // Prevent infinite loops
       
-      while (fetchedArticles.length < targetCount && attempts < maxAttempts) {
+      while (fetchedContent.length < targetCount && attempts < maxAttempts) {
         attempts++;
         
         // Go through each user industry
         for (const industryId of this.userIndustries) {
-          if (fetchedArticles.length >= targetCount) break;
+          if (fetchedContent.length >= targetCount) break;
           
-          // Try to fetch one paper for this industry
-          const paperArticle = await this.fetchArticleByTypeAndIndustry(
-            'paper', 
-            industryId, 
-            excludeInteracted, 
-            attemptedIds
-          );
-          
-          if (paperArticle) {
-            fetchedArticles.push(paperArticle);
-            attemptedIds.add(paperArticle.id);
-            this.fetchedIds.add(paperArticle.id);
-          }
-          
-          if (fetchedArticles.length >= targetCount) break;
-          
-          // Try to fetch one book or article for this industry
-          const nonPaperTypes = articleTypes.filter(type => type !== 'paper');
-          for (const type of nonPaperTypes) {
-            if (fetchedArticles.length >= targetCount) break;
+          // Try to fetch one item of each type for this industry
+          for (const type of contentTypes) {
+            if (fetchedContent.length >= targetCount) break;
             
-            const nonPaperArticle = await this.fetchArticleByTypeAndIndustry(
+            const content = await this.fetchContentByTypeAndIndustry(
               type, 
               industryId, 
               excludeInteracted, 
               attemptedIds
             );
             
-            if (nonPaperArticle) {
-              fetchedArticles.push(nonPaperArticle);
-              attemptedIds.add(nonPaperArticle.id);
-              this.fetchedIds.add(nonPaperArticle.id);
-              break; // Only get one non-paper article per industry per iteration
+            if (content) {
+              fetchedContent.push(content);
+              attemptedIds.add(content.id);
+              this.fetchedIds.add(content.id);
             }
           }
         }
         
         // If we haven't made progress, try with more relaxed constraints
-        if (fetchedArticles.length === 0 && excludeInteracted) {
+        if (fetchedContent.length === 0 && excludeInteracted) {
           return this.fetchArticles(targetCount, false);
         }
         
         // If we're not making progress, break out
-        if (attempts > 10 && fetchedArticles.length === 0) {
+        if (attempts > 10 && fetchedContent.length === 0) {
           break;
         }
       }
       
-      // Randomize the order of articles
-      const shuffledArticles = this.shuffleArray(fetchedArticles);
+      // Randomize the order of content
+      const shuffledContent = this.shuffleArray(fetchedContent);
       
-      // Convert to Article format
-      const articles = shuffledArticles.map(this.mapToArticle);
-      return articles;
+      // Convert to FeedItem format
+      const feedItems = shuffledContent.map(this.mapToFeedItem);
+      return feedItems;
     } catch (error) {
       console.error('Error in fetchArticles:', error);
       return [];
@@ -163,19 +186,20 @@ export class FeedAlgorithm {
   }
 
   /**
-   * Fetch a single article by type and industry, excluding already fetched/interacted articles
+   * Fetch a single content item by type and industry, excluding already fetched/interacted items
    */
-  private async fetchArticleByTypeAndIndustry(
+  private async fetchContentByTypeAndIndustry(
     type: 'paper' | 'book' | 'article',
     industryId: string,
     excludeInteracted: boolean,
     attemptedIds: Set<number>
-  ): Promise<FetchedArticle | null> {
+  ): Promise<FetchedContent | null> {
     try {
+      const tableName = type === 'paper' ? 'papers' : type === 'book' ? 'books' : 'articles';
+      
       let query = supabase
-        .from('articles')
+        .from(tableName)
         .select('*')
-        .eq('type', type)
         .eq('industry_id', industryId)
         .order('created_at', { ascending: false })
         .limit(10); // Get multiple options to choose from
@@ -191,16 +215,16 @@ export class FeedAlgorithm {
         return null;
       }
       
-      // Filter out articles we want to exclude
-      const availableArticles = data.filter(article => {
-        // Always exclude already fetched articles in this session
-        if (this.fetchedIds.has(article.id) || attemptedIds.has(article.id)) {
+      // Filter out content we want to exclude
+      const availableContent = data.filter(item => {
+        // Always exclude already fetched items in this session
+        if (this.fetchedIds.has(item.id) || attemptedIds.has(item.id)) {
           return false;
         }
         
-        // Optionally exclude previously interacted articles
+        // Optionally exclude previously interacted items
         if (excludeInteracted) {
-          if (this.likedIds.has(article.id) || this.savedIds.has(article.id)) {
+          if (this.likedIds.has(item.id) || this.savedIds.has(item.id)) {
             return false;
           }
         }
@@ -208,16 +232,20 @@ export class FeedAlgorithm {
         return true;
       });
 
-      if (availableArticles.length === 0) {
+      if (availableContent.length === 0) {
         return null;
       }
 
-      // Return a random article from available options
-      const randomIndex = Math.floor(Math.random() * availableArticles.length);
-      const selectedArticle = availableArticles[randomIndex];
-      return selectedArticle;
+      // Return a random item from available options
+      const randomIndex = Math.floor(Math.random() * availableContent.length);
+      const selectedItem = availableContent[randomIndex];
+      
+      return {
+        ...selectedItem,
+        type
+      };
     } catch (error) {
-      console.error('Error in fetchArticleByTypeAndIndustry:', error);
+      console.error('Error in fetchContentByTypeAndIndustry:', error);
       return null;
     }
   }
@@ -235,41 +263,71 @@ export class FeedAlgorithm {
   }
 
   /**
-   * Convert FetchedArticle to Article format
+   * Convert FetchedContent to FeedItem format
    */
-  private mapToArticle = (article: FetchedArticle): Article => {
-    const industryName = this.allIndustries.find(ind => ind.id === article.industry_id)?.name || `Industry ${article.industry_id}`;
-    return {
-      id: article.id,
-      type: article.type,
-      title: article.title,
-      caption: '', // No caption in articles table
-      source: article.link,
-      industry: industryName,
-      video_url: undefined, // No video_url in articles table
-      likes: article.likes_count || 0,
-      saves: article.saves_count || 0,
-      comments: article.comments_count || 0,
-      views: article.views_count || 0,
-      content: article.content,
-      authors: article.authors || [],
-      created_at: article.created_at,
+  private mapToFeedItem = (content: FetchedContent): FeedItem => {
+    const baseFields = {
+      id: content.id,
+      title: content.title,
+      link: content.link,
+      created_at: content.created_at,
+      date: content.date,
+      site_name: content.site_name,
+      industry_id: content.industry_id,
+      likes_count: content.likes_count || 0,
+      saves_count: content.saves_count || 0,
+      comments_count: content.comments_count || 0,
+      views_count: content.views_count || 0,
     };
+
+    switch (content.type) {
+      case 'article':
+        return {
+          ...baseFields,
+          type: 'article',
+          summary: content.summary || '',
+          author: content.author,
+        } as Article;
+      
+      case 'paper':
+        return {
+          ...baseFields,
+          type: 'paper',
+          content_simple: content.content_simple || '',
+          content_complex: content.content_complex || '',
+          authors: content.authors || [],
+        } as Paper;
+      
+      case 'book':
+        return {
+          ...baseFields,
+          type: 'book',
+          author: content.author || '',
+          year: content.year,
+          short_summary: content.short_summary || '',
+          key_insights: content.key_insights,
+        } as Book;
+      
+      default:
+        throw new Error(`Unknown content type: ${content.type}`);
+    }
   };
 
   /**
-   * Fetch a specific article by ID (used for saved posts)
+   * Fetch a specific content item by ID and type
    */
-  async fetchSpecificArticle(articleId: number): Promise<Article | null> {
+  async fetchSpecificContent(contentId: number, contentType: 'article' | 'paper' | 'book'): Promise<FeedItem | null> {
     try {
+      const tableName = contentType === 'paper' ? 'papers' : contentType === 'book' ? 'books' : 'articles';
+      
       const { data, error } = await supabase
-        .from('articles')
+        .from(tableName)
         .select('*')
-        .eq('id', articleId)
+        .eq('id', contentId)
         .single();
 
       if (error) {
-        console.error('Database error in fetchSpecificArticle:', error);
+        console.error('Database error in fetchSpecificContent:', error);
         return null;
       }
 
@@ -285,14 +343,34 @@ export class FeedAlgorithm {
       // Add to fetched IDs to avoid duplicates in regular feed
       this.fetchedIds.add(data.id);
       
-      // Convert to Article format
-      const article = this.mapToArticle(data);
+      // Convert to FeedItem format
+      const feedItem = this.mapToFeedItem({
+        ...data,
+        type: contentType
+      });
       
-      return article;
+      return feedItem;
     } catch (error) {
-      console.error('Exception in fetchSpecificArticle:', error);
+      console.error('Exception in fetchSpecificContent:', error);
       return null;
     }
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   */
+  async fetchSpecificArticle(articleId: number): Promise<FeedItem | null> {
+    // Try to fetch from articles table first, then papers, then books
+    const types: ('article' | 'paper' | 'book')[] = ['article', 'paper', 'book'];
+    
+    for (const type of types) {
+      const result = await this.fetchSpecificContent(articleId, type);
+      if (result) {
+        return result;
+      }
+    }
+    
+    return null;
   }
 
   /**
@@ -304,21 +382,21 @@ export class FeedAlgorithm {
   }
 
   /**
-   * Update user interaction tracking when user likes/saves an article
+   * Update user interaction tracking when user likes/saves content
    */
-  updateUserInteraction(articleId: number, action: 'like' | 'save' | 'unlike' | 'unsave'): void {
+  updateUserInteraction(contentId: number, action: 'like' | 'save' | 'unlike' | 'unsave'): void {
     switch (action) {
       case 'like':
-        this.likedIds.add(articleId);
+        this.likedIds.add(contentId);
         break;
       case 'unlike':
-        this.likedIds.delete(articleId);
+        this.likedIds.delete(contentId);
         break;
       case 'save':
-        this.savedIds.add(articleId);
+        this.savedIds.add(contentId);
         break;
       case 'unsave':
-        this.savedIds.delete(articleId);
+        this.savedIds.delete(contentId);
         break;
     }
   }

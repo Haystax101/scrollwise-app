@@ -1,29 +1,60 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Animated, KeyboardAvoidingView, Platform, TextInput, FlatList, TouchableWithoutFeedback, Keyboard, Dimensions } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, TouchableOpacity, Modal, FlatList, TextInput, ActivityIndicator, Animated, Dimensions, Keyboard, Platform, StyleSheet } from 'react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { FontAwesome } from '@expo/vector-icons';
+
+interface Comment {
+  id: number;
+  user_id: string;
+  content: string;
+  created_at: string;
+  author_name?: string;
+}
 
 interface CommentsModalProps {
   videoId: number | null;
   visible: boolean;
   onClose: () => void;
   onCommentsCountChange?: (count: number) => void;
+  contentType?: 'article' | 'paper' | 'book'; // Add content type prop
 }
 
-interface Comment {
-  id: number;
-  user_id: string;
-  article_id: number;
-  content: string;
-  created_at: string;
-  author_name?: string;
-}
+// Helper function to get table names based on content type
+const getCommentTableInfo = (contentType: 'article' | 'paper' | 'book' = 'article') => {
+  switch (contentType) {
+    case 'paper':
+      return { 
+        commentTable: 'paper_comments', 
+        contentTable: 'papers',
+        idField: 'paper_id'
+      };
+    case 'book':
+      return { 
+        commentTable: 'book_comments', 
+        contentTable: 'books',
+        idField: 'book_id'
+      };
+    case 'article':
+    default:
+      return { 
+        commentTable: 'comments', 
+        contentTable: 'articles',
+        idField: 'article_id'
+      };
+  }
+};
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, onClose, onCommentsCountChange }) => {
+export const CommentsModal: React.FC<CommentsModalProps> = ({ 
+  videoId, 
+  visible, 
+  onClose, 
+  onCommentsCountChange, 
+  contentType = 'article' 
+}) => {
   const { user } = useAuth();
   const { colors } = useTheme();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -33,6 +64,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const textInputRef = useRef<TextInput>(null);
+
+  // Get table info for current content type
+  const tableInfo = getCommentTableInfo(contentType);
 
   // Animate modal in/out
   useEffect(() => {
@@ -83,9 +117,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
     if (!videoId) return;
     setLoading(true);
     const { data, error } = await supabase
-      .from('comments')
-      .select('id, user_id, article_id, content, created_at')
-      .eq('article_id', videoId)
+      .from(tableInfo.commentTable)
+      .select(`id, user_id, ${tableInfo.idField}, content, created_at`)
+      .eq(tableInfo.idField, videoId)
       .order('created_at', { ascending: false });
     if (error) {
       setComments([]);
@@ -106,11 +140,19 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
   const handleAddComment = async () => {
     if (!user || !input.trim() || !videoId) return;
     setSubmitting(true);
+    
+    const insertData = { 
+      user_id: user.id, 
+      [tableInfo.idField]: videoId, 
+      content: input.trim() 
+    };
+    
     const { error, data } = await supabase
-      .from('comments')
-      .insert({ user_id: user.id, article_id: videoId, content: input.trim() })
-      .select('id, user_id, article_id, content, created_at')
+      .from(tableInfo.commentTable)
+      .insert(insertData)
+      .select(`id, user_id, ${tableInfo.idField}, content, created_at`)
       .single();
+      
     if (!error && data) {
       const newComment = {
         ...data,
@@ -119,8 +161,12 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
       setComments((prev) => [newComment, ...prev]);
       setInput('');
       onCommentsCountChange && onCommentsCountChange(comments.length + 1);
-      // Update comments_count in articles table
-      await supabase.from('articles').update({ comments_count: comments.length + 1 }).eq('id', videoId);
+      
+      // Update comments_count in content table
+      await supabase
+        .from(tableInfo.contentTable)
+        .update({ comments_count: comments.length + 1 })
+        .eq('id', videoId);
     }
     setSubmitting(false);
   };
@@ -129,338 +175,236 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
   const handleDeleteComment = async (commentId: number) => {
     if (!user || !videoId) return;
     const { error } = await supabase
-      .from('comments')
+      .from(tableInfo.commentTable)
       .delete()
       .eq('id', commentId)
       .eq('user_id', user.id);
+      
     if (!error) {
-      const newCount = Math.max(comments.length - 1, 0);
       setComments((prev) => prev.filter((c) => c.id !== commentId));
-      onCommentsCountChange && onCommentsCountChange(newCount);
-      // Update comments_count in reels table
-      await supabase.from('articles').update({ comments_count: newCount }).eq('id', videoId);
-    }
-  };
-
-  // Handle backdrop press - dismiss keyboard first, then modal
-  const handleBackdropPress = () => {
-    if (keyboardHeight > 0) {
-      // If keyboard is open, just dismiss it
-      textInputRef.current?.blur();
-      Keyboard.dismiss();
-    } else {
-      // If keyboard is already closed, close the modal
-      onClose();
+      onCommentsCountChange && onCommentsCountChange(Math.max(comments.length - 1, 0));
+      
+      // Update comments_count in content table
+      await supabase
+        .from(tableInfo.contentTable)
+        .update({ comments_count: Math.max(comments.length - 1, 0) })
+        .eq('id', videoId);
     }
   };
 
   // Render comment item
-  const renderItem = ({ item }: { item: Comment }) => {
-    const isOwnComment = user && item.user_id === user.id;
-    // Format date as 'Apr 27, 2024'
-    const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '';
-    return (
-      <View style={dynamicStyles.commentRow}>
-        <View style={dynamicStyles.commentContent}>
-          <Text style={dynamicStyles.commentAuthor}>{isOwnComment ? 'You' : (item.author_name || 'Unknown')}</Text>
-          <Text style={dynamicStyles.commentText}>{item.content}</Text>
-          <Text style={dynamicStyles.commentMeta}>{dateStr}</Text>
-        </View>
-        {isOwnComment && (
-          <TouchableOpacity onPress={() => handleDeleteComment(item.id)} accessibilityLabel="Delete comment" accessibilityRole="button">
-            <FontAwesome name="trash" size={18} color="#ef4444" />
-          </TouchableOpacity>
-        )}
+  const renderItem = useCallback(({ item }: { item: Comment }) => (
+    <View style={dynamicStyles.commentRow}>
+      <View style={dynamicStyles.commentContent}>
+        <Text style={dynamicStyles.commentAuthor}>{item.author_name}</Text>
+        <Text style={dynamicStyles.commentText}>{item.content}</Text>
+        <Text style={dynamicStyles.commentMeta}>{new Date(item.created_at).toLocaleString()}</Text>
       </View>
-    );
-  };
+      {user && item.user_id === user.id && (
+        <TouchableOpacity 
+          onPress={() => handleDeleteComment(item.id)} 
+          accessibilityLabel="Delete comment" 
+          accessibilityRole="button"
+          style={dynamicStyles.deleteButton}
+        >
+          <FontAwesome name="trash" size={16} color={colors.textSecondary} />
+        </TouchableOpacity>
+      )}
+    </View>
+  ), [user, colors.textSecondary]);
 
   const dynamicStyles = StyleSheet.create({
+    modalContainer: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
     modalContent: {
-      position: 'absolute',
-      bottom: keyboardHeight,
-      left: 0,
-      right: 0,
-      height: SCREEN_HEIGHT * 0.6,
-      maxHeight: SCREEN_HEIGHT - keyboardHeight - 50, // Leave some space at top
       backgroundColor: colors.background,
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 1000,
-      zIndex: 1000,
+      paddingTop: 16,
+      paddingHorizontal: 16,
+      paddingBottom: Math.max(keyboardHeight, 16),
+      maxHeight: SCREEN_HEIGHT * 0.8,
     },
-    sheetContent: {
-      flex: 1,
-      paddingHorizontal: 20,
-      paddingBottom: 20,
-      paddingTop: 0,
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingBottom: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
-    handleArea: {
-      paddingVertical: 16,
+    title: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    closeButton: {
+      padding: 8,
+    },
+    loadingContainer: {
+      padding: 40,
       alignItems: 'center',
     },
-    handleBar: {
-      width: 40,
-      height: 4,
-      backgroundColor: colors.textTertiary,
-      borderRadius: 2,
+    emptyContainer: {
+      padding: 40,
+      alignItems: 'center',
     },
-    sheetTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: colors.text,
-      marginBottom: 16,
-      textAlign: 'center',
-    },
-    noCommentsText: {
-      textAlign: 'center',
+    emptyText: {
       color: colors.textSecondary,
-      marginTop: 40,
       fontSize: 16,
+    },
+    commentsList: {
+      flex: 1,
+      paddingVertical: 8,
     },
     commentRow: {
       flexDirection: 'row',
       paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      paddingHorizontal: 4,
+      alignItems: 'flex-start',
     },
     commentContent: {
       flex: 1,
-      marginRight: 12,
+      marginRight: 8,
     },
     commentAuthor: {
+      fontSize: 14,
       fontWeight: '600',
-      color: '#3b82f6',
+      color: colors.primary,
       marginBottom: 4,
     },
     commentText: {
+      fontSize: 15,
       color: colors.text,
       lineHeight: 20,
       marginBottom: 4,
     },
     commentMeta: {
       fontSize: 12,
-      color: colors.textTertiary,
+      color: colors.textSecondary,
     },
-    inputRow: {
+    deleteButton: {
+      padding: 8,
+    },
+    inputContainer: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingTop: 16,
+      paddingBottom: 8,
       borderTopWidth: 1,
       borderTopColor: colors.border,
     },
-    input: {
+    textInput: {
       flex: 1,
       borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: 25,
+      borderColor: colors.border,
+      borderRadius: 20,
       paddingHorizontal: 16,
       paddingVertical: 12,
-      backgroundColor: colors.inputBackground,
-      color: colors.inputText,
+      fontSize: 15,
+      color: colors.text,
+      backgroundColor: colors.surface,
       marginRight: 12,
+      maxHeight: 100,
     },
-    sendBtn: {
-      padding: 8,
+    sendButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    sendButtonDisabled: {
+      backgroundColor: colors.border,
     },
   });
 
+  if (!visible) return null;
+
   return (
     <Modal
-      visible={visible}
-      animationType="fade"
       transparent
+      visible={visible}
+      animationType="none"
       onRequestClose={onClose}
     >
-      <TouchableWithoutFeedback onPress={handleBackdropPress}>
-        <View style={styles.backdrop}>
-          {/* Themed overlay specifically for keyboard area */}
-          {keyboardHeight > 0 && (
-            <View style={[
-              styles.keyboardOverlay,
-              {
-                bottom: 0,
-                height: keyboardHeight,
-                backgroundColor: colors.background === '#ffffff' || colors.background === '#fff' ? '#ffffff' : '#000000',
-              }
-            ]} />
+      <View style={dynamicStyles.modalContainer}>
+        <Animated.View 
+          style={[
+            dynamicStyles.modalContent,
+            {
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          <View style={dynamicStyles.header}>
+            <Text style={dynamicStyles.title}>Comments</Text>
+            <TouchableOpacity 
+              onPress={onClose} 
+              style={dynamicStyles.closeButton}
+              accessibilityLabel="Close comments"
+              accessibilityRole="button"
+            >
+              <FontAwesome name="times" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {loading ? (
+            <View style={dynamicStyles.loadingContainer}>
+              <ActivityIndicator color={colors.primary} size="large" />
+            </View>
+          ) : comments.length === 0 ? (
+            <View style={dynamicStyles.emptyContainer}>
+              <Text style={dynamicStyles.emptyText}>
+                No comments yet. Be the first to comment!
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={comments}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderItem}
+              style={dynamicStyles.commentsList}
+              showsVerticalScrollIndicator={false}
+            />
           )}
-          <TouchableWithoutFeedback onPress={() => {
-            // If keyboard is open and user taps modal content, dismiss keyboard
-            if (keyboardHeight > 0) {
-              textInputRef.current?.blur();
-              Keyboard.dismiss();
-            }
-          }}>
-            <Animated.View style={[dynamicStyles.modalContent, { transform: [{ translateY: slideAnim }] }]}> 
-              <TouchableOpacity 
-                style={dynamicStyles.handleArea} 
-                onPress={handleBackdropPress}
-                activeOpacity={1}
-              >
-                <View style={dynamicStyles.handleBar} />
-              </TouchableOpacity>
-              <View style={dynamicStyles.sheetContent}>
-                <Text style={dynamicStyles.sheetTitle}>Comments</Text>
-                {loading ? (
-                  <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
-                ) : comments.length === 0 ? (
-                  <Text style={dynamicStyles.noCommentsText}>No comments yet. Be the first to comment!</Text>
-                ) : (
-                  <FlatList
-                    data={comments}
-                    keyExtractor={(item) => item.id.toString()}
-                    renderItem={renderItem}
-                    contentContainerStyle={{ paddingBottom: 16 }}
-                    style={{ flex: 1 }}
-                  />
-                )}
-                <View style={dynamicStyles.inputRow}>
-                  <TextInput
-                    ref={textInputRef}
-                    style={dynamicStyles.input}
-                    value={input}
-                    onChangeText={setInput}
-                    placeholder="Add a comment..."
-                    placeholderTextColor={colors.inputPlaceholder}
-                    editable={!submitting}
-                    onSubmitEditing={handleAddComment}
-                    returnKeyType="send"
-                    autoCorrect={false}
-                    autoCapitalize="none"
-                    spellCheck={false}
-                    textContentType="none"
-                    clearButtonMode="never"
-                    keyboardAppearance={colors.background === '#000000' ? 'dark' : 'light'}
-                  />
-                  <TouchableOpacity
-                    style={dynamicStyles.sendBtn}
-                    onPress={handleAddComment}
-                    disabled={submitting || !input.trim()}
-                    accessibilityLabel="Send comment"
-                    accessibilityRole="button"
-                  >
-                    <FontAwesome name="send" size={20} color={submitting || !input.trim() ? colors.textTertiary : colors.primary} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </Animated.View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+
+          <View style={dynamicStyles.inputContainer}>
+            <TextInput
+              ref={textInputRef}
+              style={dynamicStyles.textInput}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Add a comment..."
+              placeholderTextColor={colors.textSecondary}
+              editable={!submitting}
+              multiline
+              onSubmitEditing={handleAddComment}
+              returnKeyType="send"
+            />
+            <TouchableOpacity
+              style={[
+                dynamicStyles.sendButton,
+                (submitting || !input.trim()) && dynamicStyles.sendButtonDisabled
+              ]}
+              onPress={handleAddComment}
+              disabled={submitting || !input.trim()}
+              accessibilityLabel="Send comment"
+              accessibilityRole="button"
+            >
+              <FontAwesome 
+                name="send" 
+                size={16} 
+                color={submitting || !input.trim() ? colors.textSecondary : colors.surface} 
+              />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
     </Modal>
   );
-};
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  keyboardOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 999,
-  },
-  modalContent: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '70%',
-    backgroundColor: '#18181b',
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    zIndex: 1000,
-    elevation: 1000,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    overflow: 'hidden',
-  },
-  sheetContent: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#18181b',
-  },
-  handleBar: {
-    width: 60,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: '#3b82f6',
-    alignSelf: 'center',
-    marginBottom: 12,
-    marginTop: 4,
-  },
-  sheetTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  noCommentsText: {
-    color: '#888',
-    textAlign: 'center',
-    marginTop: 32,
-  },
-  commentRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#23232b',
-  },
-  commentContent: {
-    flex: 1,
-    marginRight: 12,
-  },
-  commentText: {
-    color: '#fff',
-    fontSize: 15,
-  },
-  commentAuthor: {
-    color: '#3b82f6',
-    fontWeight: 'bold',
-    fontSize: 13,
-    marginBottom: 2,
-  },
-  commentMeta: {
-    color: '#888',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    backgroundColor: '#23232b',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  input: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 15,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    backgroundColor: 'transparent',
-  },
-  sendBtn: {
-    marginLeft: 8,
-    padding: 6,
-  },
-}); 
+}; 

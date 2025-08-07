@@ -28,9 +28,9 @@ const IndustryStep: React.FC<IndustryStepProps> = ({ onNext, onPrev, setData, da
 
   const handleSelectIndustry = (industry: any) => {
     if (selectedIndustries.find((item: any) => item.id === industry.id)) {
-      setData({ ...data, selectedIndustries: selectedIndustries.filter((item: any) => item.id !== industry.id) });
+      setData(selectedIndustries.filter((item: any) => item.id !== industry.id));
     } else {
-      setData({ ...data, selectedIndustries: [...selectedIndustries, industry] });
+      setData([...selectedIndustries, industry]);
     }
   };
 

@@ -10,6 +10,9 @@ serve(async (req: Request) => {
     console.log('Request body:', body);
     const { industries, workExperience, education, projects, careerGoals } = body;
 
+    // Detailed logging for industries
+    console.log('Received industries object:', JSON.stringify(industries, null, 2));
+
     // Create a Supabase client with the service role key to bypass RLS
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -28,13 +31,14 @@ serve(async (req: Request) => {
     console.log(`Processing onboarding for user_id: ${user_id}`);
 
     // Upsert industries
-    if (industries && Array.isArray(industries.selectedIndustries)) {
-      console.log('Processing industries:', industries.selectedIndustries);
-      for (const industry of industries.selectedIndustries) {
+    if (industries && Array.isArray(industries)) {
+      console.log('Processing industries:', industries);
+      for (const industry of industries) {
         console.log('Upserting industry:', industry);
         const { data, error } = await supabaseAdmin.from('user_industries').upsert({
           user_id,
           industry_id: industry.id,
+          stage: industry.stage || 'undisclosed',
         }, { onConflict: 'user_id,industry_id' });
         if (error) console.error('Error upserting industry:', error);
         else console.log('Successfully upserted industry:', data);
