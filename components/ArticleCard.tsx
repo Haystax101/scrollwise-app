@@ -250,7 +250,12 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
             <View style={dynamicStyles.mainContent}>
               <View style={dynamicStyles.metadata}>
                 <View style={dynamicStyles.metadataRow}>
-                  {article.site_name && <Text style={dynamicStyles.metadataText}>{getSiteName(article.site_name)}</Text>}
+                  {article.site_name && (
+                    <View style={dynamicStyles.typeContainer}>
+                      <Feather name="globe" size={12} color={colors.textSecondary} style={{marginRight: 4}}/>
+                      <Text style={dynamicStyles.metadataText}>{getSiteName(article.site_name)}</Text>
+                    </View>
+                  )}
                   {article.site_name && industryName && <Text style={dynamicStyles.metadataDot}>•</Text>}
                   {industryName && (
                     <View style={dynamicStyles.typeContainer}>

@@ -294,7 +294,12 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
             <View style={dynamicStyles.mainContent}>
               <View style={dynamicStyles.metadata}>
                 <View style={dynamicStyles.metadataRow}>
-                  {paper.site_name && <Text style={dynamicStyles.metadataText}>{getSiteName(paper.site_name)}</Text>}
+                  {paper.site_name && (
+                    <View style={dynamicStyles.typeContainer}>
+                      <Feather name="globe" size={12} color={colors.textSecondary} style={{marginRight: 4}}/>
+                      <Text style={dynamicStyles.metadataText}>{getSiteName(paper.site_name)}</Text>
+                    </View>
+                  )}
                   {paper.site_name && industryName && <Text style={dynamicStyles.metadataDot}>•</Text>}
                   {industryName && (
                     <View style={dynamicStyles.typeContainer}>

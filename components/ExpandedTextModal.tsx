@@ -32,7 +32,7 @@ export const ExpandedTextModal: React.FC<ExpandedTextModalProps> = ({ visible, o
     >
       <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>{title}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Feather name="x" size={28} color={colors.text} />
           </TouchableOpacity>
