@@ -106,6 +106,23 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
     }
 
     onUserInteraction?.(article.id, isLiking ? 'like' : 'unlike');
+
+    // Sync likes_count in articles table using authoritative count
+    try {
+      const { count, error: countError } = await supabase
+        .from(tableNames.likes)
+        .select('*', { count: 'exact', head: true })
+        .eq(tableNames.idField, article.id);
+      if (!countError) {
+        await supabase
+          .from(tableNames.content)
+          .update({ likes_count: count ?? 0 })
+          .eq('id', article.id);
+        if (typeof count === 'number') setLikes(count);
+      }
+    } catch {
+      // ignore
+    }
   }, [user, article.id, tableNames, onUserInteraction]);
 
   const toggleSave = useCallback(async (isSaving: boolean) => {
@@ -122,12 +139,47 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
       await supabase.from(tableNames.saves).delete().match(interactionData);
     }
     onUserInteraction?.(article.id, isSaving ? 'save' : 'unsave');
+
+    // Sync saves_count in articles table to ensure future loads show correct count
+    try {
+      const { count, error: countError } = await supabase
+        .from(tableNames.saves)
+        .select('*', { count: 'exact', head: true })
+        .eq(tableNames.idField, article.id);
+      if (!countError) {
+        await supabase
+          .from(tableNames.content)
+          .update({ saves_count: count ?? 0 })
+          .eq('id', article.id);
+        if (typeof count === 'number') setSaves(count);
+      }
+    } catch {
+      // ignore
+    }
   }, [user, article.id, tableNames, onUserInteraction]);
 
   const handleLikePress = () => toggleLike(!hasLiked);
   const handleSavePress = () => toggleSave(!hasSaved);
   const handleCommentsPress = () => onOpenComments?.(article.id);
   const handleReadMorePress = () => { if (article.link) Linking.openURL(article.link); };
+
+  // When modal updates comment count, also persist to articles table so future loads are correct
+  useEffect(() => {
+    // We do not have direct hook into modal here; MainFeed already updates item state when count changes.
+    // This helper ensures that if comments_count changes on the item prop, we mirror it to DB once.
+    // If you prefer, wire a direct callback from CommentsModal to update DB; keeping it simple here.
+    (async () => {
+      try {
+        if (typeof article.comments_count === 'number') {
+          await supabase
+            .from(tableNames.content)
+            .update({ comments_count: article.comments_count })
+            .eq('id', article.id);
+        }
+      } catch {}
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [article.comments_count]);
 
   const dynamicStyles = StyleSheet.create({
     container: {
@@ -149,11 +201,12 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       marginTop: -20,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 5,
+      // Remove shadow and border to keep a clean aesthetic
+      shadowColor: 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
     },
     contentBody: {
       flex: 1,

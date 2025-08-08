@@ -73,6 +73,40 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
       await supabase.from(table).delete().match(interactionData);
     }
     onUserInteraction?.(book.id, action);
+
+    // If save/unsave, sync saves_count in books table using authoritative count
+    if (!isLikeAction) {
+      try {
+        const { count, error: countError } = await supabase
+          .from('book_saves')
+          .select('*', { count: 'exact', head: true })
+          .eq('book_id', book.id);
+        if (!countError) {
+          await supabase
+            .from('books')
+            .update({ saves_count: count ?? 0 })
+            .eq('id', book.id);
+          if (typeof count === 'number') setSaves(count);
+        }
+      } catch {}
+    }
+
+    // If like/unlike, sync likes_count in books table using authoritative count
+    if (isLikeAction) {
+      try {
+        const { count, error: countError } = await supabase
+          .from('book_likes')
+          .select('*', { count: 'exact', head: true })
+          .eq('book_id', book.id);
+        if (!countError) {
+          await supabase
+            .from('books')
+            .update({ likes_count: count ?? 0 })
+            .eq('id', book.id);
+          if (typeof count === 'number') setLikes(count);
+        }
+      } catch {}
+    }
   }, [user, book.id, onUserInteraction]);
 
   const handleCommentsPress = () => onOpenComments?.(book.id);

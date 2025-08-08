@@ -63,10 +63,9 @@ export const Discover: React.FC = () => {
     }
   }, [selectedIndustry]);
 
-  // Watch for industry changes and re-filter current results if we have search results
+  // Watch for industry changes and always re-run current search if a query exists
   useEffect(() => {
-    if (searchQuery.trim() && searchResults.length > 0) {
-      // Re-run the current search with the new industry filter
+    if (searchQuery.trim()) {
       if (searchMode === 'typing') {
         performImmediateSearch(searchQuery);
       } else {

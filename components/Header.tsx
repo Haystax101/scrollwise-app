@@ -13,7 +13,7 @@ type HeaderProps = {
 const NAV_ITEMS = [
   { name: 'Home', screenName: 'home' as ScreenName, path: '/feed', icon: (props: any) => <Feather name="home" {...props} />, accessibilityLabel: "Navigate to Home screen" },
   { name: 'Discover', screenName: 'discover' as ScreenName, path: '/discover', icon: (props: any) => <Feather name="search" {...props} />, accessibilityLabel: "Navigate to Discover screen" },
-  { name: 'Chats', screenName: 'chats' as ScreenName, path: '/chats', icon: (props: any) => <Feather name="message-square" {...props} />, accessibilityLabel: "Navigate to Chats screen" },
+  { name: 'Insights', screenName: 'chats' as ScreenName, path: '/chats', icon: (props: any) => <Feather name="message-square" {...props} />, accessibilityLabel: "Navigate to Insights screen" },
   { name: 'Profile', screenName: 'profile' as ScreenName, path: '/profile', icon: (props: any) => <Feather name="user" {...props} />, accessibilityLabel: "Navigate to Profile screen" },
 ];
 

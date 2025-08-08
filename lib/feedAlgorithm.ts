@@ -335,6 +335,29 @@ export class FeedAlgorithm {
         return null;
       }
 
+      // Ensure interaction counters are accurate on first load by reading from join tables
+      const likesTable = contentType === 'paper' ? 'paper_likes' : contentType === 'book' ? 'book_likes' : 'article_likes';
+      const savesTable = contentType === 'paper' ? 'paper_saves' : contentType === 'book' ? 'book_saves' : 'article_saves';
+      const commentsTable = contentType === 'paper' ? 'paper_comments' : contentType === 'book' ? 'book_comments' : 'comments';
+      const idField = contentType === 'paper' ? 'paper_id' : contentType === 'book' ? 'book_id' : 'article_id';
+
+      const [likesCountRes, savesCountRes, commentsCountRes] = await Promise.all([
+        supabase.from(likesTable).select('*', { count: 'exact', head: true }).eq(idField, contentId),
+        supabase.from(savesTable).select('*', { count: 'exact', head: true }).eq(idField, contentId),
+        supabase.from(commentsTable).select('*', { count: 'exact', head: true }).eq(idField, contentId),
+      ]);
+
+      const safeLikes = (likesCountRes.count as number | null) ?? data.likes_count ?? 0;
+      const safeSaves = (savesCountRes.count as number | null) ?? data.saves_count ?? 0;
+      const safeComments = (commentsCountRes.count as number | null) ?? data.comments_count ?? 0;
+
+      const hydratedData = {
+        ...data,
+        likes_count: safeLikes,
+        saves_count: safeSaves,
+        comments_count: safeComments,
+      };
+
       // Initialize user interactions if not already done
       if (this.likedIds.size === 0 && this.savedIds.size === 0 && this.userId) {
         await this.initializeUserInteractions();
@@ -345,7 +368,7 @@ export class FeedAlgorithm {
       
       // Convert to FeedItem format
       const feedItem = this.mapToFeedItem({
-        ...data,
+        ...hydratedData,
         type: contentType
       });
       

@@ -32,55 +32,69 @@ const Insights = () => {
     if (!user) return;
     setLoading(true);
 
-    // Fetch responses to user's insights
-    const { data: responses, error: responsesError } = await supabase
-      .from('insight_responses')
-      .select(`*,
-        responder:profiles!responder_id(
-          full_name,
-          avatar_url
-        )
-      `)
-      .eq('original_author_id', user.id);
-
-    // Fetch user's own insights
+    // Fetch user's own insights with counts
     const { data: ownInsights, error: ownInsightsError } = await supabase
       .from('insights')
-      .select(`*,
-        author:profiles!author_id(
-          full_name,
-          avatar_url
-        )
+      .select(`id, content, created_at, likes_count, saves_count, comments_count,
+        author:profiles!author_id(full_name, avatar_url)
       `)
-      .eq('author_id', user.id);
+      .eq('author_id', user.id)
+      .order('created_at', { ascending: false });
 
-    if (responsesError || ownInsightsError) {
-      console.error('Error fetching data:', responsesError || ownInsightsError);
-    } else {
-      const formattedResponses = (responses || []).map((item: any) => ({
-        id: item.id,
-        type: 'response' as const,
-        userName: item.responder.full_name,
-        jobTitle: 'Researcher', // Placeholder
-        avatar: item.responder.avatar_url,
-        userMessage: item.content,
-        insightTitle: 'Your Insight', // Placeholder
-        responder_id: item.responder_id,
-        original_author_id: item.original_author_id,
-      }));
-
-      const formattedOwnInsights = (ownInsights || []).map((item: any) => ({
-        id: item.id,
-        type: 'own' as const,
-        userName: item.author.full_name,
-        jobTitle: 'Researcher', // Placeholder
-        avatar: item.author.avatar_url,
-        userMessage: item.content,
-        insightTitle: 'Your Insight',
-      }));
-
-      setItems([...formattedResponses, ...formattedOwnInsights]);
+    if (ownInsightsError) {
+      console.error('Error fetching insights:', ownInsightsError);
+      setLoading(false);
+      return;
     }
+
+    // Fetch profile details for current user separately (no FK from insights → user_experiences/education)
+    const [eduRes, expRes] = await Promise.all([
+      supabase.from('user_education').select('university_id, degree_id').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_experiences').select('company_id, experience_level').eq('user_id', user.id).maybeSingle(),
+    ]);
+
+    let universityName: string | null = null;
+    let degreeName: string | null = null;
+    let companyName: string | null = null;
+    const experienceLevel: string | null = (expRes.data as any)?.experience_level || null;
+
+    // Resolve names from lookup tables if ids exist
+    const lookups: Promise<any>[] = [];
+    const edu = eduRes.data as any;
+    const exp = expRes.data as any;
+    if (edu?.university_id) {
+      lookups.push(
+        supabase.from('universities').select('name').eq('id', edu.university_id).maybeSingle().then(r => { universityName = r.data?.name || null; })
+      );
+    }
+    if (edu?.degree_id) {
+      lookups.push(
+        supabase.from('degrees').select('name').eq('id', edu.degree_id).maybeSingle().then(r => { degreeName = r.data?.name || null; })
+      );
+    }
+    if (exp?.company_id) {
+      lookups.push(
+        supabase.from('companies').select('name').eq('id', exp.company_id).maybeSingle().then(r => { companyName = r.data?.name || null; })
+      );
+    }
+    if (lookups.length) await Promise.all(lookups);
+
+    const detailParts = [universityName, degreeName, experienceLevel, companyName].filter(Boolean) as string[];
+    const detailsText = detailParts.join(' • ');
+
+    const formatted = (ownInsights || []).map((item: any) => ({
+      id: item.id,
+      type: 'own' as const,
+      userName: item.author?.full_name,
+      avatar: item.author?.avatar_url,
+      jobTitle: detailsText,
+      userMessage: item.content,
+      likes_count: item.likes_count || 0,
+      saves_count: item.saves_count || 0,
+      comments_count: item.comments_count || 0,
+    }));
+
+    setItems(formatted);
     setLoading(false);
   }, [user]);
 
@@ -152,26 +166,13 @@ const Insights = () => {
           </View>
           <Text style={styles.messageText}>"{item.userMessage}"</Text>
           <Text style={styles.insightContext}>
-            {item.type === 'response' ? `Response to your insight: ${item.insightTitle}` : `Your insight`}
+            Your insight
           </Text>
           <View style={styles.actions}>
-            {item.type === 'response' ? (
-              <>
-                <TouchableOpacity style={[styles.actionButton, styles.replyButton]} onPress={() => handleAccept(item)}>
-                  <Feather name="message-square" size={18} color={colors.primaryText} />
-                  <Text style={[styles.actionButtonText, styles.replyButtonText]}>Reply</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionButton, styles.dismissButton]} onPress={() => handleDismiss(item.id)}>
-                  <Feather name="x" size={18} color={colors.error} />
-                  <Text style={[styles.actionButtonText, { color: colors.error }]}>Dismiss</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <TouchableOpacity style={[styles.actionButton, styles.deleteButton]} onPress={() => handleDelete(item.id)}>
-                <Feather name="trash-2" size={18} color={colors.error} />
-                <Text style={[styles.actionButtonText, { color: colors.error }]}>Delete</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity style={[styles.actionButton, styles.deleteButton]} onPress={() => handleDelete(item.id)}>
+              <Feather name="trash-2" size={18} color={colors.error} />
+              <Text style={[styles.actionButtonText, { color: colors.error }]}>Delete</Text>
+            </TouchableOpacity>
           </View>
         </LinearGradient>
       </View>
@@ -180,7 +181,7 @@ const Insights = () => {
   
   // Styles need to be defined here for the component to use them.
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
+    container: { flex: 1, backgroundColor: colors.background, paddingTop: 16 },
     createInsightButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, paddingVertical: 15, paddingHorizontal: 20, borderRadius: 12, marginVertical: 10, marginHorizontal: 16, alignSelf: 'center' },
     createInsightButtonText: { color: colors.primaryText, fontSize: 16, fontWeight: '600', marginLeft: 8 },
     modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },

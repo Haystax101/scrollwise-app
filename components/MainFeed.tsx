@@ -268,7 +268,11 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   const renderItem = useCallback(({ item, index }: { item: FeedItem; index: number }) => {
     switch (item.type) {
       case 'insight':
-        return <InsightCard insight={item as Insight} />;
+        return (
+          <InsightCard
+            insight={item as Insight}
+          />
+        );
       case 'article':
         return (
           <ArticleCard
@@ -423,7 +427,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         contentType={
           commentsArticleId 
             ? (articles.find(article => article.id === commentsArticleId)?.type as 'article' | 'paper' | 'book') || 'article'
-            : 'article'
+            : undefined
         }
       />
     </>

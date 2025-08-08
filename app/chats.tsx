@@ -1,5 +1,5 @@
-import Chats from '../components/Chats';
+import Insights from '../components/Insights';
 
 export default function ChatsScreen() {
-  return <Chats />;
+  return <Insights />;
 } 

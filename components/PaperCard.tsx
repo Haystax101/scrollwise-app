@@ -108,6 +108,21 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       await supabase.from(tableNames.likes).delete().match(interactionData);
     }
     onUserInteraction?.(paper.id, isLiking ? 'like' : 'unlike');
+
+     // Sync likes_count in papers table
+     try {
+       const { count, error: countError } = await supabase
+         .from(tableNames.likes)
+         .select('*', { count: 'exact', head: true })
+         .eq(tableNames.idField, paper.id);
+       if (!countError) {
+         await supabase
+           .from(tableNames.content)
+           .update({ likes_count: count ?? 0 })
+           .eq('id', paper.id);
+         if (typeof count === 'number') setLikes(count);
+       }
+     } catch {}
   }, [user, paper.id, tableNames, onUserInteraction]);
 
   const toggleSave = useCallback(async (isSaving: boolean) => {
@@ -124,6 +139,21 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       await supabase.from(tableNames.saves).delete().match(interactionData);
     }
     onUserInteraction?.(paper.id, isSaving ? 'save' : 'unsave');
+
+    // Sync saves_count in papers table
+    try {
+      const { count, error: countError } = await supabase
+        .from(tableNames.saves)
+        .select('*', { count: 'exact', head: true })
+        .eq(tableNames.idField, paper.id);
+      if (!countError) {
+        await supabase
+          .from(tableNames.content)
+          .update({ saves_count: count ?? 0 })
+          .eq('id', paper.id);
+        if (typeof count === 'number') setSaves(count);
+      }
+    } catch {}
   }, [user, paper.id, tableNames, onUserInteraction]);
 
 
@@ -194,11 +224,12 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       marginTop: -20,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 5,
+      // Remove shadow and border to keep a clean aesthetic
+      shadowColor: 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
     },
     contentBody: {
       flex: 1,

@@ -18,6 +18,7 @@ interface ChatListItem {
   otherUserId: string;
 }
 
+// Legacy: preserved for reference; not used in MVP
 const Chats = () => {
   const { colors } = useTheme();
   const router = useRouter();

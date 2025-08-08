@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, Modal, FlatList, TextInput, ActivityIndicator, Animated, Dimensions, Keyboard, Platform, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, FlatList, TextInput, ActivityIndicator, Animated, Dimensions, Keyboard, Platform, StyleSheet, Pressable } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 
 interface Comment {
   id: number;
@@ -14,16 +15,22 @@ interface Comment {
 }
 
 interface CommentsModalProps {
-  videoId: number | null;
+  videoId: number | string | null;
   visible: boolean;
   onClose: () => void;
   onCommentsCountChange?: (count: number) => void;
-  contentType?: 'article' | 'paper' | 'book'; // Add content type prop
+  contentType?: 'article' | 'paper' | 'book' | 'insight';
 }
 
 // Helper function to get table names based on content type
-const getCommentTableInfo = (contentType: 'article' | 'paper' | 'book' = 'article') => {
+const getCommentTableInfo = (contentType: 'article' | 'paper' | 'book' | 'insight' = 'article') => {
   switch (contentType) {
+    case 'insight':
+      return {
+        commentTable: 'insight_comments',
+        contentTable: 'insights',
+        idField: 'insight_id',
+      };
     case 'paper':
       return { 
         commentTable: 'paper_comments', 
@@ -64,13 +71,20 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const textInputRef = useRef<TextInput>(null);
+  // Keep stable references for the lifetime of the open modal to avoid drift between renders
+  const stableVideoIdRef = useRef<number | string | null>(null);
+  const stableTableInfoRef = useRef(getCommentTableInfo(contentType));
 
-  // Get table info for current content type
+  // Get table info for current content type (used for initial mount; stable ref will be used afterward)
   const tableInfo = getCommentTableInfo(contentType);
 
   // Animate modal in/out
   useEffect(() => {
     if (visible) {
+      // Capture stable identifiers for the session of this open modal
+      stableVideoIdRef.current = videoId ?? null;
+      stableTableInfoRef.current = getCommentTableInfo(contentType);
+      console.log('COMMENTS_MODAL_OPEN', { videoId: stableVideoIdRef.current, contentType, tableInfo: stableTableInfoRef.current });
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 300,
@@ -114,12 +128,14 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
 
   // Fetch comments
   const fetchComments = async () => {
-    if (!videoId) return;
+    const vid = stableVideoIdRef.current ?? videoId;
+    if (!vid) return;
     setLoading(true);
+    const tableCfg = stableTableInfoRef.current;
     const { data, error } = await supabase
-      .from(tableInfo.commentTable)
-      .select(`id, user_id, ${tableInfo.idField}, content, created_at`)
-      .eq(tableInfo.idField, videoId)
+      .from(tableCfg.commentTable)
+      .select(`id, user_id, ${tableCfg.idField}, content, created_at`)
+      .eq(tableCfg.idField, vid)
       .order('created_at', { ascending: false });
     if (error) {
       setComments([]);
@@ -171,47 +187,126 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     setSubmitting(false);
   };
 
-  // Delete comment
+  // Delete comment with detailed logging (helps diagnose RLS issues)
   const handleDeleteComment = async (commentId: number) => {
-    if (!user || !videoId) return;
-    const { error } = await supabase
-      .from(tableInfo.commentTable)
-      .delete()
-      .eq('id', commentId)
-      .eq('user_id', user.id);
-      
-    if (!error) {
+    if (!user) {
+      console.warn('DELETE_COMMENT_SKIPPED: Missing user', { userExists: !!user });
+      return;
+    }
+
+    console.log('DELETE_COMMENT_ATTEMPT', {
+      table: stableTableInfoRef.current.commentTable,
+      commentId,
+      userId: user.id,
+      contentType,
+      contentTable: stableTableInfoRef.current.contentTable,
+      idField: stableTableInfoRef.current.idField,
+    });
+
+    try {
+      const { error, status } = await supabase
+        .from(stableTableInfoRef.current.commentTable)
+        .delete()
+        .eq('id', commentId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('DELETE_COMMENT_ERROR', {
+          table: tableInfo.commentTable,
+          commentId,
+          userId: user.id,
+          status,
+          code: (error as any)?.code,
+          details: (error as any)?.details,
+          hint: (error as any)?.hint,
+          message: error.message,
+        });
+        return;
+      }
+
+      console.log('DELETE_COMMENT_SUCCESS', { commentId, userId: user.id, status, table: stableTableInfoRef.current.commentTable });
+
       setComments((prev) => prev.filter((c) => c.id !== commentId));
       onCommentsCountChange && onCommentsCountChange(Math.max(comments.length - 1, 0));
-      
-      // Update comments_count in content table
-      await supabase
-        .from(tableInfo.contentTable)
-        .update({ comments_count: Math.max(comments.length - 1, 0) })
-        .eq('id', videoId);
+
+      const vid = stableVideoIdRef.current ?? videoId;
+      if (vid) {
+        const { error: updateError, status: updateStatus } = await supabase
+          .from(stableTableInfoRef.current.contentTable)
+          .update({ comments_count: Math.max(comments.length - 1, 0) })
+          .eq('id', vid);
+
+        if (updateError) {
+          console.error('UPDATE_COMMENTS_COUNT_ERROR', {
+            table: stableTableInfoRef.current.contentTable,
+            contentId: vid,
+            updateStatus,
+            code: (updateError as any)?.code,
+            details: (updateError as any)?.details,
+            hint: (updateError as any)?.hint,
+            message: updateError.message,
+          });
+        } else {
+          console.log('UPDATE_COMMENTS_COUNT_SUCCESS', { table: stableTableInfoRef.current.contentTable, contentId: vid, updateStatus });
+        }
+      } else {
+        console.warn('SKIP_UPDATE_COMMENTS_COUNT_NO_VIDEO_ID', { contentTable: stableTableInfoRef.current.contentTable });
+      }
+    } catch (e: any) {
+      console.error('DELETE_COMMENT_EXCEPTION', {
+        table: stableTableInfoRef.current.commentTable,
+        commentId,
+        userId: user.id,
+        error: e?.message || String(e),
+      });
     }
   };
 
-  // Render comment item
-  const renderItem = useCallback(({ item }: { item: Comment }) => (
-    <View style={dynamicStyles.commentRow}>
-      <View style={dynamicStyles.commentContent}>
-        <Text style={dynamicStyles.commentAuthor}>{item.author_name}</Text>
-        <Text style={dynamicStyles.commentText}>{item.content}</Text>
-        <Text style={dynamicStyles.commentMeta}>{new Date(item.created_at).toLocaleString()}</Text>
+  // When adding comments, CommentsModal already updates count locally and DB via existing code.
+
+  // Render right swipe action for delete
+  const renderRightActions = (comment: Comment) => {
+    const isOwner = user && comment.user_id === user.id;
+    if (!isOwner) return <View />;
+    return (
+      <TouchableOpacity
+        onPress={() => handleDeleteComment(comment.id)}
+        style={dynamicStyles.rightActionContainer}
+        accessibilityLabel="Delete comment"
+        accessibilityRole="button"
+        activeOpacity={0.8}
+      >
+        <FontAwesome name="trash" size={18} color="#fff" />
+      </TouchableOpacity>
+    );
+  };
+
+  // Render comment item with swipe-to-delete for own comments
+  const renderItem = useCallback(({ item }: { item: Comment }) => {
+    const isOwner = user && item.user_id === user.id;
+    const content = (
+      <View style={dynamicStyles.commentRow}>
+        <View style={dynamicStyles.commentContent}>
+          <Text style={dynamicStyles.commentAuthor}>{item.author_name}</Text>
+          <Text style={dynamicStyles.commentText}>{item.content}</Text>
+          <Text style={dynamicStyles.commentMeta}>{new Date(item.created_at).toLocaleString()}</Text>
+        </View>
       </View>
-      {user && item.user_id === user.id && (
-        <TouchableOpacity 
-          onPress={() => handleDeleteComment(item.id)} 
-          accessibilityLabel="Delete comment" 
-          accessibilityRole="button"
-          style={dynamicStyles.deleteButton}
-        >
-          <FontAwesome name="trash" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-      )}
-    </View>
-  ), [user, colors.textSecondary]);
+    );
+
+    if (!isOwner) return content;
+
+    return (
+      <Swipeable
+        renderRightActions={() => renderRightActions(item)}
+        friction={2}
+        rightThreshold={40}
+        overshootRight={false}
+      >
+        {content}
+      </Swipeable>
+    );
+  }, [user]);
 
   const dynamicStyles = StyleSheet.create({
     modalContainer: {
@@ -226,7 +321,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       paddingTop: 16,
       paddingHorizontal: 16,
       paddingBottom: Math.max(keyboardHeight, 16),
-      maxHeight: SCREEN_HEIGHT * 0.8,
+      // Open higher so comments are more readable
+      maxHeight: SCREEN_HEIGHT * 0.92,
+      minHeight: SCREEN_HEIGHT * 0.7,
     },
     header: {
       flexDirection: 'row',
@@ -262,9 +359,15 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     },
     commentRow: {
       flexDirection: 'row',
-      paddingVertical: 12,
-      paddingHorizontal: 4,
+      paddingVertical: 10,
+      paddingHorizontal: 8,
       alignItems: 'flex-start',
+      marginHorizontal: 8,
+      marginVertical: 6,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
     },
     commentContent: {
       flex: 1,
@@ -286,8 +389,14 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       fontSize: 12,
       color: colors.textSecondary,
     },
-    deleteButton: {
-      padding: 8,
+    rightActionContainer: {
+      width: 80,
+      backgroundColor: '#dc2626',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderTopRightRadius: 12,
+      borderBottomRightRadius: 12,
+      marginVertical: 6,
     },
     inputContainer: {
       flexDirection: 'row',
@@ -332,7 +441,8 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       animationType="none"
       onRequestClose={onClose}
     >
-      <View style={dynamicStyles.modalContainer}>
+      <GestureHandlerRootView style={dynamicStyles.modalContainer}>
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
         <Animated.View 
           style={[
             dynamicStyles.modalContent,
@@ -404,7 +514,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
             </TouchableOpacity>
           </View>
         </Animated.View>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }; 
