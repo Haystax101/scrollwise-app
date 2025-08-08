@@ -10,12 +10,19 @@ export default function FeedScreen() {
   const router = useRouter();
   const { industries } = useIndustries();
   const params = useSearchParams();
-  const reelId = params.get('reelId');
+  const contentId = params.get('contentId');
+  const contentType = params.get('contentType') as 'article' | 'paper' | 'book' | null;
   useEffect(() => {
     if (!loading && !user) {
       router.replace('/sign-in');
     }
   }, [user, loading]);
   if (loading || !user) return null;
-  return <MainFeed industries={industries} initialArticleId={reelId ? Number(reelId) : undefined} />;
+  return (
+    <MainFeed 
+      industries={industries} 
+      initialArticleId={contentId ? Number(contentId) : undefined}
+      initialContentType={contentType ?? undefined}
+    />
+  );
 }

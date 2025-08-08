@@ -3,8 +3,8 @@ import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, Activi
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
-import { useIndustries, Industry } from '../context/IndustriesContext'; // Import Industry type
-import { searchArticles, getSearchSuggestions, SearchResult, SearchFilters } from '../lib/searchService';
+import { useIndustries } from '../context/IndustriesContext';
+import { immediateKeywordSearch, progressiveSearch, checkProPlan, SearchResult } from '../lib/smartSearchService';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -31,15 +31,72 @@ export const Discover: React.FC = () => {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [keywordResults, setKeywordResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [vectorLoading, setVectorLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null); // Changed to string for UUID
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [searchMode, setSearchMode] = useState<'typing' | 'submitted'>('typing');
+  const [isProUser, setIsProUser] = useState(false);
+  const [showUpgradeMessage, setShowUpgradeMessage] = useState(false);
   
   // Debounce search query for better performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // Check pro plan status on mount and load initial content
+  useEffect(() => {
+    const checkUserPlan = async () => {
+      const isPro = await checkProPlan();
+      setIsProUser(isPro);
+    };
+    checkUserPlan();
+    
+    // Load initial content (most interacted content)
+    loadInitialContent();
+  }, []);
+
+  // Load initial content when component mounts or when industry filter changes
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      loadInitialContent();
+    }
+  }, [selectedIndustry]);
+
+  // Watch for industry changes and re-filter current results if we have search results
+  useEffect(() => {
+    if (searchQuery.trim() && searchResults.length > 0) {
+      // Re-run the current search with the new industry filter
+      if (searchMode === 'typing') {
+        performImmediateSearch(searchQuery);
+      } else {
+        performFullSearch(searchQuery);
+      }
+    }
+  }, [selectedIndustry]);
+
+  const loadInitialContent = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Call the search service with empty query to get most liked content
+      const response = await immediateKeywordSearch('', selectedIndustry || undefined, undefined);
+      
+      if (response.error) {
+        setError(response.error);
+        setSearchResults([]);
+      } else {
+        setSearchResults(response.results);
+        setKeywordResults(response.results);
+      }
+    } catch (err) {
+      setError('Failed to load content. Please try again.');
+      setSearchResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedIndustry]);
 
   // Get the name of an industry from its ID
   const getIndustryName = (id: string) => {
@@ -47,68 +104,107 @@ export const Discover: React.FC = () => {
     return industry ? industry.name : 'General';
   };
 
-  // Perform search when debounced query changes
+  // Immediate keyword search while typing
   useEffect(() => {
-    performSearch(debouncedSearchQuery);
-  }, [debouncedSearchQuery, selectedIndustry]);
-
-  // Get search suggestions when user types
-  useEffect(() => {
-    if (searchQuery.length >= 2 && searchQuery.length < 20) {
-      getSuggestionsForQuery(searchQuery);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
+    if (searchMode === 'typing') {
+      performImmediateSearch(debouncedSearchQuery);
     }
-  }, [searchQuery]);
+  }, [debouncedSearchQuery, searchMode]);
 
-  const performSearch = useCallback(async (query: string) => {
+  const performImmediateSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      // If query is empty, load initial content instead
+      loadInitialContent();
+      return;
+    }
+
     setLoading(true);
     setError(null);
     
     try {
-      const filters: SearchFilters = {};
-      if (selectedIndustry) {
-        filters.industryId = selectedIndustry;
-      }
-
-      const { articles, error: searchError } = await searchArticles(query, filters, 1, 50);
+      const response = await immediateKeywordSearch(query, selectedIndustry || undefined, undefined);
       
-      if (searchError) {
-        setError(searchError);
-        setSearchResults([]);
+      if (response.error) {
+        setError(response.error);
+        setKeywordResults([]);
       } else {
-        setSearchResults(articles);
+        setKeywordResults(response.results);
+        setSearchResults(response.results); // Show immediate results
+        setShowUpgradeMessage(false); // Hide upgrade message for immediate results
       }
     } catch (err) {
       setError('Search failed. Please try again.');
+      setKeywordResults([]);
       setSearchResults([]);
     } finally {
       setLoading(false);
     }
-  }, [selectedIndustry]);
+  }, [selectedIndustry, loadInitialContent]);
 
-  const getSuggestionsForQuery = useCallback(async (query: string) => {
-    try {
-      const { suggestions: newSuggestions } = await getSearchSuggestions(query, 5);
-      setSuggestions(newSuggestions);
-      setShowSuggestions(newSuggestions.length > 0);
-    } catch (err) {
-      setSuggestions([]);
-      setShowSuggestions(false);
+  // Full search when user submits (Enter key)
+  const performFullSearch = useCallback(async (query: string) => {
+    if (!query.trim()) return;
+
+    setSearchMode('submitted');
+    // If user is not pro, do NOT start vector search; show upgrade immediately
+    if (!isProUser) {
+      setShowUpgradeMessage(true);
+      setVectorLoading(false);
+      // Keep showing keyword results; do not call progressive/embedding
+      return;
     }
-  }, []);
 
-  const handleSuggestionPress = (suggestion: string) => {
-    setSearchQuery(suggestion);
-    setShowSuggestions(false);
-  };
+    setVectorLoading(true);
+    setError(null);
+
+    // Start with keyword results if we have them
+    if (keywordResults.length > 0) {
+      setSearchResults(keywordResults);
+    } else {
+      setLoading(true);
+    }
+    
+    try {
+      const response = await progressiveSearch(query, 0.75, selectedIndustry || undefined, undefined);
+      
+      if (response.error) {
+        setError(response.error);
+        // Keep keyword results if vector search fails
+        if (keywordResults.length === 0) {
+          setSearchResults([]);
+        }
+        setShowUpgradeMessage(false);
+      } else {
+        setSearchResults(response.results);
+        setShowUpgradeMessage(!!response.upgradeMessage);
+      }
+    } catch (err) {
+      setError('Search failed. Please try again.');
+      // Keep keyword results if available
+      if (keywordResults.length === 0) {
+        setSearchResults([]);
+      }
+    } finally {
+      setLoading(false);
+      setVectorLoading(false);
+    }
+  }, [keywordResults, isProUser, selectedIndustry]);
 
   const clearSearch = () => {
     setSearchQuery('');
-    setSearchResults([]);
     setError(null);
-    setShowSuggestions(false);
+    setSearchMode('typing');
+    setVectorLoading(false);
+    setShowUpgradeMessage(false);
+    // Load initial content when search is cleared
+    loadInitialContent();
+  };
+
+  // Handle Enter key press for full search
+  const handleSearchSubmit = () => {
+    if (searchQuery.trim()) {
+      performFullSearch(searchQuery);
+    }
   };
 
   const getTypeIcon = (type: string) => {
@@ -128,18 +224,25 @@ export const Discover: React.FC = () => {
   };
 
   const formatAuthors = (authors?: string[] | string, siteName?: string) => {
-    if (!authors || authors.length === 0) {
-      if (siteName) {
-        return `From ${siteName}`;
-      }
-      return 'By Unknown Author';
+    const isInvalid = (val?: string) => {
+      if (!val) return true;
+      const trimmed = String(val).trim().toLowerCase();
+      return trimmed === '' || trimmed === 'null' || trimmed === 'undefined';
+    };
+
+    if (!authors || (Array.isArray(authors) && authors.length === 0)) {
+      return siteName ? `From ${siteName}` : 'By Unknown Author';
     }
+
     if (Array.isArray(authors)) {
-      if (authors.length === 1) return `By ${authors[0]}`;
-      if (authors.length === 2) return `By ${authors[0]} & ${authors[1]}`;
-      return `By ${authors[0]} et al.`;
+      const clean = authors.filter(a => !isInvalid(a));
+      if (clean.length === 0) return siteName ? `From ${siteName}` : 'By Unknown Author';
+      if (clean.length === 1) return `By ${clean[0]}`;
+      if (clean.length === 2) return `By ${clean[0]} & ${clean[1]}`;
+      return `By ${clean[0]} et al.`;
     }
-    return `By ${authors}`;
+
+    return isInvalid(authors) ? (siteName ? `From ${siteName}` : 'By Unknown Author') : `By ${authors}`;
   };
 
   const truncateText = (text: string, maxLength: number) => {
@@ -185,8 +288,8 @@ export const Discover: React.FC = () => {
       accessibilityLabel={`View article: ${item.title}`}
       accessibilityRole="button"
       onPress={() => {
-        // Navigate to feed with the specific article at the top
-        router.push({ pathname: '/feed', params: { reelId: item.id.toString() } });
+        // Navigate to feed with the specific content at the top
+        router.push({ pathname: '/feed', params: { contentId: item.id.toString(), contentType: item.type } });
       }}
     >
       <View style={styles.resultHeader}>
@@ -238,11 +341,7 @@ export const Discover: React.FC = () => {
             <Text style={dynamicStyles.statText}>{formatDate(item.created_at || '')}</Text>
           </View>
         </View>
-        {item.rank && (
-          <Text style={dynamicStyles.relevanceText}>
-            {Math.round(item.rank * 100)}% match
-          </Text>
-        )}
+        {/* Removed match percentage display */}
       </View>
     </TouchableOpacity>
   );
@@ -282,26 +381,6 @@ export const Discover: React.FC = () => {
       top: 14,
       right: 12,
       zIndex: 1,
-    },
-    suggestionList: {
-      position: 'absolute',
-      top: 65,
-      left: 16,
-      right: 16,
-      backgroundColor: colors.surface,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      zIndex: 9,
-    },
-    suggestionItem: {
-      padding: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    suggestionText: {
-      color: colors.text,
-      fontSize: 16,
     },
     filtersContainer: {
       paddingHorizontal: 16,
@@ -414,6 +493,47 @@ export const Discover: React.FC = () => {
       color: colors.primary,
       fontWeight: '600',
     },
+    vectorLoadingText: {
+      ...styles.vectorLoadingText,
+      color: colors.textSecondary,
+    },
+    upgradeContainer: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginHorizontal: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.primary + '20',
+    },
+    upgradeContent: {
+      alignItems: 'center',
+    },
+    upgradeTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+      marginTop: 8,
+      marginBottom: 4,
+    },
+    upgradeDescription: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 16,
+      lineHeight: 20,
+    },
+    upgradeButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    upgradeButtonText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '600',
+    },
     errorContainer: {
       flex: 1,
       justifyContent: 'center',
@@ -448,9 +568,14 @@ export const Discover: React.FC = () => {
             placeholder="Search articles, papers, and more..."
             placeholderTextColor={colors.textTertiary}
             value={searchQuery}
-            onChangeText={setSearchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              setSearchMode('typing');
+            }}
+            onSubmitEditing={handleSearchSubmit}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
+            returnKeyType="search"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={clearSearch} style={dynamicStyles.clearIcon}>
@@ -459,16 +584,6 @@ export const Discover: React.FC = () => {
           )}
         </View>
       </View>
-
-      {showSuggestions && (
-        <View style={dynamicStyles.suggestionList}>
-          {suggestions.map((item, index) => (
-            <TouchableOpacity key={index} style={dynamicStyles.suggestionItem} onPress={() => handleSuggestionPress(item)}>
-              <Text style={dynamicStyles.suggestionText}>{item}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
 
       <View style={dynamicStyles.filtersContainer}>
         <ScrollView
@@ -494,14 +609,14 @@ export const Discover: React.FC = () => {
         </ScrollView>
       </View>
 
-      {loading ? (
+      {loading && searchResults.length === 0 ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
-      ) : error ? (
+      ) : error && searchResults.length === 0 ? (
         <View style={dynamicStyles.errorContainer}>
           <Feather name="alert-triangle" size={40} color="#EF4444" />
           <Text style={dynamicStyles.errorText}>{error}</Text>
         </View>
-      ) : searchResults.length === 0 && debouncedSearchQuery.length > 0 ? (
+      ) : searchResults.length === 0 && debouncedSearchQuery.length > 0 && !loading ? (
         <View style={dynamicStyles.emptyContainer}>
           <Feather name="search" size={40} color={colors.textTertiary} />
           <Text style={dynamicStyles.emptyText}>No results found for "{debouncedSearchQuery}"</Text>
@@ -509,10 +624,44 @@ export const Discover: React.FC = () => {
         </View>
       ) : (
         <FlatList
-          data={searchResults}
-          renderItem={renderSearchResult}
-          keyExtractor={(item) => item.id.toString()}
+          data={
+            showUpgradeMessage && !isProUser
+              ? [{ id: -1, __upgrade: true } as any, ...searchResults]
+              : searchResults
+          }
+          renderItem={({ item }) => {
+            if ((item as any).__upgrade) {
+              return (
+                <View style={dynamicStyles.upgradeContainer}>
+                  <View style={dynamicStyles.upgradeContent}>
+                    <MaterialCommunityIcons name="crown" size={24} color="#FFD700" />
+                    <Text style={dynamicStyles.upgradeTitle}>Upgrade to Pro</Text>
+                    <Text style={dynamicStyles.upgradeDescription}>
+                      Get AI-powered semantic search with more comprehensive results!
+                    </Text>
+                    <TouchableOpacity 
+                      style={dynamicStyles.upgradeButton}
+                      onPress={() => {
+                        router.push('/upgrade' as any);
+                      }}
+                    >
+                      <Text style={dynamicStyles.upgradeButtonText}>Upgrade Now</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            }
+            return renderSearchResult({ item });
+          }}
+          keyExtractor={(item: any) => (item.__upgrade ? 'upgrade' : item.id.toString())}
           contentContainerStyle={dynamicStyles.resultsListContent}
+          style={dynamicStyles.resultsContainer}
+          ListHeaderComponent={vectorLoading ? (
+            <View style={styles.vectorLoadingContainer}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={[styles.vectorLoadingText, { color: colors.text }]}>Finding more results...</Text>
+            </View>
+          ) : null}
         />
       )}
     </View>
@@ -559,5 +708,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginRight: 16,
+  },
+  vectorLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  vectorLoadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

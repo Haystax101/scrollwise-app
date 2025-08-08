@@ -1,0 +1,214 @@
+import { supabase } from './supabase';
+
+export interface SearchResult {
+  id: number;
+  title: string;
+  summary?: string;
+  content_simple?: string;
+  short_summary?: string;
+  authors?: string[] | string;
+  link: string;
+  type: 'article' | 'paper' | 'book';
+  site_name?: string;
+  date?: string;
+  industry_id?: string;
+  likes_count?: number;
+  saves_count?: number;
+  comments_count?: number;
+  views_count?: number;
+  created_at?: string;
+  rank?: number;
+  score?: number; // Now as percentage (0-100)
+  searchSource?: 'keyword' | 'vector' | 'both';
+  combinedScore?: number;
+  keywordRank?: number;
+  vectorRank?: number;
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+  searchType: 'keyword' | 'progressive' | 'recent';
+  hasMore: boolean;
+  isProFeature: boolean;
+  upgradeMessage?: string;
+  meta?: {
+    keywordCount: number;
+    vectorCount: number;
+    totalCount: number;
+  };
+  error?: string | null;
+}
+
+export interface SearchFilters {
+  industryId?: string;
+  type?: 'article' | 'paper' | 'book';
+  dateRange?: {
+    start: string;
+    end: string;
+  };
+}
+
+/**
+ * Immediate keyword search for typing (free for all users)
+ */
+export async function immediateKeywordSearch(
+  query: string,
+  industryId?: string,
+  contentType?: 'article' | 'paper' | 'book'
+): Promise<SearchResponse> {
+  try {
+    const { data, error } = await supabase.functions.invoke('smart-search', {
+      body: { 
+        query, 
+        searchType: 'keyword',
+        industry_id: industryId || null,
+        content_type: contentType || null
+      },
+    });
+
+    if (error) {
+      console.error('Immediate keyword search error:', error);
+      return { 
+        results: [], 
+        searchType: 'keyword', 
+        hasMore: false, 
+        isProFeature: false,
+        error: error.message 
+      };
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Immediate keyword search exception:', error);
+    return { 
+      results: [], 
+      searchType: 'keyword', 
+      hasMore: false, 
+      isProFeature: false,
+      error: 'Search failed. Please try again.' 
+    };
+  }
+}
+
+/**
+ * Progressive search with vector search (Pro users only)
+ * Falls back to keyword search for free users
+ */
+export async function progressiveSearch(
+  query: string,
+  match_threshold: number = 0.75,
+  industryId?: string,
+  contentType?: 'article' | 'paper' | 'book'
+): Promise<SearchResponse> {
+  try {
+    const { data, error } = await supabase.functions.invoke('smart-search', {
+      body: { 
+        query, 
+        searchType: 'progressive',
+        match_threshold,
+        industry_id: industryId || null,
+        content_type: contentType || null
+      },
+    });
+
+    if (error) {
+      console.error('Progressive search error:', error);
+      return { 
+        results: [], 
+        searchType: 'keyword', 
+        hasMore: false, 
+        isProFeature: false,
+        error: error.message 
+      };
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Progressive search exception:', error);
+    return { 
+      results: [], 
+      searchType: 'keyword', 
+      hasMore: false, 
+      isProFeature: false,
+      error: 'Search failed. Please try again.' 
+    };
+  }
+}
+
+/**
+ * Get recent content when no search query
+ */
+export async function getRecentContent(): Promise<SearchResponse> {
+  try {
+    const { data, error } = await supabase.functions.invoke('smart-search', {
+      body: { 
+        query: '', 
+        searchType: 'keyword' 
+      },
+    });
+
+    if (error) {
+      console.error('Recent content error:', error);
+      return { 
+        results: [], 
+        searchType: 'recent', 
+        hasMore: false, 
+        isProFeature: false,
+        error: error.message 
+      };
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Recent content exception:', error);
+    return { 
+      results: [], 
+      searchType: 'recent', 
+      hasMore: false, 
+      isProFeature: false,
+      error: 'Failed to load content.' 
+    };
+  }
+}
+
+/**
+ * Check if current user has pro plan
+ */
+export async function checkProPlan(): Promise<boolean> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('pro_plan')
+      .eq('id', user.id)
+      .single();
+
+    return profile?.pro_plan || false;
+  } catch (error) {
+    console.error('Error checking pro plan:', error);
+    return false;
+  }
+}
+
+// Utility function to highlight search terms in results
+export function highlightSearchTerms(text: string, searchQuery: string): string {
+  if (!searchQuery.trim()) return text;
+  
+  const terms = searchQuery.split(' ').filter(term => term.length > 2);
+  let highlightedText = text;
+  
+  terms.forEach(term => {
+    const regex = new RegExp(`(${term})`, 'gi');
+    highlightedText = highlightedText.replace(regex, '<mark>$1</mark>');
+  });
+  
+  return highlightedText;
+}
+
+// Utility function to format score as percentage
+export function formatScore(score?: number): string {
+  if (!score) return '0%';
+  return `${Math.round(score)}%`;
+}

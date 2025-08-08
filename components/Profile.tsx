@@ -361,7 +361,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       style={[dynamicStyles.savedItemRow, { width: 260, marginRight: 16 }]}
       accessibilityLabel={`View saved content: ${item.title}`}
       accessibilityRole="button"
-      onPress={() => router.push({ pathname: '/feed', params: { reelId: item.id } })}
+      onPress={() => router.push({ pathname: '/feed', params: { contentId: item.id, contentType: item.type } })}
     >
       <View style={styles.savedIconCircle}>
         <Feather name="bookmark" size={18} color={colors.primary} />

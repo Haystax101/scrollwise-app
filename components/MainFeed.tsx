@@ -15,11 +15,12 @@ import { supabase } from '../lib/supabase';
 interface MainFeedProps {
   industries: Industry[]; // Changed from number[] to Industry[]
   initialArticleId?: number;
+  initialContentType?: 'article' | 'paper' | 'book';
 }
 
 const { height: screenHeight } = Dimensions.get('window');
 
-export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId }) => {
+export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId, initialContentType }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { allIndustries } = useIndustries(); // Get all industries
@@ -58,9 +59,10 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     try {
       let newArticles: Article[] = [];
       
-      // If we have an initialArticleId (from saved post), fetch that specific article first
+      // If we have an initialArticleId (from search), fetch that specific content first
       if (initialArticleId) {
-        const specificArticle = await feedAlgorithmRef.current.fetchSpecificContent(initialArticleId, 'article');
+        const typeToFetch: 'article' | 'paper' | 'book' = initialContentType || 'article';
+        const specificArticle = await feedAlgorithmRef.current.fetchSpecificContent(initialArticleId, typeToFetch);
         
         if (specificArticle) {
           newArticles.push(specificArticle as Article);

@@ -18,6 +18,7 @@ export interface SearchResult {
   views_count?: number;
   created_at?: string;
   rank?: number;
+  score?: number;
 }
 
 export interface SearchFilters {
@@ -29,12 +30,33 @@ export interface SearchFilters {
   };
 }
 
+export async function hybridSearch(
+  query: string,
+  match_threshold: number = 0.8
+): Promise<{ results: SearchResult[]; error: string | null }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('hybrid-search', {
+      body: { query, match_threshold },
+    });
+
+    if (error) {
+      console.error('Hybrid search error:', error);
+      return { results: [], error: error.message };
+    }
+
+    return { results: data.results || [], error: null };
+  } catch (error) {
+    console.error('Hybrid search exception:', error);
+    return { results: [], error: 'An error occurred while searching' };
+  }
+}
+
 export async function searchArticles(
-  query: string = '',
+  query: string,
   filters: SearchFilters = {},
   page: number = 1,
   limit: number = 20
-): Promise<{ articles: SearchResult[]; error: string | null; totalCount?: number }> {
+): Promise<{ articles: SearchResult[]; error: string | null }> {
   try {
     const offset = (page - 1) * limit;
 
