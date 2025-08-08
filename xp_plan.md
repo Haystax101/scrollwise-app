@@ -264,6 +264,108 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS public.leaderboard_daily AS
 
 ---
 
+## Phase 4.1: Levels, Rank Storage, and Profile Progress Display
+
+SQL changes:
+
+1. Persist user level (optional cache) on `profiles`
+
+```sql
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS level int NOT NULL DEFAULT 1;
+```
+
+2. Compute level from XP (deterministic function)
+
+Leveling curve (tunable): per-level requirement grows linearly.
+
+- Base per-level XP = 100
+- Increment per level = +25 (Level 1 → 100, L2 → 125, L3 → 150, ...)
+
+```sql
+CREATE OR REPLACE FUNCTION public.compute_level(p_xp bigint)
+RETURNS int
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  lvl int := 1;
+  remaining bigint := COALESCE(p_xp, 0);
+  need int;
+BEGIN
+  LOOP
+    need := 100 + (lvl - 1) * 25; -- tunable curve
+    EXIT WHEN remaining < need;
+    remaining := remaining - need;
+    lvl := lvl + 1;
+  END LOOP;
+  RETURN GREATEST(lvl, 1);
+END;
+$$;
+```
+
+3. Update the XP trigger to also persist `level`
+
+```sql
+CREATE OR REPLACE FUNCTION public.apply_xp_to_profile()
+RETURNS TRIGGER AS $$
+DECLARE
+  new_xp bigint;
+BEGIN
+  UPDATE public.profiles
+    SET xp = COALESCE(xp, 0) + NEW.amount
+    WHERE id = NEW.user_id
+    RETURNING xp INTO new_xp;
+
+  UPDATE public.profiles
+    SET level = public.compute_level(new_xp)
+    WHERE id = NEW.user_id;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+4. Rank storage options
+
+- Option A (no storage, dynamic): compute rank on demand with a window function:
+
+```sql
+SELECT id, full_name, avatar_url, xp,
+       RANK() OVER (ORDER BY xp DESC) AS rank
+FROM public.profiles;
+```
+
+- Option B (cached): materialized view to store rank for fast reads (refresh periodically):
+
+```sql
+CREATE MATERIALIZED VIEW IF NOT EXISTS public.leaderboard_ranks AS
+SELECT id, full_name, avatar_url, xp,
+       RANK() OVER (ORDER BY xp DESC) AS rank
+FROM public.profiles;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_leaderboard_ranks_id ON public.leaderboard_ranks(id);
+
+-- Refresh via cron/Edge Function as needed
+-- REFRESH MATERIALIZED VIEW CONCURRENTLY public.leaderboard_ranks;
+```
+
+UI implementation details (Profile):
+
+- Show a yellow progress bar representing progress within the current level.
+  - Compute on client (or via SQL function) using the same curve:
+    - `level = computeLevelFromXp(xp)`
+    - `xpNeededForLevel(level) = 100 + (level - 1) * 25`
+    - `xpIntoCurrent = xp - totalRequiredXpUpTo(level - 1)`
+  - Progress = `xpIntoCurrent / xpNeededForLevel(level)`.
+- Display: “Level N • X / Y XP” above the bar.
+- Display user rank: either from the dynamic query (Option A) or from `leaderboard_ranks` (Option B) if enabled.
+- Color: use brand yellow for the progress fill; ensure accessible contrast on dark/light themes.
+
+Notes:
+
+- Storing `rank` directly on profiles is discouraged (it changes whenever anyone’s XP changes). Prefer dynamic window function or a materialized view refreshed periodically.
+- `level` can be cached safely on profiles since it derives directly and deterministically from `xp`.
+
 ## Phase 5: UI/UX Adjustments
 
 Profile screen:
