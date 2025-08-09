@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useIndustries } from '../context/IndustriesContext'; // <-- ADD THIS LINE
 import { CommentsModal } from './CommentsModal';
+import QuizCard, { QuizQuestion } from './QuizCard';
 import { supabase } from '../lib/supabase';
 
 interface MainFeedProps {
@@ -30,6 +31,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [commentsArticleId, setCommentsArticleId] = useState<number | null>(null);
+  const [quizVisible, setQuizVisible] = useState(false);
+  const [quizQuestion, setQuizQuestion] = useState<QuizQuestion | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   const feedAlgorithmRef = useRef<FeedAlgorithm | null>(null);
@@ -138,6 +141,27 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       setArticles([]);
     }
     setIsLoading(false);
+
+    // Opportunistically show a quiz (approx 1 in 8 openings)
+    try {
+      if (Math.random() < 0.125) {
+        const { data: q } = await supabase
+          .from('quiz_questions')
+          .select('id, question')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (q) {
+          setQuizQuestion({
+            id: q.id,
+            question: q.question,
+          });
+          setQuizVisible(true);
+        }
+      }
+    } catch (_) {
+      // ignore quiz errors
+    }
   };
 
   // Background prefetch function for smoother experience
@@ -418,6 +442,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         windowSize={8} // Smaller window for faster initial load
         legacyImplementation={false} // Use modern VirtualizedList implementation
       />
+      <QuizCard visible={quizVisible} onClose={() => setQuizVisible(false)} question={quizQuestion} />
       {/* CommentsModal will be rendered here, controlled by commentsArticleId */}
       <CommentsModal
         videoId={commentsArticleId}

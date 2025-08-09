@@ -52,6 +52,8 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const router = useRouter();
+  const [userXpDisplay, setUserXpDisplay] = useState<string>('0');
+  const [userLevelDisplay, setUserLevelDisplay] = useState<string>('1');
 
   // Always get the current user from supabase.auth to ensure we have the right id
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -97,7 +99,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       // Fetch profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('full_name, email, created_at')
+        .select('full_name, email, created_at, xp, level')
         .eq('id', currentUser.id)
         .single();
 
@@ -105,6 +107,8 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
         console.error('Error fetching profile:', profileError);
       } else if (profileData) {
         setFullName(profileData.full_name || defaultUserData.name);
+        setUserXpDisplay(String(profileData.xp ?? 0));
+        setUserLevelDisplay(String(profileData.level ?? 1));
         setUserData((prev) => ({
           ...prev,
           name: profileData.full_name || defaultUserData.name,
@@ -328,10 +332,16 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
     <View style={dynamicStyles.statsContainer}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <StatCard
-          title="Insights Gained"
-          value={isLoadingStats ? '...' : learningStats.videosWatched.toString()}
-          icon={<Feather name="play-circle" size={24} color={colors.text} />}
-          color="blue"
+          title="XP"
+          value={userXpDisplay}
+          icon={<Feather name="star" size={24} color={colors.text} />}
+          color="yellow"
+        />
+        <StatCard
+          title="Level"
+          value={userLevelDisplay}
+          icon={<Feather name="trending-up" size={24} color={colors.text} />}
+          color="purple"
         />
         <StatCard
           title="Posts Liked"
@@ -343,7 +353,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
           title="Posts Saved"
           value={isLoadingStats ? '...' : learningStats.postsSaved.toString()}
           icon={<Feather name="bookmark" size={24} color={colors.text} />}
-          color="purple"
+          color="blue"
         />
         <StatCard
           title="Days Active"
@@ -383,6 +393,48 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
     }
   };
 
+  // Small inline component to render top-3 leaderboard by XP
+  const LeaderboardTop3: React.FC = () => {
+    const { colors } = useTheme();
+    const [rows, setRows] = useState<Array<{ id: string; full_name: string; avatar_url: string | null; xp: number }>>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const fetchLeaderboard = async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, xp')
+          .order('xp', { ascending: false })
+          .limit(3);
+        if (!error && data) setRows(data as any);
+        setLoading(false);
+      };
+      fetchLeaderboard();
+    }, []);
+
+    if (loading) {
+      return <Text style={{ color: colors.textSecondary }}>Loading...</Text>;
+    }
+
+    if (!rows.length) {
+      return <Text style={{ color: colors.textSecondary }}>No leaderboard data yet.</Text>;
+    }
+
+    return (
+      <View>
+        {rows.map((r, idx) => (
+          <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <Text style={{ width: 24, color: colors.text }}>{idx + 1}.</Text>
+            <Image source={{ uri: r.avatar_url || 'https://i.pravatar.cc/40' }} style={{ width: 28, height: 28, borderRadius: 14, marginRight: 8 }} />
+            <Text style={{ flex: 1, color: colors.text }}>{r.full_name}</Text>
+            <Text style={{ color: colors.textSecondary }}>{r.xp} XP</Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   return (
     <View style={dynamicStyles.container}>
       <ScrollView contentContainerStyle={dynamicStyles.contentContainer}>
@@ -401,6 +453,10 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
           <Text style={dynamicStyles.userEmail}>{userData.email}</Text>
         </LinearGradient>
         {renderStats()}
+        <View style={dynamicStyles.savedCard}>
+          <Text style={dynamicStyles.savedTitle}>Leaderboard (Top 3)</Text>
+          <LeaderboardTop3 />
+        </View>
         {renderInterests()}
         <View style={dynamicStyles.savedCard}>
           <Text style={dynamicStyles.savedTitle}>Saved Content</Text>

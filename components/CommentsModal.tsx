@@ -183,6 +183,28 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
         .from(tableInfo.contentTable)
         .update({ comments_count: comments.length + 1 })
         .eq('id', videoId);
+
+      // If commenting on an insight, grant XP to the insight author (idempotent in DB)
+      try {
+        if (contentType === 'insight') {
+          const { data: insightRow } = await supabase
+            .from('insights')
+            .select('author_id')
+            .eq('id', videoId)
+            .maybeSingle();
+          const authorId = (insightRow as any)?.author_id;
+          if (authorId) {
+            await supabase.rpc('grant_xp_for_insight_interaction', {
+              p_insight_id: videoId,
+              p_author_id: authorId,
+              p_actor_id: user.id,
+              p_reason: 'insight_comment',
+            });
+          }
+        }
+      } catch (e) {
+        // best-effort only
+      }
     }
     setSubmitting(false);
   };

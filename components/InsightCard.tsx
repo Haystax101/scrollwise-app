@@ -23,6 +23,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   const [hasLiked, setHasLiked] = useState(false);
   const [hasSaved, setHasSaved] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [authorId, setAuthorId] = useState<string | null>(null);
 
   const dynamicStyles = StyleSheet.create({
     wrapper: {
@@ -108,6 +109,20 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
 
   useEffect(() => {
     initializeFlags();
+    // Fetch and cache author_id for XP RPCs
+    const fetchAuthorId = async () => {
+      try {
+        const { data } = await supabase
+          .from('insights')
+          .select('author_id')
+          .eq('id', insight.id)
+          .maybeSingle();
+        if (data?.author_id) setAuthorId(data.author_id);
+      } catch (e) {
+        // noop
+      }
+    };
+    fetchAuthorId();
   }, [initializeFlags]);
 
   const toggleLike = useCallback(async () => {
@@ -117,6 +132,20 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     setLikes(prev => adding ? prev + 1 : Math.max(0, prev - 1));
     if (adding) {
       await supabase.from('insight_likes').insert({ user_id: user.id, insight_id: insight.id });
+      // Grant XP to author for like (idempotent via DB)
+      try {
+        const ensuredAuthorId = authorId || (await supabase.from('insights').select('author_id').eq('id', insight.id).maybeSingle()).data?.author_id;
+        if (ensuredAuthorId) {
+          await supabase.rpc('grant_xp_for_insight_interaction', {
+            p_insight_id: insight.id,
+            p_author_id: ensuredAuthorId,
+            p_actor_id: user.id,
+            p_reason: 'insight_like',
+          });
+        }
+      } catch (e) {
+        // best-effort; idempotent and safe to skip on error
+      }
     } else {
       await supabase.from('insight_likes').delete().match({ user_id: user.id, insight_id: insight.id });
     }
@@ -132,6 +161,20 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     setSaves(prev => adding ? prev + 1 : Math.max(0, prev - 1));
     if (adding) {
       await supabase.from('insight_saves').insert({ user_id: user.id, insight_id: insight.id });
+      // Grant XP to author for save (idempotent via DB)
+      try {
+        const ensuredAuthorId = authorId || (await supabase.from('insights').select('author_id').eq('id', insight.id).maybeSingle()).data?.author_id;
+        if (ensuredAuthorId) {
+          await supabase.rpc('grant_xp_for_insight_interaction', {
+            p_insight_id: insight.id,
+            p_author_id: ensuredAuthorId,
+            p_actor_id: user.id,
+            p_reason: 'insight_save',
+          });
+        }
+      } catch (e) {
+        // best-effort
+      }
     } else {
       await supabase.from('insight_saves').delete().match({ user_id: user.id, insight_id: insight.id });
     }
