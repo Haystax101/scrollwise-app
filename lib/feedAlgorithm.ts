@@ -119,70 +119,174 @@ export class FeedAlgorithm {
   }
 
   /**
-   * Core algorithm: For each industry, try to fetch one paper, one book, and one article
-   * Repeat until we have the desired number of items
+   * Core algorithm: Implements time-based scoring with content-type balancing
+   * Uses decaying time score and weighted content distribution
    */
   async fetchArticles(targetCount: number = 10, excludeInteracted: boolean = true): Promise<FeedItem[]> {
     try {
       await this.initializeUserInteractions();
       
-      const fetchedContent: FetchedContent[] = [];
-      const contentTypes: ('paper' | 'book' | 'article')[] = ['paper', 'book', 'article'];
+      // Improved algorithm with weighted content type distribution
+      const contentTypeWeights = {
+        'article': 0.4,  // 40% articles (news, current events)
+        'paper': 0.25,   // 25% papers (research, in-depth)
+        'book': 0.35     // 35% books (learning, development)
+      };
       
-      // Track which items we've tried to fetch to avoid infinite loops
-      const attemptedIds = new Set<number>();
+      // Calculate target counts for each content type
+      const targetCounts = {
+        'article': Math.ceil(targetCount * contentTypeWeights.article),
+        'paper': Math.ceil(targetCount * contentTypeWeights.paper),
+        'book': Math.ceil(targetCount * contentTypeWeights.book)
+      };
       
-      // Continue fetching until we have enough content
-      let attempts = 0;
-      const maxAttempts = 50; // Prevent infinite loops
+      // Fetch content with time-based scoring for each type
+      const allContent: Array<FetchedContent & { score: number }> = [];
       
-      while (fetchedContent.length < targetCount && attempts < maxAttempts) {
-        attempts++;
-        
-        // Go through each user industry
-        for (const industryId of this.userIndustries) {
-          if (fetchedContent.length >= targetCount) break;
-          
-          // Try to fetch one item of each type for this industry
-          for (const type of contentTypes) {
-            if (fetchedContent.length >= targetCount) break;
-            
-            const content = await this.fetchContentByTypeAndIndustry(
-              type, 
-              industryId, 
-              excludeInteracted, 
-              attemptedIds
-            );
-            
-            if (content) {
-              fetchedContent.push(content);
-              attemptedIds.add(content.id);
-              this.fetchedIds.add(content.id);
-            }
-          }
-        }
-        
-        // If we haven't made progress, try with more relaxed constraints
-        if (fetchedContent.length === 0 && excludeInteracted) {
-          return this.fetchArticles(targetCount, false);
-        }
-        
-        // If we're not making progress, break out
-        if (attempts > 10 && fetchedContent.length === 0) {
-          break;
-        }
+      for (const [contentType, targetTypeCount] of Object.entries(targetCounts)) {
+        const typeContent = await this.fetchContentWithTimeScoring(
+          contentType as 'article' | 'paper' | 'book',
+          targetTypeCount * 2, // Fetch more than needed for better selection
+          excludeInteracted
+        );
+        allContent.push(...typeContent);
       }
       
-      // Randomize the order of content
-      const shuffledContent = this.shuffleArray(fetchedContent);
+      // Sort by time-weighted score and take the best content
+      allContent.sort((a, b) => b.score - a.score);
+      
+      // Ensure content type diversity by using round-robin selection
+      const balancedContent = this.balanceContentTypes(allContent, targetCount, contentTypeWeights);
       
       // Convert to FeedItem format
-      const feedItems = shuffledContent.map(this.mapToFeedItem);
+      const feedItems = balancedContent.map(this.mapToFeedItem);
       return feedItems;
     } catch (error) {
       console.error('Error in fetchArticles:', error);
       return [];
     }
+  }
+
+  /**
+   * Fetch content with time-based scoring for a specific content type
+   */
+  private async fetchContentWithTimeScoring(
+    contentType: 'article' | 'paper' | 'book',
+    targetCount: number,
+    excludeInteracted: boolean
+  ): Promise<Array<FetchedContent & { score: number }>> {
+    const tableName = contentType === 'paper' ? 'papers' : contentType === 'book' ? 'books' : 'articles';
+    const scoredContent: Array<FetchedContent & { score: number }> = [];
+    
+    try {
+      for (const industryId of this.userIndustries) {
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .eq('industry_id', industryId)
+          .order('created_at', { ascending: false })
+          .limit(20); // Get more options for better scoring
+
+        if (error || !data) continue;
+
+        const filteredData = data.filter(item => {
+          if (this.fetchedIds.has(item.id)) return false;
+          if (excludeInteracted && (this.likedIds.has(item.id) || this.savedIds.has(item.id))) {
+            return false;
+          }
+          return true;
+        });
+
+        for (const item of filteredData) {
+          const score = this.calculateTimeScore(item);
+          scoredContent.push({
+            ...item,
+            type: contentType,
+            score
+          });
+        }
+      }
+
+      // Sort by score and return top items
+      scoredContent.sort((a, b) => b.score - a.score);
+      return scoredContent.slice(0, targetCount);
+    } catch (error) {
+      console.error('Error in fetchContentWithTimeScoring:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Calculate time-based score using decaying function
+   * Formula: base_score * e^(-decay_rate * hours_old)
+   */
+  private calculateTimeScore(content: any): number {
+    const now = new Date();
+    const contentDate = new Date(content.created_at || content.date);
+    const hoursOld = (now.getTime() - contentDate.getTime()) / (1000 * 60 * 60);
+    
+    // Base score from engagement metrics (normalized 0-1)
+    const engagementScore = Math.min(1, 
+      (content.likes_count * 0.4 + content.saves_count * 0.6) / 100
+    );
+    
+    // Base score: engagement (0-1) + quality boost (0.2) 
+    const baseScore = Math.max(0.2, engagementScore);
+    
+    // Decay rate: slower decay for papers/books (research content), faster for articles (news)
+    const decayRate = content.type === 'article' ? 0.02 : 0.005;
+    
+    // Apply time decay
+    const timeScore = baseScore * Math.exp(-decayRate * hoursOld);
+    
+    return timeScore;
+  }
+
+  /**
+   * Balance content types using round-robin to prevent clustering
+   */
+  private balanceContentTypes(
+    allContent: Array<FetchedContent & { score: number }>,
+    targetCount: number,
+    weights: { article: number; paper: number; book: number }
+  ): FetchedContent[] {
+    const contentByType = {
+      article: allContent.filter(c => c.type === 'article'),
+      paper: allContent.filter(c => c.type === 'paper'),
+      book: allContent.filter(c => c.type === 'book')
+    };
+
+    const result: FetchedContent[] = [];
+    const indices = { article: 0, paper: 0, book: 0 };
+    const typeOrder: ('article' | 'paper' | 'book')[] = ['article', 'book', 'paper'];
+
+    // Round-robin selection with type weighting
+    while (result.length < targetCount) {
+      let addedThisRound = false;
+
+      for (const type of typeOrder) {
+        if (result.length >= targetCount) break;
+        
+        // Check if we should add this type based on current distribution
+        const currentTypeCount = result.filter(item => item.type === type).length;
+        const targetTypeCount = Math.ceil(targetCount * weights[type]);
+        
+        if (currentTypeCount < targetTypeCount && 
+            indices[type] < contentByType[type].length) {
+          
+          const item = contentByType[type][indices[type]];
+          result.push(item);
+          this.fetchedIds.add(item.id);
+          indices[type]++;
+          addedThisRound = true;
+        }
+      }
+
+      // If no items were added this round, break to avoid infinite loop
+      if (!addedThisRound) break;
+    }
+
+    return result;
   }
 
   /**

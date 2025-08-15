@@ -1,0 +1,29 @@
+Frontend 
+
+Here is everything that needs to happen on the frontend:
+
+Quizzes:
+
+The current quiz logic is primitive, so needs changing, especially given the fact that each question is now 4-answer multiple choice, so we need to adapt the frontend to handle the new database layout (see databaseOverview.sql). In the main feed, every 5-15 scrolls (it should be randomised each time), a QuestionCard should appear instead of a standard content card. It should lock the feed on this card. This card should contain a multiple choice question. The multiple choice question should be for one of the previous 5-15 pieces of content (again, randomised, but the number of pieces of content selected from should NOT be randomised, it should be based on the random number chosen above). Whichever piece of content is selected, we should query the quiz_questions table with the composite key of that piece of content’s type (article / book / paper) and its id in its respective table. This should get us the question for that specific piece of content as well as the 4 choices. Option A in the table is always the correct one, so this should be noted. The MCQs order should be random. For now, the QuestionCard can mention specifically which piece of content it is assessing (i.e. reference the title) but in future this will likely not be the case. The design of the QuestionCard can be fairly simple for now. If they select the right answer it should go green whereas if they select the wrong answer it should go red, and the correct answer should be highlighted in some way. If they get the answer right, we should display “+5XP” and the user should gain 5 XP (use xp_ledger and profiles table for this). Then, the main feed should be unlocked, so they can scroll on to the next piece of content and the process of randomising between 5-15 then adding another question will start over. 
+
+XP and leaderboard:
+
+Alongside the above logic, we also need to adapt the profile section so that XP is displayed as more of a progress bar along with their level. For now levels can go up in increments of 20XP. So the XP bar fills up as they gain XP, then when they reach 20 the bar resets and their level increases. This should all be stored in the profiles table. You may wish to have edge functions handling the levelling up logic. On the leaderboard in the profile, you should be able to tap on each user. Doing so will bring up a modal with all their profile data (similar to how one’s own profile looks minus the saved_content bit as that’s private). Each time a user levels up, they should get an award for the level they just completed. Awards should be in a horizontal scrollview in their profile. Each award for each level will need to look slightly different, but you needn’t worry too much about the design for now as I’ll add that later. 
+
+Insights:
+
+In the insights tab, there needs to be more of a margin_top as currently the create insight button is somewhat obfuscated by the notch. As for the insights being displayed, the insight message should not be in quotes. The data displayed in the profile details section should be real data collected during onboarding / added later in their profile. Include the 4 pieces of data which you think are best for others to see. It doesn’t matter if there’s no data in the table for the user, we can just display the heading and put “—“ or whatever. 
+
+Profile Picture:
+
+profileIcon.png should be used as the default profile picture, then in profile users should be able to add a profile photo (upload a file, choose from photo gallery or take a photo - there should be native components to allow this). The insight cards should load the user’s profile picture (or profileIcon.png as fallback). We will need to use Supabase Buckets for profile photos I think. 
+
+Profile:
+
+A user’s profile should display all the data collected during onboarding. Any of these fields which they did not fill in during onboarding should be still displayed but left blank, with the option for them to edit their profile and add in this information. Think similarly to LinkedIn. 
+
+Feed Algorithm:
+
+Currently the feed algorithm is very primitive. See feedAlgorithm.md for details on what we could do and select the best method for our MVP from this. Also, think about including the Quiz injection functionality directly within the feedAlgorithm for consistency. 
+
+Generate a comprehensive plan detailing how we will go about implementing all of this and which order we will do it in. Then begin implementing as much as you are able in one go (I appreciate doing all of it in one go is unrealistic so just aim to get us to a point where as many features as possible work and can be tested in a working app). Ensure you refer to relevant documentation and only implement when you are at least 95% sure that it’s the right thing to do. Refer to databaseOverview.sql whenever you need to. If I have missed anything and you need further clarification, do not hesitate to let me know once you’ve completed the plan. Ensure you make yourself familiar with how my current code works prior to making decisions. 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Image, Modal, Alert } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -54,6 +54,20 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
   const router = useRouter();
   const [userXpDisplay, setUserXpDisplay] = useState<string>('0');
   const [userLevelDisplay, setUserLevelDisplay] = useState<string>('1');
+  const [userXp, setUserXp] = useState<number>(0);
+  const [userLevel, setUserLevel] = useState<number>(1);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [profileDetails, setProfileDetails] = useState<{
+    education: string;
+    experience: string;
+    goals: string;
+    projects: string;
+  }>({
+    education: '',
+    experience: '',
+    goals: '',
+    projects: ''
+  });
 
   // Always get the current user from supabase.auth to ensure we have the right id
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -99,7 +113,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       // Fetch profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('full_name, email, created_at, xp, level')
+        .select('full_name, email, created_at, xp, level, avatar_url')
         .eq('id', currentUser.id)
         .single();
 
@@ -107,8 +121,13 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
         console.error('Error fetching profile:', profileError);
       } else if (profileData) {
         setFullName(profileData.full_name || defaultUserData.name);
-        setUserXpDisplay(String(profileData.xp ?? 0));
-        setUserLevelDisplay(String(profileData.level ?? 1));
+        const xp = profileData.xp ?? 0;
+        const level = profileData.level ?? 1;
+        setUserXpDisplay(String(xp));
+        setUserLevelDisplay(String(level));
+        setUserXp(xp);
+        setUserLevel(level);
+        setAvatarUrl(profileData.avatar_url);
         setUserData((prev) => ({
           ...prev,
           name: profileData.full_name || defaultUserData.name,
@@ -186,6 +205,35 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       
       setUserData((prev) => ({ ...prev, savedContent }));
       
+      // Fetch detailed profile information for display
+      const [eduDetailsRes, expDetailsRes, goalsDetailsRes, projectsRes] = await Promise.all([
+        supabase.from('user_education').select('universities (name), degrees (name), stage').eq('user_id', userId).maybeSingle(),
+        supabase.from('user_experiences').select('companies (name), experience_level, description').eq('user_id', userId).maybeSingle(),
+        supabase.from('user_goals').select('goal, timeframe').eq('user_id', userId).maybeSingle(),
+        supabase.from('user_projects').select('title, description').eq('user_id', userId)
+      ]);
+
+      const education = eduDetailsRes.data 
+        ? `${(eduDetailsRes.data as any).universities?.name || ''} - ${(eduDetailsRes.data as any).degrees?.name || ''} (${eduDetailsRes.data.stage || ''})`.replace(/^- |  - $/, '').trim()
+        : '';
+      
+      const experience = expDetailsRes.data
+        ? `${(expDetailsRes.data as any).companies?.name || ''} (${expDetailsRes.data.experience_level || ''})${expDetailsRes.data.description ? ` - ${expDetailsRes.data.description}` : ''}`.replace(/^- |  - $/, '').trim()
+        : '';
+      
+      const goals = goalsDetailsRes.data
+        ? `${goalsDetailsRes.data.goal || ''} (${goalsDetailsRes.data.timeframe || ''})`.replace(/^- |  - $/, '').trim()
+        : '';
+      
+      const projects = projectsRes.data?.map((p: any) => `${p.title || ''}: ${p.description || ''}`).join('; ') || '';
+
+      setProfileDetails({
+        education,
+        experience, 
+        goals,
+        projects
+      });
+
       // Fetch learning stats
       await fetchLearningStats(userId);
     };
@@ -216,6 +264,16 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       borderWidth: 3,
       borderColor: 'white',
       marginBottom: 12,
+    },
+    avatarEditOverlay: {
+      position: 'absolute',
+      bottom: 12,
+      right: 0,
+      backgroundColor: colors.primary,
+      borderRadius: 12,
+      padding: 4,
+      borderWidth: 2,
+      borderColor: 'white',
     },
     userName: {
       fontSize: 24,
@@ -310,6 +368,126 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
     contentContainer: {
       paddingBottom: 120,
     },
+    xpContainer: {
+      marginHorizontal: 16,
+      marginTop: 20,
+      backgroundColor: colors.card,
+      padding: 20,
+      borderRadius: 16,
+    },
+    xpHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    xpTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    xpText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    progressBarContainer: {
+      marginBottom: 12,
+    },
+    progressBar: {
+      height: 8,
+      borderRadius: 4,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: 4,
+    },
+    totalXpText: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    awardsSection: {
+      marginTop: 8,
+    },
+    awardsTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 12,
+    },
+    awardsScrollView: {
+      flexDirection: 'row',
+    },
+    awardBadge: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    awardText: {
+      color: 'white',
+      fontSize: 12,
+      fontWeight: 'bold',
+    },
+    noAwardsText: {
+      fontSize: 14,
+      fontStyle: 'italic',
+      textAlign: 'center',
+      paddingVertical: 15,
+    },
+    profileDetailsContainer: {
+      marginHorizontal: 16,
+      marginTop: 20,
+      backgroundColor: colors.card,
+      padding: 20,
+      borderRadius: 16,
+    },
+    profileDetailsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    profileDetailsTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    profileDetailItem: {
+      marginBottom: 12,
+    },
+    profileDetailLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    profileDetailValue: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      lineHeight: 20,
+    },
+    emptyProfileText: {
+      fontSize: 14,
+      textAlign: 'center',
+      marginBottom: 16,
+      lineHeight: 20,
+    },
+    editProfileButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      alignItems: 'center',
+    },
+    editProfileButtonText: {
+      color: 'white',
+      fontSize: 14,
+      fontWeight: '600',
+    },
   });
 
   const renderInterests = () => {
@@ -327,6 +505,97 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
         </View>
       );
     };
+
+  const renderProfileDetails = () => {
+    const details = [
+      { label: 'Education', value: profileDetails.education },
+      { label: 'Experience', value: profileDetails.experience },
+      { label: 'Goals', value: profileDetails.goals },
+      { label: 'Projects', value: profileDetails.projects }
+    ].filter(detail => detail.value);
+
+    if (details.length === 0) {
+      return (
+        <View style={dynamicStyles.profileDetailsContainer}>
+          <Text style={dynamicStyles.profileDetailsTitle}>Profile Details</Text>
+          <Text style={[dynamicStyles.emptyProfileText, { color: colors.textSecondary }]}>
+            Complete your profile in Settings to showcase your background and goals.
+          </Text>
+          <TouchableOpacity 
+            style={[dynamicStyles.editProfileButton, { backgroundColor: colors.primary }]}
+            onPress={() => setIsSettingsModalVisible(true)}
+          >
+            <Text style={dynamicStyles.editProfileButtonText}>Edit Profile</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={dynamicStyles.profileDetailsContainer}>
+        <View style={dynamicStyles.profileDetailsHeader}>
+          <Text style={dynamicStyles.profileDetailsTitle}>Profile Details</Text>
+          <TouchableOpacity onPress={() => setIsSettingsModalVisible(true)}>
+            <Feather name="edit" size={20} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+        
+        {details.map((detail, index) => (
+          <View key={index} style={dynamicStyles.profileDetailItem}>
+            <Text style={dynamicStyles.profileDetailLabel}>{detail.label}</Text>
+            <Text style={dynamicStyles.profileDetailValue}>{detail.value}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  const renderXPProgress = () => {
+    const currentLevelXP = (userLevel - 1) * 20; // XP needed to reach current level
+    const nextLevelXP = userLevel * 20; // XP needed to reach next level
+    const progressInCurrentLevel = userXp - currentLevelXP;
+    const progressPercentage = (progressInCurrentLevel / 20) * 100;
+
+    return (
+      <View style={dynamicStyles.xpContainer}>
+        <View style={dynamicStyles.xpHeader}>
+          <Text style={dynamicStyles.xpTitle}>Level {userLevel}</Text>
+          <Text style={dynamicStyles.xpText}>{progressInCurrentLevel}/20 XP</Text>
+        </View>
+        
+        <View style={dynamicStyles.progressBarContainer}>
+          <View style={[dynamicStyles.progressBar, { backgroundColor: colors.border }]}>
+            <View style={[
+              dynamicStyles.progressFill, 
+              { 
+                width: `${Math.min(progressPercentage, 100)}%`,
+                backgroundColor: colors.primary 
+              }
+            ]} />
+          </View>
+        </View>
+        
+        <Text style={dynamicStyles.totalXpText}>Total XP: {userXp}</Text>
+        
+        {/* Awards Section */}
+        <View style={dynamicStyles.awardsSection}>
+          <Text style={dynamicStyles.awardsTitle}>Achievements</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={dynamicStyles.awardsScrollView}>
+            {Array.from({ length: userLevel - 1 }, (_, index) => (
+              <View key={index} style={[dynamicStyles.awardBadge, { backgroundColor: colors.primary }]}>
+                <Text style={dynamicStyles.awardText}>L{index + 1}</Text>
+              </View>
+            ))}
+            {userLevel === 1 && (
+              <Text style={[dynamicStyles.noAwardsText, { color: colors.textSecondary }]}>
+                Complete quizzes to earn your first achievement!
+              </Text>
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    );
+  };
 
   const renderStats = () => (
     <View style={dynamicStyles.statsContainer}>
@@ -393,11 +662,84 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
     }
   };
 
+  const handleProfilePicturePress = () => {
+    Alert.alert(
+      "Update Profile Picture",
+      "Choose an option",
+      [
+        {
+          text: "Take Photo",
+          onPress: () => Alert.alert("Camera", "Camera functionality requires expo-image-picker. For now, using placeholder.")
+        },
+        {
+          text: "Choose from Gallery", 
+          onPress: () => Alert.alert("Gallery", "Gallery functionality requires expo-image-picker. For now, using placeholder.")
+        },
+        {
+          text: "Use Default",
+          onPress: () => updateProfilePicture("default")
+        },
+        {
+          text: "Cancel",
+          style: "cancel"
+        }
+      ]
+    );
+  };
+
+  const updateProfilePicture = async (type: string) => {
+    if (!currentUser) return;
+    
+    try {
+      let newAvatarUrl = null;
+      
+      if (type === "default") {
+        // Use the profileIcon.png as default
+        newAvatarUrl = null; // This will fall back to profileIcon.png
+      } else {
+        // For future implementation with expo-image-picker
+        newAvatarUrl = "https://randomuser.me/api/portraits/men/32.jpg"; // Placeholder
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: newAvatarUrl })
+        .eq('id', currentUser.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setAvatarUrl(newAvatarUrl);
+      Alert.alert("Success", "Profile picture updated successfully!");
+    } catch (error) {
+      console.error('Error updating profile picture:', error);
+      Alert.alert("Error", "Failed to update profile picture.");
+    }
+  };
+
+  // User profile modal data interface
+  interface UserProfile {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+    xp: number;
+    level: number;
+    email: string;
+    created_at: string;
+    industries: string[];
+    education: string;
+    experience: string;
+    goals: string;
+  }
+
   // Small inline component to render top-3 leaderboard by XP
   const LeaderboardTop3: React.FC = () => {
     const { colors } = useTheme();
     const [rows, setRows] = useState<Array<{ id: string; full_name: string; avatar_url: string | null; xp: number }>>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+    const [userModalVisible, setUserModalVisible] = useState(false);
 
     useEffect(() => {
       const fetchLeaderboard = async () => {
@@ -413,6 +755,73 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       fetchLeaderboard();
     }, []);
 
+    const fetchUserProfile = async (userId: string) => {
+      try {
+        // Fetch basic profile data
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, xp, level, email, created_at')
+          .eq('id', userId)
+          .single();
+
+        if (profileError || !profileData) {
+          console.error('Error fetching user profile:', profileError);
+          return;
+        }
+
+        // Fetch user industries
+        const { data: industriesData } = await supabase
+          .from('user_industries')
+          .select('industries (name)')
+          .eq('user_id', userId);
+
+        // Fetch education data
+        const { data: educationData } = await supabase
+          .from('user_education')
+          .select('universities (name), degrees (name), stage')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        // Fetch experience data
+        const { data: experienceData } = await supabase
+          .from('user_experiences')
+          .select('companies (name), experience_level, description')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        // Fetch goals data
+        const { data: goalsData } = await supabase
+          .from('user_goals')
+          .select('goal, timeframe')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        const industries = industriesData?.map((i: any) => i.industries.name) || [];
+        const education = educationData 
+          ? `${educationData.universities?.name || ''} - ${educationData.degrees?.name || ''} (${educationData.stage || ''})`.replace(/^- |  - $/, '').trim()
+          : '';
+        const experience = experienceData
+          ? `${experienceData.companies?.name || ''} (${experienceData.experience_level || ''})${experienceData.description ? ` - ${experienceData.description}` : ''}`.replace(/^- |  - $/, '').trim()
+          : '';
+        const goals = goalsData
+          ? `${goalsData.goal || ''} (${goalsData.timeframe || ''})`.replace(/^- |  - $/, '').trim()
+          : '';
+
+        const userProfile: UserProfile = {
+          ...profileData,
+          industries,
+          education,
+          experience,
+          goals
+        };
+
+        setSelectedUser(userProfile);
+        setUserModalVisible(true);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+
     if (loading) {
       return <Text style={{ color: colors.textSecondary }}>Loading...</Text>;
     }
@@ -422,16 +831,126 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
     }
 
     return (
-      <View>
-        {rows.map((r, idx) => (
-          <View key={r.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Text style={{ width: 24, color: colors.text }}>{idx + 1}.</Text>
-            <Image source={{ uri: r.avatar_url || 'https://i.pravatar.cc/40' }} style={{ width: 28, height: 28, borderRadius: 14, marginRight: 8 }} />
-            <Text style={{ flex: 1, color: colors.text }}>{r.full_name}</Text>
-            <Text style={{ color: colors.textSecondary }}>{r.xp} XP</Text>
+      <>
+        <View>
+          {rows.map((r, idx) => (
+            <TouchableOpacity 
+              key={r.id} 
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, padding: 8, borderRadius: 8 }}
+              onPress={() => fetchUserProfile(r.id)}
+            >
+              <Text style={{ width: 24, color: colors.text }}>{idx + 1}.</Text>
+              <Image source={{ uri: r.avatar_url || 'https://i.pravatar.cc/40' }} style={{ width: 28, height: 28, borderRadius: 14, marginRight: 8 }} />
+              <Text style={{ flex: 1, color: colors.text }}>{r.full_name}</Text>
+              <Text style={{ color: colors.textSecondary }}>{r.xp} XP</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* User Profile Modal */}
+        <Modal
+          visible={userModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setUserModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ 
+              backgroundColor: colors.card, 
+              margin: 20, 
+              borderRadius: 16, 
+              padding: 20, 
+              maxHeight: '80%',
+              width: '90%'
+            }}>
+              {selectedUser && (
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {/* Header */}
+                  <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                    <Image 
+                      source={{ uri: selectedUser.avatar_url || 'https://i.pravatar.cc/80' }} 
+                      style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 12 }}
+                    />
+                    <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text, marginBottom: 4 }}>
+                      {selectedUser.full_name}
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, marginBottom: 8 }}>
+                      Level {selectedUser.level} • {selectedUser.xp} XP
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                      Joined {new Date(selectedUser.created_at).toLocaleDateString()}
+                    </Text>
+                  </View>
+
+                  {/* Profile Details */}
+                  {selectedUser.industries.length > 0 && (
+                    <View style={{ marginBottom: 16 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
+                        Industries
+                      </Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                        {selectedUser.industries.map((industry, index) => (
+                          <View key={index} style={{ 
+                            backgroundColor: colors.primary + '20', 
+                            paddingHorizontal: 12, 
+                            paddingVertical: 4, 
+                            borderRadius: 16, 
+                            marginRight: 8, 
+                            marginBottom: 4 
+                          }}>
+                            <Text style={{ color: colors.primary, fontSize: 12 }}>{industry}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {selectedUser.education && (
+                    <View style={{ marginBottom: 16 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
+                        Education
+                      </Text>
+                      <Text style={{ color: colors.textSecondary }}>{selectedUser.education}</Text>
+                    </View>
+                  )}
+
+                  {selectedUser.experience && (
+                    <View style={{ marginBottom: 16 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
+                        Experience
+                      </Text>
+                      <Text style={{ color: colors.textSecondary }}>{selectedUser.experience}</Text>
+                    </View>
+                  )}
+
+                  {selectedUser.goals && (
+                    <View style={{ marginBottom: 16 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
+                        Goals
+                      </Text>
+                      <Text style={{ color: colors.textSecondary }}>{selectedUser.goals}</Text>
+                    </View>
+                  )}
+                </ScrollView>
+              )}
+
+              {/* Close Button */}
+              <TouchableOpacity
+                style={{ 
+                  backgroundColor: colors.primary, 
+                  padding: 12, 
+                  borderRadius: 8, 
+                  alignItems: 'center', 
+                  marginTop: 16 
+                }}
+                onPress={() => setUserModalVisible(false)}
+              >
+                <Text style={{ color: 'white', fontWeight: '600' }}>Close</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        ))}
-      </View>
+        </Modal>
+      </>
     );
   };
 
@@ -445,19 +964,30 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
           <TouchableOpacity style={dynamicStyles.settingsButton} onPress={() => setIsSettingsModalVisible(true)}>
             <Feather name="settings" size={24} color="white" />
           </TouchableOpacity>
-          <Image
-            source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} // Placeholder
-            style={dynamicStyles.avatar}
-          />
+          <TouchableOpacity onPress={handleProfilePicturePress}>
+            <Image
+              source={
+                avatarUrl 
+                  ? { uri: avatarUrl } 
+                  : require('../profileIcon.png') // Fallback to local profileIcon.png
+              }
+              style={dynamicStyles.avatar}
+            />
+            <View style={dynamicStyles.avatarEditOverlay}>
+              <Feather name="edit-2" size={16} color="white" />
+            </View>
+          </TouchableOpacity>
           <Text style={dynamicStyles.userName}>{fullName}</Text>
           <Text style={dynamicStyles.userEmail}>{userData.email}</Text>
         </LinearGradient>
+        {renderXPProgress()}
         {renderStats()}
         <View style={dynamicStyles.savedCard}>
           <Text style={dynamicStyles.savedTitle}>Leaderboard (Top 3)</Text>
           <LeaderboardTop3 />
         </View>
         {renderInterests()}
+        {renderProfileDetails()}
         <View style={dynamicStyles.savedCard}>
           <Text style={dynamicStyles.savedTitle}>Saved Content</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>

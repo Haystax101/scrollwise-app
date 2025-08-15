@@ -33,6 +33,9 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   const [commentsArticleId, setCommentsArticleId] = useState<number | null>(null);
   const [quizVisible, setQuizVisible] = useState(false);
   const [quizQuestion, setQuizQuestion] = useState<QuizQuestion | null>(null);
+  const [scrollCount, setScrollCount] = useState(0);
+  const [nextQuizAt, setNextQuizAt] = useState<number>(Math.floor(Math.random() * 11) + 5); // Random between 5-15
+  const [feedLocked, setFeedLocked] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const feedAlgorithmRef = useRef<FeedAlgorithm | null>(null);
@@ -248,18 +251,89 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
 
   // Note: Removed scroll-to-index logic since specific articles are now positioned at the top of the feed
 
-  // Handle viewable items change - optimized with fewer dependencies
+  // Function to get a quiz question for a specific piece of content
+  const getQuizForContent = async (contentItem: FeedItem): Promise<QuizQuestion | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('quiz_questions')
+        .select('*')
+        .eq('content_type', contentItem.type)
+        .eq('content_id', contentItem.id)
+        .maybeSingle();
+
+      if (error || !data) {
+        console.log('No quiz found for content:', contentItem.type, contentItem.id);
+        return null;
+      }
+
+      return {
+        id: data.id,
+        question: data.question,
+        option_a: data.option_a,
+        option_b: data.option_b, 
+        option_c: data.option_c,
+        option_d: data.option_d,
+        correct_option_index: data.correct_option_index,
+        content_type: data.content_type,
+        content_id: data.content_id,
+        content_title: contentItem.title
+      };
+    } catch (error) {
+      console.error('Error fetching quiz question:', error);
+      return null;
+    }
+  };
+
+  // Function to show quiz for recent content
+  const showQuizForRecentContent = async () => {
+    if (articles.length < 5) return; // Need at least 5 articles to quiz on
+    
+    // Get content from the last 5-15 articles (based on nextQuizAt)
+    const recentContentCount = Math.min(nextQuizAt, articles.length);
+    const recentContent = articles.slice(Math.max(0, articles.length - recentContentCount), articles.length);
+    
+    // Filter out insights as they don't have quiz questions
+    const quizableContent = recentContent.filter(item => ['article', 'paper', 'book'].includes(item.type));
+    
+    if (quizableContent.length === 0) return;
+    
+    // Randomly select one piece of content to quiz on
+    const randomContent = quizableContent[Math.floor(Math.random() * quizableContent.length)];
+    
+    // Get quiz question for this content
+    const quiz = await getQuizForContent(randomContent);
+    
+    if (quiz) {
+      setQuizQuestion(quiz);
+      setQuizVisible(true);
+      setFeedLocked(true);
+    }
+  };
+
+  // Handle viewable items change - now with quiz injection logic
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
       const newIndex = viewableItems[0].index;
+      const oldIndex = currentArticleIndex;
       setCurrentArticleIndex(newIndex);
+      
+      // Count scrolls (only when moving forward)
+      if (newIndex > oldIndex) {
+        const newScrollCount = scrollCount + 1;
+        setScrollCount(newScrollCount);
+        
+        // Check if it's time to show a quiz
+        if (newScrollCount >= nextQuizAt && !feedLocked && !quizVisible) {
+          showQuizForRecentContent();
+        }
+      }
       
       // Trigger infinite scroll earlier for smoother experience (when 2-3 items remain)
       if (newIndex >= 2 && newIndex >= articles.length - 3) {
         loadMoreArticles();
       }
     }
-  }, [articles.length, loadMoreArticles]);
+  }, [articles.length, currentArticleIndex, scrollCount, nextQuizAt, feedLocked, quizVisible, loadMoreArticles]);
 
   // Memoize viewability config to prevent recreation
   const viewabilityConfig = useMemo(() => ({
@@ -423,12 +497,14 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         style={dynamicStyles.list}
         accessibilityHint="Scroll vertically to read articles"
         initialScrollIndex={currentArticleIndex}
+        scrollEnabled={!feedLocked} // Lock scrolling when quiz is active
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
             tintColor={colors.primary}
             colors={[colors.primary]}
+            enabled={!feedLocked} // Disable refresh when feed is locked
           />
         }
         ListFooterComponent={renderFooter}
@@ -442,7 +518,17 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         windowSize={8} // Smaller window for faster initial load
         legacyImplementation={false} // Use modern VirtualizedList implementation
       />
-      <QuizCard visible={quizVisible} onClose={() => setQuizVisible(false)} question={quizQuestion} />
+      <QuizCard 
+        visible={quizVisible} 
+        onClose={() => {
+          setQuizVisible(false);
+          setFeedLocked(false);
+          // Reset quiz timing for next quiz
+          setScrollCount(0);
+          setNextQuizAt(Math.floor(Math.random() * 11) + 5);
+        }} 
+        question={quizQuestion} 
+      />
       {/* CommentsModal will be rendered here, controlled by commentsArticleId */}
       <CommentsModal
         videoId={commentsArticleId}

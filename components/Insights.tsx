@@ -47,40 +47,22 @@ const Insights = () => {
       return;
     }
 
-    // Fetch profile details for current user separately (no FK from insights → user_experiences/education)
-    const [eduRes, expRes] = await Promise.all([
-      supabase.from('user_education').select('university_id, degree_id').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_experiences').select('company_id, experience_level').eq('user_id', user.id).maybeSingle(),
+    // Fetch comprehensive profile details for current user
+    const [eduRes, expRes, goalRes, industriesRes] = await Promise.all([
+      supabase.from('user_education').select('universities (name), degrees (name), stage').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_experiences').select('companies (name), experience_level, description').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_goals').select('goal, timeframe').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_industries').select('industries (name)').eq('user_id', user.id)
     ]);
 
-    let universityName: string | null = null;
-    let degreeName: string | null = null;
-    let companyName: string | null = null;
-    const experienceLevel: string | null = (expRes.data as any)?.experience_level || null;
+    const education = eduRes.data ? `${(eduRes.data as any).universities?.name || ''} ${(eduRes.data as any).degrees?.name || ''} (${eduRes.data.stage || ''})`.trim() : '';
+    const experience = expRes.data ? `${(expRes.data as any).companies?.name || ''} (${expRes.data.experience_level || ''})`.trim() : '';
+    const goals = goalRes.data ? `${goalRes.data.goal || ''} - ${goalRes.data.timeframe || ''}`.trim() : '';
+    const industries = industriesRes.data?.map((i: any) => i.industries.name).join(', ') || '';
 
-    // Resolve names from lookup tables if ids exist
-    const lookups: Promise<any>[] = [];
-    const edu = eduRes.data as any;
-    const exp = expRes.data as any;
-    if (edu?.university_id) {
-      lookups.push(
-        supabase.from('universities').select('name').eq('id', edu.university_id).maybeSingle().then(r => { universityName = r.data?.name || null; })
-      );
-    }
-    if (edu?.degree_id) {
-      lookups.push(
-        supabase.from('degrees').select('name').eq('id', edu.degree_id).maybeSingle().then(r => { degreeName = r.data?.name || null; })
-      );
-    }
-    if (exp?.company_id) {
-      lookups.push(
-        supabase.from('companies').select('name').eq('id', exp.company_id).maybeSingle().then(r => { companyName = r.data?.name || null; })
-      );
-    }
-    if (lookups.length) await Promise.all(lookups);
-
-    const detailParts = [universityName, degreeName, experienceLevel, companyName].filter(Boolean) as string[];
-    const detailsText = detailParts.join(' • ');
+    // Build profile description with best 4 pieces of data
+    const profileParts = [education, experience, industries, goals].filter(part => part && part !== ' ()' && part !== ' - ').slice(0, 4);
+    const detailsText = profileParts.length > 0 ? profileParts.join(' • ') : 'Complete your profile to share more about yourself';
 
     const formatted = (ownInsights || []).map((item: any) => ({
       id: item.id,
@@ -89,6 +71,7 @@ const Insights = () => {
       avatar: item.author?.avatar_url,
       jobTitle: detailsText,
       userMessage: item.content,
+      insightTitle: item.content.substring(0, 50) + (item.content.length > 50 ? '...' : ''),
       likes_count: item.likes_count || 0,
       saves_count: item.saves_count || 0,
       comments_count: item.comments_count || 0,
@@ -164,7 +147,7 @@ const Insights = () => {
               <Text style={styles.jobTitle}>{item.jobTitle}</Text>
             </View>
           </View>
-          <Text style={styles.messageText}>"{item.userMessage}"</Text>
+          <Text style={styles.messageText}>{item.userMessage}</Text>
           <Text style={styles.insightContext}>
             Your insight
           </Text>
@@ -181,7 +164,7 @@ const Insights = () => {
   
   // Styles need to be defined here for the component to use them.
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, paddingTop: 16 },
+    container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 }, // Increased top margin for notch
     createInsightButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, paddingVertical: 15, paddingHorizontal: 20, borderRadius: 12, marginVertical: 10, marginHorizontal: 16, alignSelf: 'center' },
     createInsightButtonText: { color: colors.primaryText, fontSize: 16, fontWeight: '600', marginLeft: 8 },
     modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
