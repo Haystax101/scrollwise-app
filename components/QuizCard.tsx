@@ -76,32 +76,8 @@ export const QuizCard: React.FC<QuizCardProps> = ({ visible, onClose, question }
         console.error('Error recording quiz attempt:', error);
       }
 
-      // Award XP for correct answers
-      if (isCorrect) {
-        const { error: xpError } = await supabase
-          .from('xp_ledger')
-          .insert({
-            user_id: user.id,
-            amount: 5,
-            reason: 'Quiz correct answer',
-            subject_type: 'quiz',
-            subject_id: question.id
-          });
-
-        if (xpError) {
-          console.error('Error awarding XP:', xpError);
-        }
-
-        // Update user's total XP and level
-        const { error: updateError } = await supabase.rpc('update_user_xp_and_level', {
-          p_user_id: user.id,
-          p_xp_to_add: 5
-        });
-
-        if (updateError) {
-          console.error('Error updating user XP:', updateError);
-        }
-      }
+      // XP is automatically awarded by the database trigger when quiz_attempt is inserted
+      // The trigger awards 5 XP for correct answers and updates user totals
 
       const correctAnswer = [question.option_a, question.option_b, question.option_c, question.option_d][question.correct_option_index];
       setResult({ correct: isCorrect, correctAnswer });

@@ -34,9 +34,34 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   const [quizVisible, setQuizVisible] = useState(false);
   const [quizQuestion, setQuizQuestion] = useState<QuizQuestion | null>(null);
   const [scrollCount, setScrollCount] = useState(0);
-  const [nextQuizAt, setNextQuizAt] = useState<number>(Math.floor(Math.random() * 11) + 5); // Random between 5-15
+  const [nextQuizAt, setNextQuizAt] = useState<number>(Math.floor(Math.random() * 6) + 8); // Random between 8-13
   const [feedLocked, setFeedLocked] = useState(false);
+  const [viewedContent, setViewedContent] = useState<Set<string>>(new Set());
   const flatListRef = useRef<FlatList>(null);
+
+  // Function to randomly intersperse insights into the content feed
+  const intersperseInsights = (content: FeedItem[], insights: FeedItem[]): FeedItem[] => {
+    if (insights.length === 0) return content;
+    
+    const result: FeedItem[] = [];
+    const insightsCopy = [...insights];
+    
+    // Add content items and randomly insert insights
+    for (let i = 0; i < content.length; i++) {
+      result.push(content[i]);
+      
+      // Randomly insert an insight (roughly every 3-5 items)
+      if (insightsCopy.length > 0 && Math.random() < 0.25) {
+        const randomInsight = insightsCopy.splice(Math.floor(Math.random() * insightsCopy.length), 1)[0];
+        result.push(randomInsight);
+      }
+    }
+    
+    // Add any remaining insights
+    result.push(...insightsCopy);
+    
+    return result;
+  };
 
   const feedAlgorithmRef = useRef<FeedAlgorithm | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -118,8 +143,9 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
             },
           }));
         
-        // Combine insights and articles, with insights at the top
-        const combinedFeed: FeedItem[] = [...insights, ...newArticles, ...algorithmArticles];
+        // Randomly intersperse insights with articles and algorithm content
+        const allContent = [...newArticles, ...algorithmArticles];
+        const combinedFeed: FeedItem[] = intersperseInsights(allContent, insights);
         
         setArticles(combinedFeed);
       } else {
@@ -266,6 +292,26 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         return null;
       }
 
+      // Validate that all options are present and non-empty
+      const options = [data.option_a, data.option_b, data.option_c, data.option_d];
+      const hasValidOptions = options.every(option => option && option.trim().length > 0);
+      
+      if (!hasValidOptions) {
+        console.log('Quiz has blank options, skipping:', data.id);
+        return null;
+      }
+
+      // Validate that the question text exists and correct_option_index is valid
+      if (!data.question || data.question.trim().length === 0) {
+        console.log('Quiz has blank question, skipping:', data.id);
+        return null;
+      }
+
+      if (data.correct_option_index < 0 || data.correct_option_index > 3) {
+        console.log('Quiz has invalid correct_option_index, skipping:', data.id);
+        return null;
+      }
+
       return {
         id: data.id,
         question: data.question,
@@ -284,46 +330,84 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     }
   };
 
-  // Function to show quiz for recent content
-  const showQuizForRecentContent = async () => {
-    if (articles.length < 5) return; // Need at least 5 articles to quiz on
+  // Function to record content view
+  const recordContentView = async (contentItem: FeedItem) => {
+    if (!user) return;
     
-    // Get content from the last 5-15 articles (based on nextQuizAt)
-    const recentContentCount = Math.min(nextQuizAt, articles.length);
-    const recentContent = articles.slice(Math.max(0, articles.length - recentContentCount), articles.length);
+    const viewKey = `${contentItem.type}-${contentItem.id}`;
+    if (viewedContent.has(viewKey)) return; // Already recorded
     
-    // Filter out insights as they don't have quiz questions
-    const quizableContent = recentContent.filter(item => ['article', 'paper', 'book'].includes(item.type));
-    
-    if (quizableContent.length === 0) return;
-    
-    // Randomly select one piece of content to quiz on
-    const randomContent = quizableContent[Math.floor(Math.random() * quizableContent.length)];
-    
-    // Get quiz question for this content
-    const quiz = await getQuizForContent(randomContent);
-    
-    if (quiz) {
-      setQuizQuestion(quiz);
-      setQuizVisible(true);
-      setFeedLocked(true);
+    try {
+      await supabase.rpc('record_content_view', {
+        p_user_id: user.id,
+        p_content_type: contentItem.type,
+        p_content_id: contentItem.id,
+        p_view_duration: 3 // Assume 3+ seconds = viewed
+      });
+      
+      setViewedContent(prev => new Set([...prev, viewKey]));
+    } catch (error) {
+      console.error('Error recording content view:', error);
     }
   };
 
-  // Handle viewable items change - now with quiz injection logic
+  // Function to show quiz for recent content
+  const showQuizForRecentContent = async () => {
+    if (!user) return;
+    
+    try {
+      // Get recently viewed content from database
+      const { data: recentlyViewed, error } = await supabase.rpc('get_recently_viewed_content', {
+        p_user_id: user.id,
+        p_limit: nextQuizAt
+      });
+      
+      if (error || !recentlyViewed || recentlyViewed.length === 0) return;
+      
+      // Randomly select one piece of recently viewed content to quiz on
+      const randomViewedContent = recentlyViewed[Math.floor(Math.random() * Math.min(5, recentlyViewed.length))];
+      
+      // Get quiz question for this content
+      const quiz = await getQuizForContent({
+        id: randomViewedContent.content_id,
+        type: randomViewedContent.content_type,
+        title: 'Recently viewed content' // Will be replaced by actual title
+      } as FeedItem);
+      
+      if (quiz) {
+        setQuizQuestion(quiz);
+        setQuizVisible(true);
+        setFeedLocked(true);
+      }
+    } catch (error) {
+      console.error('Error showing quiz for recent content:', error);
+    }
+  };
+
+  // Handle viewable items change - now with view tracking and quiz injection logic
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
       const newIndex = viewableItems[0].index;
       const oldIndex = currentArticleIndex;
       setCurrentArticleIndex(newIndex);
       
+      // Record view for the current item
+      const currentItem = articles[newIndex];
+      if (currentItem && ['article', 'paper', 'book', 'insight'].includes(currentItem.type)) {
+        recordContentView(currentItem);
+      }
+      
       // Count scrolls (only when moving forward)
       if (newIndex > oldIndex) {
         const newScrollCount = scrollCount + 1;
         setScrollCount(newScrollCount);
         
-        // Check if it's time to show a quiz
-        if (newScrollCount >= nextQuizAt && !feedLocked && !quizVisible) {
+        // Check if it's time to show a quiz - MUST have at least 5 scrolls AND viewed content
+        if (newScrollCount >= Math.max(5, nextQuizAt) && 
+            newScrollCount >= 5 && 
+            !feedLocked && 
+            !quizVisible &&
+            viewedContent.size >= 3) { // Ensure we have at least 3 viewed pieces of content
           showQuizForRecentContent();
         }
       }
@@ -333,7 +417,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         loadMoreArticles();
       }
     }
-  }, [articles.length, currentArticleIndex, scrollCount, nextQuizAt, feedLocked, quizVisible, loadMoreArticles]);
+  }, [articles, currentArticleIndex, scrollCount, nextQuizAt, feedLocked, quizVisible, loadMoreArticles, recordContentView, viewedContent.size]);
 
   // Memoize viewability config to prevent recreation
   const viewabilityConfig = useMemo(() => ({
@@ -525,7 +609,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
           setFeedLocked(false);
           // Reset quiz timing for next quiz
           setScrollCount(0);
-          setNextQuizAt(Math.floor(Math.random() * 11) + 5);
+          setNextQuizAt(Math.floor(Math.random() * 6) + 8);
         }} 
         question={quizQuestion} 
       />

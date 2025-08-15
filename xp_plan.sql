@@ -37,7 +37,7 @@ END;$$;
 
 GRANT EXECUTE ON FUNCTION public.submit_quiz_attempt(uuid, uuid, char) TO authenticated;
 
--- Optional trigger to auto-grant XP when a correct attempt is inserted
+-- Trigger to auto-grant XP when a correct quiz attempt is inserted
 CREATE OR REPLACE FUNCTION public.trg_quiz_attempts_grant_xp()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -46,9 +46,13 @@ SET search_path = public
 AS $$
 BEGIN
   IF NEW.is_correct THEN
+    -- Award 5 XP for correct quiz answers
     INSERT INTO public.xp_ledger (user_id, amount, reason, subject_type, subject_id, actor_id)
-    VALUES (NEW.user_id, 10, 'quiz_correct', 'quiz_question', NEW.question_id::text, NEW.user_id)
+    VALUES (NEW.user_id, 5, 'quiz_correct', 'quiz_question', NEW.question_id::text, NEW.user_id)
     ON CONFLICT DO NOTHING;
+    
+    -- Update user's total XP and level
+    PERFORM public.update_user_xp_and_level(NEW.user_id, 5);
   END IF;
   RETURN NEW;
 END;$$;

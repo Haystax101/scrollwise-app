@@ -29,27 +29,99 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     wrapper: {
       height: screenHeight,
     },
-    container: { flex: 1, justifyContent: 'center', padding: 16, paddingBottom: 120 },
-    profileSection: { alignItems: 'center', marginBottom: 16 },
-    avatar: {
-      width: 90,
-      height: 90,
-      borderRadius: 45,
+    container: { 
+      flex: 1, 
+      justifyContent: 'center', 
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      margin: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingBottom: 120 
+    },
+    // Twitter-like header styles
+    tweetHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
       marginBottom: 12,
-      borderWidth: 2,
-      borderColor: colors.accent,
     },
-    authorName: { fontSize: 18, fontWeight: '700', color: colors.text },
-    authorHandle: {
+    tweetAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      marginRight: 12,
+    },
+    tweetHeaderText: {
+      flex: 1,
+      paddingTop: 2,
+    },
+    tweetNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 2,
+    },
+    tweetAuthorName: {
       fontSize: 16,
-      color: colors.textSecondary,
-      marginBottom: 8,
+      fontWeight: '700',
+      color: colors.text,
+      marginRight: 8,
     },
-    profileDetailsToggle: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-    toggleText: {
+    tweetHandle: {
+      fontSize: 14,
       color: colors.textSecondary,
+      fontWeight: '400',
     },
-    expandedDetails: { backgroundColor: colors.surface, borderRadius: 12, padding: 12, width: '100%', marginBottom: 16, borderWidth: 1, borderColor: colors.border },
+    tweetDetails: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      lineHeight: 18,
+    },
+    moreButton: {
+      padding: 4,
+      marginLeft: 8,
+    },
+    // Content styles
+    tweetContent: {
+      marginLeft: 60, // Align with text content
+      marginBottom: 16,
+    },
+    tweetText: {
+      fontSize: 16,
+      color: colors.text,
+      lineHeight: 24,
+      letterSpacing: 0.2,
+    },
+    // Action styles
+    tweetActions: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      marginLeft: 60, // Align with content
+    },
+    tweetActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 8,
+    },
+    tweetActionText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginLeft: 8,
+      fontWeight: '500',
+    },
+    // Expandable details (kept from original)
+    expandedDetails: { 
+      backgroundColor: colors.surface, 
+      borderRadius: 12, 
+      padding: 12, 
+      width: '100%', 
+      marginTop: 12, 
+      borderWidth: 1, 
+      borderColor: colors.border 
+    },
     detailRow: {
       flexDirection: 'row',
       marginBottom: 10,
@@ -68,20 +140,6 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       fontWeight: '500',
       color: colors.text,
     },
-    projectSection: {
-      marginTop: 4,
-    },
-    insightCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 20, width: '100%', marginBottom: 16, borderWidth: 1, borderColor: colors.border },
-    insightBody: {
-      fontSize: 18,
-      color: colors.text,
-      lineHeight: 26,
-      textAlign: 'center',
-    },
-    actionsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
-    actionGroup: { flexDirection: 'row', alignItems: 'center' },
-    actionBtn: { padding: 8 },
-    actionText: { color: colors.textSecondary, fontSize: 12, marginLeft: 4, fontWeight: '500' },
   });
 
   const details = useMemo(() => {
@@ -186,73 +244,75 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   return (
     <View style={dynamicStyles.wrapper}>
       <View style={dynamicStyles.container}>
-        <View style={dynamicStyles.profileSection}>
-          <Image source={{ uri: insight.author.avatar }} style={dynamicStyles.avatar} />
-          <Text style={dynamicStyles.authorName}>{insight.author.name}</Text>
-          {details ? <Text style={dynamicStyles.authorHandle}>{details}</Text> : null}
-          <TouchableOpacity onPress={() => setShowDetails(!showDetails)} style={dynamicStyles.profileDetailsToggle}>
-            <Text style={dynamicStyles.toggleText}>{showDetails ? 'Hide' : 'View'} profile details </Text>
-            <Feather name={showDetails ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+        {/* Twitter-like header */}
+        <View style={dynamicStyles.tweetHeader}>
+          <Image source={{ uri: insight.author.avatar }} style={dynamicStyles.tweetAvatar} />
+          <View style={dynamicStyles.tweetHeaderText}>
+            <View style={dynamicStyles.tweetNameRow}>
+              <Text style={dynamicStyles.tweetAuthorName}>{insight.author.name}</Text>
+              <Text style={dynamicStyles.tweetHandle}>@{insight.author.name.toLowerCase().replace(/\s+/g, '')}</Text>
+            </View>
+            {details ? <Text style={dynamicStyles.tweetDetails}>{details}</Text> : null}
+          </View>
+          <TouchableOpacity onPress={() => setShowDetails(!showDetails)} style={dynamicStyles.moreButton}>
+            <Feather name="more-horizontal" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
+        {/* Tweet content */}
+        <View style={dynamicStyles.tweetContent}>
+          <Text style={dynamicStyles.tweetText}>{insight.content}</Text>
+        </View>
+
+        {/* Actions row */}
+        <View style={dynamicStyles.tweetActions}>
+          <TouchableOpacity style={dynamicStyles.tweetActionBtn} onPress={toggleLike}>
+            <Feather name={hasLiked ? 'heart' : 'heart'} size={20} color={hasLiked ? '#e91e63' : colors.textSecondary} />
+            <Text style={[dynamicStyles.tweetActionText, hasLiked && { color: '#e91e63' }]}>{likes}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={dynamicStyles.tweetActionBtn} onPress={() => setCommentsOpen(true)}>
+            <Feather name="message-circle" size={20} color={colors.textSecondary} />
+            <Text style={dynamicStyles.tweetActionText}>{comments}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={dynamicStyles.tweetActionBtn} onPress={toggleSave}>
+            <Feather name="bookmark" size={20} color={hasSaved ? colors.accent : colors.textSecondary} />
+            <Text style={[dynamicStyles.tweetActionText, hasSaved && { color: colors.accent }]}>{saves}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Expandable profile details */}
         {showDetails && (
           <View style={dynamicStyles.expandedDetails}>
             <View style={dynamicStyles.detailRow}>
-              {insight.author.industry ? (
+              {insight.author.industry && (
                 <View style={dynamicStyles.detailItem}>
                   <Text style={dynamicStyles.detailLabel}>Industry</Text>
                   <Text style={dynamicStyles.detailValue}>{insight.author.industry}</Text>
                 </View>
-              ) : null}
-              {insight.author.company ? (
+              )}
+              {insight.author.company && (
                 <View style={dynamicStyles.detailItem}>
                   <Text style={dynamicStyles.detailLabel}>Company</Text>
                   <Text style={dynamicStyles.detailValue}>{insight.author.company}</Text>
                 </View>
-              ) : null}
+              )}
             </View>
             <View style={dynamicStyles.detailRow}>
-              {insight.author.role ? (
+              {insight.author.role && (
                 <View style={dynamicStyles.detailItem}>
                   <Text style={dynamicStyles.detailLabel}>Role</Text>
                   <Text style={dynamicStyles.detailValue}>{insight.author.role}</Text>
                 </View>
-              ) : null}
-              {insight.author.location ? (
+              )}
+              {insight.author.location && (
                 <View style={dynamicStyles.detailItem}>
                   <Text style={dynamicStyles.detailLabel}>Location</Text>
                   <Text style={dynamicStyles.detailValue}>{insight.author.location}</Text>
                 </View>
-              ) : null}
+              )}
             </View>
           </View>
         )}
-
-        <View style={dynamicStyles.insightCard}>
-          <Text style={dynamicStyles.insightBody}>"{insight.content}"</Text>
-        </View>
-
-        <View style={dynamicStyles.actionsRow}>
-          <View style={dynamicStyles.actionGroup}>
-            <TouchableOpacity style={dynamicStyles.actionBtn} onPress={toggleLike}>
-              <Feather name={hasLiked ? 'heart' : 'heart'} size={20} color={hasLiked ? colors.accent : colors.text} />
-            </TouchableOpacity>
-            <Text style={dynamicStyles.actionText}>{likes}</Text>
-          </View>
-          <View style={dynamicStyles.actionGroup}>
-            <TouchableOpacity style={dynamicStyles.actionBtn} onPress={toggleSave}>
-              <Feather name="bookmark" size={20} color={hasSaved ? colors.accent : colors.text} />
-            </TouchableOpacity>
-            <Text style={dynamicStyles.actionText}>{saves}</Text>
-          </View>
-          <View style={dynamicStyles.actionGroup}>
-            <TouchableOpacity style={dynamicStyles.actionBtn} onPress={() => setCommentsOpen(true)}>
-              <Feather name="message-circle" size={20} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={dynamicStyles.actionText}>{comments}</Text>
-          </View>
-        </View>
       </View>
 
       <CommentsModal

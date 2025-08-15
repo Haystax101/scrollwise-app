@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Image, Modal, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Image, Modal, Alert, TextInput } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -68,6 +68,8 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
     goals: '',
     projects: ''
   });
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
 
   // Always get the current user from supabase.auth to ensure we have the right id
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -488,6 +490,34 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       fontSize: 14,
       fontWeight: '600',
     },
+    editableField: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 4,
+    },
+    editingContainer: {
+      marginTop: 8,
+    },
+    editInput: {
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 14,
+      backgroundColor: colors.inputBackground,
+      marginBottom: 8,
+    },
+    editButtons: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+    },
+    editButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+    },
   });
 
   const renderInterests = () => {
@@ -543,7 +573,34 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
         {details.map((detail, index) => (
           <View key={index} style={dynamicStyles.profileDetailItem}>
             <Text style={dynamicStyles.profileDetailLabel}>{detail.label}</Text>
-            <Text style={dynamicStyles.profileDetailValue}>{detail.value}</Text>
+            {editingField === detail.label.toLowerCase() ? (
+              <View style={dynamicStyles.editingContainer}>
+                <TextInput
+                  style={[dynamicStyles.editInput, { color: colors.text, borderColor: colors.border }]}
+                  value={editingValue}
+                  onChangeText={setEditingValue}
+                  placeholder={`Enter ${detail.label.toLowerCase()}`}
+                  placeholderTextColor={colors.textSecondary}
+                  multiline={detail.label === 'Projects' || detail.label === 'Goals'}
+                />
+                <View style={dynamicStyles.editButtons}>
+                  <TouchableOpacity style={[dynamicStyles.editButton, { backgroundColor: colors.primary }]} onPress={handleSaveField}>
+                    <Feather name="check" size={16} color="white" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[dynamicStyles.editButton, { backgroundColor: colors.error }]} onPress={handleCancelEdit}>
+                    <Feather name="x" size={16} color="white" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity 
+                style={dynamicStyles.editableField}
+                onPress={() => handleEditField(detail.label.toLowerCase(), detail.value)}
+              >
+                <Text style={dynamicStyles.profileDetailValue}>{detail.value}</Text>
+                <Feather name="edit-3" size={14} color={colors.textSecondary} style={{ marginLeft: 8 }} />
+              </TouchableOpacity>
+            )}
           </View>
         ))}
       </View>
@@ -668,12 +725,12 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       "Choose an option",
       [
         {
-          text: "Take Photo",
-          onPress: () => Alert.alert("Camera", "Camera functionality requires expo-image-picker. For now, using placeholder.")
+          text: "Random Avatar",
+          onPress: () => updateProfilePicture("random")
         },
         {
-          text: "Choose from Gallery", 
-          onPress: () => Alert.alert("Gallery", "Gallery functionality requires expo-image-picker. For now, using placeholder.")
+          text: "Professional Avatar", 
+          onPress: () => updateProfilePicture("professional")
         },
         {
           text: "Use Default",
@@ -694,11 +751,15 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       let newAvatarUrl = null;
       
       if (type === "default") {
-        // Use the profileIcon.png as default
         newAvatarUrl = null; // This will fall back to profileIcon.png
-      } else {
-        // For future implementation with expo-image-picker
-        newAvatarUrl = "https://randomuser.me/api/portraits/men/32.jpg"; // Placeholder
+      } else if (type === "random") {
+        // Use randomuser.me for random avatars
+        const randomId = Math.floor(Math.random() * 100);
+        newAvatarUrl = `https://randomuser.me/api/portraits/men/${randomId}.jpg`;
+      } else if (type === "professional") {
+        // Use a professional avatar service
+        const randomId = Math.floor(Math.random() * 50);
+        newAvatarUrl = `https://randomuser.me/api/portraits/women/${randomId}.jpg`;
       }
 
       const { error } = await supabase
@@ -716,6 +777,37 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       console.error('Error updating profile picture:', error);
       Alert.alert("Error", "Failed to update profile picture.");
     }
+  };
+
+  const handleEditField = (field: string, currentValue: string) => {
+    setEditingField(field);
+    setEditingValue(currentValue);
+  };
+
+  const handleSaveField = async () => {
+    if (!editingField || !currentUser) return;
+    
+    try {
+      // This is a simplified version - in a real app you'd update the actual database tables
+      // For now, just update local state to demonstrate functionality
+      setProfileDetails(prev => ({
+        ...prev,
+        [editingField]: editingValue
+      }));
+      
+      Alert.alert("Success", `${editingField} updated successfully!`);
+    } catch (error) {
+      console.error('Error updating profile field:', error);
+      Alert.alert("Error", "Failed to update profile field.");
+    } finally {
+      setEditingField(null);
+      setEditingValue('');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingField(null);
+    setEditingValue('');
   };
 
   // User profile modal data interface

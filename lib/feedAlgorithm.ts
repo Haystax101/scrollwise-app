@@ -42,6 +42,7 @@ export class FeedAlgorithm {
   private fetchedIds: Set<number> = new Set();
   private likedIds: Set<number> = new Set();
   private savedIds: Set<number> = new Set();
+  private viewedIds: Set<string> = new Set(); // Track viewed content by type-id
 
   constructor(userId: string, userIndustries: string[], allIndustries: Industry[]) {
     this.userId = userId;
@@ -50,7 +51,7 @@ export class FeedAlgorithm {
   }
 
   /**
-   * Initialize user interaction data (liked and saved content)
+   * Initialize user interaction data (liked, saved, and viewed content)
    */
   async initializeUserInteractions(): Promise<void> {
     if (!this.userId) {
@@ -112,6 +113,19 @@ export class FeedAlgorithm {
           ...(savedBooks?.map(item => item.book_id) || [])
         ];
         this.savedIds = new Set(allSavedIds);
+      }
+
+      // Fetch user's viewed content
+      const { data: viewedContent, error: viewedError } = await supabase
+        .from('content_views')
+        .select('content_type, content_id')
+        .eq('user_id', this.userId);
+      
+      if (viewedError) {
+        console.error('Error fetching viewed content:', viewedError);
+      } else {
+        const viewedKeys = (viewedContent || []).map(view => `${view.content_type}-${view.content_id}`);
+        this.viewedIds = new Set(viewedKeys);
       }
     } catch (error) {
       console.error('Error in initializeUserInteractions:', error);
@@ -194,6 +208,10 @@ export class FeedAlgorithm {
           if (excludeInteracted && (this.likedIds.has(item.id) || this.savedIds.has(item.id))) {
             return false;
           }
+          // Exclude already viewed content - this is the most important filter
+          const viewKey = `${contentType}-${item.id}`;
+          if (this.viewedIds.has(viewKey)) return false;
+          
           return true;
         });
 
@@ -505,7 +523,8 @@ export class FeedAlgorithm {
    */
   reset(): void {
     this.fetchedIds.clear();
-    // Keep liked and saved IDs as they represent persistent user interactions
+    // Keep liked, saved, and viewed IDs as they represent persistent user interactions
+    // Note: We don't clear viewedIds because we don't want to show already seen content again
   }
 
   /**

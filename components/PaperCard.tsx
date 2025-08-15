@@ -370,7 +370,9 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
                 </ScrollView>
               )}
               <TouchableOpacity onPress={handleToggleExpand}>
-                <Text style={dynamicStyles.contentText} numberOfLines={6}>{paper.content_simple}</Text>
+                <Text style={dynamicStyles.contentText} numberOfLines={isExpanded ? undefined : 6}>
+                  {isExpanded ? (showComplexContent ? paper.content_complex : paper.content_simple) : paper.content_simple}
+                </Text>
               </TouchableOpacity>
             </View>
             <View style={dynamicStyles.actionsRow}>
