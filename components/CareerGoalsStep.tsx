@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ccc',
   },
   nextButton: {
-    backgroundColor: '#6A0DAD',
+    backgroundColor: '#EAB308',
   },
   buttonText: {
     color: '#fff',

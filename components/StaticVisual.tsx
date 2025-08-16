@@ -57,7 +57,7 @@ function QuantumParticles() {
   return (
     <View style={styles.visualContainer}>
       <LinearGradient
-        colors={["#1e1b4b", "#4c1d95", "#7c3aed"]}
+        colors={["#FCD34D", "#F59E0B", "#FBBF24"]}
         style={styles.gradientBg}
       />
       
@@ -69,12 +69,12 @@ function QuantumParticles() {
             width: 20,
             height: 20,
             borderRadius: 10,
-            backgroundColor: '#a855f7',
+            backgroundColor: '#EAB308',
             top: '50%',
             left: '50%',
             marginTop: -10,
             marginLeft: -10,
-            shadowColor: '#a855f7',
+            shadowColor: '#EAB308',
             shadowOffset: { width: 0, height: 0 },
             shadowOpacity: 0.8,
             shadowRadius: 10,
@@ -111,7 +111,7 @@ function QuantumParticles() {
                 width: 8,
                 height: 8,
                 borderRadius: 4,
-                backgroundColor: '#c084fc',
+                backgroundColor: '#FDE047',
                 top: '50%',
                 left: '50%',
                 marginTop: -4,
@@ -161,7 +161,7 @@ function QuantumParticles() {
               height: 80,
               borderRadius: 40,
               borderWidth: 2,
-              borderColor: '#8b5cf6',
+              borderColor: '#EAB308',
               marginTop: -40,
               marginLeft: -40,
             },
@@ -193,7 +193,7 @@ function QuantumParticles() {
               width: 4,
               height: 4,
               borderRadius: 2,
-              backgroundColor: '#ddd6fe',
+              backgroundColor: '#FEF3C7',
               top: `${20 + Math.random() * 60}%`,
               left: `${20 + Math.random() * 60}%`,
             },
@@ -416,7 +416,7 @@ function SpaceCosmos() {
           ]}
         >
           <LinearGradient
-            colors={["#8b5cf6", "#6366f1", "#3b82f6"]}
+            colors={["#EAB308", "#6366f1", "#3b82f6"]}
             style={{ flex: 1, borderRadius: 20 }}
           />
         </Animated.View>
@@ -1240,7 +1240,7 @@ function DNAHelix() {
                 position: 'absolute',
                 width: 56,
                 height: 2,
-                backgroundColor: '#8e44ad',
+                backgroundColor: '#EAB308',
                 left: 12,
                 top: 3,
                 borderRadius: 1,
@@ -1409,7 +1409,7 @@ function DNAHelix() {
               position: 'absolute',
               width: 25,
               height: 4,
-              backgroundColor: '#8e44ad',
+              backgroundColor: '#EAB308',
               right: '10%',
               borderRadius: 2,
               top: `${20 + index * 15}%`,
@@ -4012,7 +4012,7 @@ function CalculusFlow() {
   return (
     <View style={styles.visualContainer}>
       <LinearGradient
-        colors={['#0a0a1a', '#1a1a2e', '#2d1b69', '#11998e']}
+        colors={['#0a0a1a', '#1a1a2e', '#F59E0B', '#11998e']}
         style={styles.gradientBg}
       />
       
@@ -4316,7 +4316,7 @@ function StatisticalDistribution() {
   return (
     <View style={styles.visualContainer}>
       <LinearGradient
-        colors={['#0a0a1a', '#1a1a2e', '#2d1b69', '#8b5cf6']}
+        colors={['#0a0a1a', '#1a1a2e', '#F59E0B', '#EAB308']}
         style={styles.gradientBg}
       />
       

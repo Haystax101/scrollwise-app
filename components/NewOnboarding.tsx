@@ -154,11 +154,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#6A0DAD',
+    color: '#EAB308',
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#6A0DAD',
+    color: '#EAB308',
   },
   progressBarContainer: {
     marginBottom: 20,
@@ -170,13 +170,13 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: 10,
-    backgroundColor: '#6A0DAD',
+    backgroundColor: '#EAB308',
     borderRadius: 5,
   },
   progressText: {
     textAlign: 'right',
     marginTop: 5,
-    color: '#6A0DAD',
+    color: '#EAB308',
   },
 });
 

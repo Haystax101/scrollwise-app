@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   addProjectText: {
-    color: '#6A0DAD',
+    color: '#EAB308',
     marginBottom: 20,
   },
   buttonContainer: {
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ccc',
   },
   nextButton: {
-    backgroundColor: '#6A0DAD',
+    backgroundColor: '#EAB308',
   },
   buttonText: {
     color: '#fff',

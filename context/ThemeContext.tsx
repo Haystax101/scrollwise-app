@@ -58,9 +58,9 @@ const lightTheme: ThemeColors = {
   border: '#E5E7EB',
   separator: '#F3F4F6',
   
-  primary: '#4F46E5',
+  primary: '#EAB308',
   primaryText: '#FFFFFF',
-  accent: '#8B5CF6',
+  accent: '#EAB308',
   error: '#EF4444',
   
   statusBarStyle: 'dark-content',
@@ -68,7 +68,7 @@ const lightTheme: ThemeColors = {
   
   navigationBackground: '#FFFFFF',
   navigationBorder: '#E5E7EB',
-  navigationActive: '#4F46E5',
+  navigationActive: '#EAB308',
   navigationInactive: '#6B7280',
   
   inputBackground: '#F3F4F6',
@@ -90,9 +90,9 @@ const darkTheme: ThemeColors = {
   border: '#2D2D3A',
   separator: '#2D2D3A',
 
-  primary: '#4F46E5',
+  primary: '#EAB308',
   primaryText: '#FFFFFF',
-  accent: '#8B5CF6',
+  accent: '#EAB308',
   error: '#EF4444',
   
   statusBarStyle: 'light-content',
@@ -100,7 +100,7 @@ const darkTheme: ThemeColors = {
   
   navigationBackground: '#0A0B1E',
   navigationBorder: '#2D2D3A',
-  navigationActive: '#4F46E5',
+  navigationActive: '#EAB308',
   navigationInactive: '#71717A',
   
   inputBackground: '#1A1B2E',
