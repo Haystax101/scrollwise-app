@@ -23,8 +23,8 @@ const IndustryStep: React.FC<IndustryStepProps> = ({ onNext, onPrev, setData, da
     fetchIndustries();
   }, []);
 
-  // Ensure selectedIndustries is always an array
-  const selectedIndustries = Array.isArray(data.selectedIndustries) ? data.selectedIndustries : [];
+  // Ensure selectedIndustries is always an array - data is the industries array directly
+  const selectedIndustries = Array.isArray(data) ? data : [];
 
   const handleSelectIndustry = (industry: any) => {
     if (selectedIndustries.find((item: any) => item.id === industry.id)) {
