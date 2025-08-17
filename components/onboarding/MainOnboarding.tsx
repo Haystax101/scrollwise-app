@@ -18,6 +18,7 @@ import { DreamRole } from './DreamRole';
 import { CurrentWork } from './CurrentWork';
 import { StreakSelection } from './StreakSelection';
 import { Notifications } from './Notifications';
+import { IntroScroller } from './IntroScroller';
 
 // Import assets
 const HeroImage = require('../../assets/hero.png');
@@ -54,7 +55,7 @@ const tutorialSteps = [
 
 export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSignIn }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [currentSection, setCurrentSection] = useState<'welcome' | 'intro' | 'registration' | 'tutorial'>('welcome');
+  const [currentSection, setCurrentSection] = useState<'welcome' | 'intro-scroller' | 'intro' | 'registration' | 'tutorial'>('welcome');
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({});
   const [userId, setUserId] = useState<string | null>(null);
   const [showLogin, setShowLogin] = useState(false);
@@ -63,29 +64,18 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
   const [loggingIn, setLoggingIn] = useState(false);
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [chargeLevel, setChargeLevel] = useState(0);
+  const [emailExistsError, setEmailExistsError] = useState(false);
 
   // Stable image components to prevent re-creation
-  const heroImage1 = useMemo(() => <Image source={HeroImage} style={{ width: 280, height: 280 }} resizeMode="contain" />, []);
-  const heroImage2 = useMemo(() => <Image source={Hero2Image} style={{ width: 280, height: 280 }} resizeMode="contain" />, []);
   const chargingBolt = useMemo(() => <ChargingBoltIcon charge={chargeLevel} />, [chargeLevel]);
   
   const introSteps = useMemo(() => [
-    {
-      icon: heroImage1,
-      title: 'Take Control Of Your Scrolls',
-      description: 'With supercharged you have the power of all in the package of one',
-    },
-    {
-      icon: heroImage2,
-      title: 'Meet Your Goals',
-      description: 'Progress in your industry, one scroll at a time',
-    },
     {
       icon: chargingBolt,
       title: 'Get Supercharged',
       description: 'Connect with like-minded professionals for exciting project opportunities',
     },
-  ], [heroImage1, heroImage2, chargingBolt]);
+  ], [chargingBolt]);
 
   const updateOnboardingData = (newData: Partial<OnboardingData>) => {
     setOnboardingData(prev => ({ ...prev, ...newData }));
@@ -94,6 +84,9 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
   const nextStep = () => {
     if (currentSection === 'welcome') {
       // Move to intro section
+      setCurrentSection('intro-scroller');
+      setCurrentStep(0);
+    } else if (currentSection === 'intro-scroller') {
       setCurrentSection('intro');
       setCurrentStep(0);
     } else if (currentSection === 'intro') {
@@ -125,9 +118,12 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
   const prevStep = () => {
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
-    } else if (currentSection === 'intro') {
-      // Go back to welcome
+    } else if (currentSection === 'intro-scroller') {
       setCurrentSection('welcome');
+    }
+    else if (currentSection === 'intro') {
+      // Go back to welcome
+      setCurrentSection('intro-scroller');
       setCurrentStep(0);
     } else if (currentSection === 'registration') {
       // Go back to intro
@@ -138,6 +134,13 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
       setCurrentSection('registration');
       setCurrentStep(7); // Last registration step
     }
+  };
+
+  const goToLogin = () => {
+    setEmailExistsError(false);
+    setShowLogin(true);
+    setCurrentSection('intro');
+    setCurrentStep(0);
   };
 
   // Supabase integration functions
@@ -395,8 +398,23 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
 
   // Registration step handlers
   const handleEmailInput = async (data: { email: string }) => {
-    updateOnboardingData(data);
-    nextStep();
+    const { email } = data;
+    // Check if user exists. Note: This relies on RLS allowing read access to 'profiles' table for unauthenticated users.
+    // A more robust solution would be a Supabase Edge Function with the service role key.
+    const { data: existingUser, error } = await supabase.from('profiles').select('id').eq('email', email).maybeSingle();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116: "exact one row expected, but 0 rows returned" (not an error for us)
+      Alert.alert('Error', 'Could not verify email. Please try again.');
+      return;
+    }
+
+    if (existingUser) {
+      setEmailExistsError(true);
+    } else {
+      setEmailExistsError(false);
+      updateOnboardingData(data);
+      nextStep();
+    }
   };
 
   const handlePasswordSetup = async (data: { password: string }) => {
@@ -506,21 +524,21 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
   const renderRegistrationStep = () => {
     switch (currentStep) {
       case 0:
-        return <EmailInput onNext={handleEmailInput} onBack={prevStep} />;
+        return <EmailInput onNext={handleEmailInput} onBack={prevStep} emailExistsError={emailExistsError} onGoToLogin={goToLogin} />;
       case 1:
         return <PasswordSetup onNext={handlePasswordSetup} onBack={prevStep} />;
       case 2:
         return <PersonalInfo onNext={handlePersonalInfo} onBack={prevStep} isLoading={creatingAccount} />;
       case 3:
-        return <IndustrySelection onNext={handleIndustrySelection} onBack={prevStep} />;
+        return <IndustrySelection onNext={handleIndustrySelection} />;
       case 4:
-        return <DreamRole onNext={handleDreamRole} onBack={prevStep} />;
+        return <DreamRole onNext={handleDreamRole} />;
       case 5:
-        return <StreakSelection onNext={handleStreakSelection} onBack={prevStep} />;
+        return <StreakSelection onNext={handleStreakSelection} />;
       case 6:
-        return <CurrentWork onNext={handleCurrentWork} onBack={prevStep} />;
+        return <CurrentWork onNext={handleCurrentWork} />;
       case 7:
-        return <Notifications onNext={handleNotifications} onBack={prevStep} />;
+        return <Notifications onNext={handleNotifications} />;
       default:
         return null;
     }
@@ -562,6 +580,10 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     return <WelcomeScreen onGetStarted={handleGetStarted} onSignIn={handleWelcomeSignIn} />;
   }
 
+  if (currentSection === 'intro-scroller') {
+    return <IntroScroller onComplete={nextStep} onBack={prevStep} />;
+  }
+
   // Handle login on first intro screen
   if (currentSection === 'intro' && currentStep === 0 && showLogin) {
     return (
@@ -572,7 +594,10 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
         currentStep={currentStep}
         totalSteps={introSteps.length}
         onNext={handleLogin}
-        onBack={() => setShowLogin(false)}
+        onBack={() => {
+          setShowLogin(false);
+          setCurrentSection('welcome');
+        }}
         customContent={
           <View style={{ width: '100%', paddingHorizontal: 24 }}>
             <InputField
@@ -615,6 +640,10 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
       onBack={prevStep}
       isFinalStep={isFinalIntroStep}
       chargeComponent={isFinalIntroStep ? <ChargingComponent onComplete={nextStep} onChargeChange={setChargeLevel} /> : undefined}
+      disableIconAnimation={isFinalIntroStep}
+      hideStepCounter={isFinalIntroStep}
+      hideProgressDots={isFinalIntroStep}
+      showBackButton={isFinalIntroStep}
     />
   );
 };

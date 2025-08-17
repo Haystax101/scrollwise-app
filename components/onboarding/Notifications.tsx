@@ -5,10 +5,9 @@ import { Button } from './Button';
 
 interface NotificationsProps {
   onNext: (data: { enableNotifications: boolean }) => void;
-  onBack: () => void;
 }
 
-export const Notifications: React.FC<NotificationsProps> = ({ onNext, onBack }) => {
+export const Notifications: React.FC<NotificationsProps> = ({ onNext }) => {
   const handleEnableNotifications = () => {
     onNext({ enableNotifications: true });
   };
@@ -20,11 +19,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ onNext, onBack }) 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      <View style={styles.header} />
 
       {/* Content */}
       <View style={styles.content}>
@@ -42,7 +37,6 @@ export const Notifications: React.FC<NotificationsProps> = ({ onNext, onBack }) 
       {/* Footer */}
       <View style={styles.footer}>
         <Button
-          fullWidth
           onPress={handleEnableNotifications}
         >
           Enable Notifications
@@ -65,21 +59,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    height: 60,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 64,
   },
   iconContainer: {
     marginBottom: 32,
@@ -100,6 +85,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingVertical: 32,
+    alignItems: 'center',
   },
   maybeButton: {
     paddingVertical: 16,

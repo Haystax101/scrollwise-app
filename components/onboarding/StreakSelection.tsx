@@ -2,103 +2,71 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
+import Svg, { Path } from 'react-native-svg';
 
-const streakOptions = [
-  { days: 3, color: '#10B981', label: 'Beginner' },
-  { days: 4, color: '#10B981', label: 'Steady' },
-  { days: 5, color: '#3B82F6', label: 'Committed' },
-  { days: 6, color: '#3B82F6', label: 'Dedicated' },
-  { days: 7, color: '#F59E0B', label: 'Supercharged' },
-];
+const streakOptions = [3, 4, 5, 6, 7];
 
 interface StreakSelectionProps {
   onNext: (data: { weeklyGoal: number }) => void;
-  onBack: () => void;
 }
 
-export const StreakSelection: React.FC<StreakSelectionProps> = ({ onNext, onBack }) => {
-  const [selectedDays, setSelectedDays] = useState<number>(5); // Default to middle option
+const FlameIcon = () => (
+  <Svg width="96" height="96" viewBox="0 0 24 24" fill="none">
+    <Path 
+      d="M17.657 7.93C17.8351 7.29284 17.9241 6.62533 17.9241 5.95C17.9241 3.216 15.7081 1 12.9741 1C10.2401 1 8.02408 3.216 8.02408 5.95C8.02408 6.62533 8.11309 7.29284 8.2911 7.93C5.11408 9.181 3.24109 12.442 3.24109 16.15C3.24109 20.02 6.43509 23.15 10.3681 23.15H15.5801C19.5131 23.15 22.7071 20.02 22.7071 16.15C22.7071 12.442 20.8341 9.181 17.657 7.93Z" 
+      stroke="#22C55E" 
+      strokeWidth="1.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+export const StreakSelection: React.FC<StreakSelectionProps> = ({ onNext }) => {
+  const [selectedDays, setSelectedDays] = useState<number>(3);
 
   const handleNext = () => {
     onNext({ weeklyGoal: selectedDays });
   };
 
-  const getCurrentOption = () => {
-    return streakOptions.find(opt => opt.days === selectedDays) || streakOptions[2];
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      <View style={styles.header} />
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Flame Icon */}
-        <View style={styles.iconContainer}>
-          <Ionicons 
-            name="flame" 
-            size={96} 
-            color={getCurrentOption().color} 
-          />
-        </View>
-
         <Text style={styles.title}>Set your weekly goal</Text>
-        <Text style={styles.subtitle}>
-          How many days per week do you want to learn something new?
-        </Text>
-
-        {/* Current Selection Display */}
-        <View style={styles.selectionDisplay}>
-          <Text style={styles.selectedDays}>{selectedDays}</Text>
-          <Text style={styles.selectedLabel}>{getCurrentOption().label}</Text>
+        <Text style={styles.subtitle}>Light the fire and commit to your growth.</Text>
+        
+        <View style={styles.iconContainer}>
+          <FlameIcon />
         </View>
 
-        {/* Slider Picker Bar */}
-        <View style={styles.sliderContainer}>
-          <View style={styles.sliderTrack}>
-            {streakOptions.map((option, index) => {
-              const isSelected = selectedDays === option.days;
-              return (
-                <TouchableOpacity
-                  key={option.days}
-                  style={[
-                    styles.sliderDot,
-                    isSelected && [styles.sliderDotSelected, { backgroundColor: option.color }]
-                  ]}
-                  onPress={() => setSelectedDays(option.days)}
-                >
-                  <View style={[
-                    styles.sliderDotInner,
-                    isSelected && styles.sliderDotInnerSelected
-                  ]} />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          
-          {/* Labels below slider */}
-          <View style={styles.sliderLabels}>
-            {streakOptions.map((option) => (
-              <Text key={option.days} style={[
-                styles.sliderLabelText,
-                selectedDays === option.days && { color: option.color, fontWeight: '600' }
+        <View style={styles.selectionContainer}>
+          {streakOptions.map((days) => (
+            <TouchableOpacity
+              key={days}
+              style={[
+                styles.dayOption,
+                selectedDays === days && styles.dayOptionSelected,
+              ]}
+              onPress={() => setSelectedDays(days)}
+            >
+              <Text style={[
+                styles.dayText,
+                selectedDays === days && styles.dayTextSelected,
               ]}>
-                {option.days}
+                {days}
               </Text>
-            ))}
-          </View>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
       {/* Footer */}
       <View style={styles.footer}>
         <Button
-          fullWidth
           onPress={handleNext}
         >
           Continue
@@ -115,24 +83,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    height: 60,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 64,
-  },
-  iconContainer: {
-    marginBottom: 32,
   },
   title: {
     fontSize: 32,
@@ -145,74 +101,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#9CA3AF',
     textAlign: 'center',
-    marginBottom: 48,
+    marginBottom: 64,
     lineHeight: 24,
     maxWidth: 300,
   },
-  selectionDisplay: {
+  iconContainer: {
+    marginBottom: 64,
+  },
+  selectionContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    marginBottom: 48,
+    backgroundColor: '#111827',
+    borderRadius: 999,
+    padding: 8,
+    width: '100%',
+    maxWidth: 300,
   },
-  selectedDays: {
-    fontSize: 64,
-    fontWeight: 'bold',
-    color: '#FBBF24',
-    marginBottom: 8,
+  dayOption: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  selectedLabel: {
+  dayOptionSelected: {
+    backgroundColor: '#FBBF24',
+  },
+  dayText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  sliderContainer: {
-    width: '100%',
-    maxWidth: 320,
-    marginBottom: 32,
-  },
-  sliderTrack: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    position: 'relative',
-  },
-  sliderDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#374151',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#6B7280',
-  },
-  sliderDotSelected: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderColor: '#FBBF24',
-  },
-  sliderDotInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#6B7280',
-  },
-  sliderDotInnerSelected: {
-    backgroundColor: '#000000',
-  },
-  sliderLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  sliderLabelText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
+  dayTextSelected: {
+    color: '#000000',
   },
   footer: {
     paddingVertical: 32,
+    alignItems: 'center',
   },
 });

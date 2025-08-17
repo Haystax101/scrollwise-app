@@ -21,7 +21,7 @@ export const InputField: React.FC<InputFieldProps> = ({
   autoCapitalize = 'sentences'
 }) => {
   const [isFocused, setIsFocused] = useState(false);
-  const animatedValue = new Animated.Value(value ? 1 : 0);
+  const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
   const inputRef = useRef<TextInput>(null);
 
   const handleFocus = () => {

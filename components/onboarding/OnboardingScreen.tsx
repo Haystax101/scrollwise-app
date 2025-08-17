@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { OnboardingStyles } from './styles';
 
 interface OnboardingScreenProps {
   icon: React.ReactNode | null;
@@ -17,6 +18,10 @@ interface OnboardingScreenProps {
   buttonDisabled?: boolean;
   secondaryButtonText?: string;
   onSecondaryAction?: () => void;
+  disableIconAnimation?: boolean;
+  hideStepCounter?: boolean;
+  hideProgressDots?: boolean;
+  showBackButton?: boolean;
 }
 
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
@@ -34,10 +39,18 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   buttonDisabled = false,
   secondaryButtonText,
   onSecondaryAction,
+  disableIconAnimation = false,
+  hideStepCounter = false,
+  hideProgressDots = false,
+  showBackButton = false,
 }) => {
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    if (disableIconAnimation) {
+      fadeAnim.setValue(1);
+      return;
+    }
     // Quick fade out then fade in for icon changes only
     if (icon) {
       fadeAnim.setValue(0);
@@ -47,19 +60,21 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         useNativeDriver: true,
       }).start();
     }
-  }, [icon]);
+  }, [icon, disableIconAnimation]);
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        {currentStep > 0 ? (
+        {(currentStep > 0 || showBackButton) ? (
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         ) : <View style={styles.backButton} />}
-        <Text style={styles.stepCounter}>
-          {currentStep + 1} / {totalSteps}
-        </Text>
+        {!hideStepCounter && (
+          <Text style={styles.stepCounter}>
+            {currentStep + 1} / {totalSteps}
+          </Text>
+        )}
       </View>
 
       {/* Content */}
@@ -95,34 +110,38 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         {isFinalStep && chargeComponent ? (
           <View style={styles.chargingLayout}>
             {/* Progress Dots */}
-            <View style={styles.progressContainer}>
-              {Array.from({ length: totalSteps }).map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.progressDot,
-                    index === currentStep && styles.progressDotActive
-                  ]}
-                />
-              ))}
-            </View>
+            {!hideProgressDots && (
+              <View style={styles.progressContainer}>
+                {Array.from({ length: totalSteps }).map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.progressDot,
+                      index === currentStep && styles.progressDotActive
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
             {/* Charging Component */}
             {chargeComponent}
           </View>
         ) : (
           <>
             {/* Progress Dots */}
-            <View style={styles.progressContainer}>
-              {Array.from({ length: totalSteps }).map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.progressDot,
-                    index === currentStep && styles.progressDotActive
-                  ]}
-                />
-              ))}
-            </View>
+            {!hideProgressDots && (
+              <View style={styles.progressContainer}>
+                {Array.from({ length: totalSteps }).map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.progressDot,
+                      index === currentStep && styles.progressDotActive
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
 
             {/* Action Button */}
             <TouchableOpacity 
@@ -151,8 +170,8 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
-    paddingHorizontal: 32,
+    backgroundColor: OnboardingStyles.backgroundColor,
+    paddingHorizontal: OnboardingStyles.containerPaddingHorizontal,
   },
   header: {
     flexDirection: 'row',
@@ -193,7 +212,8 @@ const styles = StyleSheet.create({
     maxWidth: 300,
   },
   footer: {
-    paddingVertical: 32,
+    paddingVertical: OnboardingStyles.footerPaddingVertical,
+    paddingHorizontal: OnboardingStyles.footerPaddingHorizontal,
     alignItems: 'center',
   },
   progressContainer: {

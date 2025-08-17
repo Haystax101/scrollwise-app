@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, TextInput, Text, StyleSheet, FlatList, TouchableOpacity, Animated } from 'react-native';
 
 interface AutocompleteInputProps {
@@ -16,44 +16,49 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const animatedValue = new Animated.Value(value ? 1 : 0);
+  const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
   const inputRef = useRef<TextInput>(null);
 
   const filteredOptions = options
     .filter(option => option.toLowerCase().includes(value.toLowerCase()))
     .slice(0, 3); // Limit to 3 results
 
-  const handleFocus = () => {
-    setIsFocused(true);
-    setShowDropdown(value.length > 0);
+  useEffect(() => {
     Animated.timing(animatedValue, {
-      toValue: 1,
+      toValue: isFocused || value ? 1 : 0,
       duration: 200,
       useNativeDriver: false,
     }).start();
+  }, [isFocused, value, animatedValue]);
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    if (value.length > 0) {
+      setShowDropdown(true);
+    }
   };
 
   const handleBlur = () => {
     setIsFocused(false);
-    setTimeout(() => setShowDropdown(false), 300); // Increased delay for better touch handling
-    if (!value) {
-      Animated.timing(animatedValue, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: false,
-      }).start();
-    }
+    // Use a timeout to allow the press on a dropdown item to register
+    setTimeout(() => {
+      setShowDropdown(false);
+    }, 200);
   };
 
   const handleTextChange = (text: string) => {
     onChangeText(text);
-    setShowDropdown(text.length > 0);
+    if (text.length > 0) {
+      setShowDropdown(true);
+    } else {
+      setShowDropdown(false);
+    }
   };
 
   const handleOptionSelect = (option: string) => {
     onChangeText(option);
     setShowDropdown(false);
-    inputRef.current?.blur(); // Manually blur to hide keyboard
+    inputRef.current?.blur();
   };
 
   const labelStyle = {
@@ -69,38 +74,37 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   };
 
   return (
-    <TouchableOpacity
-      style={styles.container}
-      onPress={() => {
-        inputRef.current?.focus();
-      }}
-      activeOpacity={1}
-    >
-      <Animated.Text style={[styles.label, labelStyle]}>
-        {label}
-      </Animated.Text>
-      <TextInput
-        ref={inputRef}
-        style={[styles.input, isFocused && styles.inputFocused]}
-        value={value}
-        onChangeText={handleTextChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        selectionColor="#FBBF24"
-      />
+    <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.inputContainer}
+        onPress={() => {
+          inputRef.current?.focus();
+        }}
+        activeOpacity={1}
+      >
+        <Animated.Text style={[styles.label, labelStyle]}>
+          {label}
+        </Animated.Text>
+        <TextInput
+          ref={inputRef}
+          style={[styles.input, isFocused && styles.inputFocused]}
+          value={value}
+          onChangeText={handleTextChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          selectionColor="#FBBF24"
+        />
+      </TouchableOpacity>
       {showDropdown && filteredOptions.length > 0 && (
         <View style={styles.dropdown}>
           <FlatList
             data={filteredOptions}
-            keyExtractor={(item, index) => index.toString()}
-            style={styles.dropdownList}
-            nestedScrollEnabled={true}
+            keyExtractor={(item) => item}
+            keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.dropdownItem}
                 onPress={() => handleOptionSelect(item)}
-                delayPressIn={0}
-                activeOpacity={0.7}
               >
                 <Text style={styles.dropdownItemText}>{item}</Text>
               </TouchableOpacity>
@@ -108,7 +112,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
           />
         </View>
       )}
-    </TouchableOpacity>
+    </View>
   );
 };
 
@@ -116,8 +120,10 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     marginBottom: 16,
-    zIndex: 1000,
-    elevation: 1000, // For Android
+    zIndex: 1, // Let parent control stacking
+  },
+  inputContainer: {
+    // This now wraps the input and label for focus handling
   },
   input: {
     height: 56,
@@ -142,28 +148,19 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: 'absolute',
-    top: '100%',
+    top: 60, // Position below the input
     left: 0,
     right: 0,
-    backgroundColor: '#1F2937',
+    backgroundColor: '#2b394d',
     borderWidth: 1,
     borderColor: '#4B5563',
     borderRadius: 8,
-    marginTop: 4,
-    maxHeight: 144, // Reduced height for 3 items
-    zIndex: 2000,
-    elevation: 2000, // For Android
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  dropdownList: {
-    maxHeight: 144,
+    maxHeight: 150,
+    zIndex: 100, // Ensure dropdown is above other elements in the same container
+    elevation: 100,
   },
   dropdownItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#4B5563',
   },

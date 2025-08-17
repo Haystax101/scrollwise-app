@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
+import { OnboardingStyles } from './styles';
 
 const industries = [
   { id: 'finance', name: 'Finance and Economics', icon: 'briefcase-outline' },
@@ -17,10 +18,9 @@ const industries = [
 
 interface IndustrySelectionProps {
   onNext: (data: { industries: typeof industries }) => void;
-  onBack: () => void;
 }
 
-export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext, onBack }) => {
+export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext }) => {
   const [selectedIndustries, setSelectedIndustries] = useState<typeof industries>([]);
   const [searchText, setSearchText] = useState('');
 
@@ -47,9 +47,6 @@ export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext, on
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Select your industry</Text>
       </View>
 
@@ -106,7 +103,6 @@ export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext, on
       {/* Footer */}
       <View style={styles.footer}>
         <Button
-          fullWidth
           onPress={handleNext}
           disabled={selectedIndustries.length === 0}
         >
@@ -120,26 +116,22 @@ export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext, on
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
-    paddingHorizontal: 32,
+    backgroundColor: OnboardingStyles.backgroundColor,
+    paddingHorizontal: OnboardingStyles.containerPaddingHorizontal,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    marginBottom: 24,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
+    paddingVertical: 16,
+    marginBottom: OnboardingStyles.contentMarginBottom,
+    height: OnboardingStyles.headerHeight,
+    paddingHorizontal: OnboardingStyles.textPaddingHorizontal, // Added text padding
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: OnboardingStyles.textPrimary,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -167,7 +159,7 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#1F2937',
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 16,
     borderWidth: 2,
     borderColor: 'transparent',
   },
@@ -197,6 +189,8 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   footer: {
-    paddingVertical: 32,
+    paddingVertical: OnboardingStyles.footerPaddingVertical,
+    paddingHorizontal: OnboardingStyles.footerPaddingHorizontal,
+    alignItems: 'center',
   },
 });

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, PanResponder } from 'react-native';
 import Svg, { Path, Rect, ClipPath, Defs } from 'react-native-svg';
+import { OnboardingStyles } from './styles';
 
 interface ChargingBoltIconProps {
   charge: number;
@@ -99,22 +100,23 @@ const styles = StyleSheet.create({
   },
   chargeButton: {
     width: '100%',
-    height: 48,
-    borderRadius: 16,
+    height: OnboardingStyles.buttonHeight,
+    borderRadius: OnboardingStyles.buttonBorderRadius,
     borderWidth: 2,
-    borderColor: '#FBBF24',
+    borderColor: OnboardingStyles.accent,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
     position: 'relative',
+    minWidth: OnboardingStyles.buttonMinWidth,
   },
   chargeProgress: {
     position: 'absolute',
     left: 0,
     top: 0,
     height: '100%',
-    backgroundColor: '#FBBF24',
-    borderRadius: 16,
+    backgroundColor: OnboardingStyles.accent,
+    borderRadius: OnboardingStyles.buttonBorderRadius,
   },
   chargeButtonText: {
     fontSize: 16,

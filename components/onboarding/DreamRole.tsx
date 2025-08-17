@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet } from 'react-native';
 import { AutocompleteInput } from './AutocompleteInput';
-import { Button } from './Button';
+import { OnboardingPage } from './OnboardingPage';
 
 const loadJobTitles = async (): Promise<string[]> => {
   // UK-focused job titles for various industries
@@ -40,10 +39,9 @@ const loadCompanies = async (): Promise<string[]> => {
 
 interface DreamRoleProps {
   onNext: (data: { dreamRole: string; dreamCompany: string }) => void;
-  onBack: () => void;
 }
 
-export const DreamRole: React.FC<DreamRoleProps> = ({ onNext, onBack }) => {
+export const DreamRole: React.FC<DreamRoleProps> = ({ onNext }) => {
   const [dreamRole, setDreamRole] = useState('');
   const [dreamCompany, setDreamCompany] = useState('');
   const [jobTitles, setJobTitles] = useState<string[]>([]);
@@ -77,138 +75,62 @@ export const DreamRole: React.FC<DreamRoleProps> = ({ onNext, onBack }) => {
   const handleStepBack = () => {
     if (currentStep === 1) {
       setCurrentStep(0);
-    } else {
-      onBack();
     }
   };
 
   const isValidRole = jobTitles.includes(dreamRole.trim());
   const isValidCompany = companies.includes(dreamCompany.trim());
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleStepBack} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      <KeyboardAvoidingView 
-        style={styles.content} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+  if (currentStep === 0) {
+    return (
+      <OnboardingPage
+        title="Dream Role"
+        subtitle="What position would you love to have one day?"
+        onNext={handleRoleNext}
+        buttonText="Continue"
+        buttonDisabled={!isValidRole}
       >
-        <View style={styles.textContainer}>
-          <Text style={styles.title}>
-            {currentStep === 0 ? 'Dream Role' : 'Dream Company'}
-          </Text>
-          <Text style={styles.subtitle}>
-            {currentStep === 0 
-              ? 'What position would you love to have one day?'
-              : 'Which company would you love to work for?'
-            }
-          </Text>
+        <View style={styles.container}>
+          <AutocompleteInput
+            label="Dream Role"
+            options={jobTitles}
+            value={dreamRole}
+            onChangeText={setDreamRole}
+          />
         </View>
+      </OnboardingPage>
+    );
+  }
 
-        <View style={styles.inputContainer}>
-          {currentStep === 0 && (
-            <View style={styles.inputWrapper}>
-              <AutocompleteInput
-                label="Dream Role"
-                options={jobTitles}
-                value={dreamRole}
-                onChangeText={setDreamRole}
-              />
-            </View>
-          )}
-          
-          {currentStep === 1 && (
-            <>
-              {/* Show selected role */}
-              <View style={styles.selectedRoleContainer}>
-                <Text style={styles.selectedRoleLabel}>Your Dream Role</Text>
-                <Text style={styles.selectedRole}>{dreamRole}</Text>
-              </View>
-              
-              <View style={styles.inputWrapper}>
-                <AutocompleteInput
-                  label="Dream Company"
-                  options={companies}
-                  value={dreamCompany}
-                  onChangeText={setDreamCompany}
-                />
-              </View>
-            </>
-          )}
+  return (
+    <OnboardingPage
+      title="Dream Company"
+      subtitle="Which company would you love to work for?"
+      onBack={handleStepBack}
+      onNext={handleCompanyNext}
+      buttonText="Continue"
+      buttonDisabled={!isValidCompany}
+    >
+      <View style={styles.container}>
+        <View style={styles.selectedRoleContainer}>
+          <Text style={styles.selectedRoleLabel}>Your Dream Role</Text>
+          <Text style={styles.selectedRole}>{dreamRole}</Text>
         </View>
-      </KeyboardAvoidingView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Button
-          fullWidth
-          onPress={currentStep === 0 ? handleRoleNext : handleCompanyNext}
-          disabled={currentStep === 0 ? !isValidRole : !isValidCompany}
-        >
-          Continue
-        </Button>
+        <AutocompleteInput
+          label="Dream Company"
+          options={companies}
+          value={dreamCompany}
+          onChangeText={setDreamCompany}
+        />
       </View>
-    </SafeAreaView>
+    </OnboardingPage>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
-    paddingHorizontal: 32,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
     justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    paddingTop: 20,
-  },
-  textContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    paddingHorizontal: 16,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#9CA3AF',
-    marginBottom: 24,
-    lineHeight: 24,
-    paddingHorizontal: 16,
-  },
-  inputContainer: {
-    paddingHorizontal: 16,
-    flex: 1,
-  },
-  inputWrapper: {
-    marginBottom: 80, // More space between inputs to accommodate dropdowns
-    zIndex: 1000,
-  },
-  footer: {
-    paddingVertical: 32,
   },
   selectedRoleContainer: {
     backgroundColor: '#1F2937',

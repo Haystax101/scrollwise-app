@@ -1,28 +1,29 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
+import { OnboardingStyles } from './styles';
 
 interface ButtonProps {
   children: string;
   onPress: () => void;
-  fullWidth?: boolean;
   disabled?: boolean;
   variant?: 'primary' | 'secondary';
+  style?: ViewStyle;
 }
 
 export const Button: React.FC<ButtonProps> = ({
   children,
   onPress,
-  fullWidth = false,
   disabled = false,
-  variant = 'primary'
+  variant = 'primary',
+  style
 }) => {
   return (
     <TouchableOpacity
       style={[
         styles.button,
-        fullWidth && styles.fullWidth,
         disabled && styles.disabled,
-        variant === 'secondary' && styles.secondary
+        variant === 'secondary' && styles.secondary,
+        style
       ]}
       onPress={onPress}
       disabled={disabled}
@@ -37,15 +38,13 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    height: 48,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    backgroundColor: '#FBBF24',
+    height: OnboardingStyles.buttonHeight,
+    paddingHorizontal: OnboardingStyles.buttonPaddingHorizontal,
+    borderRadius: OnboardingStyles.buttonBorderRadius,
+    backgroundColor: OnboardingStyles.accent,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  fullWidth: {
-    width: '100%',
+    minWidth: OnboardingStyles.buttonMinWidth,
   },
   disabled: {
     opacity: 0.5,
@@ -53,7 +52,7 @@ const styles = StyleSheet.create({
   secondary: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#4B5563',
+    borderColor: OnboardingStyles.borderColor,
   },
   text: {
     color: '#000000',

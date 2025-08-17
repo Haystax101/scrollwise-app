@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 
 interface WelcomeScreenProps {
@@ -7,8 +7,19 @@ interface WelcomeScreenProps {
 }
 
 const WelcomeHeroImage = require('../assets/welcomehero.png');
+const HeroImage = require('../assets/hero.png');
+const Hero2Image = require('../assets/hero2.png');
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSignIn }) => {
+  useEffect(() => {
+    // Preload images for the next screens to avoid flickering
+    const preloadImages = async () => {
+      await Image.prefetch(Image.resolveAssetSource(HeroImage).uri);
+      await Image.prefetch(Image.resolveAssetSource(Hero2Image).uri);
+    };
+    preloadImages();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
