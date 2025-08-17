@@ -1,7 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingStyles } from './styles';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 interface OnboardingScreenProps {
   icon: React.ReactNode | null;
@@ -45,6 +47,17 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   showBackButton = false,
 }) => {
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(screenWidth)).current;
+
+  useEffect(() => {
+    // Slide in from right animation on mount and step changes
+    slideAnim.setValue(screenWidth);
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [currentStep]);
 
   useEffect(() => {
     if (disableIconAnimation) {
@@ -63,8 +76,16 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
   }, [icon, disableIconAnimation]);
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
+      <Animated.View 
+        style={[
+          styles.animatedContainer,
+          {
+            transform: [{ translateX: slideAnim }]
+          }
+        ]}
+      >
+        {/* Header */}
+        <View style={styles.header}>
         {(currentStep > 0 || showBackButton) ? (
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
@@ -163,6 +184,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
           </TouchableOpacity>
         )}
       </View>
+      </Animated.View>
     </SafeAreaView>
   );
 };
@@ -172,6 +194,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: OnboardingStyles.backgroundColor,
     paddingHorizontal: OnboardingStyles.containerPaddingHorizontal,
+  },
+  animatedContainer: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',

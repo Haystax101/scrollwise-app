@@ -19,6 +19,8 @@ import { CurrentWork } from './CurrentWork';
 import { StreakSelection } from './StreakSelection';
 import { Notifications } from './Notifications';
 import { IntroScroller } from './IntroScroller';
+import { CongratulationsScreen } from './CongratulationsScreen';
+import { FinalOnboardingScreen } from './FinalOnboardingScreen';
 
 // Import assets
 const HeroImage = require('../../assets/hero.png');
@@ -98,7 +100,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
         setCurrentStep(0);
       }
     } else if (currentSection === 'registration') {
-      if (currentStep < 7) { // 8 registration screens (0-7)
+      if (currentStep < 8) { // 9 registration screens (0-8)
         setCurrentStep(prev => prev + 1);
       } else {
         // Move to tutorial section
@@ -132,7 +134,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     } else if (currentSection === 'tutorial') {
       // Go back to registration
       setCurrentSection('registration');
-      setCurrentStep(7); // Last registration step
+      setCurrentStep(8); // Last registration step
     }
   };
 
@@ -532,12 +534,14 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
       case 3:
         return <IndustrySelection onNext={handleIndustrySelection} />;
       case 4:
-        return <DreamRole onNext={handleDreamRole} />;
+        return <CongratulationsScreen onNext={nextStep} />;
       case 5:
-        return <StreakSelection onNext={handleStreakSelection} />;
+        return <DreamRole onNext={handleDreamRole} />;
       case 6:
-        return <CurrentWork onNext={handleCurrentWork} />;
+        return <StreakSelection onNext={handleStreakSelection} />;
       case 7:
+        return <CurrentWork onNext={handleCurrentWork} />;
+      case 8:
         return <Notifications onNext={handleNotifications} />;
       default:
         return null;
@@ -624,8 +628,13 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     );
   }
 
-  // Render intro or tutorial sections
-  const steps = currentSection === 'intro' ? introSteps : tutorialSteps;
+  // Handle tutorial section with custom final screen
+  if (currentSection === 'tutorial') {
+    return <FinalOnboardingScreen onNext={onComplete} />;
+  }
+
+  // Render intro sections
+  const steps = introSteps;
   const step = steps[currentStep];
   const isFinalIntroStep = currentSection === 'intro' && currentStep === introSteps.length - 1;
 

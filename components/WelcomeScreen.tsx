@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 
 interface WelcomeScreenProps {
@@ -6,16 +6,29 @@ interface WelcomeScreenProps {
   onSignIn: () => void;
 }
 
+// Preload all images at module level for immediate availability
 const WelcomeHeroImage = require('../assets/welcomehero.png');
 const HeroImage = require('../assets/hero.png');
 const Hero2Image = require('../assets/hero2.png');
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSignIn }) => {
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+
   useEffect(() => {
     // Preload images for the next screens to avoid flickering
     const preloadImages = async () => {
-      await Image.prefetch(Image.resolveAssetSource(HeroImage).uri);
-      await Image.prefetch(Image.resolveAssetSource(Hero2Image).uri);
+      try {
+        await Promise.all([
+          Image.prefetch(Image.resolveAssetSource(HeroImage).uri),
+          Image.prefetch(Image.resolveAssetSource(Hero2Image).uri),
+          Image.prefetch(Image.resolveAssetSource(WelcomeHeroImage).uri)
+        ]);
+        setImagesLoaded(true);
+      } catch (error) {
+        console.log('Image preload error:', error);
+        // Still allow navigation even if preload fails
+        setImagesLoaded(true);
+      }
     };
     preloadImages();
   }, []);
@@ -25,7 +38,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSi
       <View style={styles.content}>
         {/* Hero Image */}
         <View style={styles.imageContainer}>
-          <Image source={WelcomeHeroImage} style={styles.heroImage} resizeMode="contain" />
+          <Image 
+            source={WelcomeHeroImage} 
+            style={[styles.heroImage, { opacity: imagesLoaded ? 1 : 0 }]} 
+            resizeMode="contain"
+            fadeDuration={0}
+          />
         </View>
         
         {/* Main Text */}

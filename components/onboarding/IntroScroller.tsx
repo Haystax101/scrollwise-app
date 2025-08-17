@@ -1,23 +1,42 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Dimensions, Image, SafeAreaView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-// Preload images
+// Preload images at module level for immediate availability
 const HeroImage = require('../../assets/hero.png');
 const Hero2Image = require('../../assets/hero2.png');
+
+// Create stable image components to prevent re-rendering
+const HeroImageComponent = React.memo(() => (
+  <Image 
+    source={HeroImage} 
+    style={{ width: 280, height: 280 }} 
+    resizeMode="contain"
+    fadeDuration={0}
+  />
+));
+
+const Hero2ImageComponent = React.memo(() => (
+  <Image 
+    source={Hero2Image} 
+    style={{ width: 280, height: 280 }} 
+    resizeMode="contain"
+    fadeDuration={0}
+  />
+));
 
 const introSteps = [
   {
     key: '1',
-    icon: <Image source={HeroImage} style={{ width: 280, height: 280 }} resizeMode="contain" />,
+    icon: <HeroImageComponent />,
     title: 'Take Control Of Your Scrolls',
     description: 'With supercharged you have the power of all in the package of one',
   },
   {
     key: '2',
-    icon: <Image source={Hero2Image} style={{ width: 280, height: 280 }} resizeMode="contain" />,
+    icon: <Hero2ImageComponent />,
     title: 'Meet Your Goals',
     description: 'Progress in your industry, one scroll at a time',
   },
@@ -55,7 +74,7 @@ export const IntroScroller: React.FC<IntroScrollerProps> = ({ onComplete, onBack
           <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.stepCounter}>
-          {activeIndex + 1} / {introSteps.length + 1}
+          {activeIndex + 1} / {introSteps.length}
         </Text>
       </View>
       
@@ -76,8 +95,7 @@ export const IntroScroller: React.FC<IntroScrollerProps> = ({ onComplete, onBack
 
       <View style={styles.footer}>
         <View style={styles.progressContainer}>
-          {/* Add an extra dot for the charging screen */}
-          {Array.from({ length: introSteps.length + 1 }).map((_, index) => (
+          {Array.from({ length: introSteps.length }).map((_, index) => (
             <View
               key={index}
               style={[

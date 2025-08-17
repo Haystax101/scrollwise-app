@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Image, StyleSheet, Animated } from 'react-native';
 
+// Preload images at module level for immediate availability
 const images = [
   require('../../assets/IMG_2106.jpg'),
   require('../../assets/IMG_2107.jpg'),
@@ -68,6 +69,7 @@ export const ImageScroller: React.FC = () => {
             source={source}
             style={styles.image}
             resizeMode="cover"
+            fadeDuration={0}
           />
         ))}
       </Animated.View>
