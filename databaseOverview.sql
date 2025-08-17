@@ -29,7 +29,7 @@ CREATE TABLE public.article_views (
 CREATE TABLE public.articles (
   id integer NOT NULL DEFAULT nextval('articles_id_seq'::regclass),
   title text NOT NULL,
-  summary text NOT NULL,
+  summary text NOT NULL UNIQUE,
   link text NOT NULL UNIQUE,
   created_at timestamp with time zone DEFAULT now(),
   site_name text,

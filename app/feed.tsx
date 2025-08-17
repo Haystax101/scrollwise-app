@@ -14,7 +14,7 @@ export default function FeedScreen() {
   const contentType = params.get('contentType') as 'article' | 'paper' | 'book' | null;
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/sign-in');
+      router.replace('/onboarding');
     }
   }, [user, loading]);
   if (loading || !user) return null;

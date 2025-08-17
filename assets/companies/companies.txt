@@ -1,0 +1,382 @@
+ASDA
+ARM Holdings
+ASOS
+AstraZeneca
+Aviva
+BAE Systems
+Barclays
+BT Group
+BP
+British Airways
+British American Tobacco
+Burberry
+CityFiber
+Compass Group
+DeepMind
+Deliveroo
+Diageo
+EE
+Experian
+FTSE Russell
+GSK
+HSBC
+ITV
+Imperial Brands
+Kingfisher
+Legal & General
+Lloyds Banking Group
+Marks & Spencer
+Monzo
+National Grid
+NatWest Group
+Next
+NVIDIA UK
+Ocado
+Prudential
+Reckitt
+Rolls-Royce Holdings
+Royal Mail
+Sage Group
+Sainsbury's
+Schroders
+Shell
+Sky
+Standard Chartered
+Tesco
+The Co-operative Group
+Unilever
+Virgin Group
+Vodafone
+WPP Group
+Admiral Group
+Anglian Water
+Associated British Foods
+Auto Trader Group
+Balfour Beatty
+Berkeley Group Holdings
+BHP Billiton
+British Land
+Bunzl
+CMC Markets
+Capita
+Centrica
+ConvaTec Group
+Croda International
+DCC
+DS Smith
+Dechra Pharmaceuticals
+Diploma
+Entain
+Evraz
+Experian
+Ferguson
+Fresnillo
+Halma
+Hargreaves Lansdown
+Hikma Pharmaceuticals
+HomeServe
+Howden Joinery Group
+IG Group Holdings
+IMI
+IWG
+Informa
+InterContinental Hotels Group
+International Airlines Group
+JD Sports Fashion
+Johnson Matthey
+Just Eat Takeaway.com
+Kingfisher
+Lancashire Holdings
+Land Securities Group
+Meggitt
+Melrose Industries
+Persimmon
+Phoenix Group Holdings
+Polyus
+Rightmove
+Rio Tinto Group
+Royal Bank of Scotland Group
+Scottish Mortgage Investment Trust
+Segro
+Smiths Group
+Spirax-Sarco Engineering
+Taylor Wimpey
+The Weir Group
+Ultra Electronics Holdings
+Unite Group
+Whitbread
+3i Group
+Admiral Group
+Anglo American
+Antofagasta
+Associated British Foods
+AstraZeneca
+Auto Trader Group
+Aviva
+BAE Systems
+Barclays
+Barratt Developments
+Berkeley Group Holdings
+BHP
+BP
+British American Tobacco
+BT Group
+Bunzl
+Burberry Group
+Carnival
+Centrica
+CNH Industrial
+Coca-Cola HBC
+Compass Group
+ConvaTec Group
+Croda International
+DCC
+DS Smith
+Dechra Pharmaceuticals
+Diageo
+Diploma
+Entain
+Evraz
+Experian
+Ferguson
+Flutter Entertainment
+Fresnillo
+GSK
+Glencore
+Halma
+Hargreaves Lansdown
+Hikma Pharmaceuticals
+HSBC Holdings
+HomeServe
+Howden Joinery Group
+IG Group Holdings
+IMI
+ITV
+IWG
+Imperial Brands
+Informa
+InterContinental Hotels Group
+International Airlines Group
+Intertek Group
+JD Sports Fashion
+Johnson Matthey
+Just Eat Takeaway.com
+Kingfisher
+Land Securities Group
+Legal & General
+Lloyds Banking Group
+London Stock Exchange Group
+Melrose Industries
+Mondi
+NatWest Group
+National Grid
+Next
+Ocado Group
+Pearson
+Persimmon
+Phoenix Group Holdings
+Prudential
+RELX
+Reckitt Benckiser
+Rentokil Initial
+Rightmove
+Rolls-Royce Holdings
+Royal Mail
+SSE
+Sage Group
+Sainsbury's
+Schroders
+Scottish Mortgage Investment Trust
+Segro
+Shell
+Smith & Nephew
+Smiths Group
+Spirax-Sarco Engineering
+Standard Chartered
+Taylor Wimpey
+Tesco
+The Weir Group
+Ultra Electronics Holdings
+Unilever
+Unite Group
+Vodafone Group
+WPP
+Whitbread
+Airbus UK
+Argos
+Asda
+Aston Martin
+Babcock International
+BAM Construct UK
+Balfour Beatty
+Bentley Motors
+Bombardier Transportation UK
+Bovis Homes
+British Gas
+British Steel
+BskyB
+Carillion
+Costain Group
+Crossrail
+Daily Mail and General Trust
+Direct Line Insurance Group
+Dixons Carphone
+Dyson
+EasyJet
+FirstGroup
+G4S
+Go-Ahead Group
+Greggs
+Hays
+Hiscox
+House of Fraser
+Inchcape
+Jardine Lloyd Thompson
+John Lewis Partnership
+Kier Group
+Ladbrokes Coral Group
+Laing O'Rourke
+Liberty Global
+Linde
+Morrisons
+National Express Group
+Old Mutual
+Partnership Assurance Group
+Petrofac
+Playtech
+Provident Financial
+QinetiQ Group
+Randgold Resources
+Royal Bank of Scotland
+RSA Insurance Group
+Serco Group
+Severn Trent
+Sports Direct International
+St. James's Place
+Stagecoach Group
+Subsea 7
+TalkTalk Telecom Group
+Travis Perkins
+TUI Group
+Virgin Media
+Wolseley
+Wood Group
+Zoopla Property Group
+Amazon UK
+Apple UK
+Microsoft UK
+Google UK
+Facebook UK
+LinkedIn UK
+Twitter UK
+Spotify UK
+Netflix UK
+Uber UK
+Airbnb UK
+PayPal UK
+eBay UK
+Booking.com UK
+TripAdvisor UK
+Zoom UK
+Slack UK
+Dropbox UK
+Adobe UK
+Salesforce UK
+Oracle UK
+SAP UK
+IBM UK
+Intel UK
+Cisco UK
+VMware UK
+Red Hat UK
+Atlassian UK
+GitHub UK
+GitLab UK
+Docker UK
+MongoDB UK
+Elastic UK
+Tableau UK
+Palantir UK
+Snowflake UK
+Databricks UK
+Stripe UK
+Square UK
+Twilio UK
+SendGrid UK
+Mailchimp UK
+HubSpot UK
+Zendesk UK
+Intercom UK
+Segment UK
+Mixpanel UK
+Amplitude UK
+LaunchDarkly UK
+PagerDuty UK
+DataDog UK
+New Relic UK
+Splunk UK
+Sumo Logic UK
+LogRocket UK
+Sentry UK
+Rollbar UK
+CircleCI UK
+Jenkins UK
+Travis CI UK
+AppVeyor UK
+TeamCity UK
+GitLab CI UK
+GitHub Actions UK
+Buildkite UK
+Semaphore UK
+CodeShip UK
+DeployBot UK
+Heroku UK
+AWS UK
+Microsoft Azure UK
+Google Cloud UK
+DigitalOcean UK
+Linode UK
+Vultr UK
+OVHcloud UK
+Scaleway UK
+Hetzner UK
+CloudFlare UK
+Fastly UK
+KeyCDN UK
+MaxCDN UK
+BunnyCDN UK
+Akamai UK
+Limelight UK
+Level 3 UK
+Cogent UK
+Hurricane Electric UK
+GTT UK
+Telia Carrier UK
+NTT UK
+Verizon UK
+AT&T UK
+CenturyLink UK
+Orange Business Services UK
+Telefonica UK
+Deutsche Telekom UK
+Telecom Italia UK
+Swisscom UK
+KPN UK
+Tele2 UK
+Telenor UK
+Telia UK
+Three UK
+O2 UK
+Virgin Mobile UK
+giffgaff UK
+Plusnet UK
+Sky Mobile UK
+TalkTalk UK
+Post Office Telecoms UK
+Utility Warehouse UK
+Lebara UK
+Lycamobile UK
+SMARTY UK
+VOXI UK
+iD Mobile UK
+Tesco Mobile UK

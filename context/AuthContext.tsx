@@ -49,7 +49,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     fetchSession();
 
     // Listen for changes in authentication state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('AuthContext: Auth state changed:', event, session ? 'User logged in' : 'User logged out');
       setSession(session);
       setUser(session?.user ?? null);
     });
@@ -62,7 +63,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Define the signOut function
   const signOut = async () => {
+    console.log('AuthContext: Signing out user...');
     await supabase.auth.signOut();
+    console.log('AuthContext: Sign out completed, user should be redirected to onboarding');
     // The onAuthStateChange listener will handle setting user and session to null
   };
 

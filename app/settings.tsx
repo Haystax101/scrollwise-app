@@ -8,7 +8,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/sign-in');
+      router.replace('/onboarding');
     }
   }, [user, loading]);
   if (loading || !user) return null;

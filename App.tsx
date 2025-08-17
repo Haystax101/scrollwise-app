@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { SafeAreaView, View, StatusBar, StyleSheet } from 'react-native';
-import { SignIn } from './components/SignIn';
-import { SignUp } from './components/SignUp';
 import { Onboarding } from './components/Onboarding';
 import { MainFeed } from './components/MainFeed';
 import { Profile } from './components/Profile';
@@ -10,7 +8,7 @@ import { Discover } from './components/Discover';
 import Settings from './components/Settings';
 import { useAuth } from './context/AuthContext';
 import { useTheme } from './context/ThemeContext';
-import type { User, ScreenName } from './types';
+import type { ScreenName, Industry } from './types';
 // Removed: import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // Removed: import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 // Removed: import { styled } from "nativewind";
@@ -20,30 +18,27 @@ import type { User, ScreenName } from './types';
 
 export default function App() {
   const { user, loading, signOut } = useAuth();
-  const { colors, isDark } = useTheme();
-  const [currentScreen, setCurrentScreen] = useState<ScreenName>('signIn');
-  const [selectedIndustries, setSelectedIndustries] = useState<number[]>([]);
+  const { colors } = useTheme();
+  const [currentScreen, setCurrentScreen] = useState<ScreenName>('onboarding');
+  const [selectedIndustries, setSelectedIndustries] = useState<Industry[]>([]);
 
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        setCurrentScreen('signIn');
-      } else if (currentScreen === 'signIn' || currentScreen === 'signUp') {
+        setCurrentScreen('onboarding');
+      } else if (currentScreen === 'onboarding') {
         setCurrentScreen('feed');
       }
     }
     // eslint-disable-next-line
   }, [user, loading]);
 
-  const handleSignIn = (_user: User) => {
-    // No-op: handled by AuthContext
+  // Handle when user signs in via onboarding
+  const handleSignIn = () => {
+    setCurrentScreen('feed');
   };
 
-  const handleSignUp = (_user: User) => {
-    setCurrentScreen('onboarding');
-  };
-
-  const handleOnboardingComplete = (interests: number[]) => {
+  const handleOnboardingComplete = (interests: Industry[]) => {
     setSelectedIndustries(interests);
     setCurrentScreen('feed');
   };
@@ -54,12 +49,8 @@ export default function App() {
 
   const renderScreen = () => {
     switch (currentScreen) {
-      case 'signIn':
-        return <SignIn onSignIn={handleSignIn} onSwitchToSignUp={() => setCurrentScreen('signUp')} />;
-      case 'signUp':
-        return <SignUp onSignUp={handleSignUp} onSwitchToSignIn={() => setCurrentScreen('signIn')} />;
       case 'onboarding':
-        return <Onboarding onComplete={handleOnboardingComplete} />;
+        return <Onboarding onComplete={handleOnboardingComplete} onSignIn={handleSignIn} />;
       case 'feed':
         return <MainFeed industries={selectedIndustries} />;
       case 'discover':
@@ -73,11 +64,11 @@ export default function App() {
       case 'settings':
         return <Settings navigateTo={navigateTo as any} signOut={signOut} />;
       default:
-        return <SignIn onSignIn={handleSignIn} onSwitchToSignUp={() => setCurrentScreen('signUp')} />;
+        return <Onboarding onComplete={handleOnboardingComplete} onSignIn={handleSignIn} />;
     }
   };
 
-  const showHeader = currentScreen !== 'signIn' && currentScreen !== 'signUp' && currentScreen !== 'onboarding';
+  const showHeader = currentScreen !== 'onboarding';
 
   const dynamicStyles = StyleSheet.create({
     container: {
@@ -101,14 +92,3 @@ export default function App() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F9FAFB', // bg-gray-50
-  },
-  flex1: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-});
