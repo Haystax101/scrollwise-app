@@ -18,7 +18,6 @@ import { DreamRole } from './DreamRole';
 import { CurrentWork } from './CurrentWork';
 import { StreakSelection } from './StreakSelection';
 import { Notifications } from './Notifications';
-import { IntroScroller } from './IntroScroller';
 import { CongratulationsScreen } from './CongratulationsScreen';
 import { FinalOnboardingScreen } from './FinalOnboardingScreen';
 
@@ -29,6 +28,8 @@ const Hero2Image = require('../../assets/hero2.png');
 interface MainOnboardingProps {
   onComplete: () => void;
   onSignIn?: () => void;
+  refreshMainFeed?: () => void;
+  tutorialOnly?: boolean;
 }
 
 interface OnboardingData {
@@ -55,9 +56,9 @@ const tutorialSteps = [
   },
 ];
 
-export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSignIn }) => {
+export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSignIn, refreshMainFeed, tutorialOnly }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [currentSection, setCurrentSection] = useState<'welcome' | 'intro-scroller' | 'intro' | 'registration' | 'tutorial'>('welcome');
+  const [currentSection, setCurrentSection] = useState<'welcome' | 'intro' | 'registration' | 'tutorial'>(tutorialOnly ? 'tutorial' : 'welcome');
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({});
   const [userId, setUserId] = useState<string | null>(null);
   const [showLogin, setShowLogin] = useState(false);
@@ -83,12 +84,18 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     setOnboardingData(prev => ({ ...prev, ...newData }));
   };
 
+  const handleTutorialComplete = () => {
+    // Refresh main feed since industries have been selected
+    if (refreshMainFeed) {
+      refreshMainFeed();
+    }
+    // Complete onboarding
+    onComplete();
+  };
+
   const nextStep = () => {
     if (currentSection === 'welcome') {
-      // Move to intro section
-      setCurrentSection('intro-scroller');
-      setCurrentStep(0);
-    } else if (currentSection === 'intro-scroller') {
+      // Skip intro-scroller, go directly to intro section
       setCurrentSection('intro');
       setCurrentStep(0);
     } else if (currentSection === 'intro') {
@@ -120,12 +127,9 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
   const prevStep = () => {
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
-    } else if (currentSection === 'intro-scroller') {
+    } else if (currentSection === 'intro') {
+      // Go back to welcome, skip intro-scroller
       setCurrentSection('welcome');
-    }
-    else if (currentSection === 'intro') {
-      // Go back to welcome
-      setCurrentSection('intro-scroller');
       setCurrentStep(0);
     } else if (currentSection === 'registration') {
       // Go back to intro
@@ -584,9 +588,6 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     return <WelcomeScreen onGetStarted={handleGetStarted} onSignIn={handleWelcomeSignIn} />;
   }
 
-  if (currentSection === 'intro-scroller') {
-    return <IntroScroller onComplete={nextStep} onBack={prevStep} />;
-  }
 
   // Handle login on first intro screen
   if (currentSection === 'intro' && currentStep === 0 && showLogin) {
@@ -602,13 +603,15 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
           setShowLogin(false);
           setCurrentSection('welcome');
         }}
+        hideStepCounter={true}
+        hideProgressDots={true}
+        showBackButton={true}
         customContent={
           <View style={{ width: '100%', paddingHorizontal: 24 }}>
             <InputField
               label="Email"
               value={loginEmail}
               onChangeText={setLoginEmail}
-              placeholder="Enter your email"
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -617,7 +620,6 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
               label="Password"
               value={loginPassword}
               onChangeText={setLoginPassword}
-              placeholder="Enter your password"
               secureTextEntry
             />
           </View>
@@ -630,7 +632,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
 
   // Handle tutorial section with custom final screen
   if (currentSection === 'tutorial') {
-    return <FinalOnboardingScreen onNext={onComplete} />;
+    return <FinalOnboardingScreen onNext={handleTutorialComplete} />;
   }
 
   // Render intro sections

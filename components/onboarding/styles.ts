@@ -24,11 +24,16 @@ export const OnboardingStyles = {
   inputBorderRadius: 8,
   inputPaddingHorizontal: 16,
   
-  // Colors
-  backgroundColor: '#000000',
-  textPrimary: '#FFFFFF',
-  textSecondary: '#9CA3AF',
-  accent: '#FBBF24',
-  inputBackground: '#1F2937',
-  borderColor: '#4B5563',
+  // Colors - Light Mode Theme
+  backgroundColor: '#FFFBF0',        // Warm cream background
+  textPrimary: '#1F2937',            // Dark grey for primary text
+  textSecondary: '#6B7280',          // Medium grey for secondary text
+  textTertiary: '#9CA3AF',           // Light grey for tertiary text
+  accent: '#F59E0B',                 // Rich yellow accent
+  accentHover: '#D97706',            // Darker yellow for hover states
+  inputBackground: '#FFFFFF',         // Pure white for inputs
+  cardBackground: '#FFFFFF',          // White for cards/containers
+  borderColor: '#E5E7EB',            // Light grey borders
+  borderColorActive: '#F59E0B',       // Yellow borders when active
+  shadowColor: 'rgba(0, 0, 0, 0.1)', // Subtle shadows
 } as const;

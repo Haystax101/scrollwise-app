@@ -116,7 +116,7 @@ export const IntroScroller: React.FC<IntroScrollerProps> = ({ onComplete, onBack
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFBF0',
   },
   slide: {
     width: width,
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   stepCounter: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
   },
   content: {
     flex: 1,
@@ -152,13 +152,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#1F2937',
     textAlign: 'center',
     marginBottom: 16,
   },
   description: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: '#6B7280',
     textAlign: 'center',
     maxWidth: 300,
   },
@@ -176,16 +176,16 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4B5563',
+    backgroundColor: '#E5E7EB',
     marginHorizontal: 4,
   },
   progressDotActive: {
-    backgroundColor: '#FBBF24',
+    backgroundColor: '#F59E0B',
   },
   nextButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#FBBF24',
+    backgroundColor: '#F59E0B',
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -193,6 +193,6 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#FFFFFF',
   },
 });

@@ -88,7 +88,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
         <View style={styles.header}>
         {(currentStep > 0 || showBackButton) ? (
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={24} color="#1F2937" />
           </TouchableOpacity>
         ) : <View style={styles.backButton} />}
         {!hideStepCounter && (
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   },
   stepCounter: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: OnboardingStyles.textSecondary,
   },
   content: {
     flex: 1,
@@ -226,13 +226,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: OnboardingStyles.textPrimary,
     textAlign: 'center',
     marginBottom: 16,
   },
   description: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: OnboardingStyles.textSecondary,
     textAlign: 'center',
     maxWidth: 300,
   },
@@ -250,16 +250,16 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4B5563',
+    backgroundColor: OnboardingStyles.borderColor,
     marginHorizontal: 4,
   },
   progressDotActive: {
-    backgroundColor: '#FBBF24',
+    backgroundColor: OnboardingStyles.accent,
   },
   nextButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#FBBF24',
+    backgroundColor: OnboardingStyles.accent,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -267,13 +267,13 @@ const styles = StyleSheet.create({
   nextButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#FFFFFF',
   },
   nextButtonDisabled: {
-    backgroundColor: '#6B7280',
+    backgroundColor: OnboardingStyles.textTertiary,
   },
   nextButtonTextDisabled: {
-    color: '#9CA3AF',
+    color: OnboardingStyles.borderColor,
   },
   customContentContainer: {
     marginTop: 32,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 14,
-    color: '#FBBF24',
+    color: OnboardingStyles.accent,
     textAlign: 'center',
   },
   chargingLayout: {

@@ -70,7 +70,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
       inputRange: [0, 1],
       outputRange: [16, 12],
     }),
-    color: isFocused ? '#FBBF24' : '#9CA3AF',
+    color: isFocused ? '#F59E0B' : '#6B7280',
   };
 
   return (
@@ -130,15 +130,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 8,
-    backgroundColor: '#1F2937',
+    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderBottomWidth: 2,
-    borderBottomColor: '#4B5563',
-    color: '#FFFFFF',
+    borderBottomColor: '#E5E7EB',
+    color: '#1F2937',
     fontSize: 16,
   },
   inputFocused: {
-    borderBottomColor: '#FBBF24',
+    borderBottomColor: '#F59E0B',
   },
   label: {
     position: 'absolute',
@@ -151,21 +151,25 @@ const styles = StyleSheet.create({
     top: 60, // Position below the input
     left: 0,
     right: 0,
-    backgroundColor: '#2b394d',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#4B5563',
+    borderColor: '#E5E7EB',
     borderRadius: 8,
     maxHeight: 150,
     zIndex: 100, // Ensure dropdown is above other elements in the same container
     elevation: 100,
+    shadowColor: 'rgba(0, 0, 0, 0.05)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
   },
   dropdownItem: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#4B5563',
+    borderBottomColor: '#E5E7EB',
   },
   dropdownItemText: {
-    color: '#FFFFFF',
+    color: '#1F2937',
     fontSize: 16,
   },
 });

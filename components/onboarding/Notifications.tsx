@@ -25,7 +25,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ onNext }) => {
       <View style={styles.content}>
         {/* Bell Icon */}
         <View style={styles.iconContainer}>
-          <Ionicons name="notifications" size={96} color="#FBBF24" />
+          <Ionicons name="notifications" size={96} color="#F59E0B" />
         </View>
 
         <Text style={styles.title}>Stay on track</Text>
@@ -55,7 +55,7 @@ export const Notifications: React.FC<NotificationsProps> = ({ onNext }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFBF0',
     paddingHorizontal: 32,
   },
   header: {
@@ -72,13 +72,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#1F2937',
     textAlign: 'center',
     marginBottom: 16,
   },
   subtitle: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
     maxWidth: 300,
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   },
   maybeButtonText: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: '#6B7280',
     fontWeight: '600',
   },
 });

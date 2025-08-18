@@ -107,7 +107,7 @@ export const StreakSelection: React.FC<StreakSelectionProps> = ({ onNext }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFBF0',
     paddingHorizontal: 32,
   },
   header: {
@@ -121,13 +121,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#1F2937',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: '#6B7280',
     textAlign: 'center',
     marginBottom: 64,
     lineHeight: 24,
@@ -140,11 +140,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: '#FFFFFF',
     borderRadius: 999,
     padding: 8,
     width: '100%',
     maxWidth: 300,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   dayOption: {
     width: 48,
@@ -154,15 +161,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayOptionSelected: {
-    backgroundColor: '#FBBF24',
+    backgroundColor: '#F59E0B',
   },
   dayText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#6B7280',
   },
   dayTextSelected: {
-    color: '#000000',
+    color: '#FFFFFF',
   },
   footer: {
     paddingVertical: 32,

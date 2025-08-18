@@ -33,7 +33,7 @@ export const OnboardingPage: React.FC<OnboardingPageProps> = ({
         <View style={styles.header}>
           {onBack && (
             <TouchableOpacity onPress={onBack} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+              <Ionicons name="chevron-back" size={24} color="#1F2937" />
             </TouchableOpacity>
           )}
         </View>

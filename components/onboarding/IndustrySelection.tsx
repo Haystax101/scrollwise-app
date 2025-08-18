@@ -20,6 +20,24 @@ interface IndustrySelectionProps {
   onNext: (data: { industries: typeof industries }) => void;
 }
 
+const getIndustryIconColor = (industryId: string, isSelected: boolean): string => {
+  if (isSelected) return '#F59E0B'; // Yellow when selected
+  
+  const colorMap: { [key: string]: string } = {
+    'finance': '#3B82F6',      // Blue
+    'politics': '#8B5CF6',      // Purple
+    'entrepreneurship': '#EF4444', // Red
+    'technology': '#10B981',    // Green
+    'energy': '#22C55E',        // Green (climate)
+    'creative': '#F59E0B',      // Yellow/Orange
+    'engineering': '#6B7280',   // Gray
+    'healthcare': '#EC4899',    // Pink
+    'education': '#F97316',     // Orange
+  };
+  
+  return colorMap[industryId] || '#F59E0B';
+};
+
 export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext }) => {
   const [selectedIndustries, setSelectedIndustries] = useState<typeof industries>([]);
   const [searchText, setSearchText] = useState('');
@@ -51,31 +69,34 @@ export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext }) 
       </View>
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search industries..."
-          placeholderTextColor="#9CA3AF"
-          value={searchText}
-          onChangeText={setSearchText}
-          selectionColor="#FBBF24"
-        />
+      <View style={styles.searchContainerWrapper}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search industries..."
+            placeholderTextColor="#9CA3AF"
+            value={searchText}
+            onChangeText={setSearchText}
+            selectionColor="#F59E0B"
+          />
+        </View>
       </View>
 
       {/* Industries List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {filteredIndustries.map((industry) => {
-          const isSelected = selectedIndustries.some(selected => selected.id === industry.id);
-          return (
-            <TouchableOpacity
-              key={industry.id}
-              style={[
-                styles.industryItem,
-                isSelected && styles.industryItemSelected
-              ]}
-              onPress={() => handleIndustryToggle(industry)}
-            >
+        <View style={styles.industriesWrapper}>
+          {filteredIndustries.map((industry) => {
+            const isSelected = selectedIndustries.some(selected => selected.id === industry.id);
+            return (
+              <TouchableOpacity
+                key={industry.id}
+                style={[
+                  styles.industryItem,
+                  isSelected && styles.industryItemSelected
+                ]}
+                onPress={() => handleIndustryToggle(industry)}
+              >
               <View style={[
                 styles.industryIcon,
                 isSelected && styles.industryIconSelected
@@ -83,7 +104,7 @@ export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext }) 
                 <Ionicons 
                   name={industry.icon as any} 
                   size={24} 
-                  color={isSelected ? '#000000' : '#FBBF24'} 
+                  color={getIndustryIconColor(industry.id, isSelected)} 
                 />
               </View>
               <Text style={[
@@ -93,11 +114,12 @@ export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext }) 
                 {industry.name}
               </Text>
               {isSelected && (
-                <Ionicons name="checkmark-circle" size={24} color="#000000" />
+                <Ionicons name="checkmark-circle" size={24} color="#F59E0B" />
               )}
-            </TouchableOpacity>
-          );
-        })}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </ScrollView>
 
       {/* Footer */}
@@ -133,60 +155,79 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: OnboardingStyles.textPrimary,
   },
+  searchContainerWrapper: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1F2937',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingHorizontal: 16,
-    marginBottom: 24,
     height: 48,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: 'rgba(0, 0, 0, 0.05)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchIcon: {
     marginRight: 12,
   },
   searchInput: {
     flex: 1,
-    color: '#FFFFFF',
+    color: '#1F2937',
     fontSize: 16,
   },
   content: {
     flex: 1,
   },
+  industriesWrapper: {
+    paddingHorizontal: 16,
+  },
   industryItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#1F2937',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: '#E5E7EB',
+    shadowColor: 'rgba(0, 0, 0, 0.05)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   industryItemSelected: {
-    backgroundColor: '#FBBF24',
+    backgroundColor: '#FFFFFF',
     borderColor: '#F59E0B',
+    borderWidth: 2,
   },
   industryIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#374151',
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   industryIconSelected: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#FEF3C7',
   },
   industryName: {
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1F2937',
   },
   industryNameSelected: {
-    color: '#000000',
+    color: '#1F2937',
   },
   footer: {
     paddingVertical: OnboardingStyles.footerPaddingVertical,

@@ -16,6 +16,10 @@ function Settings({ navigateTo, signOut }: SettingsProps) {
     navigateTo('onboarding');
   };
 
+  const handleTutorialRewatch = () => {
+    navigateTo('onboarding?tutorialOnly=true');
+  };
+
   const handleSignOut = () => {
     Alert.alert(
       'Sign Out',
@@ -203,7 +207,7 @@ function Settings({ navigateTo, signOut }: SettingsProps) {
           <Text style={dynamicStyles.sectionTitle}>Content</Text>
           <View style={dynamicStyles.settingCard}>
             <TouchableOpacity
-              style={[dynamicStyles.settingItem, dynamicStyles.settingItemLast]}
+              style={dynamicStyles.settingItem}
               onPress={handleContentPreferences}
               accessibilityRole="button"
               accessibilityLabel="Edit content preferences"
@@ -214,6 +218,23 @@ function Settings({ navigateTo, signOut }: SettingsProps) {
               <View style={dynamicStyles.settingContent}>
                 <Text style={dynamicStyles.settingTitle}>Content Preferences</Text>
                 <Text style={dynamicStyles.settingDescription}>Update your academic interests</Text>
+              </View>
+              <View style={dynamicStyles.settingAction}>
+                <Feather name="chevron-right" size={20} color={colors.textTertiary} />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[dynamicStyles.settingItem, dynamicStyles.settingItemLast]}
+              onPress={handleTutorialRewatch}
+              accessibilityRole="button"
+              accessibilityLabel="Rewatch tutorial"
+            >
+              <View style={dynamicStyles.settingIcon}>
+                <Feather name="play-circle" size={20} color={colors.textSecondary} />
+              </View>
+              <View style={dynamicStyles.settingContent}>
+                <Text style={dynamicStyles.settingTitle}>Rewatch Tutorial</Text>
+                <Text style={dynamicStyles.settingDescription}>Go through the app tutorial again</Text>
               </View>
               <View style={dynamicStyles.settingAction}>
                 <Feather name="chevron-right" size={20} color={colors.textTertiary} />

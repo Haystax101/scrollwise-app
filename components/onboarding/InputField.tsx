@@ -53,7 +53,7 @@ export const InputField: React.FC<InputFieldProps> = ({
       inputRange: [0, 1],
       outputRange: [16, 12],
     }),
-    color: isFocused ? '#FBBF24' : '#9CA3AF',
+    color: isFocused ? '#F59E0B' : '#6B7280',
   };
 
   return (
@@ -78,7 +78,7 @@ export const InputField: React.FC<InputFieldProps> = ({
         keyboardType={keyboardType}
         placeholder={placeholder}
         autoCapitalize={autoCapitalize}
-        selectionColor="#FBBF24"
+        selectionColor="#F59E0B"
       />
     </TouchableOpacity>
   );
@@ -94,15 +94,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 8,
-    backgroundColor: '#1F2937',
+    backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderBottomWidth: 2,
-    borderBottomColor: '#4B5563',
-    color: '#FFFFFF',
+    borderBottomColor: '#E5E7EB',
+    color: '#1F2937',
     fontSize: 16,
+    shadowColor: 'rgba(0, 0, 0, 0.05)',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    shadowRadius: 2,
+    elevation: 1,
   },
   inputFocused: {
-    borderBottomColor: '#FBBF24',
+    borderBottomColor: '#F59E0B',
   },
   label: {
     position: 'absolute',

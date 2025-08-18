@@ -188,13 +188,8 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
               </Text>
             ) : (
               <>
-                <Image 
-                  source={require('../sparkles.png')} 
-                  style={{ width: 16, height: 16, marginRight: 8 }}
-                  resizeMode="contain"
-                />
                 <Text style={[{ fontSize: 16, fontWeight: '600' }, { color: colors.primaryText }]}>
-                  Delve Deeper
+                  ✨ Delve Deeper
                 </Text>
               </>
             )}

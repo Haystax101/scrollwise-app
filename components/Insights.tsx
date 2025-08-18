@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'expo-router';
+import { InsightsPublisher } from './insights/InsightsPublisher';
 
 interface InsightItem {
   id: string;
@@ -25,8 +26,7 @@ const Insights = () => {
   const router = useRouter();
   const [items, setItems] = useState<InsightItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [newInsightContent, setNewInsightContent] = useState('');
+  const [showPublisher, setShowPublisher] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -113,24 +113,9 @@ const Insights = () => {
     setItems(items.filter(i => i.id !== itemId));
   };
 
-  const handlePublishInsight = async () => {
-    if (!user || newInsightContent.trim() === '') return;
-    try {
-      const { error } = await supabase.from('insights').insert({
-        content: newInsightContent.trim(),
-        author_id: user.id,
-      });
-
-      if (error) throw error;
-      
-      // Close modal and refresh the data
-      setNewInsightContent('');
-      setModalVisible(false);
-      fetchData(); // Re-fetch all data to ensure consistency
-    } catch (error) {
-      console.error('Error publishing insight:', error);
-      Alert.alert('Error', 'Could not publish your insight.');
-    }
+  const handlePublisherComplete = () => {
+    setShowPublisher(false);
+    fetchData(); // Refresh the insights list
   };
 
   const InsightCard = ({ item }: { item: InsightItem }) => {
@@ -162,19 +147,10 @@ const Insights = () => {
     );
   };
   
-  // Styles need to be defined here for the component to use them.
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 }, // Increased top margin for notch
+    container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 },
     createInsightButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, paddingVertical: 15, paddingHorizontal: 20, borderRadius: 12, marginVertical: 10, marginHorizontal: 16, alignSelf: 'center' },
     createInsightButtonText: { color: colors.primaryText, fontSize: 16, fontWeight: '600', marginLeft: 8 },
-    modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-    modalContent: { backgroundColor: colors.card, borderRadius: 16, padding: 20, width: '80%', alignItems: 'center' },
-    modalTitle: { fontSize: 24, fontWeight: 'bold', color: colors.text, marginBottom: 15 },
-    modalInput: { width: '100%', height: 150, borderColor: colors.border, borderWidth: 1, borderRadius: 12, padding: 15, fontSize: 16, color: colors.text, backgroundColor: colors.inputBackground, textAlignVertical: 'top', marginBottom: 20 },
-    publishButton: { backgroundColor: colors.primary, paddingVertical: 15, paddingHorizontal: 30, borderRadius: 12, width: '100%', alignItems: 'center', marginBottom: 10 },
-    publishButtonText: { color: colors.primaryText, fontSize: 18, fontWeight: 'bold' },
-    cancelButton: { backgroundColor: 'transparent', paddingVertical: 15, paddingHorizontal: 30, borderRadius: 12, width: '100%', alignItems: 'center' },
-    cancelButtonText: { color: colors.textSecondary, fontSize: 18, fontWeight: 'bold' },
     insightCard: { borderRadius: 16, marginVertical: 8, marginHorizontal: 16, overflow: 'hidden' },
     gradient: { padding: 20 },
     cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
@@ -201,6 +177,10 @@ const Insights = () => {
     );
   }
 
+  if (showPublisher) {
+    return <InsightsPublisher onComplete={handlePublisherComplete} />;
+  }
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -208,37 +188,12 @@ const Insights = () => {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <InsightCard item={item} />}
         ListHeaderComponent={
-          <TouchableOpacity style={styles.createInsightButton} onPress={() => setModalVisible(true)}>
+          <TouchableOpacity style={styles.createInsightButton} onPress={() => setShowPublisher(true)}>
             <Feather name="plus" size={18} color={colors.primaryText} />
             <Text style={styles.createInsightButtonText}>Create Insight</Text>
           </TouchableOpacity>
         }
       />
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isModalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Create an Insight</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Share your thoughts..."
-              value={newInsightContent}
-              onChangeText={setNewInsightContent}
-              multiline
-            />
-            <TouchableOpacity style={styles.publishButton} onPress={handlePublishInsight}>
-              <Text style={styles.publishButtonText}>Publish</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };

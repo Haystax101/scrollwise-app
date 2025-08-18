@@ -134,7 +134,7 @@ export const FinalOnboardingScreen: React.FC<FinalOnboardingScreenProps> = ({ on
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#FFFBF0',
   },
   touchableContainer: {
     flex: 1,
@@ -158,15 +158,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: 'rgba(75, 85, 99, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: '#6B7280',
+    borderColor: '#E5E7EB',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   skipButtonText: {
-    color: '#FBBF24',
+    color: '#F59E0B',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -176,19 +181,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   textBox: {
-    backgroundColor: '#1F2937',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 10,
-    marginLeft: 2, // More to the left
+    padding: 20,
+    marginLeft: 16, // More to the left
     marginRight: screenWidth * 0.3, // Leave space for Simon
     marginTop: 40, // Move down slightly
     maxWidth: screenWidth * 0.65, // Narrower to avoid Simon
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: '#E5E7EB',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   tutorialText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#1F2937',
     lineHeight: 24,
     textAlign: 'left',
   },

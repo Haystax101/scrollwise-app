@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   chargeButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1F2937',
     zIndex: 1,
   },
 });

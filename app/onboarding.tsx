@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useSearchParams } from 'expo-router/build/hooks';
 import { useAuth } from '../context/AuthContext';
 import NewOnboarding from '../components/NewOnboarding';
 import { useEffect } from 'react';
@@ -6,12 +7,14 @@ import { useEffect } from 'react';
 export default function OnboardingScreen() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const params = useSearchParams();
+  const tutorialOnly = params.get('tutorialOnly') === 'true';
   
-  console.log('OnboardingScreen: Current state -', { user: user ? 'authenticated' : 'not authenticated', loading });
+  console.log('OnboardingScreen: Current state -', { user: user ? 'authenticated' : 'not authenticated', loading, tutorialOnly });
   
   const onComplete = () => {
-    console.log('OnboardingScreen: Onboarding completed, redirecting to /feed');
-    router.replace('/feed'); // Navigate to the main feed
+    console.log('OnboardingScreen: Onboarding completed, redirecting to /feed with refresh');
+    router.replace('/feed?refresh=true'); // Navigate to the main feed with refresh param
   };
   
   const onSignIn = () => {
@@ -30,5 +33,5 @@ export default function OnboardingScreen() {
     return null;
   }
   
-  return <NewOnboarding onComplete={onComplete} onSignIn={onSignIn} />;
+  return <NewOnboarding onComplete={onComplete} onSignIn={onSignIn} tutorialOnly={tutorialOnly} />;
 }

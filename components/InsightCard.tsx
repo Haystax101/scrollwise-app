@@ -1,13 +1,27 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import type { Insight } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { CommentsModal } from './CommentsModal';
 
 const { height: screenHeight } = Dimensions.get('window');
+
+interface Comment {
+  id: number;
+  user_id: string;
+  content: string;
+  created_at: string;
+  author_name?: string;
+  likes_count?: number;
+  user?: {
+    name: string;
+    photo?: string;
+    tagline?: string;
+  };
+}
 
 interface InsightCardProps {
   insight: Insight;
@@ -24,100 +38,245 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   const [hasSaved, setHasSaved] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [authorId, setAuthorId] = useState<string | null>(null);
+  const [topComment, setTopComment] = useState<Comment | null>(null);
+  const [isSupercharged, setIsSupercharged] = useState(false);
 
   const dynamicStyles = StyleSheet.create({
     wrapper: {
       height: screenHeight,
     },
-    container: { 
-      flex: 1, 
-      justifyContent: 'center', 
+    container: {
       backgroundColor: colors.card,
       borderRadius: 12,
-      padding: 16,
-      margin: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingBottom: 120 
+      marginHorizontal: 16,
+      marginBottom: 16,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
+      maxHeight: screenHeight * 0.85, // Constrain height to fit in feed container
+      justifyContent: 'center', // Center content vertically
     },
-    // Twitter-like header styles
-    tweetHeader: {
+    // User header section
+    userHeader: {
       flexDirection: 'row',
+      padding: 16,
       alignItems: 'flex-start',
-      marginBottom: 12,
     },
-    tweetAvatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+    avatar: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
       marginRight: 12,
     },
-    tweetHeaderText: {
+    userInfo: {
       flex: 1,
-      paddingTop: 2,
     },
-    tweetNameRow: {
+    headerRow: {
       flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 2,
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
     },
-    tweetAuthorName: {
-      fontSize: 16,
+    textContainer: {
+      flex: 1,
+    },
+    name: {
+      fontSize: 18,
       fontWeight: '700',
       color: colors.text,
-      marginRight: 8,
+      marginBottom: 2,
     },
-    tweetHandle: {
-      fontSize: 14,
+    role: {
+      fontSize: 16,
       color: colors.textSecondary,
-      fontWeight: '400',
+      marginBottom: 4,
     },
-    tweetDetails: {
-      fontSize: 14,
+    timestampContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    timestamp: {
+      fontSize: 12,
       color: colors.textSecondary,
-      lineHeight: 18,
+      marginLeft: 4,
     },
     moreButton: {
       padding: 4,
-      marginLeft: 8,
     },
-    // Content styles
-    tweetContent: {
-      marginLeft: 60, // Align with text content
-      marginBottom: 16,
+    // Content section
+    contentSection: {
+      paddingHorizontal: 16,
+      paddingBottom: 12,
     },
-    tweetText: {
+    contentText: {
       fontSize: 16,
-      color: colors.text,
       lineHeight: 24,
-      letterSpacing: 0.2,
+      color: colors.text,
     },
-    // Action styles
-    tweetActions: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      paddingTop: 12,
+    // Engagement bar
+    engagementSection: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
       borderTopWidth: 1,
       borderTopColor: colors.border,
-      marginLeft: 60, // Align with content
     },
-    tweetActionBtn: {
+    topRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    viewsContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: 8,
     },
-    tweetActionText: {
+    viewsText: {
       fontSize: 14,
       color: colors.textSecondary,
-      marginLeft: 8,
+      marginLeft: 6,
+    },
+    superchargeButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#000',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+    },
+    superchargedButton: {
+      backgroundColor: '#333',
+      opacity: 0.8,
+    },
+    superchargeText: {
+      color: 'white',
+      fontSize: 14,
+      fontWeight: '600',
+      marginLeft: 4,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      paddingTop: 4,
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    actionText: {
+      marginLeft: 4,
+      fontSize: 16,
+      color: colors.text,
+    },
+    // Comment display section
+    commentSection: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    commentDisplay: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: colors.surface,
+    },
+    commentHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    commentAvatar: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      marginRight: 8,
+    },
+    commentContent: {
+      flex: 1,
+    },
+    commentUserRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    commentUserName: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    commentTimestamp: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    commentTagline: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    commentText: {
+      fontSize: 14,
+      color: colors.text,
+      marginTop: 4,
+      lineHeight: 20,
+    },
+    commentActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 8,
+    },
+    commentActionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    commentActionText: {
+      fontSize: 12,
+      marginLeft: 4,
+      color: colors.text,
+    },
+    replyButton: {
+      marginLeft: 16,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    replyText: {
+      fontSize: 12,
+      color: colors.text,
+    },
+    joinDiscussionSection: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: colors.background,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    joinDiscussionButton: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.text,
+      borderRadius: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    joinDiscussionText: {
+      fontSize: 14,
       fontWeight: '500',
+      color: colors.text,
+      marginLeft: 8,
     },
     // Expandable details (kept from original)
     expandedDetails: { 
       backgroundColor: colors.surface, 
       borderRadius: 12, 
       padding: 12, 
-      width: '100%', 
+      marginHorizontal: 16,
       marginTop: 12, 
       borderWidth: 1, 
       borderColor: colors.border 
@@ -156,6 +315,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       .eq('insight_id', insight.id)
       .maybeSingle();
     if (likeRow) setHasLiked(true);
+    
     const { data: saveRow } = await supabase
       .from('insight_saves')
       .select('user_id')
@@ -163,10 +323,65 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       .eq('insight_id', insight.id)
       .maybeSingle();
     if (saveRow) setHasSaved(true);
+    
+    // Check if user has supercharged this insight
+    const { data: superchargeRow } = await supabase
+      .from('insight_supercharges') // Assuming this table exists for tracking supercharges
+      .select('user_id')
+      .eq('user_id', user.id)
+      .eq('insight_id', insight.id)
+      .maybeSingle();
+    if (superchargeRow) setIsSupercharged(true);
   }, [user, insight.id]);
+
+  const fetchTopComment = useCallback(async () => {
+    if (!insight.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('insight_comments')
+        .select(`
+          id, 
+          user_id, 
+          content, 
+          created_at,
+          likes_count,
+          profiles!user_id (
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('insight_id', insight.id)
+        .order('likes_count', { ascending: false, nullsLast: true })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data) {
+        const comment: Comment = {
+          id: data.id,
+          user_id: data.user_id,
+          content: data.content,
+          created_at: data.created_at,
+          likes_count: data.likes_count || 0,
+          user: {
+            name: (data.profiles as any)?.full_name || 'Anonymous',
+            photo: (data.profiles as any)?.avatar_url || undefined,
+          }
+        };
+        setTopComment(comment);
+      } else {
+        setTopComment(null); // Explicitly set to null if no comments found
+      }
+    } catch (error) {
+      console.error('Error fetching top comment:', error);
+      setTopComment(null);
+    }
+  }, [insight.id]);
 
   useEffect(() => {
     initializeFlags();
+    // Always fetch comments on component mount/insight change
+    fetchTopComment();
     // Fetch and cache author_id for XP RPCs
     const fetchAuthorId = async () => {
       try {
@@ -181,7 +396,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       }
     };
     fetchAuthorId();
-  }, [initializeFlags]);
+  }, [insight.id, initializeFlags, fetchTopComment]); // Added insight.id as dependency
 
   const toggleLike = useCallback(async () => {
     if (!user) return;
@@ -241,44 +456,155 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     await supabase.from('insights').update({ saves_count: count ?? 0 }).eq('id', insight.id);
   }, [user, hasSaved, insight.id]);
 
+  const formatNumber = (num: number): string => {
+    return num.toLocaleString();
+  };
+
+  const formatTimestamp = (timestamp: string): string => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes}m`;
+    } else if (diffInMinutes < 1440) {
+      return `${Math.floor(diffInMinutes / 60)}h`;
+    } else {
+      return `${Math.floor(diffInMinutes / 1440)}d`;
+    }
+  };
+
   return (
     <View style={dynamicStyles.wrapper}>
       <View style={dynamicStyles.container}>
-        {/* Twitter-like header */}
-        <View style={dynamicStyles.tweetHeader}>
-          <Image source={{ uri: insight.author.avatar }} style={dynamicStyles.tweetAvatar} />
-          <View style={dynamicStyles.tweetHeaderText}>
-            <View style={dynamicStyles.tweetNameRow}>
-              <Text style={dynamicStyles.tweetAuthorName}>{insight.author.name}</Text>
-              <Text style={dynamicStyles.tweetHandle}>@{insight.author.name.toLowerCase().replace(/\s+/g, '')}</Text>
+        {/* User Header */}
+        <View style={dynamicStyles.userHeader}>
+          <Image source={{ uri: insight.author.avatar }} style={dynamicStyles.avatar} />
+          <View style={dynamicStyles.userInfo}>
+            <View style={dynamicStyles.headerRow}>
+              <View style={dynamicStyles.textContainer}>
+                <Text style={dynamicStyles.name}>{insight.author.name}</Text>
+                <Text style={dynamicStyles.role}>
+                  {insight.author.role} at {insight.author.company}
+                </Text>
+                {insight.created_at && (
+                  <View style={dynamicStyles.timestampContainer}>
+                    <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+                    <Text style={dynamicStyles.timestamp}>{formatTimestamp(insight.created_at)}</Text>
+                  </View>
+                )}
+              </View>
+              <TouchableOpacity onPress={() => setShowDetails(!showDetails)} style={dynamicStyles.moreButton}>
+                <Ionicons name="ellipsis-horizontal" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
-            {details ? <Text style={dynamicStyles.tweetDetails}>{details}</Text> : null}
           </View>
-          <TouchableOpacity onPress={() => setShowDetails(!showDetails)} style={dynamicStyles.moreButton}>
-            <Feather name="more-horizontal" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
         </View>
 
-        {/* Tweet content */}
-        <View style={dynamicStyles.tweetContent}>
-          <Text style={dynamicStyles.tweetText}>{insight.content}</Text>
+        {/* Content */}
+        <View style={dynamicStyles.contentSection}>
+          <Text style={dynamicStyles.contentText}>{insight.content}</Text>
         </View>
 
-        {/* Actions row */}
-        <View style={dynamicStyles.tweetActions}>
-          <TouchableOpacity style={dynamicStyles.tweetActionBtn} onPress={toggleLike}>
-            <Feather name={hasLiked ? 'heart' : 'heart'} size={20} color={hasLiked ? '#e91e63' : colors.textSecondary} />
-            <Text style={[dynamicStyles.tweetActionText, hasLiked && { color: '#e91e63' }]}>{likes}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={dynamicStyles.tweetActionBtn} onPress={() => setCommentsOpen(true)}>
-            <Feather name="message-circle" size={20} color={colors.textSecondary} />
-            <Text style={dynamicStyles.tweetActionText}>{comments}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={dynamicStyles.tweetActionBtn} onPress={toggleSave}>
-            <Feather name="bookmark" size={20} color={hasSaved ? colors.accent : colors.textSecondary} />
-            <Text style={[dynamicStyles.tweetActionText, hasSaved && { color: colors.accent }]}>{saves}</Text>
-          </TouchableOpacity>
+        {/* Engagement Bar */}
+        <View style={dynamicStyles.engagementSection}>
+          <View style={dynamicStyles.topRow}>
+            <View style={dynamicStyles.viewsContainer}>
+              <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
+              <Text style={dynamicStyles.viewsText}>{formatNumber(insight.views_count || 0)} views</Text>
+            </View>
+            <View style={[dynamicStyles.superchargeButton, isSupercharged && dynamicStyles.superchargedButton]}>
+              <Ionicons name="flash" size={16} color="#FDE047" />
+              <Text style={dynamicStyles.superchargeText}>
+                {isSupercharged ? 'Supercharged' : 'Supercharge'}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={dynamicStyles.actionRow}>
+            <TouchableOpacity
+              style={dynamicStyles.actionButton}
+              onPress={toggleLike}
+            >
+              <Ionicons
+                name={hasLiked ? "heart" : "heart-outline"}
+                size={20}
+                color={hasLiked ? "#FDE047" : colors.text}
+              />
+              <Text style={[dynamicStyles.actionText, hasLiked && { color: '#FDE047' }]}>
+                {formatNumber(likes)}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={dynamicStyles.actionButton} onPress={() => setCommentsOpen(true)}>
+              <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
+              <Text style={dynamicStyles.actionText}>{formatNumber(comments)}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={dynamicStyles.actionButton}
+              onPress={toggleSave}
+            >
+              <Ionicons
+                name={hasSaved ? "bookmark" : "bookmark-outline"}
+                size={20}
+                color={hasSaved ? "#FDE047" : colors.text}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* Top Comment Display */}
+        {topComment && (
+          <View style={dynamicStyles.commentSection}>
+            <View style={dynamicStyles.commentDisplay}>
+              <View style={dynamicStyles.commentHeader}>
+                <Image
+                  source={{ uri: topComment.user?.photo || 'https://via.placeholder.com/32' }}
+                  style={dynamicStyles.commentAvatar}
+                />
+                <View style={dynamicStyles.commentContent}>
+                  <View style={dynamicStyles.commentUserRow}>
+                    <Text style={dynamicStyles.commentUserName}>{topComment.user?.name || 'Anonymous'}</Text>
+                    <Text style={dynamicStyles.commentTimestamp}>{formatTimestamp(topComment.created_at)}</Text>
+                  </View>
+                  {topComment.user?.tagline && (
+                    <Text style={dynamicStyles.commentTagline}>{topComment.user.tagline}</Text>
+                  )}
+                  <Text style={dynamicStyles.commentText}>{topComment.content}</Text>
+                  <View style={dynamicStyles.commentActions}>
+                    <TouchableOpacity style={dynamicStyles.commentActionButton}>
+                      <Ionicons name="heart-outline" size={14} color={colors.text} />
+                      <Text style={dynamicStyles.commentActionText}>{topComment.likes_count || 0}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={dynamicStyles.replyButton}>
+                      <Text style={dynamicStyles.replyText}>Reply</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </View>
+            
+            <View style={dynamicStyles.joinDiscussionSection}>
+              <TouchableOpacity style={dynamicStyles.joinDiscussionButton} onPress={() => setCommentsOpen(true)}>
+                <Ionicons name="chatbubble-outline" size={16} color={colors.text} />
+                <Text style={dynamicStyles.joinDiscussionText}>Join the discussion...</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* If no comments, still show join discussion button */}
+        {!topComment && comments === 0 && (
+          <View style={dynamicStyles.commentSection}>
+            <View style={dynamicStyles.joinDiscussionSection}>
+              <TouchableOpacity style={dynamicStyles.joinDiscussionButton} onPress={() => setCommentsOpen(true)}>
+                <Ionicons name="chatbubble-outline" size={16} color={colors.text} />
+                <Text style={dynamicStyles.joinDiscussionText}>Join the discussion...</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Expandable profile details */}
         {showDetails && (
@@ -318,8 +644,19 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       <CommentsModal
         videoId={insight.id}
         visible={commentsOpen}
-        onClose={() => setCommentsOpen(false)}
-        onCommentsCountChange={(count) => setComments(count)}
+        onClose={() => {
+          setCommentsOpen(false);
+          fetchTopComment(); // Refresh comments when modal closes
+        }}
+        onCommentsCountChange={(count) => {
+          setComments(count);
+          // Refresh top comment when count changes
+          if (count > 0) {
+            fetchTopComment();
+          } else {
+            setTopComment(null);
+          }
+        }}
         contentType="insight"
       />
     </View>
