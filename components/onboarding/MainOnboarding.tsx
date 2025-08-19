@@ -28,7 +28,7 @@ const Hero2Image = require('../../assets/hero2.png');
 interface MainOnboardingProps {
   onComplete: () => void;
   onSignIn?: () => void;
-  refreshMainFeed?: () => void;
+  refreshMainFeed?: () => Promise<void>;
   tutorialOnly?: boolean;
 }
 
@@ -84,10 +84,15 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     setOnboardingData(prev => ({ ...prev, ...newData }));
   };
 
-  const handleTutorialComplete = () => {
-    // Refresh main feed since industries have been selected
+  const handleTutorialComplete = async () => {
+    // Refresh industries context since user just selected industries during onboarding
     if (refreshMainFeed) {
-      refreshMainFeed();
+      try {
+        await refreshMainFeed();
+        console.log('Industries refreshed after onboarding completion');
+      } catch (error) {
+        console.error('Error refreshing industries after onboarding:', error);
+      }
     }
     // Complete onboarding
     onComplete();

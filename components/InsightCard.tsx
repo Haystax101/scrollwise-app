@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, Modal, ScrollView } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import type { Insight } from '../types';
@@ -23,6 +23,20 @@ interface Comment {
   };
 }
 
+interface UserProfile {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  xp: number;
+  level: number;
+  email: string;
+  created_at: string;
+  industries: string[];
+  education: string;
+  experience: string;
+  goals: string;
+}
+
 interface InsightCardProps {
   insight: Insight;
 }
@@ -31,19 +45,26 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
   const [showDetails, setShowDetails] = useState(false);
+  const [views, setViews] = useState(insight.views_count || 0);
   const [likes, setLikes] = useState(insight.likes_count || 0);
   const [saves, setSaves] = useState(insight.saves_count || 0);
   const [comments, setComments] = useState(insight.comments_count || 0);
   const [hasLiked, setHasLiked] = useState(false);
   const [hasSaved, setHasSaved] = useState(false);
+  const [hasViewed, setHasViewed] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [authorId, setAuthorId] = useState<string | null>(null);
   const [topComment, setTopComment] = useState<Comment | null>(null);
   const [isSupercharged, setIsSupercharged] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [userModalVisible, setUserModalVisible] = useState(false);
+  const [commentLiked, setCommentLiked] = useState(false);
+  const [commentLikes, setCommentLikes] = useState(0);
 
   const dynamicStyles = StyleSheet.create({
     wrapper: {
       height: screenHeight,
+      justifyContent: 'center',
     },
     container: {
       backgroundColor: colors.card,
@@ -306,6 +327,42 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     return parts.join(' • ');
   }, [insight]);
 
+  const trackView = useCallback(async () => {
+    if (!user || hasViewed) return;
+
+    // Optimistic update - update local state immediately
+    setHasViewed(true);
+    setViews(prev => prev + 1);
+
+    try {
+      // Create view record in database (using the extended schema)
+      await supabase
+        .from('insight_views')
+        .insert({
+          user_id: user.id,
+          insight_id: insight.id
+        });
+
+      // Update the insight's view count in database
+      const { count } = await supabase
+        .from('insight_views')
+        .select('*', { count: 'exact', head: true })
+        .eq('insight_id', insight.id);
+
+      if (typeof count === 'number') {
+        await supabase
+          .from('insights')
+          .update({ views_count: count })
+          .eq('id', insight.id);
+      }
+    } catch (error) {
+      console.error('Error tracking view:', error);
+      // Revert optimistic update on error
+      setViews(prev => prev - 1);
+      setHasViewed(false);
+    }
+  }, [user, insight.id, hasViewed]);
+
   const initializeFlags = useCallback(async () => {
     if (!user) return;
     const { data: likeRow } = await supabase
@@ -324,14 +381,20 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       .maybeSingle();
     if (saveRow) setHasSaved(true);
     
-    // Check if user has supercharged this insight
-    const { data: superchargeRow } = await supabase
-      .from('insight_supercharges') // Assuming this table exists for tracking supercharges
-      .select('user_id')
-      .eq('user_id', user.id)
-      .eq('insight_id', insight.id)
-      .maybeSingle();
-    if (superchargeRow) setIsSupercharged(true);
+    // Check if this insight is supercharged
+    try {
+      const { data: superchargeRow } = await supabase
+        .from('insights')
+        .select('supercharged')
+        .eq('id', insight.id)
+        .maybeSingle();
+        if (superchargeRow?.supercharged) setIsSupercharged(true);
+    }
+    catch (error) {
+      console.error('Error checking supercharged status:', error);
+      setIsSupercharged(false);
+      return;
+    }
   }, [user, insight.id]);
 
   const fetchTopComment = useCallback(async () => {
@@ -351,7 +414,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           )
         `)
         .eq('insight_id', insight.id)
-        .order('likes_count', { ascending: false, nullsLast: true })
+        .order('likes_count', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -369,8 +432,22 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           }
         };
         setTopComment(comment);
+        setCommentLikes(data.likes_count || 0);
+        
+        // Check if current user has liked this comment
+        if (user && data.id) {
+          const { data: likeData } = await supabase
+            .from('insight_comment_likes')
+            .select('user_id')
+            .eq('user_id', user.id)
+            .eq('comment_id', data.id)
+            .maybeSingle();
+          setCommentLiked(!!likeData);
+        }
       } else {
         setTopComment(null); // Explicitly set to null if no comments found
+        setCommentLiked(false);
+        setCommentLikes(0);
       }
     } catch (error) {
       console.error('Error fetching top comment:', error);
@@ -382,6 +459,8 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     initializeFlags();
     // Always fetch comments on component mount/insight change
     fetchTopComment();
+    // Track view optimistically
+    trackView();
     // Fetch and cache author_id for XP RPCs
     const fetchAuthorId = async () => {
       try {
@@ -396,7 +475,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       }
     };
     fetchAuthorId();
-  }, [insight.id, initializeFlags, fetchTopComment]); // Added insight.id as dependency
+  }, [insight.id, initializeFlags, fetchTopComment, trackView]); // Added insight.id as dependency
 
   const toggleLike = useCallback(async () => {
     if (!user) return;
@@ -474,11 +553,107 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     }
   };
 
+  const toggleCommentLike = useCallback(async () => {
+    if (!user || !topComment) return;
+    
+    const wasLiked = commentLiked;
+    // Optimistic update
+    setCommentLiked(!wasLiked);
+    setCommentLikes(prev => wasLiked ? prev - 1 : prev + 1);
+
+    try {
+      if (wasLiked) {
+        // Remove like
+        await supabase
+          .from('insight_comment_likes')
+          .delete()
+          .match({ user_id: user.id, comment_id: topComment.id });
+      } else {
+        // Add like
+        await supabase
+          .from('insight_comment_likes')
+          .insert({ user_id: user.id, comment_id: topComment.id });
+      }
+    } catch (error) {
+      console.error('Error toggling comment like:', error);
+      // Revert optimistic update on error
+      setCommentLiked(wasLiked);
+      setCommentLikes(prev => wasLiked ? prev + 1 : prev - 1);
+    }
+  }, [user, topComment, commentLiked]);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      // Fetch basic profile data
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, xp, level, email, created_at')
+        .eq('id', userId)
+        .single();
+
+      if (profileError || !profileData) {
+        console.error('Error fetching user profile:', profileError);
+        return;
+      }
+
+      // Fetch user industries
+      const { data: industriesData } = await supabase
+        .from('user_industries')
+        .select('industries (name)')
+        .eq('user_id', userId);
+
+      // Fetch education data
+      const { data: educationData } = await supabase
+        .from('user_education')
+        .select('universities (name), degrees (name), stage')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // Fetch experience data
+      const { data: experienceData } = await supabase
+        .from('user_experiences')
+        .select('companies (name), experience_level, description')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // Fetch goals data
+      const { data: goalsData } = await supabase
+        .from('user_goals')
+        .select('goal, timeframe')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      const industries = industriesData?.map((i: any) => i.industries.name) || [];
+      const education = educationData 
+        ? `${educationData.universities?.name || ''} - ${educationData.degrees?.name || ''} (${educationData.stage || ''})`.replace(/^- |  - $/, '').trim()
+        : '';
+      const experience = experienceData
+        ? `${experienceData.companies?.name || ''} (${experienceData.experience_level || ''})${experienceData.description ? ` - ${experienceData.description}` : ''}`.replace(/^- |  - $/, '').trim()
+        : '';
+      const goals = goalsData
+        ? `${goalsData.goal || ''} (${goalsData.timeframe || ''})`.replace(/^- |  - $/, '').trim()
+        : '';
+
+      const userProfile: UserProfile = {
+        ...profileData,
+        industries,
+        education,
+        experience,
+        goals
+      };
+
+      setSelectedUser(userProfile);
+      setUserModalVisible(true);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
   return (
     <View style={dynamicStyles.wrapper}>
       <View style={dynamicStyles.container}>
         {/* User Header */}
-        <View style={dynamicStyles.userHeader}>
+        <TouchableOpacity style={dynamicStyles.userHeader} onPress={() => authorId && fetchUserProfile(authorId)}>
           <Image source={{ uri: insight.author.avatar }} style={dynamicStyles.avatar} />
           <View style={dynamicStyles.userInfo}>
             <View style={dynamicStyles.headerRow}>
@@ -494,12 +669,12 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
                   </View>
                 )}
               </View>
-              <TouchableOpacity onPress={() => setShowDetails(!showDetails)} style={dynamicStyles.moreButton}>
+              <TouchableOpacity onPress={() => authorId && fetchUserProfile(authorId)} style={dynamicStyles.moreButton}>
                 <Ionicons name="ellipsis-horizontal" size={22} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Content */}
         <View style={dynamicStyles.contentSection}>
@@ -511,14 +686,15 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           <View style={dynamicStyles.topRow}>
             <View style={dynamicStyles.viewsContainer}>
               <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
-              <Text style={dynamicStyles.viewsText}>{formatNumber(insight.views_count || 0)} views</Text>
+              <Text style={dynamicStyles.viewsText}>{formatNumber(views)} views</Text>
             </View>
-            <View style={[dynamicStyles.superchargeButton, isSupercharged && dynamicStyles.superchargedButton]}>
+            {isSupercharged && (<View style={[dynamicStyles.superchargeButton, isSupercharged && dynamicStyles.superchargedButton]}>
               <Ionicons name="flash" size={16} color="#FDE047" />
               <Text style={dynamicStyles.superchargeText}>
-                {isSupercharged ? 'Supercharged' : 'Supercharge'}
+                Supercharged
               </Text>
-            </View>
+            </View>)}
+            
           </View>
           
           <View style={dynamicStyles.actionRow}>
@@ -573,11 +749,17 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
                   )}
                   <Text style={dynamicStyles.commentText}>{topComment.content}</Text>
                   <View style={dynamicStyles.commentActions}>
-                    <TouchableOpacity style={dynamicStyles.commentActionButton}>
-                      <Ionicons name="heart-outline" size={14} color={colors.text} />
-                      <Text style={dynamicStyles.commentActionText}>{topComment.likes_count || 0}</Text>
+                    <TouchableOpacity style={dynamicStyles.commentActionButton} onPress={toggleCommentLike}>
+                      <Ionicons 
+                        name={commentLiked ? "heart" : "heart-outline"} 
+                        size={14} 
+                        color={commentLiked ? "#FDE047" : colors.text} 
+                      />
+                      <Text style={[dynamicStyles.commentActionText, commentLiked && { color: "#FDE047" }]}>
+                        {commentLikes}
+                      </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={dynamicStyles.replyButton}>
+                    <TouchableOpacity style={dynamicStyles.replyButton} onPress={() => setCommentsOpen(true)}>
                       <Text style={dynamicStyles.replyText}>Reply</Text>
                     </TouchableOpacity>
                   </View>
@@ -640,6 +822,110 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           </View>
         )}
       </View>
+
+      {/* User Profile Modal */}
+      <Modal
+        visible={userModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setUserModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ 
+            backgroundColor: colors.card, 
+            margin: 20, 
+            borderRadius: 16, 
+            padding: 20, 
+            maxHeight: '80%',
+            width: '90%'
+          }}>
+            {selectedUser && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Header */}
+                <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                  <Image 
+                    source={{ uri: selectedUser.avatar_url || 'https://i.pravatar.cc/80' }} 
+                    style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 12 }}
+                  />
+                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text, marginBottom: 4 }}>
+                    {selectedUser.full_name}
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, marginBottom: 8 }}>
+                    Level {selectedUser.level} • {selectedUser.xp} XP
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                    Joined {new Date(selectedUser.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
+
+                {/* Profile Details */}
+                {selectedUser.industries.length > 0 && (
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
+                      Industries
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                      {selectedUser.industries.map((industry, index) => (
+                        <View key={index} style={{ 
+                          backgroundColor: colors.primary + '20', 
+                          paddingHorizontal: 12, 
+                          paddingVertical: 4, 
+                          borderRadius: 16, 
+                          marginRight: 8, 
+                          marginBottom: 4 
+                        }}>
+                          <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>{industry}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {selectedUser.education && (
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
+                      Education
+                    </Text>
+                    <Text style={{ color: colors.textSecondary }}>{selectedUser.education}</Text>
+                  </View>
+                )}
+
+                {selectedUser.experience && (
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
+                      Experience
+                    </Text>
+                    <Text style={{ color: colors.textSecondary }}>{selectedUser.experience}</Text>
+                  </View>
+                )}
+
+                {selectedUser.goals && (
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
+                      Goals
+                    </Text>
+                    <Text style={{ color: colors.textSecondary }}>{selectedUser.goals}</Text>
+                  </View>
+                )}
+
+                {/* Close Button */}
+                <TouchableOpacity 
+                  style={{ 
+                    backgroundColor: colors.primary, 
+                    borderRadius: 8, 
+                    paddingVertical: 12, 
+                    alignItems: 'center',
+                    marginTop: 16 
+                  }}
+                  onPress={() => setUserModalVisible(false)}
+                >
+                  <Text style={{ color: 'white', fontWeight: '600' }}>Close</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       <CommentsModal
         videoId={insight.id}

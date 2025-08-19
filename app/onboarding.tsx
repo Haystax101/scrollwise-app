@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useSearchParams } from 'expo-router/build/hooks';
 import { useAuth } from '../context/AuthContext';
+import { useIndustries } from '../context/IndustriesContext';
 import NewOnboarding from '../components/NewOnboarding';
 import { useEffect } from 'react';
 
 export default function OnboardingScreen() {
   const { user, loading } = useAuth();
+  const { refreshIndustries } = useIndustries();
   const router = useRouter();
   const params = useSearchParams();
   const tutorialOnly = params.get('tutorialOnly') === 'true';
@@ -33,5 +35,5 @@ export default function OnboardingScreen() {
     return null;
   }
   
-  return <NewOnboarding onComplete={onComplete} onSignIn={onSignIn} tutorialOnly={tutorialOnly} />;
+  return <NewOnboarding onComplete={onComplete} onSignIn={onSignIn} tutorialOnly={tutorialOnly} refreshMainFeed={refreshIndustries} />;
 }

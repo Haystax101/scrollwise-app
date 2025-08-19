@@ -7,11 +7,18 @@ import { useTheme } from '../context/ThemeContext';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 
 interface Comment {
-  id: number;
+  id: string;
   user_id: string;
   content: string;
   created_at: string;
   author_name?: string;
+  parent_comment_id?: string;
+  likes_count?: number;
+  reply_count?: number;
+  depth_level?: number;
+  user_name?: string;
+  user_avatar?: string;
+  hasLiked?: boolean;
 }
 
 interface CommentsModalProps {
@@ -55,13 +62,7 @@ const getCommentTableInfo = (contentType: 'article' | 'paper' | 'book' | 'insigh
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-export const CommentsModal: React.FC<CommentsModalProps> = ({ 
-  videoId, 
-  visible, 
-  onClose, 
-  onCommentsCountChange, 
-  contentType = 'article' 
-}) => {
+export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, onClose, onCommentsCountChange, contentType = 'article' }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -69,6 +70,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
   const [input, setInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const textInputRef = useRef<TextInput>(null);
   // Keep stable references for the lifetime of the open modal to avoid drift between renders
@@ -126,63 +128,213 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     };
   }, []);
 
-  // Fetch comments
+  // Fetch comments (threaded for insights, flat for others)
   const fetchComments = async () => {
     const vid = stableVideoIdRef.current ?? videoId;
     if (!vid) return;
     setLoading(true);
     const tableCfg = stableTableInfoRef.current;
-    const { data, error } = await supabase
-      .from(tableCfg.commentTable)
-      .select(`id, user_id, ${tableCfg.idField}, content, created_at`)
-      .eq(tableCfg.idField, vid)
-      .order('created_at', { ascending: false });
-    if (error) {
+    
+    try {
+      if (contentType === 'insight') {
+        // Use threaded comments function for insights
+        const { data, error } = await supabase.rpc('get_threaded_comments', {
+          p_insight_id: vid,
+          p_limit: 100,
+          p_offset: 0
+        });
+        
+        if (error) {
+          console.error('Error fetching threaded comments:', error);
+          setComments([]);
+          onCommentsCountChange && onCommentsCountChange(0);
+        } else {
+          const mapped = await Promise.all((data || []).map(async (c: any) => {
+            // Check if current user has liked this comment
+            let hasLiked = false;
+            if (user) {
+              const { data: likeData } = await supabase
+                .from('insight_comment_likes')
+                .select('user_id')
+                .eq('user_id', user.id)
+                .eq('comment_id', c.id)
+                .maybeSingle();
+              hasLiked = !!likeData;
+            }
+            
+            return {
+              id: c.id,
+              user_id: c.user_id,
+              content: c.content,
+              created_at: c.created_at,
+              parent_comment_id: c.parent_comment_id,
+              likes_count: c.likes_count || 0,
+              reply_count: c.reply_count || 0,
+              depth_level: c.depth_level || 0,
+              user_name: c.user_name || 'Anonymous',
+              user_avatar: c.user_avatar,
+              author_name: c.user_id === user?.id ? 'You' : c.user_name || 'User',
+              hasLiked
+            };
+          }));
+          setComments(mapped);
+          onCommentsCountChange && onCommentsCountChange(mapped.length);
+        }
+      } else {
+        // Use regular flat comments for other content types
+        const { data, error } = await supabase
+          .from(tableCfg.commentTable)
+          .select(`id, user_id, ${tableCfg.idField}, content, created_at`)
+          .eq(tableCfg.idField, vid)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          setComments([]);
+          onCommentsCountChange && onCommentsCountChange(0);
+        } else {
+          const mapped = (data || []).map((c: any) => ({
+            ...c,
+            author_name: c.user_id === user?.id ? 'You' : 'User',
+            depth_level: 0,
+            likes_count: 0,
+            reply_count: 0
+          }));
+          setComments(mapped);
+          onCommentsCountChange && onCommentsCountChange(mapped.length);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching comments:', error);
       setComments([]);
       onCommentsCountChange && onCommentsCountChange(0);
-    } else {
-      // Map author name - for now just show "User" for all non-current users
-      const mapped = (data || []).map((c: any) => ({
-        ...c,
-        author_name: c.user_id === user?.id ? 'You' : 'User',
-      }));
-      setComments(mapped);
-      onCommentsCountChange && onCommentsCountChange(mapped.length);
     }
     setLoading(false);
   };
 
-  // Add comment
+  // Add comment or reply
   const handleAddComment = async () => {
     if (!user || !input.trim() || !videoId) return;
     setSubmitting(true);
     
-    const insertData = { 
-      user_id: user.id, 
-      [tableInfo.idField]: videoId, 
-      content: input.trim() 
-    };
-    
-    const { error, data } = await supabase
-      .from(tableInfo.commentTable)
-      .insert(insertData)
-      .select(`id, user_id, ${tableInfo.idField}, content, created_at`)
-      .single();
-      
-    if (!error && data) {
-      const newComment = {
-        ...data,
-        author_name: 'You',
-      };
-      setComments((prev) => [newComment, ...prev]);
-      setInput('');
-      onCommentsCountChange && onCommentsCountChange(comments.length + 1);
-      
-      // Update comments_count in content table
-      await supabase
-        .from(tableInfo.contentTable)
-        .update({ comments_count: comments.length + 1 })
-        .eq('id', videoId);
+    try {
+      if (contentType === 'insight' && replyingTo) {
+        // Use the SQL function for threaded replies
+        let { data, error } = await supabase.rpc('add_comment_reply', {
+          p_user_id: user.id,
+          p_insight_id: videoId,
+          p_parent_comment_id: replyingTo.id,
+          p_content: input.trim()
+        });
+        
+        // If the main function fails, try the backup function
+        if (error) {
+          console.warn('Primary add_comment_reply failed, trying backup function:', error);
+          const backupResult = await supabase.rpc('insert_insight_comment', {
+            p_insight_id: videoId,
+            p_content: input.trim(),
+            p_parent_comment_id: replyingTo.id
+          });
+          data = backupResult.data;
+          error = backupResult.error;
+        }
+        
+        if (error) {
+          console.error('Error adding reply (both methods failed):', error);
+          // Show user-friendly error message
+          alert('Failed to add reply. Please check your connection and try again.');
+          return;
+        }
+        
+        if (data) {
+          // Add the new reply to the comments array instead of full refresh
+          // This preserves optimistic like states and is more efficient
+          const newReply: Comment = {
+            id: data,
+            user_id: user.id,
+            content: input.trim(),
+            created_at: new Date().toISOString(),
+            parent_comment_id: replyingTo.id,
+            likes_count: 0,
+            reply_count: 0,
+            depth_level: (replyingTo.depth_level || 0) + 1,
+            user_name: 'You',
+            author_name: 'You',
+            hasLiked: false
+          };
+          
+          // Insert reply after the parent comment in the correct position
+          setComments(prev => {
+            const parentIndex = prev.findIndex(c => c.id === replyingTo.id);
+            if (parentIndex !== -1) {
+              // Find the last reply to this parent
+              let insertIndex = parentIndex + 1;
+              while (insertIndex < prev.length && 
+                     prev[insertIndex].parent_comment_id === replyingTo.id) {
+                insertIndex++;
+              }
+              const newComments = [...prev];
+              newComments.splice(insertIndex, 0, newReply);
+              
+              // Update parent's reply count optimistically
+              newComments[parentIndex] = {
+                ...newComments[parentIndex],
+                reply_count: (newComments[parentIndex].reply_count || 0) + 1
+              };
+              
+              return newComments;
+            }
+            return [...prev, newReply];
+          });
+          
+          setInput('');
+          setReplyingTo(null);
+          onCommentsCountChange && onCommentsCountChange(comments.length + 1);
+        }
+      } else {
+        // Regular comment (root level or non-insight content)
+        const insertData = { 
+          user_id: user.id, 
+          [tableInfo.idField]: videoId, 
+          content: input.trim(),
+          ...(contentType === 'insight' ? { depth_level: 0 } : {})
+        };
+        
+        const { error, data } = await supabase
+          .from(tableInfo.commentTable)
+          .insert(insertData)
+          .select(`id, user_id, ${tableInfo.idField}, content, created_at`)
+          .single();
+          
+        if (error) {
+          console.error('Error adding comment:', error);
+          // Show user-friendly error message
+          alert('Failed to add comment. Please check your connection and try again.');
+          return;
+        }
+        
+        if (data) {
+          const newComment: Comment = {
+            id: (data as any).id,
+            user_id: (data as any).user_id,
+            content: (data as any).content,
+            created_at: (data as any).created_at,
+            author_name: 'You',
+            depth_level: 0,
+            likes_count: 0,
+            reply_count: 0,
+            hasLiked: false
+          };
+          setComments((prev) => [newComment, ...prev]);
+          setInput('');
+          onCommentsCountChange && onCommentsCountChange(comments.length + 1);
+          
+          // Update comments_count in content table
+          await supabase
+            .from(tableInfo.contentTable)
+            .update({ comments_count: comments.length + 1 })
+            .eq('id', videoId);
+        }
+      }
 
       // If commenting on an insight, grant XP to the insight author (idempotent in DB)
       try {
@@ -205,12 +357,64 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       } catch (e) {
         // best-effort only
       }
+    } catch (error) {
+      console.error('Error adding comment:', error);
     }
     setSubmitting(false);
   };
 
+  // Toggle comment like
+  const toggleCommentLike = async (comment: Comment) => {
+    if (!user || contentType !== 'insight') return;
+    
+    const wasLiked = comment.hasLiked || false;
+    const newLikeCount = wasLiked ? (comment.likes_count || 0) - 1 : (comment.likes_count || 0) + 1;
+    
+    // Optimistic update
+    setComments(prev => prev.map(c => 
+      c.id === comment.id 
+        ? { ...c, hasLiked: !wasLiked, likes_count: newLikeCount }
+        : c
+    ));
+
+    try {
+      if (wasLiked) {
+        // Remove like
+        await supabase
+          .from('insight_comment_likes')
+          .delete()
+          .match({ user_id: user.id, comment_id: comment.id });
+      } else {
+        // Add like
+        await supabase
+          .from('insight_comment_likes')
+          .insert({ user_id: user.id, comment_id: comment.id });
+      }
+    } catch (error) {
+      console.error('Error toggling comment like:', error);
+      // Revert optimistic update on error
+      setComments(prev => prev.map(c => 
+        c.id === comment.id 
+          ? { ...c, hasLiked: wasLiked, likes_count: comment.likes_count || 0 }
+          : c
+      ));
+    }
+  };
+
+  // Start replying to a comment
+  const startReply = (comment: Comment) => {
+    setReplyingTo(comment);
+    textInputRef.current?.focus();
+  };
+
+  // Cancel reply
+  const cancelReply = () => {
+    setReplyingTo(null);
+    setInput('');
+  };
+
   // Delete comment with detailed logging (helps diagnose RLS issues)
-  const handleDeleteComment = async (commentId: number) => {
+  const handleDeleteComment = async (commentId: string) => {
     if (!user) {
       console.warn('DELETE_COMMENT_SKIPPED: Missing user', { userExists: !!user });
       return;
@@ -303,15 +507,65 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     );
   };
 
-  // Render comment item with swipe-to-delete for own comments
+  // Render comment item with threading support and indentation
   const renderItem = useCallback(({ item }: { item: Comment }) => {
     const isOwner = user && item.user_id === user.id;
+    const depthLevel = item.depth_level || 0;
+    const indentWidth = depthLevel * 20; // 20px per level, max 3 levels = 60px max
+    const isInsightComment = contentType === 'insight';
+    
     const content = (
-      <View style={dynamicStyles.commentRow}>
+      <View style={[
+        dynamicStyles.commentRow, 
+        { marginLeft: indentWidth },
+        ...(depthLevel > 0 ? [dynamicStyles.replyRow] : [])
+      ]}>
         <View style={dynamicStyles.commentContent}>
-          <Text style={dynamicStyles.commentAuthor}>{item.author_name}</Text>
-          <Text style={dynamicStyles.commentText}>{item.content}</Text>
-          <Text style={dynamicStyles.commentMeta}>{new Date(item.created_at).toLocaleString()}</Text>
+          <View style={dynamicStyles.commentHeader}>
+            <Text style={dynamicStyles.commentAuthor}>{item.author_name || item.user_name || 'Anonymous'}</Text>
+            <Text style={dynamicStyles.commentMeta}>
+              {item.created_at ? new Date(item.created_at).toLocaleString() : 'Unknown date'}
+            </Text>
+          </View>
+          <Text style={dynamicStyles.commentText}>{item.content || 'No content'}</Text>
+          
+          {/* Action buttons for insight comments */}
+          {isInsightComment && (
+            <View style={dynamicStyles.commentActions}>
+              <TouchableOpacity 
+                style={dynamicStyles.commentActionButton}
+                onPress={() => toggleCommentLike(item)}
+              >
+                <FontAwesome 
+                  name={item.hasLiked ? "heart" : "heart-o"} 
+                  size={12} 
+                  color={item.hasLiked ? "#FDE047" : colors.textSecondary} 
+                />
+                <Text style={[
+                  dynamicStyles.commentActionText,
+                  ...(item.hasLiked ? [{ color: "#FDE047" }] : [])
+                ]}>
+                  {item.likes_count || 0}
+                </Text>
+              </TouchableOpacity>
+              
+              {depthLevel < 2 && ( // Only allow replies up to 3 levels (0, 1, 2)
+                <TouchableOpacity 
+                  style={dynamicStyles.commentActionButton}
+                  onPress={() => startReply(item)}
+                >
+                  <FontAwesome name="reply" size={12} color={colors.textSecondary} />
+                  <Text style={dynamicStyles.commentActionText}>Reply</Text>
+                </TouchableOpacity>
+              )}
+              
+              {item.reply_count && item.reply_count > 0 && (
+                <Text style={dynamicStyles.replyCount}>
+                  {item.reply_count} {item.reply_count === 1 ? 'reply' : 'replies'}
+                </Text>
+              )}
+            </View>
+          )}
         </View>
       </View>
     );
@@ -411,6 +665,60 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       fontSize: 12,
       color: colors.textSecondary,
     },
+    commentHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    commentActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 8,
+      paddingTop: 4,
+      borderTopWidth: 0.5,
+      borderTopColor: colors.border,
+    },
+    commentActionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      marginRight: 12,
+    },
+    commentActionText: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginLeft: 4,
+    },
+    replyRow: {
+      borderLeftWidth: 2,
+      borderLeftColor: `${colors.primary}40`,
+      paddingLeft: 8,
+    },
+    replyCount: {
+      fontSize: 11,
+      color: colors.textSecondary,
+      fontStyle: 'italic',
+      marginLeft: 'auto',
+    },
+    replyInputHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      backgroundColor: `${colors.primary}10`,
+      borderRadius: 8,
+      marginBottom: 8,
+    },
+    replyInputText: {
+      fontSize: 14,
+      color: colors.primary,
+      flex: 1,
+    },
+    cancelReplyButton: {
+      padding: 4,
+    },
     rightActionContainer: {
       width: 80,
       backgroundColor: '#dc2626',
@@ -498,11 +806,23 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
           ) : (
             <FlatList
               data={comments}
-              keyExtractor={(item) => item.id.toString()}
+              keyExtractor={(item) => item.id}
               renderItem={renderItem}
               style={dynamicStyles.commentsList}
               showsVerticalScrollIndicator={false}
             />
+          )}
+
+          {/* Reply indicator */}
+          {replyingTo && (
+            <View style={dynamicStyles.replyInputHeader}>
+              <Text style={dynamicStyles.replyInputText}>
+                Replying to {replyingTo.author_name || replyingTo.user_name || 'Anonymous'}
+              </Text>
+              <TouchableOpacity style={dynamicStyles.cancelReplyButton} onPress={cancelReply}>
+                <FontAwesome name="times" size={14} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
           )}
 
           <View style={dynamicStyles.inputContainer}>
@@ -511,7 +831,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
               style={dynamicStyles.textInput}
               value={input}
               onChangeText={setInput}
-              placeholder="Add a comment..."
+              placeholder={replyingTo ? "Write a reply..." : "Add a comment..."}
               placeholderTextColor={colors.textSecondary}
               editable={!submitting}
               multiline

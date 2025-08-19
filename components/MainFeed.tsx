@@ -112,6 +112,11 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
             id,
             content,
             author_id,
+            likes_count,
+            saves_count,
+            comments_count,
+            views_count,
+            created_at,
             author:profiles!author_id (
               full_name,
               avatar_url
@@ -130,6 +135,11 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
             type: 'insight',
             title: item.content.substring(0, 50) + (item.content.length > 50 ? '...' : ''), // Add a title
             content: item.content,
+            likes_count: item.likes_count || 0,
+            saves_count: item.saves_count || 0,
+            comments_count: item.comments_count || 0,
+            views_count: item.views_count || 0,
+            created_at: item.created_at,
             author: {
               name: item.author.full_name,
               handle: item.author.full_name.toLowerCase().replace(/\s/g, ''),

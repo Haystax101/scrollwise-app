@@ -154,13 +154,15 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
 
       const userId = currentUser.id;
 
-      // Fetch saved content from all three tables
-      const [savedArticles, savedPapers, savedBooks] = await Promise.all([
+      // Fetch saved content from all four tables
+      const [savedArticles, savedPapers, savedBooks, savedInsights] = await Promise.all([
         supabase.from('article_saves').select('articles(*)')
           .eq('user_id', userId).order('created_at', { ascending: false }),
         supabase.from('paper_saves').select('papers(*)')
           .eq('user_id', userId).order('created_at', { ascending: false }),
         supabase.from('book_saves').select('books(*)')
+          .eq('user_id', userId).order('created_at', { ascending: false }),
+        supabase.from('insight_saves').select('insights(*)') 
           .eq('user_id', userId).order('created_at', { ascending: false }),
       ]);
 
@@ -197,6 +199,18 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
             id: item?.id,
             title: item?.title || 'Untitled',
             type: 'book',
+            date: item?.created_at ? new Date(item.created_at).toLocaleDateString() : '',
+          };
+        }));
+      }
+
+      if (savedInsights.data) {
+        savedContent.push(...savedInsights.data.map((row: any) => {
+          const item = row.insights;
+          return {
+            id: item?.id,
+            title: item?.content ? item.content.substring(0, 50) + '...' : 'Untitled Insight',
+            type: 'insight',
             date: item?.created_at ? new Date(item.created_at).toLocaleDateString() : '',
           };
         }));
