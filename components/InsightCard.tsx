@@ -756,7 +756,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
                         color={commentLiked ? "#FDE047" : colors.text} 
                       />
                       <Text style={[dynamicStyles.commentActionText, commentLiked && { color: "#FDE047" }]}>
-                        {commentLikes}
+                        {String(commentLikes || 0)}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={dynamicStyles.replyButton} onPress={() => setCommentsOpen(true)}>
@@ -777,7 +777,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         )}
 
         {/* If no comments, still show join discussion button */}
-        {!topComment && comments === 0 && (
+        {!topComment && comments === 0 ? (
           <View style={dynamicStyles.commentSection}>
             <View style={dynamicStyles.joinDiscussionSection}>
               <TouchableOpacity style={dynamicStyles.joinDiscussionButton} onPress={() => setCommentsOpen(true)}>
@@ -786,7 +786,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
               </TouchableOpacity>
             </View>
           </View>
-        )}
+        ) : null}
 
         {/* Expandable profile details */}
         {showDetails && (

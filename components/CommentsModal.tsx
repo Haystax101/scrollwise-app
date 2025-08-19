@@ -522,7 +522,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
       ]}>
         <View style={dynamicStyles.commentContent}>
           <View style={dynamicStyles.commentHeader}>
-            <Text style={dynamicStyles.commentAuthor}>{item.author_name || item.user_name || 'Anonymous'}</Text>
+            <Text style={dynamicStyles.commentAuthor}>{String(item.author_name || item.user_name || 'Anonymous')}</Text>
             <Text style={dynamicStyles.commentMeta}>
               {item.created_at ? new Date(item.created_at).toLocaleString() : 'Unknown date'}
             </Text>
@@ -545,7 +545,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
                   dynamicStyles.commentActionText,
                   ...(item.hasLiked ? [{ color: "#FDE047" }] : [])
                 ]}>
-                  {item.likes_count || 0}
+                  {String(item.likes_count || 0)}
                 </Text>
               </TouchableOpacity>
               
@@ -559,11 +559,11 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
                 </TouchableOpacity>
               )}
               
-              {item.reply_count && item.reply_count > 0 && (
+              {item.reply_count && item.reply_count > 0 ? (
                 <Text style={dynamicStyles.replyCount}>
-                  {item.reply_count} {item.reply_count === 1 ? 'reply' : 'replies'}
+                  {String(item.reply_count)} {item.reply_count === 1 ? 'reply' : 'replies'}
                 </Text>
-              )}
+              ) : null}
             </View>
           )}
         </View>
@@ -817,7 +817,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
           {replyingTo && (
             <View style={dynamicStyles.replyInputHeader}>
               <Text style={dynamicStyles.replyInputText}>
-                Replying to {replyingTo.author_name || replyingTo.user_name || 'Anonymous'}
+                Replying to {String(replyingTo.author_name || replyingTo.user_name || 'Anonymous')}
               </Text>
               <TouchableOpacity style={dynamicStyles.cancelReplyButton} onPress={cancelReply}>
                 <FontAwesome name="times" size={14} color={colors.textSecondary} />
