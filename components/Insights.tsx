@@ -1,116 +1,155 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { InsightsPublisher } from './insights/InsightsPublisher';
+import { InsightsStatsOverview } from './insights/InsightsStatsOverview';
+import { InsightsCardsList } from './insights/InsightsCardsList';
+import { SavedInsightsList } from './insights/SavedInsightsList';
+import { Insight } from '../types';
 
-interface InsightItem {
-  id: string;
-  type: 'response' | 'own';
-  userName: string;
-  jobTitle: string;
-  avatar: string;
-  userMessage: string;
-  insightTitle: string;
-  responder_id?: string;
-  original_author_id?: string;
+interface InsightsStats {
+  postsCount: number;
+  totalLikes: number;
+  totalComments: number;
+  voltzEarned: number;
 }
 
 const Insights = () => {
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
-  const [items, setItems] = useState<InsightItem[]>([]);
+  
+  // State management
+  const [userInsights, setUserInsights] = useState<Insight[]>([]);
+  const [savedInsights, setSavedInsights] = useState<Insight[]>([]);
+  const [insightsStats, setInsightsStats] = useState<InsightsStats>({
+    postsCount: 0,
+    totalLikes: 0,
+    totalComments: 0,
+    voltzEarned: 0
+  });
   const [loading, setLoading] = useState(true);
   const [showPublisher, setShowPublisher] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
+    
     setLoading(true);
+    try {
+      // Fetch user's own insights with counts
+      const { data: ownInsights, error: ownInsightsError } = await supabase
+        .from('insights')
+        .select(`id, content, created_at, likes_count, saves_count, comments_count, views_count,
+          author:profiles!author_id(full_name, avatar_url)
+        `)
+        .eq('author_id', user.id)
+        .order('created_at', { ascending: false });
 
-    // Fetch user's own insights with counts
-    const { data: ownInsights, error: ownInsightsError } = await supabase
-      .from('insights')
-      .select(`id, content, created_at, likes_count, saves_count, comments_count,
-        author:profiles!author_id(full_name, avatar_url)
-      `)
-      .eq('author_id', user.id)
-      .order('created_at', { ascending: false });
+      if (ownInsightsError) {
+        console.error('Error fetching insights:', ownInsightsError);
+      } else {
+        const formattedInsights = (ownInsights || []).map((item: any) => ({
+          id: item.id,
+          content: item.content,
+          created_at: item.created_at,
+          likes_count: item.likes_count || 0,
+          comments_count: item.comments_count || 0,
+          views_count: item.views_count || 0,
+          saves_count: item.saves_count || 0,
+          author: item.author
+        }));
+        setUserInsights(formattedInsights);
+      }
 
-    if (ownInsightsError) {
-      console.error('Error fetching insights:', ownInsightsError);
+      // Fetch saved insights
+      const { data: savedInsightsData, error: savedInsightsError } = await supabase
+        .from('insight_saves')
+        .select(`
+          insights!insight_id(
+            id, content, created_at, likes_count, comments_count, views_count,
+            author:profiles!author_id(full_name)
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (savedInsightsError) {
+        console.error('Error fetching saved insights:', savedInsightsError);
+      } else {
+        const formattedSaved = (savedInsightsData || [])
+          .map((item: any) => item.insights)
+          .filter(Boolean);
+        setSavedInsights(formattedSaved);
+      }
+
+      // Calculate stats
+      const totalLikes = (ownInsights || []).reduce((sum: number, insight: any) => sum + (insight.likes_count || 0), 0);
+      const totalComments = (ownInsights || []).reduce((sum: number, insight: any) => sum + (insight.comments_count || 0), 0);
+      const postsCount = (ownInsights || []).length;
+      
+      // Calculate Voltz earned (simplified calculation based on engagement)
+      const voltzEarned = totalLikes * 5 + totalComments * 10;
+
+      setInsightsStats({
+        postsCount,
+        totalLikes,
+        totalComments,
+        voltzEarned
+      });
+
+    } catch (error) {
+      console.error('Error fetching insights data:', error);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Fetch comprehensive profile details for current user
-    const [eduRes, expRes, goalRes, industriesRes] = await Promise.all([
-      supabase.from('user_education').select('universities (name), degrees (name), stage').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_experiences').select('companies (name), experience_level, description').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_goals').select('goal, timeframe').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_industries').select('industries (name)').eq('user_id', user.id)
-    ]);
-
-    const education = eduRes.data ? `${(eduRes.data as any).universities?.name || ''} ${(eduRes.data as any).degrees?.name || ''} (${eduRes.data.stage || ''})`.trim() : '';
-    const experience = expRes.data ? `${(expRes.data as any).companies?.name || ''} (${expRes.data.experience_level || ''})`.trim() : '';
-    const goals = goalRes.data ? `${goalRes.data.goal || ''} - ${goalRes.data.timeframe || ''}`.trim() : '';
-    const industries = industriesRes.data?.map((i: any) => i.industries.name).join(', ') || '';
-
-    // Build profile description with best 4 pieces of data
-    const profileParts = [education, experience, industries, goals].filter(part => part && part !== ' ()' && part !== ' - ').slice(0, 4);
-    const detailsText = profileParts.length > 0 ? profileParts.join(' • ') : 'Complete your profile to share more about yourself';
-
-    const formatted = (ownInsights || []).map((item: any) => ({
-      id: item.id,
-      type: 'own' as const,
-      userName: item.author?.full_name,
-      avatar: item.author?.avatar_url,
-      jobTitle: detailsText,
-      userMessage: item.content,
-      insightTitle: item.content.substring(0, 50) + (item.content.length > 50 ? '...' : ''),
-      likes_count: item.likes_count || 0,
-      saves_count: item.saves_count || 0,
-      comments_count: item.comments_count || 0,
-    }));
-
-    setItems(formatted);
-    setLoading(false);
   }, [user]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const handleAccept = async (item: InsightItem) => {
-    if (item.type !== 'response') return;
+  // Event handlers
+  const handleInsightPress = (insight: Insight) => {
+    // Navigate to insight detail or open modal
+    console.log('Insight pressed:', insight.id);
+  };
+
+  const handleEditInsight = (insight: Insight) => {
+    // Open edit modal or navigate to edit screen
+    console.log('Edit insight:', insight.id);
+  };
+
+  const handleDeleteInsight = async (insight: Insight) => {
     try {
-      const { data, error } = await supabase.functions.invoke('create-chat-on-insight-reply', {
-        body: {
-          responderId: item.responder_id,
-          authorId: item.original_author_id,
-          insightResponseId: item.id,
-          insightResponseContent: item.userMessage,
-        },
-      });
-      if (error) throw error;
-      if (data.chatId) router.push(`/chat/${data.chatId}`);
+      await supabase.from('insights').delete().eq('id', insight.id);
+      setUserInsights(prev => prev.filter(i => i.id !== insight.id));
+      // Recalculate stats
+      fetchData();
     } catch (error) {
-      console.error('Error creating chat:', error);
+      console.error('Error deleting insight:', error);
     }
   };
 
-  const handleDismiss = async (itemId: string) => {
-    await supabase.from('insight_responses').delete().eq('id', itemId);
-    setItems(items.filter(i => i.id !== itemId));
+  const handleUnsaveInsight = async (insight: Insight) => {
+    try {
+      await supabase
+        .from('insight_saves')
+        .delete()
+        .eq('user_id', user?.id)
+        .eq('insight_id', insight.id);
+      setSavedInsights(prev => prev.filter(i => i.id !== insight.id));
+    } catch (error) {
+      console.error('Error unsaving insight:', error);
+    }
   };
 
-  const handleDelete = async (itemId: string) => {
-    await supabase.from('insights').delete().eq('id', itemId);
-    setItems(items.filter(i => i.id !== itemId));
+  const handleAnalyticsToggle = () => {
+    setShowAnalytics(!showAnalytics);
   };
 
   const handlePublisherComplete = () => {
@@ -118,64 +157,62 @@ const Insights = () => {
     fetchData(); // Refresh the insights list
   };
 
-  const InsightCard = ({ item }: { item: InsightItem }) => {
-    return (
-      <View style={styles.insightCard}>
-        <LinearGradient
-          colors={isDark ? ['#1A1B2E', '#2D2D3A'] : [colors.card, colors.card]}
-          style={styles.gradient}
-        >
-          <View style={styles.cardHeader}>
-            <Image source={{ uri: item.avatar }} style={styles.avatar} />
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{item.userName}</Text>
-              <Text style={styles.jobTitle}>{item.jobTitle}</Text>
-            </View>
-          </View>
-          <Text style={styles.messageText}>{item.userMessage}</Text>
-          <Text style={styles.insightContext}>
-            Your insight
-          </Text>
-          <View style={styles.actions}>
-            <TouchableOpacity style={[styles.actionButton, styles.deleteButton]} onPress={() => handleDelete(item.id)}>
-              <Feather name="trash-2" size={18} color={colors.error} />
-              <Text style={[styles.actionButtonText, { color: colors.error }]}>Delete</Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
-      </View>
-    );
-  };
-  
   const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, paddingTop: 60 },
-    createInsightButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, paddingVertical: 15, paddingHorizontal: 20, borderRadius: 12, marginVertical: 10, marginHorizontal: 16, alignSelf: 'center' },
-    createInsightButtonText: { color: colors.primaryText, fontSize: 16, fontWeight: '600', marginLeft: 8 },
-    insightCard: { borderRadius: 16, marginVertical: 8, marginHorizontal: 16, overflow: 'hidden' },
-    gradient: { padding: 20 },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-    avatar: { width: 40, height: 40, borderRadius: 20, marginRight: 12 },
-    userInfo: { flex: 1 },
-    userName: { fontSize: 16, fontWeight: 'bold', color: colors.text },
-    jobTitle: { fontSize: 14, color: colors.textSecondary },
-    messageText: { fontSize: 16, color: colors.text, marginBottom: 8 },
-    insightContext: { fontSize: 14, color: colors.textSecondary, fontStyle: 'italic' },
-    actions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 20 },
-    actionButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, marginLeft: 12 },
-    replyButton: { backgroundColor: colors.primary },
-    dismissButton: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.error },
-    deleteButton: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.error },
-    actionButtonText: { color: colors.text, fontWeight: '600', marginLeft: 8 },
-    replyButtonText: { color: colors.primaryText },
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingTop: 60,
+    },
+    scrollContainer: {
+      flex: 1,
+    },
+    contentContainer: {
+      paddingBottom: 100,
+    },
+    createInsightButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primary,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      borderRadius: 30,
+      marginVertical: 20,
+      marginHorizontal: 20,
+      shadowColor: colors.primary,
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    createInsightButtonText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '600',
+      marginLeft: 8,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      marginBottom: 12,
+      marginTop: 24,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    seeAllButton: {
+      fontSize: 14,
+      color: colors.primary,
+      fontWeight: '500',
+    },
   });
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
 
   if (showPublisher) {
     return <InsightsPublisher onComplete={handlePublisherComplete} />;
@@ -183,19 +220,61 @@ const Insights = () => {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={items}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <InsightCard item={item} />}
-        ListHeaderComponent={
-          <TouchableOpacity style={styles.createInsightButton} onPress={() => setShowPublisher(true)}>
-            <Feather name="plus" size={18} color={colors.primaryText} />
-            <Text style={styles.createInsightButtonText}>Create Insight</Text>
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Create Insight Button */}
+        <TouchableOpacity 
+          style={styles.createInsightButton} 
+          onPress={() => setShowPublisher(true)}
+        >
+          <Feather name="plus" size={18} color="white" />
+          <Text style={styles.createInsightButtonText}>Create Insight</Text>
+        </TouchableOpacity>
+
+        {/* Stats Overview */}
+        <InsightsStatsOverview
+          stats={insightsStats}
+          loading={loading}
+          onAnalyticsToggle={handleAnalyticsToggle}
+          showAnalytics={showAnalytics}
+        />
+
+        {/* My Insights Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>My Insights</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAllButton}>See All</Text>
           </TouchableOpacity>
-        }
-      />
+        </View>
+        
+        <InsightsCardsList
+          insights={userInsights}
+          loading={loading}
+          onInsightPress={handleInsightPress}
+          onEditPress={handleEditInsight}
+          onDeletePress={handleDeleteInsight}
+        />
+
+        {/* Saved Insights Section */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Saved Insights</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAllButton}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <SavedInsightsList
+          savedInsights={savedInsights}
+          loading={loading}
+          onInsightPress={handleInsightPress}
+          onUnsavePress={handleUnsaveInsight}
+        />
+      </ScrollView>
     </View>
   );
 };
 
-export default Insights; 
+export default Insights;

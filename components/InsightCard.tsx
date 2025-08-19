@@ -6,6 +6,7 @@ import type { Insight } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { CommentsModal } from './CommentsModal';
+import { formatNumber } from '../lib/utils';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -535,9 +536,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     await supabase.from('insights').update({ saves_count: count ?? 0 }).eq('id', insight.id);
   }, [user, hasSaved, insight.id]);
 
-  const formatNumber = (num: number): string => {
-    return num.toLocaleString();
-  };
+
 
   const formatTimestamp = (timestamp: string): string => {
     const date = new Date(timestamp);
