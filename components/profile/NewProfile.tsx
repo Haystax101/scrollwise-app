@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
@@ -16,6 +16,7 @@ import { CareerGoalCard } from './CareerGoalCard';
 import { IndustryInterestsCard } from './IndustryInterestsCard';
 import { ProfileCustomizationSections } from './ProfileCustomizationSections';
 import { IndustrySelectionPage } from './IndustrySelectionPage';
+import { PhotoUploadModal } from './PhotoUploadModal';
 
 interface NewProfileProps {
   user: any; // Supabase user
@@ -83,6 +84,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [loading, setLoading] = useState(true);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [showIndustrySelection, setShowIndustrySelection] = useState(false);
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
 
   // Get current user
   useEffect(() => {
@@ -129,18 +131,18 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         setAchievements(achievementsData || []);
       }
 
-      // Fetch career goals
-      const [goalsRes, goalCompaniesRes] = await Promise.all([
-        supabase.from('user_goals').select('goal, timeframe').eq('user_id', currentUser.id).maybeSingle(),
-        supabase.from('user_goal_companies').select('companies (name)').eq('user_id', currentUser.id)
-      ]);
+      // Fetch career goals using the enhanced schema
+      const { data: careerGoalsData, error: careerGoalsError } = await supabase
+        .rpc('get_user_career_goals', { user_id_param: currentUser.id });
 
-      if (goalsRes.data) {
-        const companies = goalCompaniesRes.data?.map((gc: any) => gc.companies.name) || [];
+      if (careerGoalsError) {
+        console.error('Error fetching career goals:', careerGoalsError);
+      } else if (careerGoalsData && careerGoalsData.length > 0) {
+        const goalData = careerGoalsData[0]; // Get primary career goal
         setCareerGoal({
-          goal: goalsRes.data.goal,
-          timeframe: goalsRes.data.timeframe,
-          companies: companies.length > 0 ? companies : undefined
+          goal: goalData.goal,
+          timeframe: goalData.timeframe,
+          companies: goalData.companies?.length > 0 ? goalData.companies : undefined
         });
       }
 
@@ -160,12 +162,12 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         setIndustries(formattedIndustries);
       }
 
-      // Fetch learning stats
+      // Fetch learning stats using enhanced function
       const { data: statsData, error: statsError } = await supabase
-        .rpc('get_user_stats', { user_id_param: currentUser.id });
+        .rpc('get_enhanced_user_stats', { user_id_param: currentUser.id });
 
       if (statsError) {
-        console.error('Error fetching learning stats:', statsError);
+        console.error('Error fetching enhanced learning stats:', statsError);
       } else if (statsData && statsData.length > 0) {
         const stats = statsData[0];
         const minutes = parseInt(stats.minutes_learned) || 0;
@@ -175,7 +177,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         setLearningStats({
           timeSpentLearning: `${hours}h ${remainingMinutes}m`,
           totalInteractions: (parseInt(stats.posts_liked) || 0) + (parseInt(stats.posts_saved) || 0),
-          contentEngaged: parseInt(stats.videos_watched) || 0
+          contentEngaged: parseInt(stats.content_pieces_engaged) || 0
         });
       }
 
@@ -213,60 +215,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
   // Event handlers
   const handleAvatarPress = () => {
-    Alert.alert(
-      "Update Profile Picture",
-      "Choose an option",
-      [
-        {
-          text: "Random Avatar",
-          onPress: () => updateProfilePicture("random")
-        },
-        {
-          text: "Professional Avatar", 
-          onPress: () => updateProfilePicture("professional")
-        },
-        {
-          text: "Use Default",
-          onPress: () => updateProfilePicture("default")
-        },
-        {
-          text: "Cancel",
-          style: "cancel"
-        }
-      ]
-    );
+    setShowPhotoUpload(true);
   };
 
-  const updateProfilePicture = async (type: string) => {
-    if (!currentUser) return;
-    
-    try {
-      let newAvatarUrl = null;
-      
-      if (type === "default") {
-        newAvatarUrl = null;
-      } else if (type === "random") {
-        const randomId = Math.floor(Math.random() * 100);
-        newAvatarUrl = `https://randomuser.me/api/portraits/men/${randomId}.jpg`;
-      } else if (type === "professional") {
-        const randomId = Math.floor(Math.random() * 50);
-        newAvatarUrl = `https://randomuser.me/api/portraits/women/${randomId}.jpg`;
-      }
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({ avatar_url: newAvatarUrl })
-        .eq('id', currentUser.id);
-
-      if (error) throw error;
-
-      setAvatarUrl(newAvatarUrl);
-      Alert.alert("Success", "Profile picture updated successfully!");
-    } catch (error) {
-      console.error('Error updating profile picture:', error);
-      Alert.alert("Error", "Failed to update profile picture.");
-    }
+  const handlePhotoUploaded = (imageUrl: string) => {
+    setAvatarUrl(imageUrl);
   };
+
 
 
   const handleEditCareerGoal = () => {
@@ -397,6 +352,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         onClose={() => setIsSettingsModalVisible(false)}
         navigateTo={router.push}
         signOut={signOut || (async () => {})}
+      />
+
+      <PhotoUploadModal
+        visible={showPhotoUpload}
+        onClose={() => setShowPhotoUpload(false)}
+        onImageUploaded={handlePhotoUploaded}
+        userId={currentUser?.id || ''}
       />
     </View>
   );

@@ -86,12 +86,12 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
     try {
       setIsLoadingStats(true);
       
-      // Use the comprehensive stats function for better performance
+      // Use the enhanced stats function for better performance and accuracy
       const { data: statsData, error: statsError } = await supabase
-        .rpc('get_user_stats', { user_id_param: userId });
+        .rpc('get_enhanced_user_stats', { user_id_param: userId });
 
       if (statsError) {
-        console.error('Error fetching learning stats:', statsError);
+        console.error('Error fetching enhanced learning stats:', statsError);
         // Keep default stats on error
       } else if (statsData && statsData.length > 0) {
         const stats = statsData[0];
@@ -99,7 +99,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
           videosWatched: parseInt(stats.videos_watched) || 0,
           postsLiked: parseInt(stats.posts_liked) || 0,
           postsSaved: parseInt(stats.posts_saved) || 0,
-          daysActive: stats.days_active || 0,
+          daysActive: stats.current_streak || 0, // Use current streak as days active
         });
       }
     } catch (error) {
@@ -224,11 +224,11 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       
       setUserData((prev) => ({ ...prev, savedContent }));
       
-      // Fetch detailed profile information for display
+      // Fetch detailed profile information for display using enhanced schema
       const [eduDetailsRes, expDetailsRes, goalsDetailsRes, projectsRes] = await Promise.all([
         supabase.from('user_education').select('universities (name), degrees (name), stage').eq('user_id', userId).maybeSingle(),
-        supabase.from('user_experiences').select('companies (name), experience_level, description').eq('user_id', userId).maybeSingle(),
-        supabase.from('user_goals').select('goal, timeframe').eq('user_id', userId).maybeSingle(),
+        supabase.from('user_experiences').select('companies (name), position_title, experience_level, is_current, employment_type').eq('user_id', userId).eq('is_current', true).maybeSingle(),
+        supabase.from('user_goals').select('goal, timeframe, description').eq('user_id', userId).eq('goal_type', 'career').eq('status', 'active').maybeSingle(),
         supabase.from('user_projects').select('title, description').eq('user_id', userId)
       ]);
 
@@ -237,7 +237,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
         : '';
       
       const experience = expDetailsRes.data
-        ? `${(expDetailsRes.data as any).companies?.name || ''} (${expDetailsRes.data.experience_level || ''})${expDetailsRes.data.description ? ` - ${expDetailsRes.data.description}` : ''}`.replace(/^- |  - $/, '').trim()
+        ? `${(expDetailsRes.data as any).companies?.name || ''} (${expDetailsRes.data.experience_level || ''})${expDetailsRes.data.position_title ? ` - ${expDetailsRes.data.position_title}` : ''}`.replace(/^- |  - $/, '').trim()
         : '';
       
       const goals = goalsDetailsRes.data

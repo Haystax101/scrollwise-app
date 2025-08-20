@@ -24,7 +24,7 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
 
   const getIconName = (iconName: string): keyof typeof Feather.glyphMap => {
     const iconMap: Record<string, keyof typeof Feather.glyphMap> = {
-      'lightbulb': 'lightbulb',
+      'lightbulb': 'zap', // lightbulb is not valid in feather, use zap instead
       'trophy': 'award',
       'award': 'award',
       'zap': 'zap',

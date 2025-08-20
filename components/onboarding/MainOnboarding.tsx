@@ -327,12 +327,16 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
         companyData = newCompany;
       }
 
-      // Save user goals
+      // Save user goals with enhanced schema
       const { error: goalsError } = await supabase
         .from('user_goals')
         .upsert({
           user_id: userId,
           goal: dreamRole,
+          goal_type: 'career',
+          status: 'active',
+          priority: 1,
+          description: `Dream role: ${dreamRole} at ${dreamCompany}`,
         });
 
       if (goalsError) {
@@ -385,14 +389,18 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
         companyId = companyData?.id;
       }
 
-      // Save user experience
+      // Save user experience with enhanced schema
       const { error } = await supabase
         .from('user_experiences')
         .upsert({
           user_id: userId,
           company_id: companyId,
-          description: currentRole,
-          experience_level: 'Current', // Could be enhanced with actual level selection
+          position_title: currentRole,
+          description: `Current position: ${currentRole}`,
+          is_current: true,
+          start_date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
+          employment_type: 'full_time', // Default assumption
+          experience_level: 'Current',
         });
 
       if (error) {
@@ -498,23 +506,19 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     updateOnboardingData(data);
     
     if (userId) {
-      console.log('Attempting to save weekly goal:', data.weeklyGoal);
-      // For now, just store in user_goals table instead of profiles
-      // since the profiles table schema has been simplified
-      const { error } = await supabase
-        .from('user_goals')
-        .upsert({
-          user_id: userId,
-          goal: `Weekly learning goal: ${data.weeklyGoal} days`,
-          timeframe: 'weekly'
-        });
+      console.log('Setting up user learning streak:', data.weeklyGoal);
+      // Use the new streak management system instead of storing in user_goals
+      const { error } = await supabase.rpc('setup_user_learning_streak', {
+        user_id_param: userId,
+        target_days_param: data.weeklyGoal
+      });
       
       if (error) {
-        console.error('Error updating weekly goal:', error);
-        Alert.alert('Database Error', `Failed to save weekly goal: ${error.message}`);
-        return; // Don't proceed if goal save failed
+        console.error('Error setting up learning streak:', error);
+        Alert.alert('Database Error', `Failed to set up learning streak: ${error.message}`);
+        return; // Don't proceed if streak setup failed
       }
-      console.log('Weekly goal saved successfully');
+      console.log('Learning streak set up successfully');
     }
     nextStep();
   };
