@@ -66,8 +66,8 @@ export const IndustrySelectionPage: React.FC<IndustrySelectionPageProps> = ({
     try {
       const { data, error } = await supabase
         .from('industries')
-        .select('id, name, icon_name')
-        .order('name');
+        .select('id, name, category')
+        .order('is_popular DESC, category, name');
 
       if (error) throw error;
       setAvailableIndustries(data || []);

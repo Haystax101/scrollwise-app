@@ -1,26 +1,40 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, TextInput, Alert, Switch } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
+import { DatabaseAutocompleteInput } from '../onboarding/DatabaseAutocompleteInput';
 
 interface Education {
+  id?: string;
   university?: string;
   degree?: string;
   stage?: string;
   period?: string;
+  startDate?: string;
+  endDate?: string;
+  isCurrent?: boolean;
 }
 
 interface Experience {
+  id?: string;
   company?: string;
   role?: string;
   period?: string;
   description?: string;
+  startDate?: string;
+  endDate?: string;
+  isCurrent?: boolean;
+  employmentType?: string;
 }
 
 interface Project {
+  id?: string;
   title: string;
   description: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
 }
 
 interface ProfileData {
@@ -39,6 +53,28 @@ interface ProfileCustomizationSectionsProps {
 }
 
 type EditableSection = 'summary' | 'education' | 'experience' | 'projects' | 'skills' | null;
+type EditMode = 'text' | 'structured';
+
+interface StructuredEditData {
+  // Experience fields
+  positionTitle?: string;
+  companyName?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  isCurrent?: boolean;
+  employmentType?: string;
+  
+  // Education fields
+  degreeName?: string;
+  universityName?: string;
+  fieldOfStudy?: string;
+  
+  // Project fields
+  projectTitle?: string;
+  projectDescription?: string;
+  projectStatus?: string;
+}
 
 export const ProfileCustomizationSections: React.FC<ProfileCustomizationSectionsProps> = ({
   profileData,
@@ -49,18 +85,60 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
   const { colors, isDark } = useTheme();
   const [editingSection, setEditingSection] = useState<EditableSection>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+  const [editMode, setEditMode] = useState<EditMode>('text');
+  const [structuredData, setStructuredData] = useState<StructuredEditData>({});
+  const [editingIndex, setEditingIndex] = useState<number>(-1);
 
-  const handleEditSection = (section: EditableSection, currentValue: string) => {
+  const handleEditSection = (section: EditableSection, currentValue: string, index: number = -1) => {
     setEditingSection(section);
     setEditingValue(currentValue);
+    setEditingIndex(index);
+    
+    if (section === 'summary' || section === 'skills') {
+      setEditMode('text');
+    } else {
+      setEditMode('structured');
+      
+      // Populate structured data if editing existing item
+      if (index >= 0) {
+        if (section === 'experience' && profileData.experience?.[index]) {
+          const exp = profileData.experience[index];
+          setStructuredData({
+            positionTitle: exp.role || '',
+            companyName: exp.company || '',
+            description: exp.description || '',
+            isCurrent: exp.period?.includes('Present') || false,
+            employmentType: 'full-time'
+          });
+        } else if (section === 'education' && profileData.education?.[index]) {
+          const edu = profileData.education[index];
+          setStructuredData({
+            degreeName: edu.degree || '',
+            universityName: edu.university || '',
+            fieldOfStudy: edu.stage || '',
+            isCurrent: edu.period?.includes('Present') || false
+          });
+        } else if (section === 'projects' && profileData.projects?.[index]) {
+          const proj = profileData.projects[index];
+          setStructuredData({
+            projectTitle: proj.title || '',
+            projectDescription: proj.description || '',
+            projectStatus: 'completed'
+          });
+        }
+      } else {
+        // Reset for new item
+        setStructuredData({});
+      }
+    }
   };
 
   const handleSaveSection = async () => {
     if (!editingSection || !userId) return;
     
     try {
-      if (editingSection === 'summary' || editingSection === 'skills') {
-        // Save to profile_sections table
+      if (editingSection === 'summary') {
+        // Save summary to profile_sections table (keep as text blob)
         await supabase
           .from('profile_sections')
           .upsert({
@@ -71,11 +149,49 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
         
         const updatedData = {
           ...profileData,
-          [editingSection]: editingSection === 'skills' 
-            ? editingValue.split(',').map(s => s.trim()).filter(s => s) 
-            : editingValue
+          summary: editingValue
         };
         onDataUpdate(updatedData);
+        
+      } else if (editingSection === 'skills') {
+        // Parse skills and save to user_skills table
+        const skillsArray = editingValue.split(',').map(s => s.trim()).filter(s => s);
+        
+        // First, delete existing skills for this user
+        await supabase
+          .from('user_skills')
+          .delete()
+          .eq('user_id', userId);
+        
+        // Insert new skills
+        if (skillsArray.length > 0) {
+          const skillsData = skillsArray.map(skill => ({
+            user_id: userId,
+            skill_name: skill,
+            proficiency_level: 'intermediate', // Default proficiency
+            is_featured: true,
+            endorsement_count: 0
+          }));
+          
+          await supabase
+            .from('user_skills')
+            .insert(skillsData);
+        }
+        
+        const updatedData = {
+          ...profileData,
+          skills: skillsArray
+        };
+        onDataUpdate(updatedData);
+        
+      } else if (editingSection === 'experience') {
+        await handleSaveExperience();
+        
+      } else if (editingSection === 'education') {
+        await handleSaveEducation();
+        
+      } else if (editingSection === 'projects') {
+        await handleSaveProject();
       }
       
       Alert.alert('Success', `${editingSection} updated successfully!`);
@@ -85,12 +201,121 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
     } finally {
       setEditingSection(null);
       setEditingValue('');
+      setStructuredData({});
+      setEditingIndex(-1);
     }
+  };
+  
+  const handleSaveExperience = async () => {
+    if (!structuredData.positionTitle || !structuredData.companyName) {
+      Alert.alert('Error', 'Position title and company name are required.');
+      return;
+    }
+    
+    // Find or create company
+    let companyId;
+    const { data: existingCompany } = await supabase
+      .from('companies')
+      .select('id')
+      .ilike('name', structuredData.companyName)
+      .single();
+    
+    if (existingCompany) {
+      companyId = existingCompany.id;
+    } else {
+      const { data: newCompany, error: companyError } = await supabase
+        .from('companies')
+        .insert({ name: structuredData.companyName })
+        .select('id')
+        .single();
+      
+      if (companyError) throw companyError;
+      companyId = newCompany.id;
+    }
+    
+    const experienceData = {
+      user_id: userId,
+      position_title: structuredData.positionTitle,
+      company_id: companyId,
+      description: structuredData.description || null,
+      start_date: structuredData.startDate || null,
+      end_date: structuredData.isCurrent ? null : structuredData.endDate,
+      is_current: structuredData.isCurrent || false,
+      employment_type: structuredData.employmentType || 'full-time'
+    };
+    
+    // Insert new experience
+    await supabase.from('user_experiences').insert(experienceData);
+    
+    // Refresh profile data by calling parent refresh
+    window.location.reload(); // Simple refresh for now
+  };
+  
+  const handleSaveEducation = async () => {
+    if (!structuredData.degreeName || !structuredData.universityName) {
+      Alert.alert('Error', 'Degree and university name are required.');
+      return;
+    }
+    
+    // Find or create university
+    let universityId;
+    const { data: existingUniversity } = await supabase
+      .from('universities')
+      .select('id')
+      .ilike('name', structuredData.universityName)
+      .single();
+    
+    if (existingUniversity) {
+      universityId = existingUniversity.id;
+    } else {
+      const { data: newUniversity, error: universityError } = await supabase
+        .from('universities')
+        .insert({ name: structuredData.universityName })
+        .select('id')
+        .single();
+      
+      if (universityError) throw universityError;
+      universityId = newUniversity.id;
+    }
+    
+    const educationData = {
+      user_id: userId,
+      degree_name: structuredData.degreeName,
+      university_id: universityId,
+      field_of_study: structuredData.fieldOfStudy || null,
+      start_date: structuredData.startDate || null,
+      end_date: structuredData.isCurrent ? null : structuredData.endDate,
+      is_current: structuredData.isCurrent || false
+    };
+    
+    await supabase.from('user_education').insert(educationData);
+    window.location.reload(); // Simple refresh for now
+  };
+  
+  const handleSaveProject = async () => {
+    if (!structuredData.projectTitle) {
+      Alert.alert('Error', 'Project title is required.');
+      return;
+    }
+    
+    const projectData = {
+      user_id: userId,
+      title: structuredData.projectTitle,
+      description: structuredData.projectDescription || null,
+      start_date: structuredData.startDate || null,
+      end_date: structuredData.endDate || null,
+      status: structuredData.projectStatus || 'completed'
+    };
+    
+    await supabase.from('user_projects').insert(projectData);
+    window.location.reload(); // Simple refresh for now
   };
 
   const handleCancelEdit = () => {
     setEditingSection(null);
     setEditingValue('');
+    setStructuredData({});
+    setEditingIndex(-1);
   };
 
   const styles = StyleSheet.create({
@@ -292,6 +517,25 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
       color: 'white',
       fontWeight: '600',
     },
+    formRow: {
+      marginBottom: 16,
+    },
+    formLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+    },
+    switchRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    switchLabel: {
+      fontSize: 14,
+      color: colors.text,
+    },
   });
 
   const renderSection = (
@@ -331,7 +575,7 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
         {!hasContent && (
           <TouchableOpacity 
             style={styles.addButton} 
-            onPress={() => handleEditSection(sectionKey as EditableSection, '')}
+            onPress={() => handleEditSection(sectionKey as EditableSection, '', -1)}
           >
             <Text style={styles.addButtonText}>+ Add {title}</Text>
           </TouchableOpacity>
@@ -380,7 +624,7 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
           'Work Experience',
           'briefcase',
           profileData.experience?.map((exp, index) => (
-            <View key={index} style={styles.workItem}>
+            <TouchableOpacity key={index} style={styles.workItem} onPress={() => handleEditSection('experience', '', index)}>
               <View style={styles.workHeader}>
                 <Text style={styles.workTitle}>{exp.role || 'Role'}</Text>
                 <Text style={styles.workPeriod}>{exp.period || 'Period'}</Text>
@@ -394,7 +638,7 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
               {exp.description && (
                 <Text style={styles.workDescription}>{exp.description}</Text>
               )}
-            </View>
+            </TouchableOpacity>
           )),
           'Add your work experience to showcase your professional journey',
           !!(profileData.experience && profileData.experience.length > 0)
@@ -406,7 +650,7 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
           'Education',
           'book-open',
           profileData.education?.map((edu, index) => (
-            <View key={index} style={styles.workItem}>
+            <TouchableOpacity key={index} style={styles.workItem} onPress={() => handleEditSection('education', '', index)}>
               <View style={styles.workHeader}>
                 <Text style={styles.workTitle}>{edu.degree || 'Degree'}</Text>
                 <Text style={styles.workPeriod}>{edu.period || 'Period'}</Text>
@@ -420,7 +664,7 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
               {edu.stage && (
                 <Text style={styles.workDescription}>{edu.stage}</Text>
               )}
-            </View>
+            </TouchableOpacity>
           )),
           'Add your educational background',
           !!(profileData.education && profileData.education.length > 0)
@@ -450,10 +694,10 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
           'Projects',
           'folder',
           profileData.projects?.map((project, index) => (
-            <View key={index} style={styles.workItem}>
+            <TouchableOpacity key={index} style={styles.workItem} onPress={() => handleEditSection('projects', '', index)}>
               <Text style={styles.workTitle}>{project.title}</Text>
               <Text style={styles.workDescription}>{project.description}</Text>
-            </View>
+            </TouchableOpacity>
           )),
           'Showcase your projects and achievements',
           !!(profileData.projects && profileData.projects.length > 0)
@@ -471,25 +715,155 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                Edit {editingSection}
+                {editingIndex >= 0 ? 'Edit' : 'Add'} {editingSection}
               </Text>
               <TouchableOpacity style={styles.closeButton} onPress={handleCancelEdit}>
                 <Feather name="x" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
             
-            <TextInput
-              style={[
-                styles.textInput,
-                editingSection === 'summary' ? { height: 120 } : { height: 80 }
-              ]}
-              value={editingValue}
-              onChangeText={setEditingValue}
-              placeholder={`Enter your ${editingSection}...`}
-              placeholderTextColor={colors.textTertiary}
-              multiline={true}
-              textAlignVertical="top"
-            />
+            {editMode === 'text' ? (
+              <TextInput
+                style={[
+                  styles.textInput,
+                  editingSection === 'summary' ? { height: 120 } : { height: 80 }
+                ]}
+                value={editingValue}
+                onChangeText={setEditingValue}
+                placeholder={`Enter your ${editingSection}...`}
+                placeholderTextColor={colors.textTertiary}
+                multiline={true}
+                textAlignVertical="top"
+              />
+            ) : (
+              <ScrollView style={{ maxHeight: 400 }}>
+                {editingSection === 'experience' && (
+                  <>
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Position Title *</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={structuredData.positionTitle || ''}
+                        onChangeText={(text) => setStructuredData({...structuredData, positionTitle: text})}
+                        placeholder="e.g. Software Engineer"
+                        placeholderTextColor={colors.textTertiary}
+                      />
+                    </View>
+                    
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Company *</Text>
+                      <DatabaseAutocompleteInput
+                        label=""
+                        value={structuredData.companyName || ''}
+                        onChangeText={(text) => setStructuredData({...structuredData, companyName: text})}
+                        onSelect={(item) => setStructuredData({...structuredData, companyName: item.title})}
+                        searchType="companies"
+                        placeholder="e.g. Google, Microsoft"
+                        maxResults={5}
+                      />
+                    </View>
+                    
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Description</Text>
+                      <TextInput
+                        style={[styles.textInput, { height: 80 }]}
+                        value={structuredData.description || ''}
+                        onChangeText={(text) => setStructuredData({...structuredData, description: text})}
+                        placeholder="Describe your role and achievements..."
+                        placeholderTextColor={colors.textTertiary}
+                        multiline
+                        textAlignVertical="top"
+                      />
+                    </View>
+                    
+                    <View style={styles.switchRow}>
+                      <Text style={styles.switchLabel}>I currently work here</Text>
+                      <Switch
+                        value={structuredData.isCurrent || false}
+                        onValueChange={(value) => setStructuredData({...structuredData, isCurrent: value})}
+                        trackColor={{ false: colors.border, true: colors.primary }}
+                        thumbColor={colors.card}
+                      />
+                    </View>
+                  </>
+                )}
+                
+                {editingSection === 'education' && (
+                  <>
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Degree *</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={structuredData.degreeName || ''}
+                        onChangeText={(text) => setStructuredData({...structuredData, degreeName: text})}
+                        placeholder="e.g. Bachelor of Science"
+                        placeholderTextColor={colors.textTertiary}
+                      />
+                    </View>
+                    
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>University/Institution *</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={structuredData.universityName || ''}
+                        onChangeText={(text) => setStructuredData({...structuredData, universityName: text})}
+                        placeholder="e.g. University of Cambridge"
+                        placeholderTextColor={colors.textTertiary}
+                      />
+                    </View>
+                    
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Field of Study</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={structuredData.fieldOfStudy || ''}
+                        onChangeText={(text) => setStructuredData({...structuredData, fieldOfStudy: text})}
+                        placeholder="e.g. Computer Science"
+                        placeholderTextColor={colors.textTertiary}
+                      />
+                    </View>
+                    
+                    <View style={styles.switchRow}>
+                      <Text style={styles.switchLabel}>I currently study here</Text>
+                      <Switch
+                        value={structuredData.isCurrent || false}
+                        onValueChange={(value) => setStructuredData({...structuredData, isCurrent: value})}
+                        trackColor={{ false: colors.border, true: colors.primary }}
+                        thumbColor={colors.card}
+                      />
+                    </View>
+                  </>
+                )}
+                
+                {editingSection === 'projects' && (
+                  <>
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Project Title *</Text>
+                      <TextInput
+                        style={styles.textInput}
+                        value={structuredData.projectTitle || ''}
+                        onChangeText={(text) => setStructuredData({...structuredData, projectTitle: text})}
+                        placeholder="e.g. E-commerce Mobile App"
+                        placeholderTextColor={colors.textTertiary}
+                      />
+                    </View>
+                    
+                    <View style={styles.formRow}>
+                      <Text style={styles.formLabel}>Description</Text>
+                      <TextInput
+                        style={[styles.textInput, { height: 80 }]}
+                        value={structuredData.projectDescription || ''}
+                        onChangeText={(text) => setStructuredData({...structuredData, projectDescription: text})}
+                        placeholder="Describe your project and its impact..."
+                        placeholderTextColor={colors.textTertiary}
+                        multiline
+                        textAlignVertical="top"
+                      />
+                    </View>
+                  </>
+                )}
+              </ScrollView>
+            )}
             
             <View style={styles.modalButtons}>
               <TouchableOpacity 

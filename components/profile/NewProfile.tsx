@@ -57,6 +57,24 @@ interface ProfileData {
   skills?: string[];
 }
 
+// Helper function to format date periods
+const formatDatePeriod = (startDate: string | null, endDate: string | null, isCurrent: boolean): string => {
+  if (!startDate) return '';
+  
+  const start = new Date(startDate);
+  const startFormatted = start.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+  
+  if (isCurrent) {
+    return `${startFormatted} - Present`;
+  } else if (endDate) {
+    const end = new Date(endDate);
+    const endFormatted = end.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    return `${startFormatted} - ${endFormatted}`;
+  } else {
+    return startFormatted;
+  }
+};
+
 export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigateTo, signOut }) => {
   const { colors, isDark } = useTheme();
   const router = useRouter();
@@ -181,26 +199,114 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         });
       }
 
-      // Fetch profile sections
-      const { data: sectionsData, error: sectionsError } = await supabase
-        .from('profile_sections')
-        .select('section_type, content')
-        .eq('user_id', currentUser.id);
+      // Fetch enhanced profile data from new schema
+      const [sectionsRes, skillsRes, experiencesRes, educationRes, projectsRes] = await Promise.all([
+        // Keep fetching summary from profile_sections
+        supabase
+          .from('profile_sections')
+          .select('section_type, content')
+          .eq('user_id', currentUser.id),
+        
+        // Fetch skills from user_skills table
+        supabase
+          .from('user_skills')
+          .select('skill_name, proficiency_level')
+          .eq('user_id', currentUser.id)
+          .eq('is_featured', true)
+          .order('endorsement_count', { ascending: false }),
+        
+        // Fetch experiences from user_experiences table
+        supabase
+          .from('user_experiences')
+          .select(`
+            position_title,
+            description,
+            start_date,
+            end_date,
+            is_current,
+            employment_type,
+            companies (name)
+          `)
+          .eq('user_id', currentUser.id)
+          .order('start_date', { ascending: false }),
+        
+        // Fetch education from user_education table
+        supabase
+          .from('user_education')
+          .select(`
+            degree_name,
+            major,
+            start_date,
+            end_date,
+            graduation_status,
+            universities (name)
+          `)
+          .eq('user_id', currentUser.id)
+          .order('start_date', { ascending: false }),
+        
+        // Fetch projects from user_projects table
+        supabase
+          .from('user_projects')
+          .select('title, description, start_date, end_date, status')
+          .eq('user_id', currentUser.id)
+          .order('start_date', { ascending: false })
+      ]);
 
-      if (sectionsError) {
-        console.error('Error fetching profile sections:', sectionsError);
+      // Process all the data
+      const sectionMap: any = {};
+      
+      // Process profile sections (summary)
+      if (sectionsRes.error) {
+        console.error('Error fetching profile sections:', sectionsRes.error);
       } else {
-        const sections = sectionsData || [];
-        const sectionMap: any = {};
+        const sections = sectionsRes.data || [];
         sections.forEach((section: any) => {
-          if (section.section_type === 'skills') {
-            sectionMap.skills = section.content.split(',').map((s: string) => s.trim()).filter((s: string) => s);
-          } else {
-            sectionMap[section.section_type] = section.content;
-          }
+          sectionMap[section.section_type] = section.content;
         });
-        setProfileData(sectionMap);
       }
+      
+      // Process skills
+      if (skillsRes.error) {
+        console.error('Error fetching skills:', skillsRes.error);
+      } else {
+        sectionMap.skills = (skillsRes.data || []).map((skill: any) => skill.skill_name);
+      }
+      
+      // Process experiences
+      if (experiencesRes.error) {
+        console.error('Error fetching experiences:', experiencesRes.error);
+      } else {
+        sectionMap.experience = (experiencesRes.data || []).map((exp: any) => ({
+          role: exp.position_title,
+          company: exp.companies?.name || 'Unknown Company',
+          description: exp.description,
+          period: formatDatePeriod(exp.start_date, exp.end_date, exp.is_current)
+        }));
+      }
+      
+      // Process education
+      if (educationRes.error) {
+        console.error('Error fetching education:', educationRes.error);
+      } else {
+        sectionMap.education = (educationRes.data || []).map((edu: any) => ({
+          degree: edu.degree_name,
+          university: edu.universities?.name || 'Unknown Institution',
+          stage: edu.major,
+          period: formatDatePeriod(edu.start_date, edu.end_date, edu.graduation_status === 'in_progress')
+        }));
+      }
+      
+      // Process projects
+      if (projectsRes.error) {
+        console.error('Error fetching projects:', projectsRes.error);
+      } else {
+        sectionMap.projects = (projectsRes.data || []).map((project: any) => ({
+          title: project.title,
+          description: project.description
+        }));
+      }
+      
+      setProfileData(sectionMap);
 
     } catch (error) {
       console.error('Error fetching profile data:', error);

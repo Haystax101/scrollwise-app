@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { InputField } from './InputField';
+import { DatabaseAutocompleteInput } from './DatabaseAutocompleteInput';
 import { OnboardingPage } from './OnboardingPage';
 
 interface CurrentWorkProps {
   onNext: (data: { currentRole: string; currentCompany: string }) => void;
 }
 
+interface AutocompleteResult {
+  id: string;
+  name: string;
+  type: 'company' | 'occupation';
+  category_or_industry?: string;
+  context?: string;
+  relevance_score: number;
+}
+
 export const CurrentWork: React.FC<CurrentWorkProps> = ({ onNext }) => {
   const [currentRole, setCurrentRole] = useState('');
   const [currentCompany, setCurrentCompany] = useState('');
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
   const handleNext = () => {
     // Allow empty values for current work (user might be unemployed/student)
@@ -17,6 +28,14 @@ export const CurrentWork: React.FC<CurrentWorkProps> = ({ onNext }) => {
       currentRole: currentRole.trim(), 
       currentCompany: currentCompany.trim() 
     });
+  };
+
+  const handleRoleSelect = (item: AutocompleteResult) => {
+    setSelectedRoleId(item.id);
+  };
+
+  const handleCompanySelect = (item: AutocompleteResult) => {
+    setSelectedCompanyId(item.id);
   };
 
   return (
@@ -27,15 +46,24 @@ export const CurrentWork: React.FC<CurrentWorkProps> = ({ onNext }) => {
       buttonText="Continue"
     >
       <View style={styles.container}>
-        <InputField
+        <DatabaseAutocompleteInput
           label="Current Role"
           value={currentRole}
           onChangeText={setCurrentRole}
+          onSelect={handleRoleSelect}
+          searchType="occupations"
+          placeholder="e.g. Software Engineer, Student (optional)"
+          maxResults={6}
         />
-        <InputField
+        <DatabaseAutocompleteInput
           label="Current Company"
           value={currentCompany}
           onChangeText={setCurrentCompany}
+          onSelect={handleCompanySelect}
+          searchType="companies"
+          placeholder="e.g. Google, University of Oxford (optional)"
+          maxResults={6}
+          countryFilter="GB"
         />
       </View>
     </OnboardingPage>
