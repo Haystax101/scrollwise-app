@@ -71,7 +71,7 @@ const Insights = () => {
         .from('insight_saves')
         .select(`
           insights!insight_id(
-            id, content, created_at, likes_count, comments_count, views_count,
+            id, content, created_at, likes_count, comments_count, views_count, author_id,
             author:profiles!author_id(full_name)
           )
         `)
@@ -271,6 +271,16 @@ const Insights = () => {
           loading={loading}
           onInsightPress={handleInsightPress}
           onUnsavePress={handleUnsaveInsight}
+          onInsightUpdate={(updatedInsight) => {
+            setSavedInsights(prev => 
+              prev.map(insight => 
+                insight.id === updatedInsight.id ? {...insight, content: updatedInsight.content} : insight
+              )
+            );
+          }}
+          onInsightDelete={(insightId) => {
+            setSavedInsights(prev => prev.filter(insight => insight.id !== insightId));
+          }}
         />
       </ScrollView>
     </View>

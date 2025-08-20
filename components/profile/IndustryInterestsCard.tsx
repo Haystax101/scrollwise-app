@@ -200,7 +200,7 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
             <View key={index} style={styles.industryItem}>
               <View style={styles.industryHeader}>
                 <View style={styles.industryIcon}>
-                  <Feather name="building" size={16} color={colors.textTertiary} />
+                  <Feather name="home" size={16} color={colors.textTertiary} />
                 </View>
                 <Text style={styles.industryName}>{industry.name}</Text>
                 {industry.stage && (

@@ -52,9 +52,10 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const router = useRouter();
-  const [userXpDisplay, setUserXpDisplay] = useState<string>('0');
+  const [userVoltzDisplay, setUserVoltzDisplay] = useState<string>('0');
   const [userLevelDisplay, setUserLevelDisplay] = useState<string>('1');
-  const [userXp, setUserXp] = useState<number>(0);
+  const [totalVoltzEarned, setTotalVoltzEarned] = useState<number>(0);
+  const [spendableVoltz, setSpendableVoltz] = useState<number>(0);
   const [userLevel, setUserLevel] = useState<number>(1);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [profileDetails, setProfileDetails] = useState<{
@@ -115,7 +116,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       // Fetch profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('full_name, email, created_at, xp, level, avatar_url')
+        .select('full_name, email, created_at, total_voltz_earned, spendable_voltz, level, avatar_url')
         .eq('id', currentUser.id)
         .single();
 
@@ -123,11 +124,13 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
         console.error('Error fetching profile:', profileError);
       } else if (profileData) {
         setFullName(profileData.full_name || defaultUserData.name);
-        const xp = profileData.xp ?? 0;
+        const totalVoltz = profileData.total_voltz_earned ?? 0;
+        const spendableVoltz = profileData.spendable_voltz ?? 0;
         const level = profileData.level ?? 1;
-        setUserXpDisplay(String(xp));
+        setUserVoltzDisplay(String(totalVoltz));
         setUserLevelDisplay(String(level));
-        setUserXp(xp);
+        setTotalVoltzEarned(totalVoltz);
+        setSpendableVoltz(spendableVoltz);
         setUserLevel(level);
         setAvatarUrl(profileData.avatar_url);
         setUserData((prev) => ({
@@ -384,25 +387,25 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
     contentContainer: {
       paddingBottom: 120,
     },
-    xpContainer: {
+    voltzContainer: {
       marginHorizontal: 16,
       marginTop: 20,
       backgroundColor: colors.card,
       padding: 20,
       borderRadius: 16,
     },
-    xpHeader: {
+    voltzHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: 12,
     },
-    xpTitle: {
+    voltzTitle: {
       fontSize: 18,
       fontWeight: '600',
       color: colors.text,
     },
-    xpText: {
+    voltzText: {
       fontSize: 14,
       color: colors.textSecondary,
     },
@@ -418,9 +421,15 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
       height: '100%',
       borderRadius: 4,
     },
-    totalXpText: {
+    totalVoltzText: {
       fontSize: 12,
       color: colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    spendableVoltzText: {
+      fontSize: 12,
+      color: colors.primary,
       textAlign: 'center',
       marginBottom: 16,
     },
@@ -621,17 +630,17 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
     );
   };
 
-  const renderXPProgress = () => {
-    const currentLevelXP = (userLevel - 1) * 20; // XP needed to reach current level
-    const nextLevelXP = userLevel * 20; // XP needed to reach next level
-    const progressInCurrentLevel = userXp - currentLevelXP;
+  const renderVoltzProgress = () => {
+    const currentLevelVoltz = (userLevel - 1) * 20; // Voltz needed to reach current level
+    const nextLevelVoltz = userLevel * 20; // Voltz needed to reach next level
+    const progressInCurrentLevel = totalVoltzEarned - currentLevelVoltz;
     const progressPercentage = (progressInCurrentLevel / 20) * 100;
 
     return (
-      <View style={dynamicStyles.xpContainer}>
-        <View style={dynamicStyles.xpHeader}>
-          <Text style={dynamicStyles.xpTitle}>Level {userLevel}</Text>
-          <Text style={dynamicStyles.xpText}>{progressInCurrentLevel}/20 XP</Text>
+      <View style={dynamicStyles.voltzContainer}>
+        <View style={dynamicStyles.voltzHeader}>
+          <Text style={dynamicStyles.voltzTitle}>Level {userLevel}</Text>
+          <Text style={dynamicStyles.voltzText}>{progressInCurrentLevel}/20 Voltz</Text>
         </View>
         
         <View style={dynamicStyles.progressBarContainer}>
@@ -646,7 +655,8 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
           </View>
         </View>
         
-        <Text style={dynamicStyles.totalXpText}>Total XP: {userXp}</Text>
+        <Text style={dynamicStyles.totalVoltzText}>Total Voltz Earned: {totalVoltzEarned}</Text>
+        <Text style={dynamicStyles.spendableVoltzText}>Available to Spend: {spendableVoltz} Voltz</Text>
         
         {/* Awards Section */}
         <View style={dynamicStyles.awardsSection}>
@@ -672,8 +682,8 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
     <View style={dynamicStyles.statsContainer}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <StatCard
-          title="XP"
-          value={userXpDisplay}
+          title="Voltz"
+          value={userVoltzDisplay}
           icon={<Feather name="star" size={24} color={colors.text} />}
           color="yellow"
         />
@@ -829,7 +839,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
     id: string;
     full_name: string;
     avatar_url: string | null;
-    xp: number;
+    total_voltz_earned: number;
     level: number;
     email: string;
     created_at: string;
@@ -839,10 +849,10 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
     goals: string;
   }
 
-  // Small inline component to render top-3 leaderboard by XP
+  // Small inline component to render top-3 leaderboard by Voltz
   const LeaderboardTop3: React.FC = () => {
     const { colors } = useTheme();
-    const [rows, setRows] = useState<Array<{ id: string; full_name: string; avatar_url: string | null; xp: number }>>([]);
+    const [rows, setRows] = useState<Array<{ id: string; full_name: string; avatar_url: string | null; total_voltz_earned: number }>>([]);
     const [loading, setLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
     const [userModalVisible, setUserModalVisible] = useState(false);
@@ -852,8 +862,8 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
         setLoading(true);
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, full_name, avatar_url, xp')
-          .order('xp', { ascending: false })
+          .select('id, full_name, avatar_url, total_voltz_earned')
+          .order('total_voltz_earned', { ascending: false })
           .limit(3);
         if (!error && data) setRows(data as any);
         setLoading(false);
@@ -866,7 +876,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
         // Fetch basic profile data
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('id, full_name, avatar_url, xp, level, email, created_at')
+          .select('id, full_name, avatar_url, total_voltz_earned, level, email, created_at')
           .eq('id', userId)
           .single();
 
@@ -948,7 +958,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
               <Text style={{ width: 24, color: colors.text }}>{idx + 1}.</Text>
               <Image source={{ uri: r.avatar_url || 'https://i.pravatar.cc/40' }} style={{ width: 28, height: 28, borderRadius: 14, marginRight: 8 }} />
               <Text style={{ flex: 1, color: colors.text }}>{r.full_name}</Text>
-              <Text style={{ color: colors.textSecondary }}>{r.xp} XP</Text>
+              <Text style={{ color: colors.textSecondary }}>{r.total_voltz_earned} Voltz</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -981,7 +991,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
                       {selectedUser.full_name}
                     </Text>
                     <Text style={{ color: colors.textSecondary, marginBottom: 8 }}>
-                      Level {selectedUser.level} • {selectedUser.xp} XP
+                      Level {selectedUser.level} • {selectedUser.total_voltz_earned} Voltz
                     </Text>
                     <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
                       Joined {new Date(selectedUser.created_at).toLocaleDateString()}
@@ -1086,7 +1096,7 @@ export const Profile: React.FC<ProfileProps> = ({ user: userProp, navigateTo, si
           <Text style={dynamicStyles.userName}>{fullName}</Text>
           <Text style={dynamicStyles.userEmail}>{userData.email}</Text>
         </LinearGradient>
-        {renderXPProgress()}
+        {renderVoltzProgress()}
         {renderStats()}
         <View style={dynamicStyles.savedCard}>
           <Text style={dynamicStyles.savedTitle}>Leaderboard (Top 3)</Text>

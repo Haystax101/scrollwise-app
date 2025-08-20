@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { formatNumber } from '../../lib/utils';
+import { supabase } from '../../lib/supabase';
+import { InsightOptionsModal } from './InsightOptionsModal';
+import { EditInsightModal } from './EditInsightModal';
 
 interface SavedInsight {
   id: string;
@@ -11,6 +15,7 @@ interface SavedInsight {
   likes_count: number;
   comments_count: number;
   views_count: number;
+  author_id?: string;
   author?: {
     full_name: string;
   };
@@ -21,15 +26,23 @@ interface SavedInsightsListProps {
   loading?: boolean;
   onInsightPress?: (insight: SavedInsight) => void;
   onUnsavePress?: (insight: SavedInsight) => void;
+  onInsightUpdate?: (insight: SavedInsight) => void;
+  onInsightDelete?: (insightId: string) => void;
 }
 
 export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
   savedInsights,
   loading = false,
   onInsightPress,
-  onUnsavePress
+  onUnsavePress,
+  onInsightUpdate,
+  onInsightDelete
 }) => {
   const { colors, isDark } = useTheme();
+  const { user } = useAuth();
+  const [optionsModalVisible, setOptionsModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedInsight, setSelectedInsight] = useState<SavedInsight | null>(null);
 
   
 
@@ -61,6 +74,54 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
     const firstSentence = content.split('.')[0];
     if (firstSentence.length <= maxLength) return firstSentence;
     return content.substring(0, maxLength) + '...';
+  };
+
+  const handleOptionsPress = (insight: SavedInsight) => {
+    setSelectedInsight(insight);
+    setOptionsModalVisible(true);
+  };
+
+  const handleEditPress = () => {
+    setOptionsModalVisible(false);
+    if (selectedInsight) {
+      setEditModalVisible(true);
+    }
+  };
+
+  const handleDeletePress = async () => {
+    if (!selectedInsight) return;
+    
+    try {
+      const { error } = await supabase
+        .from('insights')
+        .delete()
+        .eq('id', selectedInsight.id);
+
+      if (error) throw error;
+
+      onInsightDelete?.(selectedInsight.id);
+      setOptionsModalVisible(false);
+      setSelectedInsight(null);
+    } catch (error) {
+      console.error('Error deleting insight:', error);
+    }
+  };
+
+  const handleUnsavePress = (insight: SavedInsight) => {
+    onUnsavePress?.(insight);
+    setOptionsModalVisible(false);
+  };
+
+  const handleEditSave = (newContent: string) => {
+    if (selectedInsight && onInsightUpdate) {
+      const updatedInsight = { ...selectedInsight, content: newContent };
+      onInsightUpdate(updatedInsight);
+      setSelectedInsight(null);
+    }
+  };
+
+  const isOwner = (insight: SavedInsight): boolean => {
+    return !!(user && insight.author_id && user.id === insight.author_id);
   };
 
   const styles = StyleSheet.create({
@@ -193,6 +254,10 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
       color: 'white',
       fontWeight: '500',
     },
+    optionsButton: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
   });
 
   if (loading) {
@@ -222,12 +287,13 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
   }
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.scrollContent}
-      style={styles.container}
-    >
+    <>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        style={styles.container}
+      >
       {savedInsights.map((insight) => (
         <TouchableOpacity
           key={insight.id}
@@ -296,15 +362,43 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
               </View>
               
               <TouchableOpacity 
-                style={styles.unsaveButton}
-                onPress={() => onUnsavePress?.(insight)}
+                style={styles.optionsButton}
+                onPress={() => handleOptionsPress(insight)}
               >
-                <Text style={styles.unsaveButtonText}>Unsave</Text>
+                <Feather name="more-horizontal" size={16} color={colors.text} />
               </TouchableOpacity>
             </View>
           </View>
         </TouchableOpacity>
       ))}
-    </ScrollView>
+      </ScrollView>
+      
+      {/* Options Modal */}
+      <InsightOptionsModal
+        visible={optionsModalVisible}
+        onClose={() => {
+          setOptionsModalVisible(false);
+          setSelectedInsight(null);
+        }}
+        onEdit={handleEditPress}
+        onDelete={handleDeletePress}
+        onUnsave={() => selectedInsight && handleUnsavePress(selectedInsight)}
+        isOwner={selectedInsight ? isOwner(selectedInsight) : false}
+      />
+
+      {/* Edit Modal */}
+      {selectedInsight && (
+        <EditInsightModal
+          visible={editModalVisible}
+          onClose={() => {
+            setEditModalVisible(false);
+            setSelectedInsight(null);
+          }}
+          onSave={handleEditSave}
+          initialContent={selectedInsight.content}
+          insightId={selectedInsight.id}
+        />
+      )}
+    </>
   );
 };

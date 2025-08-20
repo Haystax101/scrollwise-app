@@ -5,21 +5,21 @@ import { useTheme } from '../../context/ThemeContext';
 
 interface LevelProgressCardProps {
   level: number;
-  currentXp: number;
+  currentVoltz: number;
   spendableVoltz?: number;
 }
 
 export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
   level,
-  currentXp,
+  currentVoltz,
   spendableVoltz = 0
 }) => {
   const { colors, isDark } = useTheme();
 
-  // Calculate progress within current level (each level requires 20 XP)
-  const currentLevelXP = (level - 1) * 20;
-  const nextLevelXP = level * 20;
-  const progressInCurrentLevel = currentXp - currentLevelXP;
+  // Calculate progress within current level (each level requires 20 Voltz)
+  const currentLevelVoltz = (level - 1) * 20;
+  const nextLevelVoltz = level * 20;
+  const progressInCurrentLevel = currentVoltz - currentLevelVoltz;
   const progressPercentage = Math.min((progressInCurrentLevel / 20) * 100, 100);
 
   const styles = StyleSheet.create({
@@ -117,7 +117,7 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
       color: colors.text,
       zIndex: 2,
     },
-    totalXpText: {
+    totalVoltzText: {
       fontSize: 12,
       color: colors.textSecondary,
       textAlign: 'center',
@@ -168,7 +168,7 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
         </Text>
       </View>
 
-      <Text style={styles.totalXpText}>Total XP: {currentXp.toLocaleString()}</Text>
+      <Text style={styles.totalVoltzText}>Total Voltz Earned: {currentVoltz.toLocaleString()}</Text>
     </View>
   );
 };

@@ -63,11 +63,16 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
     statItem: {
       alignItems: 'center',
       flex: 1,
+      minHeight: 100, // Fixed minimum height for all pills
+      justifyContent: 'space-between', // Distribute content evenly
     },
     iconContainer: {
-      padding: 12,
+      width: 50,
+      height: 50,
       borderRadius: 25,
       marginBottom: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
       shadowColor: '#000',
       shadowOffset: {
         width: 0,

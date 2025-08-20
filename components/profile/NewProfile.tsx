@@ -15,6 +15,7 @@ import { AchievementsBelt } from './AchievementsBelt';
 import { CareerGoalCard } from './CareerGoalCard';
 import { IndustryInterestsCard } from './IndustryInterestsCard';
 import { ProfileCustomizationSections } from './ProfileCustomizationSections';
+import { IndustrySelectionPage } from './IndustrySelectionPage';
 
 interface NewProfileProps {
   user: any; // Supabase user
@@ -62,9 +63,8 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   // Core profile data
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [fullName, setFullName] = useState<string>('');
-  const [bio, setBio] = useState<string>('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [userXp, setUserXp] = useState<number>(0);
+  const [totalVoltzEarned, setTotalVoltzEarned] = useState<number>(0);
   const [userLevel, setUserLevel] = useState<number>(1);
   const [spendableVoltz, setSpendableVoltz] = useState<number>(0);
   
@@ -82,6 +82,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   // UI states
   const [loading, setLoading] = useState(true);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
+  const [showIndustrySelection, setShowIndustrySelection] = useState(false);
 
   // Get current user
   useEffect(() => {
@@ -101,7 +102,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       // Fetch basic profile info
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('full_name, email, created_at, xp, level, avatar_url, bio, spendable_voltz')
+        .select('full_name, email, created_at, total_voltz_earned, level, avatar_url, spendable_voltz')
         .eq('id', currentUser.id)
         .single();
 
@@ -109,9 +110,8 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         console.error('Error fetching profile:', profileError);
       } else if (profileData) {
         setFullName(profileData.full_name || '');
-        setBio(profileData.bio || '');
         setAvatarUrl(profileData.avatar_url);
-        setUserXp(profileData.xp ?? 0);
+        setTotalVoltzEarned(profileData.total_voltz_earned ?? 0);
         setUserLevel(profileData.level ?? 1);
         setSpendableVoltz(profileData.spendable_voltz ?? 0);
       }
@@ -268,9 +268,6 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     }
   };
 
-  const handleEditProfile = () => {
-    setIsSettingsModalVisible(true);
-  };
 
   const handleEditCareerGoal = () => {
     // Open career goal edit modal
@@ -278,8 +275,17 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   };
 
   const handleEditIndustries = () => {
-    // Open industries edit modal  
-    console.log('Edit industries');
+    setShowIndustrySelection(true);
+  };
+
+  const handleIndustrySave = async (selectedIndustries: any[]) => {
+    // Update local state
+    const formattedIndustries = selectedIndustries.map(industry => ({
+      name: industry.name,
+      stage: 'interested'
+    }));
+    setIndustries(formattedIndustries);
+    setShowIndustrySelection(false);
   };
 
   const handleProfileDataUpdate = (newData: ProfileData) => {
@@ -311,37 +317,48 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     },
   });
 
+  // Show industry selection page if active
+  if (showIndustrySelection) {
+    return (
+      <IndustrySelectionPage
+        onBack={() => setShowIndustrySelection(false)}
+        onSave={handleIndustrySave}
+        initialIndustries={industries.map(industry => ({
+          id: industry.name, // We'll need to map this properly
+          name: industry.name
+        }))}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#4F46E5', '#8B5CF6']}
-        style={styles.gradientHeader}
-      >
-        <TouchableOpacity 
-          style={styles.settingsButton} 
-          onPress={() => setIsSettingsModalVisible(true)}
-        >
-          <Feather name="settings" size={24} color="white" />
-        </TouchableOpacity>
-        
-        <NewProfileHeader
-          fullName={fullName}
-          bio={bio}
-          avatarUrl={avatarUrl}
-          userId={currentUser?.id}
-          onEditPress={handleEditProfile}
-          onAvatarPress={handleAvatarPress}
-        />
-      </LinearGradient>
-
       <ScrollView 
         style={styles.scrollContainer}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        <LinearGradient
+          colors={['#4F46E5', '#8B5CF6']}
+          style={styles.gradientHeader}
+        >
+          <TouchableOpacity 
+            style={styles.settingsButton} 
+            onPress={() => setIsSettingsModalVisible(true)}
+          >
+            <Feather name="settings" size={24} color="white" />
+          </TouchableOpacity>
+          
+          <NewProfileHeader
+            fullName={fullName}
+            avatarUrl={avatarUrl}
+            userId={currentUser?.id}
+            onAvatarPress={handleAvatarPress}
+          />
+        </LinearGradient>
         <LevelProgressCard
           level={userLevel}
-          currentXp={userXp}
+          currentVoltz={totalVoltzEarned}
           spendableVoltz={spendableVoltz}
         />
 

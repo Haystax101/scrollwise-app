@@ -211,7 +211,7 @@ export const CareerGoalCard: React.FC<CareerGoalCardProps> = ({
             <View style={styles.companiesContainer}>
               <View style={styles.goalRow}>
                 <View style={styles.goalIcon}>
-                  <Feather name="building" size={16} color={colors.textTertiary} />
+                  <Feather name="home" size={16} color={colors.textTertiary} />
                 </View>
                 <Text style={styles.goalLabel}>Target Companies:</Text>
               </View>

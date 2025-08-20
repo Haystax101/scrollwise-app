@@ -28,7 +28,7 @@ interface UserProfile {
   id: string;
   full_name: string;
   avatar_url: string | null;
-  xp: number;
+  total_voltz_earned: number;
   level: number;
   email: string;
   created_at: string;
@@ -586,7 +586,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       // Fetch basic profile data
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('id, full_name, avatar_url, xp, level, email, created_at')
+        .select('id, full_name, avatar_url, total_voltz_earned, level, email, created_at')
         .eq('id', userId)
         .single();
 
@@ -850,7 +850,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
                     {selectedUser.full_name}
                   </Text>
                   <Text style={{ color: colors.textSecondary, marginBottom: 8 }}>
-                    Level {selectedUser.level} • {selectedUser.xp} XP
+                    Level {selectedUser.level} • {selectedUser.total_voltz_earned} Voltz
                   </Text>
                   <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
                     Joined {new Date(selectedUser.created_at).toLocaleDateString()}

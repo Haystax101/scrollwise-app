@@ -386,7 +386,7 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
                 <Text style={styles.workPeriod}>{exp.period || 'Period'}</Text>
               </View>
               <View style={styles.workCompany}>
-                <Feather name="building" size={14} color={colors.textSecondary} />
+                <Feather name="home" size={14} color={colors.textSecondary} />
                 <Text style={[styles.workCompany, { marginLeft: 4, marginBottom: 0 }]}>
                   {exp.company || 'Company'}
                 </Text>

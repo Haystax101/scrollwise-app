@@ -25,7 +25,7 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
   const getIconName = (iconName: string): keyof typeof Feather.glyphMap => {
     const iconMap: Record<string, keyof typeof Feather.glyphMap> = {
       'lightbulb': 'lightbulb',
-      'trophy': 'trophy',
+      'trophy': 'award',
       'award': 'award',
       'zap': 'zap',
       'target': 'target',
@@ -140,7 +140,7 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerIcon}>
-            <Feather name="trophy" size={20} color={colors.primary} />
+            <Feather name="award" size={20} color={colors.primary} />
           </View>
           <Text style={styles.title}>Achievements</Text>
         </View>
@@ -156,7 +156,7 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerIcon}>
-            <Feather name="trophy" size={20} color={colors.primary} />
+            <Feather name="award" size={20} color={colors.primary} />
           </View>
           <Text style={styles.title}>Achievements</Text>
         </View>
@@ -177,7 +177,7 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerIcon}>
-          <Feather name="trophy" size={20} color={colors.primary} />
+          <Feather name="award" size={20} color={colors.primary} />
         </View>
         <Text style={styles.title}>Achievements</Text>
       </View>
