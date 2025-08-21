@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Header } from '../components/Header';
 import { useRouter, usePathname } from 'expo-router';
@@ -8,6 +8,7 @@ export default function AppHeader() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const previousTabIndex = useRef<number>(0);
 
   if (loading) {
     return null;

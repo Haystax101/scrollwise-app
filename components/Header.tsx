@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useDirectionalNavigation } from '../context/NavigationContext';
 
 type ScreenName = 'home' | 'discover' | 'profile' | 'chats' | 'saved-feed';
 
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
 
 export const Header: React.FC<HeaderProps> = ({ currentScreen, navigateTo }) => {
   const { colors } = useTheme();
+  const { navigateWithDirection } = useDirectionalNavigation();
 
   const dynamicStyles = StyleSheet.create({
     header: {
@@ -54,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ currentScreen, navigateTo }) => 
           return (
             <TouchableOpacity
               key={item.screenName}
-              onPress={() => navigateTo(item.path)}
+              onPress={() => navigateWithDirection(item.path)}
               style={styles.navItem}
               accessibilityLabel={item.accessibilityLabel}
               accessibilityRole="button"
