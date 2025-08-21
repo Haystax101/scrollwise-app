@@ -17,6 +17,7 @@ import { IndustryInterestsCard } from './IndustryInterestsCard';
 import { ProfileCustomizationSections } from './ProfileCustomizationSections';
 import { IndustrySelectionPage } from './IndustrySelectionPage';
 import { PhotoUploadModal } from './PhotoUploadModal';
+import { CareerGoalEditModal } from './CareerGoalEditModal';
 
 interface NewProfileProps {
   user: any; // Supabase user
@@ -39,6 +40,7 @@ interface CareerGoal {
 }
 
 interface Industry {
+  id?: string;
   name: string;
   stage?: string;
 }
@@ -103,6 +105,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [showIndustrySelection, setShowIndustrySelection] = useState(false);
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
+  const [showCareerGoalModal, setShowCareerGoalModal] = useState(false);
 
   // Get current user
   useEffect(() => {
@@ -164,16 +167,17 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         });
       }
 
-      // Fetch industries
+      // Fetch industries with IDs
       const { data: industriesData, error: industriesError } = await supabase
         .from('user_industries')
-        .select('industries (name), stage')
+        .select('industries (id, name), stage')
         .eq('user_id', currentUser.id);
 
       if (industriesError) {
         console.error('Error fetching industries:', industriesError);
       } else {
         const formattedIndustries = (industriesData || []).map((ui: any) => ({
+          id: ui.industries.id,
           name: ui.industries.name,
           stage: ui.stage
         }));
@@ -235,11 +239,11 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           .from('user_education')
           .select(`
             degree_name,
-            major,
+            university_name,
+            field_of_study,
             start_date,
             end_date,
-            graduation_status,
-            universities (name)
+            is_current
           `)
           .eq('user_id', currentUser.id)
           .order('start_date', { ascending: false }),
@@ -289,10 +293,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         console.error('Error fetching education:', educationRes.error);
       } else {
         sectionMap.education = (educationRes.data || []).map((edu: any) => ({
-          degree: edu.degree_name,
-          university: edu.universities?.name || 'Unknown Institution',
-          stage: edu.major,
-          period: formatDatePeriod(edu.start_date, edu.end_date, edu.graduation_status === 'in_progress')
+          degree: `${edu.degree_name}${edu.field_of_study ? ` ${edu.field_of_study}` : ''}`,
+          university: edu.university_name || 'Unknown Institution',
+          stage: edu.field_of_study,
+          period: formatDatePeriod(edu.start_date, edu.end_date, edu.is_current)
         }));
       }
       
@@ -331,8 +335,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
 
   const handleEditCareerGoal = () => {
-    // Open career goal edit modal
-    console.log('Edit career goal');
+    setShowCareerGoalModal(true);
+  };
+
+  const handleCareerGoalSave = (goalData: CareerGoal) => {
+    setCareerGoal(goalData);
+    // Refresh profile data to ensure consistency
+    fetchProfileData();
   };
 
   const handleEditIndustries = () => {
@@ -385,7 +394,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         onBack={() => setShowIndustrySelection(false)}
         onSave={handleIndustrySave}
         initialIndustries={industries.map(industry => ({
-          id: industry.name, // We'll need to map this properly
+          id: industry.id || industry.name,
           name: industry.name
         }))}
       />
@@ -449,6 +458,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           profileData={profileData}
           userId={currentUser?.id || ''}
           onDataUpdate={handleProfileDataUpdate}
+          onRefresh={fetchProfileData}
           loading={loading}
         />
       </ScrollView>
@@ -464,6 +474,14 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         visible={showPhotoUpload}
         onClose={() => setShowPhotoUpload(false)}
         onImageUploaded={handlePhotoUploaded}
+        userId={currentUser?.id || ''}
+      />
+
+      <CareerGoalEditModal
+        visible={showCareerGoalModal}
+        onClose={() => setShowCareerGoalModal(false)}
+        onSave={handleCareerGoalSave}
+        currentGoal={careerGoal}
         userId={currentUser?.id || ''}
       />
     </View>

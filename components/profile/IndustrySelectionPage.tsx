@@ -14,6 +14,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { getIndustryIcon, getIndustryColor } from '../../utils/industryIcons';
 
 interface Industry {
   id: string;
@@ -28,21 +29,7 @@ interface IndustrySelectionPageProps {
 }
 
 const getIndustryIconColor = (industryName: string, isSelected: boolean): string => {
-  if (isSelected) return '#F59E0B'; // Yellow when selected
-  
-  const colorMap: { [key: string]: string } = {
-    'Finance and Economics': '#3B82F6',      // Blue
-    'Politics, Law and International Relations': '#8B5CF6',      // Purple
-    'Entrepreneurship and Startups': '#EF4444', // Red
-    'Technology and AI': '#10B981',    // Green
-    'Energy, Sustainability and Climate Innovation': '#22C55E',        // Green (climate)
-    'Creative Industries and the Arts': '#F59E0B',      // Yellow/Orange
-    'Engineering and Automotive': '#6B7280',   // Gray
-    'Medicine and Healthcare': '#EC4899',    // Pink
-    'Education': '#F97316',     // Orange
-  };
-  
-  return colorMap[industryName] || '#F59E0B';
+  return getIndustryColor(industryName, isSelected);
 };
 
 export const IndustrySelectionPage: React.FC<IndustrySelectionPageProps> = ({
@@ -67,7 +54,9 @@ export const IndustrySelectionPage: React.FC<IndustrySelectionPageProps> = ({
       const { data, error } = await supabase
         .from('industries')
         .select('id, name, category')
-        .order('is_popular DESC, category, name');
+        .order('is_popular', { ascending: false })
+        .order('category')
+        .order('name');
 
       if (error) throw error;
       setAvailableIndustries(data || []);
@@ -194,7 +183,7 @@ export const IndustrySelectionPage: React.FC<IndustrySelectionPageProps> = ({
     },
     industriesContainer: {
       paddingHorizontal: 20,
-      paddingBottom: 20,
+      paddingBottom: 100, // Increased to clear tab navigation bar
     },
     industryItem: {
       flexDirection: 'row',
@@ -314,7 +303,7 @@ export const IndustrySelectionPage: React.FC<IndustrySelectionPageProps> = ({
                     isSelected && styles.industryIconSelected
                   ]}>
                     <Ionicons 
-                      name={industry.icon_name as any || 'business-outline'} 
+                      name={getIndustryIcon(industry.name) as any} 
                       size={20} 
                       color={getIndustryIconColor(industry.name, isSelected)} 
                     />

@@ -165,7 +165,8 @@ export const InsightsPublisher: React.FC<InsightsPublisherProps> = ({ onComplete
       alignSelf: 'center',
       width: '100%',
       paddingHorizontal: spacing.lg,
-      paddingTop: spacing.xl,
+      paddingTop: 50,
+
     },
   });
 

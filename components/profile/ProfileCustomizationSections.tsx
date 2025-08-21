@@ -49,6 +49,7 @@ interface ProfileCustomizationSectionsProps {
   profileData: ProfileData;
   userId: string;
   onDataUpdate: (data: ProfileData) => void;
+  onRefresh?: () => Promise<void>;
   loading?: boolean;
 }
 
@@ -80,6 +81,7 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
   profileData,
   userId,
   onDataUpdate,
+  onRefresh,
   loading = false
 }) => {
   const { colors, isDark } = useTheme();
@@ -245,10 +247,20 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
     };
     
     // Insert new experience
-    await supabase.from('user_experiences').insert(experienceData);
+    const { error } = await supabase.from('user_experiences').insert(experienceData);
     
-    // Refresh profile data by calling parent refresh
-    window.location.reload(); // Simple refresh for now
+    if (error) {
+      throw error;
+    }
+    
+    // Clear the form and close editing mode
+    setStructuredData({});
+    setEditingSection(null);
+    
+    // Refresh the profile data to show the new experience
+    if (onRefresh) {
+      await onRefresh();
+    }
   };
   
   const handleSaveEducation = async () => {
@@ -257,39 +269,31 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
       return;
     }
     
-    // Find or create university
-    let universityId;
-    const { data: existingUniversity } = await supabase
-      .from('universities')
-      .select('id')
-      .ilike('name', structuredData.universityName)
-      .single();
-    
-    if (existingUniversity) {
-      universityId = existingUniversity.id;
-    } else {
-      const { data: newUniversity, error: universityError } = await supabase
-        .from('universities')
-        .insert({ name: structuredData.universityName })
-        .select('id')
-        .single();
-      
-      if (universityError) throw universityError;
-      universityId = newUniversity.id;
-    }
-    
+    // Simplified: store degree and university as text fields
     const educationData = {
       user_id: userId,
       degree_name: structuredData.degreeName,
-      university_id: universityId,
+      university_name: structuredData.universityName,
       field_of_study: structuredData.fieldOfStudy || null,
       start_date: structuredData.startDate || null,
       end_date: structuredData.isCurrent ? null : structuredData.endDate,
       is_current: structuredData.isCurrent || false
     };
     
-    await supabase.from('user_education').insert(educationData);
-    window.location.reload(); // Simple refresh for now
+    const { error } = await supabase.from('user_education').insert(educationData);
+    
+    if (error) {
+      throw error;
+    }
+    
+    // Clear the form and close editing mode
+    setStructuredData({});
+    setEditingSection(null);
+    
+    // Refresh the profile data to show the new education
+    if (onRefresh) {
+      await onRefresh();
+    }
   };
   
   const handleSaveProject = async () => {
@@ -307,8 +311,20 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
       status: structuredData.projectStatus || 'completed'
     };
     
-    await supabase.from('user_projects').insert(projectData);
-    window.location.reload(); // Simple refresh for now
+    const { error } = await supabase.from('user_projects').insert(projectData);
+    
+    if (error) {
+      throw error;
+    }
+    
+    // Clear the form and close editing mode
+    setStructuredData({});
+    setEditingSection(null);
+    
+    // Refresh the profile data to show the new project
+    if (onRefresh) {
+      await onRefresh();
+    }
   };
 
   const handleCancelEdit = () => {

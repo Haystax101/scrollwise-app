@@ -102,7 +102,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       }
       
       // Load additional articles from algorithm
-      const algorithmArticles = await feedAlgorithmRef.current.fetchArticles(3);
+      const algorithmArticles = await feedAlgorithmRef.current.fetchArticles(2);
       
       // Fetch insights from other users
       if (user) {
@@ -208,11 +208,11 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     if (!feedAlgorithmRef.current || isLoadingMore || !hasMore) return;
     
     try {
-      const newArticles = await feedAlgorithmRef.current.fetchArticles(7); // Prefetch 7 more to total 10
+      const newArticles = await feedAlgorithmRef.current.fetchArticles(5); // Prefetch 5 more for better performance
       
       if (newArticles.length > 0) {
         setArticles(prev => [...prev, ...newArticles]);
-        setHasMore(newArticles.length === 7); // If we got less than 7, probably no more
+        setHasMore(newArticles.length === 5); // If we got less than 5, probably no more
       } else {
         setHasMore(false);
       }
@@ -227,19 +227,88 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     
     setIsLoadingMore(true);
     try {
-      const newArticles = await feedAlgorithmRef.current.fetchArticles(8); // Load 8 more for smooth scrolling
+      // Try to fetch from the main algorithm first
+      let newArticles = await feedAlgorithmRef.current.fetchArticles(5);
+      
+      // If algorithm returns fewer items, fetch fallback content
+      if (newArticles.length < 5 && newArticles.length > 0) {
+        const fallbackArticles = await fetchFallbackContent(5 - newArticles.length);
+        newArticles = [...newArticles, ...fallbackArticles];
+      }
+      
+      // If still no content, fetch older content or from different time periods
+      if (newArticles.length === 0) {
+        const olderContent = await fetchOlderContent(5);
+        newArticles = olderContent;
+      }
       
       if (newArticles.length > 0) {
         setArticles(prev => [...prev, ...newArticles]);
-        setHasMore(newArticles.length === 8); // If we got less than 8, probably no more
+        // Keep loading as long as we get some content
+        setHasMore(newArticles.length >= 3);
       } else {
+        // Absolute fallback - show message and allow refresh
         setHasMore(false);
+        console.log('Reached end of available content');
       }
     } catch (error) {
       console.error('Error loading more articles:', error);
     }
     setIsLoadingMore(false);
   }, [isLoadingMore, hasMore]);
+
+  // Fallback content fetcher for when main algorithm runs out
+  const fetchFallbackContent = async (count: number): Promise<Article[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('articles')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(count * 2); // Get more for filtering
+
+      if (error || !data) return [];
+
+      // Filter out already fetched articles
+      const filteredData = data.filter(item => 
+        !articles.some(article => article.id === item.id)
+      );
+
+      return filteredData.slice(0, count).map(item => ({
+        ...item,
+        type: 'article' as const,
+        author: item.author || 'Content Team'
+      }));
+    } catch (error) {
+      console.error('Error fetching fallback content:', error);
+      return [];
+    }
+  };
+
+  // Fetch older content for ultimate fallback
+  const fetchOlderContent = async (count: number): Promise<Article[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('articles')
+        .select('*')
+        .order('views_count', { ascending: false }) // Popular content
+        .limit(count * 2);
+
+      if (error || !data) return [];
+
+      const filteredData = data.filter(item => 
+        !articles.some(article => article.id === item.id)
+      );
+
+      return filteredData.slice(0, count).map(item => ({
+        ...item,
+        type: 'article' as const,
+        author: item.author || 'Content Team'
+      }));
+    } catch (error) {
+      console.error('Error fetching older content:', error);
+      return [];
+    }
+  };
 
   // Pull to refresh - reset and load fresh feed (maintaining specific article if present)
   const handleRefresh = useCallback(async () => {

@@ -49,7 +49,7 @@ export const InsightsStatsOverview: React.FC<InsightsStatsOverviewProps> = ({
     },
     {
       icon: 'zap',
-      label: 'Voltz Points Earnt',
+      label: 'Voltz Earned',
       value: loading ? '...' : formatNumber(stats.voltzEarned),
       color: '#8B5CF6', // Purple
     },
@@ -74,16 +74,6 @@ export const InsightsStatsOverview: React.FC<InsightsStatsOverviewProps> = ({
       fontSize: 18,
       fontWeight: 'bold',
       color: colors.text,
-    },
-    analyticsButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    analyticsText: {
-      fontSize: 14,
-      color: colors.primary,
-      fontWeight: '500',
-      marginRight: 4,
     },
     statsGrid: {
       flexDirection: 'row',
@@ -143,19 +133,7 @@ export const InsightsStatsOverview: React.FC<InsightsStatsOverviewProps> = ({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Supercharged Stats</Text>
-        {onAnalyticsToggle && (
-          <TouchableOpacity style={styles.analyticsButton} onPress={onAnalyticsToggle}>
-            <Text style={styles.analyticsText}>
-              {showAnalytics ? 'Hide Analytics' : 'See Analytics'}
-            </Text>
-            <Feather 
-              name={showAnalytics ? 'chevron-up' : 'chevron-down'} 
-              size={16} 
-              color={colors.primary} 
-            />
-          </TouchableOpacity>
-        )}
-      </View>
+      </View> 
       
       <View style={styles.statsGrid}>
         {statItems.map((item, index) => (

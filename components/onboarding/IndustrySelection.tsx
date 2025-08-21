@@ -3,17 +3,18 @@ import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Tex
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { OnboardingStyles } from './styles';
+import { getIndustryIcon, getIndustryColor, LEGACY_INDUSTRY_MAPPING } from '../../utils/industryIcons';
 
 const industries = [
-  { id: 'finance', name: 'Finance and Economics', icon: 'briefcase-outline' },
-  { id: 'politics', name: 'Politics, Law and International Relations', icon: 'globe-outline' },
-  { id: 'entrepreneurship', name: 'Entrepreneurship and Startups', icon: 'rocket-outline' },
-  { id: 'technology', name: 'Technology and AI', icon: 'desktop-outline' },
-  { id: 'energy', name: 'Energy, Sustainability and Climate Innovation', icon: 'leaf-outline' },
-  { id: 'creative', name: 'Creative Industries and the Arts', icon: 'color-palette-outline' },
-  { id: 'engineering', name: 'Engineering and Automotive', icon: 'construct-outline' },
-  { id: 'healthcare', name: 'Medicine and Healthcare', icon: 'medkit-outline' },
-  { id: 'education', name: 'Education', icon: 'school-outline' },
+  { id: 'finance', name: 'Finance and Economics', icon: getIndustryIcon('finance') },
+  { id: 'politics', name: 'Politics, Law and International Relations', icon: getIndustryIcon('politics') },
+  { id: 'entrepreneurship', name: 'Entrepreneurship and Startups', icon: getIndustryIcon('entrepreneurship') },
+  { id: 'technology', name: 'Technology and AI', icon: getIndustryIcon('technology') },
+  { id: 'energy', name: 'Energy, Sustainability and Climate Innovation', icon: getIndustryIcon('energy') },
+  { id: 'creative', name: 'Creative Industries and the Arts', icon: getIndustryIcon('creative') },
+  { id: 'engineering', name: 'Engineering and Automotive', icon: getIndustryIcon('engineering') },
+  { id: 'healthcare', name: 'Medicine and Healthcare', icon: getIndustryIcon('healthcare') },
+  { id: 'education', name: 'Education', icon: getIndustryIcon('education') },
 ];
 
 interface IndustrySelectionProps {
@@ -21,21 +22,7 @@ interface IndustrySelectionProps {
 }
 
 const getIndustryIconColor = (industryId: string, isSelected: boolean): string => {
-  if (isSelected) return '#F59E0B'; // Yellow when selected
-  
-  const colorMap: { [key: string]: string } = {
-    'finance': '#3B82F6',      // Blue
-    'politics': '#8B5CF6',      // Purple
-    'entrepreneurship': '#EF4444', // Red
-    'technology': '#10B981',    // Green
-    'energy': '#22C55E',        // Green (climate)
-    'creative': '#F59E0B',      // Yellow/Orange
-    'engineering': '#6B7280',   // Gray
-    'healthcare': '#EC4899',    // Pink
-    'education': '#F97316',     // Orange
-  };
-  
-  return colorMap[industryId] || '#F59E0B';
+  return getIndustryColor(industryId, isSelected);
 };
 
 export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext }) => {

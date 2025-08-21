@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, TextInput, Text, StyleSheet, FlatList, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
+import { View, TextInput, Text, StyleSheet, ScrollView, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
 interface AutocompleteResult {
@@ -279,13 +279,14 @@ export const DatabaseAutocompleteInput: React.FC<DatabaseAutocompleteInputProps>
               <Text style={styles.loadingText}>Searching...</Text>
             </View>
           ) : (
-            <FlatList
-              data={results}
-              keyExtractor={(item) => item.id}
+            <ScrollView
               keyboardShouldPersistTaps="handled"
-              renderItem={renderResultItem}
               showsVerticalScrollIndicator={false}
-            />
+              nestedScrollEnabled={true}
+              style={styles.resultsScrollView}
+            >
+              {results.map((item) => renderResultItem({ item, index: results.indexOf(item) }))}
+            </ScrollView>
           )}
         </View>
       )}
@@ -345,6 +346,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 4,
+  },
+  resultsScrollView: {
+    maxHeight: 200,
   },
   dropdownItem: {
     padding: 12,

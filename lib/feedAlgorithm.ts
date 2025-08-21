@@ -193,13 +193,22 @@ export class FeedAlgorithm {
     const scoredContent: Array<FetchedContent & { score: number }> = [];
     
     try {
-      for (const industryId of this.userIndustries) {
+      // Calculate items per industry for round-robin distribution
+      const itemsPerIndustry = Math.ceil(targetCount / this.userIndustries.length);
+      
+      // Shuffle industries to prevent consistent ordering
+      const shuffledIndustries = this.shuffleArray([...this.userIndustries]);
+      
+      // Collect content from each industry
+      const industryContentMap = new Map<string, Array<FetchedContent & { score: number }>>();
+      
+      for (const industryId of shuffledIndustries) {
         const { data, error } = await supabase
           .from(tableName)
           .select('*')
           .eq('industry_id', industryId)
           .order('created_at', { ascending: false })
-          .limit(20); // Get more options for better scoring
+          .limit(itemsPerIndustry * 2); // Get more options for better selection
 
         if (error || !data) continue;
 
@@ -215,19 +224,31 @@ export class FeedAlgorithm {
           return true;
         });
 
-        for (const item of filteredData) {
-          const score = this.calculateTimeScore(item);
-          scoredContent.push({
-            ...item,
-            type: contentType,
-            score
-          });
+        const industryContent = filteredData.map(item => ({
+          ...item,
+          type: contentType,
+          score: this.calculateTimeScore(item)
+        }));
+
+        // Sort by score and take the best items from this industry
+        industryContent.sort((a, b) => b.score - a.score);
+        industryContentMap.set(industryId, industryContent.slice(0, itemsPerIndustry));
+      }
+
+      // Round-robin selection to ensure content diversity
+      const maxItemsPerIndustry = Math.max(...Array.from(industryContentMap.values()).map(arr => arr.length));
+      
+      for (let i = 0; i < maxItemsPerIndustry && scoredContent.length < targetCount; i++) {
+        for (const industryId of shuffledIndustries) {
+          const industryContent = industryContentMap.get(industryId);
+          if (industryContent && industryContent[i] && scoredContent.length < targetCount) {
+            scoredContent.push(industryContent[i]);
+          }
         }
       }
 
-      // Sort by score and return top items
-      scoredContent.sort((a, b) => b.score - a.score);
-      return scoredContent.slice(0, targetCount);
+      // Final shuffle to prevent predictable patterns
+      return this.shuffleArray(scoredContent);
     } catch (error) {
       console.error('Error in fetchContentWithTimeScoring:', error);
       return [];
@@ -446,16 +467,19 @@ export class FeedAlgorithm {
         .from(tableName)
         .select('*')
         .eq('id', contentId)
-        .single();
+        .limit(1);
 
       if (error) {
         console.error('Database error in fetchSpecificContent:', error);
         return null;
       }
 
-      if (!data) {
+      if (!data || data.length === 0) {
+        console.log(`No content found with ID ${contentId} in ${tableName}`);
         return null;
       }
+      
+      const contentItem = data[0]; // Get first (and should be only) item
 
       // Ensure interaction counters are accurate on first load by reading from join tables
       const likesTable = contentType === 'paper' ? 'paper_likes' : contentType === 'book' ? 'book_likes' : 'article_likes';
@@ -469,12 +493,12 @@ export class FeedAlgorithm {
         supabase.from(commentsTable).select('*', { count: 'exact', head: true }).eq(idField, contentId),
       ]);
 
-      const safeLikes = (likesCountRes.count as number | null) ?? data.likes_count ?? 0;
-      const safeSaves = (savesCountRes.count as number | null) ?? data.saves_count ?? 0;
-      const safeComments = (commentsCountRes.count as number | null) ?? data.comments_count ?? 0;
+      const safeLikes = (likesCountRes.count as number | null) ?? contentItem.likes_count ?? 0;
+      const safeSaves = (savesCountRes.count as number | null) ?? contentItem.saves_count ?? 0;
+      const safeComments = (commentsCountRes.count as number | null) ?? contentItem.comments_count ?? 0;
 
       const hydratedData = {
-        ...data,
+        ...contentItem,
         likes_count: safeLikes,
         saves_count: safeSaves,
         comments_count: safeComments,
@@ -486,7 +510,7 @@ export class FeedAlgorithm {
       }
       
       // Add to fetched IDs to avoid duplicates in regular feed
-      this.fetchedIds.add(data.id);
+      this.fetchedIds.add(contentItem.id);
       
       // Convert to FeedItem format
       const feedItem = this.mapToFeedItem({

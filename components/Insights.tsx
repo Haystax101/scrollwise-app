@@ -245,9 +245,6 @@ const Insights = () => {
         {/* My Insights Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>My Insights</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllButton}>See All</Text>
-          </TouchableOpacity>
         </View>
         
         <InsightsCardsList
@@ -261,9 +258,6 @@ const Insights = () => {
         {/* Saved Insights Section */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Saved Insights</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllButton}>See All</Text>
-          </TouchableOpacity>
         </View>
         
         <SavedInsightsList
