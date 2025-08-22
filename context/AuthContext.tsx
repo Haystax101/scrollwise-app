@@ -1,6 +1,9 @@
 // context/AuthContext.tsx
 
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
+import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from '../lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 
@@ -48,16 +51,75 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     fetchSession();
 
+    // Handle deep links for email verification
+    const handleDeepLink = async (url: string) => {
+      console.log('AuthContext: Received deep link:', url);
+      
+      try {
+        // Parse the URL to extract tokens
+        const parsedUrl = new URL(url);
+        const fragment = parsedUrl.hash.substring(1); // Remove the '#'
+        const params = new URLSearchParams(fragment);
+        
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+        const type = params.get('type');
+        
+        console.log('AuthContext: Parsed URL params:', { access_token: !!access_token, refresh_token: !!refresh_token, type });
+        
+        if (type === 'signup' && access_token && refresh_token) {
+          console.log('AuthContext: Email verification tokens found, creating session...');
+          
+          // Set the session using the tokens from the email link
+          const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+          
+          if (error) {
+            console.error('AuthContext: Error creating session from email verification:', error);
+            return;
+          }
+          
+          if (data.session) {
+            console.log('AuthContext: Email verification successful, user is now logged in');
+            setSession(data.session);
+            setUser(data.session.user);
+          }
+        }
+      } catch (error) {
+        console.error('AuthContext: Error parsing deep link URL:', error);
+      }
+    };
+
+    // Listen for incoming deep links
+    const handleInitialURL = async () => {
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) {
+        console.log('AuthContext: Initial URL found:', initialUrl);
+        handleDeepLink(initialUrl);
+      }
+    };
+
+    // Handle URL when app is already running
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      console.log('AuthContext: App opened with URL:', url);
+      handleDeepLink(url);
+    });
+
+    handleInitialURL();
+
     // Listen for changes in authentication state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('AuthContext: Auth state changed:', event, session ? 'User logged in' : 'User logged out');
       setSession(session);
       setUser(session?.user ?? null);
     });
 
-    // Cleanup the subscription when the component unmounts
+    // Cleanup the subscriptions when the component unmounts
     return () => {
-      subscription.unsubscribe();
+      subscription?.remove();
+      authSubscription.unsubscribe();
     };
   }, []);
 

@@ -10,7 +10,12 @@ interface NewOnboardingProps {
 }
 
 const NewOnboarding: React.FC<NewOnboardingProps> = ({ onComplete, onSignIn, tutorialOnly, refreshMainFeed }) => {
-  return <MainOnboarding onComplete={onComplete} onSignIn={onSignIn} tutorialOnly={tutorialOnly} refreshMainFeed={refreshMainFeed} />;
+  return <MainOnboarding 
+    onComplete={onComplete} 
+    onSignIn={onSignIn} 
+    tutorialOnly={tutorialOnly} 
+    refreshMainFeed={refreshMainFeed} 
+  />;
 };
 
 export default NewOnboarding;

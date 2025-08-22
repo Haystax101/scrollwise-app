@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Image, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { InputField } from './InputField';
 import { Button } from './Button';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 // Import onboarding components
 import { OnboardingScreen } from './OnboardingScreen';
@@ -57,10 +59,31 @@ const tutorialSteps = [
 ];
 
 export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSignIn, refreshMainFeed, tutorialOnly }) => {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [currentSection, setCurrentSection] = useState<'welcome' | 'intro' | 'registration' | 'tutorial'>(tutorialOnly ? 'tutorial' : 'welcome');
+  const router = useRouter();
+  const { user } = useAuth();
+  
+  // Initialize based on the entry point
+  const getInitialSection = () => {
+    if (tutorialOnly) return 'tutorial';
+    return 'welcome';
+  };
+  
+  const getInitialStep = () => {
+    return 0;
+  };
+  
+  const [currentStep, setCurrentStep] = useState(getInitialStep());
+  const [currentSection, setCurrentSection] = useState<'welcome' | 'intro' | 'registration' | 'tutorial'>(getInitialSection());
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({});
   const [userId, setUserId] = useState<string | null>(null);
+  
+  // Set userId from auth context for authenticated users
+  useEffect(() => {
+    if (user && !userId) {
+      console.log('MainOnboarding: Setting userId from authenticated user:', user.id);
+      setUserId(user.id);
+    }
+  }, [user, userId]);
   const [showLogin, setShowLogin] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -196,6 +219,18 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
       }
 
       if (data.user) {
+        // Check if email confirmation is required (session will be null)
+        if (!data.session) {
+          console.log('Email confirmation required, redirecting to verification screen');
+          // Store the user data temporarily for after email verification
+          updateOnboardingData({ firstName, lastName });
+          setUserId(data.user.id);
+          
+          // Redirect to email verification screen
+          router.push(`/(auth)/email-verification?email=${encodeURIComponent(email)}`);
+          return 'email_verification_required';
+        }
+
         console.log('User created successfully:', data.user.id);
         setUserId(data.user.id);
         
@@ -450,7 +485,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     console.log('Creating user account with complete data:', completeData);
     
     setCreatingAccount(true);
-    const newUserId = await createUserAccount(
+    const result = await createUserAccount(
       completeData.email!,
       completeData.password!,
       data.firstName,
@@ -458,9 +493,14 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     );
     setCreatingAccount(false);
     
-    if (!newUserId) {
+    if (!result) {
       console.error('Failed to create user account, not proceeding');
       return; // Don't proceed if account creation failed
+    }
+    
+    if (result === 'email_verification_required') {
+      console.log('Email verification required, user will be redirected');
+      return; // Don't proceed with next step, user will be redirected to verification screen
     }
     
     console.log('User account and profile created successfully');
