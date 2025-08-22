@@ -17,7 +17,6 @@ interface DatabaseAutocompleteInputProps {
   onChangeText: (text: string) => void;
   onSelect?: (item: AutocompleteResult) => void;
   searchType: 'companies' | 'occupations' | 'mixed';
-  placeholder?: string;
   debounceMs?: number;
   maxResults?: number;
   countryFilter?: string; // For companies
@@ -30,7 +29,6 @@ export const DatabaseAutocompleteInput: React.FC<DatabaseAutocompleteInputProps>
   onChangeText,
   onSelect,
   searchType,
-  placeholder,
   debounceMs = 250,
   maxResults = 8,
   countryFilter,
@@ -258,8 +256,6 @@ export const DatabaseAutocompleteInput: React.FC<DatabaseAutocompleteInputProps>
           onChangeText={handleTextChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          placeholder={placeholder}
-          placeholderTextColor="#9CA3AF"
           selectionColor="#FBBF24"
           autoCapitalize="words"
           autoCorrect={false}
@@ -285,7 +281,11 @@ export const DatabaseAutocompleteInput: React.FC<DatabaseAutocompleteInputProps>
               nestedScrollEnabled={true}
               style={styles.resultsScrollView}
             >
-              {results.map((item) => renderResultItem({ item, index: results.indexOf(item) }))}
+              {results.map((item, index) => (
+                <React.Fragment key={item.id || index}>
+                  {renderResultItem({ item })}
+                </React.Fragment>
+              ))}
             </ScrollView>
           )}
         </View>

@@ -18,6 +18,7 @@ export const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({ em
   const [token, setToken] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const router = useRouter();
   const inputRef = useRef<TextInput>(null);
 
@@ -33,6 +34,20 @@ export const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({ em
       setHasTriedSendingOtp(true);
     }
   }, [email, hasTriedSendingOtp, signInWithOtp, skipInitialOtpSend]);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   const handleTokenChange = (text: string) => {
     // Only allow numbers
@@ -124,9 +139,11 @@ export const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({ em
 
         {/* Content */}
         <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="keypad-outline" size={64} color={OnboardingStyles.accent} />
-          </View>
+          {!keyboardVisible && (
+            <View style={styles.iconContainer}>
+              <Ionicons name="keypad-outline" size={64} color={OnboardingStyles.accent} />
+            </View>
+          )}
           
           <Text style={styles.title}>Enter Your Code</Text>
           <Text style={styles.description}>

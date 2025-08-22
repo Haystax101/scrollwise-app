@@ -7,7 +7,6 @@ interface InputFieldProps {
   onChangeText: (text: string) => void;
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'email-address' | 'numeric';
-  placeholder?: string;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }
 
@@ -17,7 +16,6 @@ export const InputField: React.FC<InputFieldProps> = ({
   onChangeText,
   secureTextEntry = false,
   keyboardType = 'default',
-  placeholder,
   autoCapitalize = 'sentences'
 }) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -76,7 +74,6 @@ export const InputField: React.FC<InputFieldProps> = ({
         onBlur={handleBlur}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
-        placeholder={placeholder}
         autoCapitalize={autoCapitalize}
         selectionColor="#F59E0B"
       />
