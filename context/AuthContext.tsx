@@ -13,6 +13,8 @@ interface AuthContextData {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  signInWithOtp: (email: string) => Promise<boolean>;
+  verifyOtp: (email: string, token: string) => Promise<boolean>;
 }
 
 // Create the context with a default undefined value
@@ -51,64 +53,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     fetchSession();
 
-    // Handle deep links for email verification
-    const handleDeepLink = async (url: string) => {
-      console.log('AuthContext: Received deep link:', url);
-      
-      try {
-        // Parse the URL to extract tokens
-        const parsedUrl = new URL(url);
-        const fragment = parsedUrl.hash.substring(1); // Remove the '#'
-        const params = new URLSearchParams(fragment);
-        
-        const access_token = params.get('access_token');
-        const refresh_token = params.get('refresh_token');
-        const type = params.get('type');
-        
-        console.log('AuthContext: Parsed URL params:', { access_token: !!access_token, refresh_token: !!refresh_token, type });
-        
-        if (type === 'signup' && access_token && refresh_token) {
-          console.log('AuthContext: Email verification tokens found, creating session...');
-          
-          // Set the session using the tokens from the email link
-          const { data, error } = await supabase.auth.setSession({
-            access_token,
-            refresh_token,
-          });
-          
-          if (error) {
-            console.error('AuthContext: Error creating session from email verification:', error);
-            return;
-          }
-          
-          if (data.session) {
-            console.log('AuthContext: Email verification successful, user is now logged in');
-            setSession(data.session);
-            setUser(data.session.user);
-          }
-        }
-      } catch (error) {
-        console.error('AuthContext: Error parsing deep link URL:', error);
-      }
-    };
-
-    // Listen for incoming deep links
-    const handleInitialURL = async () => {
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl) {
-        console.log('AuthContext: Initial URL found:', initialUrl);
-        handleDeepLink(initialUrl);
-      }
-    };
-
-    // Handle URL when app is already running
-    const subscription = Linking.addEventListener('url', ({ url }) => {
-      console.log('AuthContext: App opened with URL:', url);
-      handleDeepLink(url);
-    });
-
-    handleInitialURL();
-
     // Listen for changes in authentication state
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('AuthContext: Auth state changed:', event, session ? 'User logged in' : 'User logged out');
@@ -118,7 +62,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Cleanup the subscriptions when the component unmounts
     return () => {
-      subscription?.remove();
       authSubscription.unsubscribe();
     };
   }, []);
@@ -131,6 +74,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // The onAuthStateChange listener will handle setting user and session to null
   };
 
+  const signInWithOtp = async (email: string): Promise<boolean> => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true, // Allow user creation for signup flow, or resend for existing users
+      },
+    });
+    if (error) {
+      console.error('Error sending OTP:', error);
+      return false;
+    }
+    return true;
+  };
+
+  const verifyOtp = async (email: string, token: string): Promise<boolean> => {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'email',
+    });
+    if (error) {
+      console.error('Error verifying OTP:', error);
+      return false;
+    }
+    if (data.session) {
+      setSession(data.session);
+      setUser(data.session.user);
+      return true;
+    }
+    return false;
+  };
+
   // The value provided to the context consumers
   // TypeScript will ensure this object matches the AuthContextData interface
   const value: AuthContextData = {
@@ -138,6 +113,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     loading,
     signOut,
+    signInWithOtp,
+    verifyOtp,
   };
 
   // We only render the children once the initial loading is complete
@@ -160,6 +137,34 @@ export const useAuth = (): AuthContextData => {
   if (context === undefined) {
     console.trace('useAuth called outside of AuthProvider');
     throw new Error('useAuth must be used within an AuthProvider');
-    }
+  }
   return context;
+};
+
+// Helper for Google Sign-In
+// This can be expanded for other OAuth providers
+const redirectUri = makeRedirectUri({
+  scheme: 'your-app-scheme', // Make sure this is configured in your app.json
+  path: 'auth/callback', // A path that your app can handle
+});
+
+// Example of how you might initiate Google Sign-In
+// This function would be called from a button press in your UI
+export const signInWithGoogle = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: redirectUri,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    },
+  });
+
+  if (error) {
+    console.error('Error with Google Sign-In:', error.message);
+  }
+  
+  return { data, error };
 };

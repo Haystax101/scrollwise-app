@@ -22,6 +22,7 @@ import { StreakSelection } from './StreakSelection';
 import { Notifications } from './Notifications';
 import { CongratulationsScreen } from './CongratulationsScreen';
 import { FinalOnboardingScreen } from './FinalOnboardingScreen';
+import { OtpVerificationScreen } from './OtpVerificationScreen';
 
 // Import assets
 const HeroImage = require('../../assets/hero.png');
@@ -73,7 +74,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
   };
   
   const [currentStep, setCurrentStep] = useState(getInitialStep());
-  const [currentSection, setCurrentSection] = useState<'welcome' | 'intro' | 'registration' | 'tutorial'>(getInitialSection());
+  const [currentSection, setCurrentSection] = useState<'welcome' | 'intro' | 'registration' | 'otp_verification' | 'tutorial'>(getInitialSection());
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({});
   const [userId, setUserId] = useState<string | null>(null);
   
@@ -205,56 +206,33 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
 
   const createUserAccount = async (email: string, password: string, firstName: string, lastName: string) => {
     try {
-      console.log('Creating user account with:', { email, firstName, lastName });
+      console.log('Creating user account with OTP verification:', { email, firstName, lastName });
       
-      const { data, error } = await supabase.auth.signUp({
+      // Use signInWithOtp instead of signUp to get OTP codes instead of magic links
+      const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
-        password,
+        options: {
+          shouldCreateUser: true, // This will create the user if they don't exist
+          data: {
+            full_name: `${firstName} ${lastName}`,
+            first_name: firstName,
+            last_name: lastName,
+          }
+        },
       });
 
-      if (error) {
-        console.error('Supabase Auth signup error:', error);
-        Alert.alert('Sign Up Error', `Auth error: ${error.message}`);
+      if (otpError) {
+        console.error('Supabase Auth OTP signup error:', otpError);
+        Alert.alert('Sign Up Error', `Auth error: ${otpError.message}`);
         return null;
       }
 
-      if (data.user) {
-        // Check if email confirmation is required (session will be null)
-        if (!data.session) {
-          console.log('Email confirmation required, redirecting to verification screen');
-          // Store the user data temporarily for after email verification
-          updateOnboardingData({ firstName, lastName });
-          setUserId(data.user.id);
-          
-          // Redirect to email verification screen
-          router.push(`/(auth)/email-verification?email=${encodeURIComponent(email)}`);
-          return 'email_verification_required';
-        }
-
-        console.log('User created successfully:', data.user.id);
-        setUserId(data.user.id);
-        
-        // Create the profile record with proper full_name
-        console.log('Attempting to create profile record...');
-        const profileSuccess = await updateUserProfile(data.user.id, {
-          firstName,
-          lastName,
-          email: email
-        });
-        
-        if (!profileSuccess) {
-          console.error('Failed to create profile record');
-          Alert.alert('Database Error', 'User account created but profile setup failed. Please try signing in instead.');
-          return null;
-        }
-        
-        console.log('Profile created successfully');
-        return data.user.id;
-      }
-
-      console.error('No user data returned from signup');
-      Alert.alert('Error', 'No user data returned from signup');
-      return null;
+      console.log('OTP sent successfully for new user creation');
+      // Store the user data temporarily for after OTP verification
+      updateOnboardingData({ firstName, lastName, email, password });
+      
+      // Return special flag to trigger OTP verification
+      return 'otp_verification_required';
     } catch (error) {
       console.error('Error creating user account:', error);
       Alert.alert('Error', `Failed to create account: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -498,9 +476,11 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
       return; // Don't proceed if account creation failed
     }
     
-    if (result === 'email_verification_required') {
-      console.log('Email verification required, user will be redirected');
-      return; // Don't proceed with next step, user will be redirected to verification screen
+    if (result === 'otp_verification_required') {
+      console.log('OTP verification required, showing OTP screen');
+      setCurrentSection('otp_verification');
+      setCurrentStep(0);
+      return; // Don't proceed with next step, show OTP verification
     }
     
     console.log('User account and profile created successfully');
@@ -575,6 +555,42 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     nextStep();
   };
 
+  const handleOtpSuccess = async () => {
+    console.log('OTP verification successful');
+    
+    // Get the user from auth context (should be available after successful OTP verification)
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    
+    if (currentUser && onboardingData.firstName && onboardingData.lastName && onboardingData.email) {
+      console.log('Creating profile after OTP verification for user:', currentUser.id);
+      setUserId(currentUser.id);
+      
+      const profileSuccess = await updateUserProfile(currentUser.id, {
+        firstName: onboardingData.firstName,
+        lastName: onboardingData.lastName,
+        email: onboardingData.email
+      });
+      
+      if (!profileSuccess) {
+        console.error('Failed to create profile record after OTP verification');
+        Alert.alert('Database Error', 'Email verified but profile setup failed. Please contact support.');
+        return;
+      }
+      
+      console.log('Profile created successfully after OTP verification');
+    }
+    
+    // Move to the next section in onboarding
+    setCurrentSection('registration');
+    setCurrentStep(3); // Skip to industry selection (step 3)
+  };
+
+  const handleOtpBack = () => {
+    // Go back to registration section
+    setCurrentSection('registration');
+    setCurrentStep(2); // Back to personal info step
+  };
+
   // Render different sections
   const renderRegistrationStep = () => {
     switch (currentStep) {
@@ -603,6 +619,18 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
 
   if (currentSection === 'registration') {
     return renderRegistrationStep();
+  }
+
+  // Handle OTP verification section
+  if (currentSection === 'otp_verification') {
+    return (
+      <OtpVerificationScreen
+        email={onboardingData.email}
+        onSuccess={handleOtpSuccess}
+        onBack={handleOtpBack}
+        skipInitialOtpSend={true} // Skip sending OTP since we just sent one during signup
+      />
+    );
   }
 
   const handleLogin = async () => {
