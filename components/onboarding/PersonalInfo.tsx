@@ -52,6 +52,7 @@ export const PersonalInfo: React.FC<PersonalInfoProps> = ({ onNext, onBack, isLo
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 20, // Add some space from the title
   },
 });

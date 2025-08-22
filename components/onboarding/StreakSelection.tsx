@@ -1,54 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { Button } from './Button';
-import Svg, { Path } from 'react-native-svg';
+import { OnboardingPage } from './OnboardingPage';
+import { Ionicons } from '@expo/vector-icons';
+import { OnboardingStyles } from './styles';
 
-const streakOptions = [3, 4, 5, 6, 7];
+const streakOptions = [
+  { days: 3, title: 'Starter', subtitle: '3 days per week', icon: 'flash' as const, color: '#22C55E' },
+  { days: 4, title: 'Consistent', subtitle: '4 days per week', icon: 'flame' as const, color: '#3B82F6' },
+  { days: 5, title: 'Committed', subtitle: '5 days per week', icon: 'trending-up' as const, color: '#F59E0B' },
+  { days: 6, title: 'Dedicated', subtitle: '6 days per week', icon: 'rocket' as const, color: '#EF4444' },
+  { days: 7, title: 'Champion', subtitle: '7 days per week', icon: 'trophy' as const, color: '#8B5CF6' },
+];
 
 interface StreakSelectionProps {
   onNext: (data: { weeklyGoal: number }) => void;
 }
-
-const FlameIcon = ({ selectedDays }: { selectedDays: number }) => {
-  // Determine color based on selected days
-  const getFlameColor = () => {
-    if (selectedDays === 3 || selectedDays === 4) {
-      return { primary: "#22C55E", secondary: "#16A34A" }; // Green
-    } else if (selectedDays === 5 || selectedDays === 6) {
-      return { primary: "#3B82F6", secondary: "#2563EB" }; // Blue
-    } else {
-      return { primary: "#F97316", secondary: "#EA580C" }; // Orange
-    }
-  };
-
-  const colors = getFlameColor();
-
-  return (
-    <Svg width="96" height="96" viewBox="0 0 24 24" fill="none">
-      {/* Main flame body */}
-      <Path 
-        d="M12 2C12 2 8 4 6 8C4.5 10.5 4.5 13.5 6 16C7.5 18.5 10 20 12 20C14 20 16.5 18.5 18 16C19.5 13.5 19.5 10.5 18 8C16 4 12 2 12 2Z" 
-        fill={colors.primary}
-        stroke={colors.secondary}
-        strokeWidth="1.5"
-        strokeLinecap="round" 
-        strokeLinejoin="round"
-      />
-      {/* Inner flame detail */}
-      <Path 
-        d="M12 6C12 6 10 7.5 9 10C8.5 11.5 8.5 13 9.5 14.5C10.5 16 11.5 17 12 17C12.5 17 13.5 16 14.5 14.5C15.5 13 15.5 11.5 15 10C14 7.5 12 6 12 6Z" 
-        fill={colors.secondary}
-        strokeWidth="0"
-      />
-      {/* Flame tip */}
-      <Path 
-        d="M12 2C12 2 10.5 3 10 5C9.8 6 10 7 10.5 7.5C11 8 11.5 7.8 12 7C12.5 7.8 13 8 13.5 7.5C14 7 14.2 6 14 5C13.5 3 12 2 12 2Z" 
-        fill={colors.primary}
-        strokeWidth="0"
-      />
-    </Svg>
-  );
-};
 
 export const StreakSelection: React.FC<StreakSelectionProps> = ({ onNext }) => {
   const [selectedDays, setSelectedDays] = useState<number>(3);
@@ -58,121 +25,124 @@ export const StreakSelection: React.FC<StreakSelectionProps> = ({ onNext }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header} />
-
-      {/* Content */}
-      <View style={styles.content}>
-        <Text style={styles.title}>Set your weekly goal</Text>
-        <Text style={styles.subtitle}>Light the fire and commit to your growth.</Text>
-        
-        <View style={styles.iconContainer}>
-          <FlameIcon selectedDays={selectedDays} />
-        </View>
-
-        <View style={styles.selectionContainer}>
-          {streakOptions.map((days) => (
-            <TouchableOpacity
-              key={days}
-              style={[
-                styles.dayOption,
-                selectedDays === days && styles.dayOptionSelected,
-              ]}
-              onPress={() => setSelectedDays(days)}
-            >
-              <Text style={[
-                styles.dayText,
-                selectedDays === days && styles.dayTextSelected,
-              ]}>
-                {days}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+    <OnboardingPage
+      title="Set your weekly goal"
+      subtitle="Choose how many days per week you want to engage with content"
+      onNext={handleNext}
+      buttonText="Continue"
+    >
+      <View style={styles.container}>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.streakWrapper}>
+            {streakOptions.map((option) => {
+              const isSelected = selectedDays === option.days;
+              return (
+                <TouchableOpacity
+                  key={option.days}
+                  style={[
+                    styles.streakItem,
+                    isSelected && styles.streakItemSelected
+                  ]}
+                  onPress={() => setSelectedDays(option.days)}
+                >
+                  <View style={[
+                    styles.streakIcon,
+                    isSelected && styles.streakIconSelected
+                  ]}>
+                    <Ionicons 
+                      name={option.icon} 
+                      size={24} 
+                      color={isSelected ? OnboardingStyles.accent : option.color} 
+                    />
+                  </View>
+                  <View style={styles.streakTextContainer}>
+                    <Text style={[
+                      styles.streakTitle,
+                      isSelected && styles.streakTitleSelected
+                    ]}>
+                      {option.title}
+                    </Text>
+                    <Text style={[
+                      styles.streakSubtitle,
+                      isSelected && styles.streakSubtitleSelected
+                    ]}>
+                      {option.subtitle}
+                    </Text>
+                  </View>
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={24} color={OnboardingStyles.accent} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
       </View>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Button
-          onPress={handleNext}
-        >
-          Continue
-        </Button>
-      </View>
-    </SafeAreaView>
+    </OnboardingPage>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFBF0',
-    paddingHorizontal: 32,
-  },
-  header: {
-    height: 60,
+    justifyContent: 'flex-start',
+    paddingTop: 20,
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    textAlign: 'center',
-    marginBottom: 8,
+  streakWrapper: {
+    paddingHorizontal: 16,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 64,
-    lineHeight: 24,
-    maxWidth: 300,
-  },
-  iconContainer: {
-    marginBottom: 64,
-  },
-  selectionContainer: {
+  streakItem: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     alignItems: 'center',
+    padding: 20,
     backgroundColor: '#FFFFFF',
-    borderRadius: 999,
-    padding: 8,
-    width: '100%',
-    maxWidth: 300,
-    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 2,
     borderColor: '#E5E7EB',
-    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowColor: 'rgba(0, 0, 0, 0.05)',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 4,
     elevation: 2,
   },
-  dayOption: {
+  streakItemSelected: {
+    backgroundColor: '#FFFFFF',
+    borderColor: OnboardingStyles.accent,
+    borderWidth: 2,
+  },
+  streakIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
+    backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 16,
   },
-  dayOptionSelected: {
-    backgroundColor: '#F59E0B',
+  streakIconSelected: {
+    backgroundColor: '#FEF3C7',
   },
-  dayText: {
-    fontSize: 18,
+  streakTextContainer: {
+    flex: 1,
+  },
+  streakTitle: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  streakTitleSelected: {
+    color: '#1F2937',
+  },
+  streakSubtitle: {
+    fontSize: 14,
     color: '#6B7280',
   },
-  dayTextSelected: {
-    color: '#FFFFFF',
-  },
-  footer: {
-    paddingVertical: 32,
-    alignItems: 'center',
+  streakSubtitleSelected: {
+    color: '#6B7280',
   },
 });

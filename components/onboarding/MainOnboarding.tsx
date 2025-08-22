@@ -74,7 +74,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
   };
   
   const [currentStep, setCurrentStep] = useState(getInitialStep());
-  const [currentSection, setCurrentSection] = useState<'welcome' | 'intro' | 'registration' | 'otp_verification' | 'tutorial'>(getInitialSection());
+  const [currentSection, setCurrentSection] = useState<'welcome' | 'intro' | 'registration' | 'tutorial'>(getInitialSection());
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({});
   const [userId, setUserId] = useState<string | null>(null);
   
@@ -136,7 +136,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
         setCurrentStep(0);
       }
     } else if (currentSection === 'registration') {
-      if (currentStep < 8) { // 9 registration screens (0-8)
+      if (currentStep < 9) { // 10 registration screens (0-9)
         setCurrentStep(prev => prev + 1);
       } else {
         // Move to tutorial section
@@ -167,7 +167,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     } else if (currentSection === 'tutorial') {
       // Go back to registration
       setCurrentSection('registration');
-      setCurrentStep(8); // Last registration step
+      setCurrentStep(9); // Last registration step
     }
   };
 
@@ -206,36 +206,38 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
 
   const createUserAccount = async (email: string, password: string, firstName: string, lastName: string) => {
     try {
-      console.log('Creating user account with OTP verification:', { email, firstName, lastName });
+      console.log('Updating user profile after email verification:', { email, firstName, lastName });
       
-      // Use signInWithOtp instead of signUp to get OTP codes instead of magic links
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true, // This will create the user if they don't exist
-          data: {
-            full_name: `${firstName} ${lastName}`,
-            first_name: firstName,
-            last_name: lastName,
-          }
-        },
-      });
+      // User already exists from OTP verification, just get the current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-      if (otpError) {
-        console.error('Supabase Auth OTP signup error:', otpError);
-        Alert.alert('Sign Up Error', `Auth error: ${otpError.message}`);
+      if (userError || !user) {
+        console.error('Error getting current user:', userError);
+        Alert.alert('Authentication Error', 'Please restart the onboarding process.');
         return null;
       }
 
-      console.log('OTP sent successfully for new user creation');
-      // Store the user data temporarily for after OTP verification
-      updateOnboardingData({ firstName, lastName, email, password });
+      console.log('Current user found:', user.id);
+      setUserId(user.id);
       
-      // Return special flag to trigger OTP verification
-      return 'otp_verification_required';
+      // Update profile record (user already exists from OTP)
+      const profileSuccess = await updateUserProfile(user.id, {
+        firstName,
+        lastName,
+        email
+      });
+      
+      if (!profileSuccess) {
+        console.error('Failed to update profile record');
+        Alert.alert('Database Error', 'Profile setup failed. Please contact support.');
+        return null;
+      }
+      
+      console.log('Profile updated successfully');
+      return user.id;
     } catch (error) {
-      console.error('Error creating user account:', error);
-      Alert.alert('Error', `Failed to create account: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error updating user account:', error);
+      Alert.alert('Error', `Failed to update account: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return null;
     }
   };
@@ -445,8 +447,32 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     } else {
       setEmailExistsError(false);
       updateOnboardingData(data);
-      nextStep();
+      
+      // Send OTP for email verification
+      console.log('Sending OTP for email verification:', email);
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+      });
+
+      if (otpError) {
+        console.error('Error sending OTP:', otpError);
+        Alert.alert('Error', 'Failed to send verification code. Please try again.');
+        return;
+      }
+
+      console.log('OTP sent successfully for email verification');
+      nextStep(); // Move to OTP verification step
     }
+  };
+
+  const handleOtpSuccess = () => {
+    console.log('OTP verification successful, proceeding to password setup');
+    nextStep();
+  };
+
+  const handleOtpBack = () => {
+    console.log('Going back from OTP verification to email input');
+    prevStep();
   };
 
   const handlePasswordSetup = async (data: { password: string }) => {
@@ -474,13 +500,6 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     if (!result) {
       console.error('Failed to create user account, not proceeding');
       return; // Don't proceed if account creation failed
-    }
-    
-    if (result === 'otp_verification_required') {
-      console.log('OTP verification required, showing OTP screen');
-      setCurrentSection('otp_verification');
-      setCurrentStep(0);
-      return; // Don't proceed with next step, show OTP verification
     }
     
     console.log('User account and profile created successfully');
@@ -555,41 +574,6 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     nextStep();
   };
 
-  const handleOtpSuccess = async () => {
-    console.log('OTP verification successful');
-    
-    // Get the user from auth context (should be available after successful OTP verification)
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-    
-    if (currentUser && onboardingData.firstName && onboardingData.lastName && onboardingData.email) {
-      console.log('Creating profile after OTP verification for user:', currentUser.id);
-      setUserId(currentUser.id);
-      
-      const profileSuccess = await updateUserProfile(currentUser.id, {
-        firstName: onboardingData.firstName,
-        lastName: onboardingData.lastName,
-        email: onboardingData.email
-      });
-      
-      if (!profileSuccess) {
-        console.error('Failed to create profile record after OTP verification');
-        Alert.alert('Database Error', 'Email verified but profile setup failed. Please contact support.');
-        return;
-      }
-      
-      console.log('Profile created successfully after OTP verification');
-    }
-    
-    // Move to the next section in onboarding
-    setCurrentSection('registration');
-    setCurrentStep(3); // Skip to industry selection (step 3)
-  };
-
-  const handleOtpBack = () => {
-    // Go back to registration section
-    setCurrentSection('registration');
-    setCurrentStep(2); // Back to personal info step
-  };
 
   // Render different sections
   const renderRegistrationStep = () => {
@@ -597,20 +581,27 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
       case 0:
         return <EmailInput onNext={handleEmailInput} onBack={prevStep} emailExistsError={emailExistsError} onGoToLogin={goToLogin} />;
       case 1:
-        return <PasswordSetup onNext={handlePasswordSetup} onBack={prevStep} />;
+        return <OtpVerificationScreen 
+          email={onboardingData.email} 
+          onSuccess={handleOtpSuccess} 
+          onBack={handleOtpBack}
+          skipInitialOtpSend={true} // OTP was already sent in EmailInput
+        />;
       case 2:
-        return <PersonalInfo onNext={handlePersonalInfo} onBack={prevStep} isLoading={creatingAccount} />;
+        return <PasswordSetup onNext={handlePasswordSetup} onBack={prevStep} />;
       case 3:
-        return <IndustrySelection onNext={handleIndustrySelection} />;
+        return <PersonalInfo onNext={handlePersonalInfo} onBack={prevStep} isLoading={creatingAccount} />;
       case 4:
-        return <CongratulationsScreen onNext={nextStep} />;
+        return <IndustrySelection onNext={handleIndustrySelection} />;
       case 5:
-        return <DreamRole onNext={handleDreamRole} />;
+        return <CongratulationsScreen onNext={nextStep} />;
       case 6:
-        return <StreakSelection onNext={handleStreakSelection} />;
+        return <DreamRole onNext={handleDreamRole} />;
       case 7:
-        return <CurrentWork onNext={handleCurrentWork} />;
+        return <StreakSelection onNext={handleStreakSelection} />;
       case 8:
+        return <CurrentWork onNext={handleCurrentWork} />;
+      case 9:
         return <Notifications onNext={handleNotifications} />;
       default:
         return null;
@@ -621,17 +612,6 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     return renderRegistrationStep();
   }
 
-  // Handle OTP verification section
-  if (currentSection === 'otp_verification') {
-    return (
-      <OtpVerificationScreen
-        email={onboardingData.email}
-        onSuccess={handleOtpSuccess}
-        onBack={handleOtpBack}
-        skipInitialOtpSend={true} // Skip sending OTP since we just sent one during signup
-      />
-    );
-  }
 
   const handleLogin = async () => {
     if (!loginEmail || !loginPassword) {

@@ -219,6 +219,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 16,
+    paddingTop: 20, // Move content up slightly to prevent text cutoff
   },
   iconContainer: {
     marginBottom: 32,

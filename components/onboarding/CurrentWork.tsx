@@ -73,6 +73,7 @@ export const CurrentWork: React.FC<CurrentWorkProps> = ({ onNext }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 20, // Add some space from the title
   },
 });

@@ -34,7 +34,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
   const [quizVisible, setQuizVisible] = useState(false);
   const [quizQuestion, setQuizQuestion] = useState<QuizQuestion | null>(null);
   const [scrollCount, setScrollCount] = useState(0);
-  const [nextQuizAt, setNextQuizAt] = useState<number>(Math.floor(Math.random() * 6) + 8); // Random between 8-13
+  const [nextQuizAt, setNextQuizAt] = useState<number>(Math.floor(Math.random() * 5) + 10); // Random between 10-14
   const [feedLocked, setFeedLocked] = useState(false);
   const [viewedContent, setViewedContent] = useState<Set<string>>(new Set());
   const flatListRef = useRef<FlatList>(null);
@@ -180,27 +180,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       setArticles([]);
     }
     setIsLoading(false);
-
-    // Opportunistically show a quiz (approx 1 in 8 openings)
-    try {
-      if (Math.random() < 0.125) {
-        const { data: q } = await supabase
-          .from('quiz_questions')
-          .select('id, question')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (q) {
-          setQuizQuestion({
-            id: q.id,
-            question: q.question,
-          });
-          setQuizVisible(true);
-        }
-      }
-    } catch (_) {
-      // ignore quiz errors
-    }
   };
 
   // Background prefetch function for smoother experience
@@ -450,7 +429,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       const quiz = await getQuizForContent({
         id: randomViewedContent.content_id,
         type: randomViewedContent.content_type,
-        title: 'Recently viewed content' // Will be replaced by actual title
+        title: randomViewedContent.content_title || 'Recently viewed content'
       } as FeedItem);
       
       if (quiz) {
@@ -481,12 +460,12 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
         const newScrollCount = scrollCount + 1;
         setScrollCount(newScrollCount);
         
-        // Check if it's time to show a quiz - MUST have at least 5 scrolls AND viewed content
-        if (newScrollCount >= Math.max(5, nextQuizAt) && 
-            newScrollCount >= 5 && 
+        // Check if it's time to show a quiz - MUST have at least 8 scrolls AND viewed content
+        if (newScrollCount >= Math.max(8, nextQuizAt) && 
+            newScrollCount >= 8 && 
             !feedLocked && 
             !quizVisible &&
-            viewedContent.size >= 3) { // Ensure we have at least 3 viewed pieces of content
+            viewedContent.size >= 5) { // Ensure we have at least 5 viewed pieces of content
           showQuizForRecentContent();
         }
       }
@@ -688,7 +667,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
           setFeedLocked(false);
           // Reset quiz timing for next quiz
           setScrollCount(0);
-          setNextQuizAt(Math.floor(Math.random() * 6) + 8);
+          setNextQuizAt(Math.floor(Math.random() * 5) + 10);
         }} 
         question={quizQuestion} 
       />

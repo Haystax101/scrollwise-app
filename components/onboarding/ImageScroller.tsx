@@ -46,7 +46,7 @@ export const ImageScroller: React.FC = () => {
       });
     };
 
-    const timer = setTimeout(sequence, 3000);
+    const timer = setTimeout(sequence, 2000); // Changed from 3000 to 2000 (2 seconds)
     return () => clearTimeout(timer);
   }, [currentIndex, translateY, scale]);
 

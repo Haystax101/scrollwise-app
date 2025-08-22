@@ -108,7 +108,8 @@ export const DreamRole: React.FC<DreamRoleProps> = ({ onNext }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 20, // Add some space from the title
     paddingHorizontal: 24,
   },
 });

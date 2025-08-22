@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -97,7 +98,12 @@ export const QuizCard: React.FC<QuizCardProps> = ({ visible, onClose, question }
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
-          <Text style={[styles.title, { color: colors.text }]}>Quiz Question</Text>
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: colors.text }]}>Test Your Knowledge</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
           {question?.content_title && (
             <Text style={[styles.contentTitle, { color: colors.textSecondary }]}>
               From: {question.content_title}
@@ -149,7 +155,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({ visible, onClose, question }
           ) : (
             <View style={styles.resultContainer}>
               <Text style={[styles.resultText, { color: result.correct ? '#10B981' : '#EF4444' }]}>
-                {result.correct ? '+5 XP • Correct!' : 'Incorrect'}
+                {result.correct ? '🎉 +5 XP • Correct!' : '❌ Incorrect'}
               </Text>
               {!result.correct && (
                 <Text style={[styles.correctAnswerText, { color: colors.textSecondary }]}>
@@ -177,11 +183,22 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   title: {
     fontSize: 20,
     fontWeight: '700',
-    marginBottom: 8,
+    flex: 1,
     textAlign: 'center',
+  },
+  closeButton: {
+    padding: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
   contentTitle: {
     fontSize: 14,

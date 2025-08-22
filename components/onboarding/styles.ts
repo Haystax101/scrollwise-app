@@ -29,11 +29,11 @@ export const OnboardingStyles = {
   textPrimary: '#1F2937',            // Dark grey for primary text
   textSecondary: '#6B7280',          // Medium grey for secondary text
   textTertiary: '#9CA3AF',           // Light grey for tertiary text
-  accent: '#F59E0B',                 // Rich yellow accent
-  accentHover: '#D97706',            // Darker yellow for hover states
+  accent: '#FBBF24',                 // Rich yellow accent (matching insights publisher)
+  accentHover: '#F59E0B',            // Darker yellow for hover states
   inputBackground: '#FFFFFF',         // Pure white for inputs
   cardBackground: '#FFFFFF',          // White for cards/containers
   borderColor: '#E5E7EB',            // Light grey borders
-  borderColorActive: '#F59E0B',       // Yellow borders when active
+  borderColorActive: '#FBBF24',       // Yellow borders when active (matching accent)
   shadowColor: 'rgba(0, 0, 0, 0.1)', // Subtle shadows
 } as const;

@@ -168,6 +168,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#1F2937',
     fontSize: 16,
+    letterSpacing: 0,
   },
   content: {
     flex: 1,

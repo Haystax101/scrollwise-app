@@ -86,6 +86,17 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSi
     preloadImages();
   }, []);
 
+  // Auto-scroll functionality
+  useEffect(() => {
+    const autoScroll = () => {
+      const nextIndex = (activeIndex + 1) % welcomeSlides.length;
+      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+    };
+
+    const timer = setInterval(autoScroll, 3000); // Auto-scroll every 2 seconds
+    return () => clearInterval(timer);
+  }, [activeIndex]);
+
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
       setActiveIndex(viewableItems[0].index);
@@ -208,6 +219,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 16,
+    paddingBottom: 20,
   },
   progressContainer: {
     flexDirection: 'row',

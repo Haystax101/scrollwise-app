@@ -234,11 +234,11 @@ export const DatabaseAutocompleteInput: React.FC<DatabaseAutocompleteInputProps>
       inputRange: [0, 1],
       outputRange: [16, 12],
     }),
-    color: isFocused ? '#F59E0B' : '#6B7280',
+    color: isFocused ? '#FBBF24' : '#6B7280',
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, showDropdown && styles.containerWithDropdown]}>
       <TouchableOpacity
         style={styles.inputContainer}
         onPress={() => {
@@ -262,7 +262,7 @@ export const DatabaseAutocompleteInput: React.FC<DatabaseAutocompleteInputProps>
         />
         {loading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#F59E0B" />
+            <ActivityIndicator size="small" color="#FBBF24" />
           </View>
         )}
       </TouchableOpacity>
@@ -271,7 +271,7 @@ export const DatabaseAutocompleteInput: React.FC<DatabaseAutocompleteInputProps>
         <View style={styles.dropdown}>
           {loading && results.length === 0 ? (
             <View style={styles.loadingItem}>
-              <ActivityIndicator size="small" color="#F59E0B" />
+              <ActivityIndicator size="small" color="#FBBF24" />
               <Text style={styles.loadingText}>Searching...</Text>
             </View>
           ) : (
@@ -300,6 +300,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     zIndex: 1,
   },
+  containerWithDropdown: {
+    zIndex: 1000, // Ensure container is above other elements when dropdown is shown
+  },
   inputContainer: {
     position: 'relative',
   },
@@ -317,7 +320,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   inputFocused: {
-    borderBottomColor: '#F59E0B',
+    borderBottomColor: '#FBBF24',
   },
   label: {
     position: 'absolute',
@@ -340,8 +343,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     borderRadius: 8,
     maxHeight: 200,
-    zIndex: 100,
-    elevation: 100,
+    zIndex: 1001, // Higher z-index to ensure dropdown appears above all other elements
+    elevation: 1001,
     shadowColor: 'rgba(0, 0, 0, 0.1)',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,

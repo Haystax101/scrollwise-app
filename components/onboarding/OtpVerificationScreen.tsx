@@ -139,12 +139,6 @@ export const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({ em
 
         {/* Content */}
         <View style={styles.content}>
-          {!keyboardVisible && (
-            <View style={styles.iconContainer}>
-              <Ionicons name="keypad-outline" size={64} color={OnboardingStyles.accent} />
-            </View>
-          )}
-          
           <Text style={styles.title}>Enter Your Code</Text>
           <Text style={styles.description}>
             We've sent a one-time password to {email || 'your email address'}. Enter the 6-digit code below.
@@ -157,7 +151,7 @@ export const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({ em
                 styles.input,
                 token.length === 6 && styles.inputComplete
               ]}
-              placeholder="000000"
+              placeholder="______"
               placeholderTextColor="#9CA3AF"
               value={token}
               onChangeText={handleTokenChange}

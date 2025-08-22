@@ -60,7 +60,8 @@ export const PasswordSetup: React.FC<PasswordSetupProps> = ({ onNext, onBack }) 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 20, // Add some space from the title
   },
   errorText: {
     color: '#EF4444',

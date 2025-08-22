@@ -74,7 +74,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, showDropdown && styles.containerWithDropdown]}>
       <TouchableOpacity
         style={styles.inputContainer}
         onPress={() => {
@@ -122,6 +122,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     zIndex: 1, // Let parent control stacking
   },
+  containerWithDropdown: {
+    zIndex: 1000, // Ensure container is above other elements when dropdown is shown
+  },
   inputContainer: {
     // This now wraps the input and label for focus handling
   },
@@ -156,8 +159,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     borderRadius: 8,
     maxHeight: 150,
-    zIndex: 100, // Ensure dropdown is above other elements in the same container
-    elevation: 100,
+    zIndex: 1001, // Higher z-index to ensure dropdown appears above all other elements
+    elevation: 1001,
     shadowColor: 'rgba(0, 0, 0, 0.05)',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
