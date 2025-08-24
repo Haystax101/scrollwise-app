@@ -23,6 +23,29 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
+const getIndustryPillColor = (industryId: string): string => {
+  const colors = [
+    '#3B82F6', // Bold Blue
+    '#10B981', // Bold Green
+    '#EF4444', // Bold Red
+    '#8B5CF6', // Bold Purple
+    '#F97316', // Bold Orange
+    '#F59E0B', // Bold Amber
+    '#64748B', // Bold Slate
+    '#06B6D4', // Bold Cyan
+    '#EC4899', // Bold Pink
+    '#84CC16', // Bold Lime
+  ];
+  
+  // Use industryId as seed for consistent color assignment
+  const hash = industryId.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  
+  return colors[Math.abs(hash) % colors.length];
+};
+
 export const Discover: React.FC = () => {
   const { colors, isDark } = useTheme();
   const { allIndustries } = useIndustries(); // Use allIndustries from the context
@@ -596,15 +619,28 @@ export const Discover: React.FC = () => {
           >
             <Text style={[dynamicStyles.categoryText, selectedIndustry === null ? dynamicStyles.activeCategoryText : dynamicStyles.inactiveCategoryText]}>All</Text>
           </TouchableOpacity>
-          {allIndustries.map((industry) => (
-            <TouchableOpacity
-              key={industry.id}
-              style={[dynamicStyles.categoryPill, selectedIndustry === industry.id ? dynamicStyles.activeCategory : dynamicStyles.inactiveCategory]}
-              onPress={() => setSelectedIndustry(industry.id)}
-            >
-              <Text style={[dynamicStyles.categoryText, selectedIndustry === industry.id ? dynamicStyles.activeCategoryText : dynamicStyles.inactiveCategoryText]}>{industry.name}</Text>
-            </TouchableOpacity>
-          ))}
+          {allIndustries.map((industry) => {
+            const pillColor = getIndustryPillColor(industry.id);
+            return (
+              <TouchableOpacity
+                key={industry.id}
+                style={[
+                  dynamicStyles.categoryPill, 
+                  selectedIndustry === industry.id 
+                    ? { backgroundColor: pillColor }
+                    : { backgroundColor: pillColor + '20', borderWidth: 1, borderColor: pillColor + '40' }
+                ]}
+                onPress={() => setSelectedIndustry(industry.id)}
+              >
+                <Text style={[
+                  dynamicStyles.categoryText, 
+                  selectedIndustry === industry.id 
+                    ? { color: 'white', fontWeight: '600' }
+                    : { color: pillColor, fontWeight: '500' }
+                ]}>{industry.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 

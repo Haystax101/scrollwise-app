@@ -58,6 +58,13 @@ export const QuizCard: React.FC<QuizCardProps> = ({ visible, onClose, question }
     setSubmitting(true);
     
     try {
+      // Double-check user is still available (race condition protection)
+      if (!user || !user.id) {
+        console.error('Error recording quiz attempt: user not available');
+        setSubmitting(false);
+        return;
+      }
+
       // Find the original index of the selected option
       const selectedText = options[selectedOption];
       const originalOptionIndex = [question.option_a, question.option_b, question.option_c, question.option_d].indexOf(selectedText);
@@ -87,8 +94,7 @@ export const QuizCard: React.FC<QuizCardProps> = ({ visible, onClose, question }
       console.error('Error submitting quiz:', error);
     } finally {
       setSubmitting(false);
-      // Close after delay to show result
-      setTimeout(onClose, 2000);
+      // Quiz now stays open until user manually closes it
     }
   };
 
@@ -100,9 +106,11 @@ export const QuizCard: React.FC<QuizCardProps> = ({ visible, onClose, question }
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text }]}>Test Your Knowledge</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text} />
-            </TouchableOpacity>
+            {result && (
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            )}
           </View>
           {question?.content_title && (
             <Text style={[styles.contentTitle, { color: colors.textSecondary }]}>

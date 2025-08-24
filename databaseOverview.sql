@@ -302,8 +302,8 @@ CREATE TABLE public.insight_comment_likes (
   comment_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT insight_comment_likes_pkey PRIMARY KEY (user_id, comment_id),
-  CONSTRAINT insight_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.insight_comments(id),
-  CONSTRAINT insight_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+  CONSTRAINT insight_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT insight_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.insight_comments(id)
 );
 CREATE TABLE public.insight_comments (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -316,17 +316,17 @@ CREATE TABLE public.insight_comments (
   reply_count bigint NOT NULL DEFAULT 0,
   depth_level integer NOT NULL DEFAULT 0 CHECK (depth_level <= 3),
   CONSTRAINT insight_comments_pkey PRIMARY KEY (id),
-  CONSTRAINT insight_comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
   CONSTRAINT insight_comments_parent_comment_id_fkey FOREIGN KEY (parent_comment_id) REFERENCES public.insight_comments(id),
-  CONSTRAINT insight_comments_insight_id_fkey FOREIGN KEY (insight_id) REFERENCES public.insights(id)
+  CONSTRAINT insight_comments_insight_id_fkey FOREIGN KEY (insight_id) REFERENCES public.insights(id),
+  CONSTRAINT insight_comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.insight_likes (
   user_id uuid NOT NULL,
   insight_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT insight_likes_pkey PRIMARY KEY (user_id, insight_id),
-  CONSTRAINT insight_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT insight_likes_insight_id_fkey FOREIGN KEY (insight_id) REFERENCES public.insights(id)
+  CONSTRAINT insight_likes_insight_id_fkey FOREIGN KEY (insight_id) REFERENCES public.insights(id),
+  CONSTRAINT insight_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.insight_responses (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -345,8 +345,8 @@ CREATE TABLE public.insight_saves (
   insight_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT insight_saves_pkey PRIMARY KEY (user_id, insight_id),
-  CONSTRAINT insight_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT insight_saves_insight_id_fkey FOREIGN KEY (insight_id) REFERENCES public.insights(id)
+  CONSTRAINT insight_saves_insight_id_fkey FOREIGN KEY (insight_id) REFERENCES public.insights(id),
+  CONSTRAINT insight_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.insight_views (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -354,8 +354,8 @@ CREATE TABLE public.insight_views (
   insight_id uuid NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT insight_views_pkey PRIMARY KEY (id),
-  CONSTRAINT insight_views_insight_id_fkey FOREIGN KEY (insight_id) REFERENCES public.insights(id),
-  CONSTRAINT insight_views_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+  CONSTRAINT insight_views_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT insight_views_insight_id_fkey FOREIGN KEY (insight_id) REFERENCES public.insights(id)
 );
 CREATE TABLE public.insights (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),

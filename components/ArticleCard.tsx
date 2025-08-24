@@ -9,6 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIndustries } from '../context/IndustriesContext';
 import { ExpandedTextModal } from './ExpandedTextModal';
+import { calculateDynamicTextLines, optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -62,8 +63,17 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
   const tableNames = useMemo(() => getTableNames(), []);
 
   const industryName = useMemo(() => {
-    return allIndustries.find(ind => ind.id === article.industry_id)?.name;
+    const rawName = allIndustries.find(ind => ind.id === article.industry_id)?.name;
+    return rawName ? optimizeIndustryName(rawName) : undefined;
   }, [allIndustries, article.industry_id]);
+
+  const dynamicTextLines = useMemo(() => {
+    return calculateDynamicTextLines({
+      hasAuthor: !!article.author,
+      hasMultipleMetadataRows: true, // ArticleCard has two metadata rows
+      containerHeight: screenHeight * 0.55, // Content section height
+    });
+  }, [article.author, screenHeight]);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -264,8 +274,8 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
     contentText: {
       color: colors.text,
       fontSize: 16,
-      lineHeight: 24,
-      marginBottom: 16,
+      lineHeight: 22,
+      marginBottom: 12,
     },
     readMoreText: {
       color: colors.primary,
@@ -331,7 +341,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
                     )}
                 </View>
               </View>
-              <Text style={dynamicStyles.title} numberOfLines={2}>{article.title}</Text>
+              <Text style={dynamicStyles.title} numberOfLines={2}>{removeHtmlTags(article.title)}</Text>
               {article.author && (
                 <View style={dynamicStyles.authorContainer}>
                     <View style={dynamicStyles.authorTag}>
@@ -340,7 +350,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
                 </View>
               )}
               <TouchableOpacity onPress={handleToggleExpand}>
-                <Text style={dynamicStyles.contentText} numberOfLines={6}>
+                <Text style={dynamicStyles.contentText} numberOfLines={dynamicTextLines}>
                   {article.summary}
                 </Text>
               </TouchableOpacity>
@@ -353,16 +363,16 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
                 <Text style={dynamicStyles.actionText}>{likes}</Text>
               </View>
               <View style={dynamicStyles.actionGroup}>
-                <TouchableOpacity style={dynamicStyles.actionButton} onPress={handleSavePress}>
-                  <Feather name="bookmark" size={20} color={hasSaved ? colors.accent : colors.text} />
-                </TouchableOpacity>
-                <Text style={dynamicStyles.actionText}>{saves}</Text>
-              </View>
-              <View style={dynamicStyles.actionGroup}>
                 <TouchableOpacity style={dynamicStyles.actionButton} onPress={handleCommentsPress}>
                   <Feather name="message-circle" size={20} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={dynamicStyles.actionText}>{article.comments_count || 0}</Text>
+              </View>
+              <View style={dynamicStyles.actionGroup}>
+                <TouchableOpacity style={dynamicStyles.actionButton} onPress={handleSavePress}>
+                  <Feather name="bookmark" size={20} color={hasSaved ? colors.accent : colors.text} />
+                </TouchableOpacity>
+                <Text style={dynamicStyles.actionText}>{saves}</Text>
               </View>
               <TouchableOpacity style={dynamicStyles.readMoreButton} onPress={handleToggleExpand}>
                 <Text style={dynamicStyles.readMoreButtonText}>Read More</Text>

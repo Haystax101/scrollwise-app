@@ -1,13 +1,39 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Linking, FlatList, ViewabilityConfig, ViewToken } from 'react-native';
-import { Feather, FontAwesome } from '@expo/vector-icons';
+import { Feather, FontAwesome, Ionicons } from '@expo/vector-icons';
 import type { Book } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { processInsightText, removeHtmlTags } from '../utils/textUtils';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
+
+// Industry-based color mapping for books
+const getIndustryColor = (industryId: string): string => {
+  // Array of vibrant colors for random selection
+  const colors = [
+    '#3B82F6', // Bold Blue
+    '#10B981', // Bold Green
+    '#EF4444', // Bold Red
+    '#8B5CF6', // Bold Purple
+    '#F97316', // Bold Orange
+    '#F59E0B', // Bold Amber
+    '#64748B', // Bold Slate
+    '#06B6D4', // Bold Cyan
+    '#EC4899', // Bold Pink
+    '#84CC16', // Bold Lime
+  ];
+  
+  // Use industryId as seed for consistent randomness per book
+  const hash = industryId.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  
+  return colors[Math.abs(hash) % colors.length];
+};
 
 interface BookCardProps {
   book: Book;
@@ -38,6 +64,11 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
     }));
     return [{ type: 'cover' }, ...insightSlides];
   }, [book.key_insights]);
+
+  const industryColor = useMemo(() => 
+    getIndustryColor(book.industry_id), 
+    [book.industry_id]
+  );
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -127,13 +158,13 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
     if (item.type === 'cover') {
       return (
         <View style={[styles.slide, { width: screenWidth }]}>
-          <View style={[styles.bookCover, { backgroundColor: colors.accent + '15', borderColor: colors.accent + '30' }]}>
+          <View style={[styles.bookCover, { backgroundColor: industryColor, borderColor: industryColor + '30' }]}>
             <View style={styles.bookSpine} />
-            <View style={[styles.bookContent, { backgroundColor: colors.accent + '10' }]}>
-              <Text style={[styles.bookTitle, { color: colors.text }]}>{book.title}</Text>
-              {book.author && <Text style={[styles.bookAuthor, { color: colors.textSecondary }]}>{book.author}</Text>}
-              {book.year && <Text style={[styles.bookYear, { color: colors.textSecondary }]}>{book.year}</Text>}
-              <Text style={[styles.bookSummary, { color: colors.text }]}>{book.short_summary}</Text>
+            <View style={[styles.bookContent, { backgroundColor: industryColor }]}>
+              <Text style={[styles.bookTitle, { color: 'white' }]}>{removeHtmlTags(book.title)}</Text>
+              {book.author && <Text style={[styles.bookAuthor, { color: 'rgba(255,255,255,0.8)' }]}>{book.author}</Text>}
+              {book.year && <Text style={[styles.bookYear, { color: 'rgba(255,255,255,0.8)' }]}>{book.year}</Text>}
+              <Text style={[styles.bookSummary, { color: 'rgba(255,255,255,0.9)' }]}>{book.short_summary}</Text>
             </View>
           </View>
           {slides.length > 1 && (
@@ -143,15 +174,25 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
       );
     }
     
+    const processedText = processInsightText(item.insight, industryColor);
+    
     return (
       <View style={[styles.slide, { width: screenWidth }]}>
         <View style={styles.insightContainer}>
-          <Text style={[styles.insightNumber, { color: colors.primary }]}>Insight {item.index}</Text>
-          <Text style={[styles.insightText, { color: colors.text }]}>{item.insight}</Text>
+          <View style={[styles.lightbulbBox, { backgroundColor: industryColor }]}>
+            <Ionicons name="bulb" size={24} color="white" />
+          </View>
+          <View style={styles.insightTextContainer}>
+            {processedText.map((part, index) => (
+              <Text key={index} style={[styles.insightText, { color: industryColor }, part.style]}>
+                {part.text}
+              </Text>
+            ))}
+          </View>
         </View>
       </View>
     );
-  }, [book, colors, slides.length]);
+  }, [book, colors, slides.length, industryColor]);
 
   const dynamicStyles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, height: screenHeight },
@@ -192,7 +233,7 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
                 key={index}
                 style={[
                   dynamicStyles.indicator,
-                  { backgroundColor: index === currentSlide ? colors.primary : colors.textSecondary + '40' }
+                  { backgroundColor: index === currentSlide ? industryColor : colors.textSecondary + '40' }
                 ]} 
               />
             ))}
@@ -207,16 +248,16 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
             <Text style={dynamicStyles.actionText}>{likes}</Text>
           </View>
           <View style={dynamicStyles.actionGroup}>
-            <TouchableOpacity style={dynamicStyles.actionButton} onPress={() => toggleInteraction(hasSaved ? 'unsave' : 'save')}>
-              <Feather name="bookmark" size={20} color={hasSaved ? colors.accent : colors.text} />
-            </TouchableOpacity>
-            <Text style={dynamicStyles.actionText}>{saves}</Text>
-          </View>
-          <View style={dynamicStyles.actionGroup}>
             <TouchableOpacity style={dynamicStyles.actionButton} onPress={handleCommentsPress}>
               <Feather name="message-circle" size={20} color={colors.text} />
             </TouchableOpacity>
             <Text style={dynamicStyles.actionText}>{book.comments_count || 0}</Text>
+          </View>
+          <View style={dynamicStyles.actionGroup}>
+            <TouchableOpacity style={dynamicStyles.actionButton} onPress={() => toggleInteraction(hasSaved ? 'unsave' : 'save')}>
+              <Feather name="bookmark" size={20} color={hasSaved ? colors.accent : colors.text} />
+            </TouchableOpacity>
+            <Text style={dynamicStyles.actionText}>{saves}</Text>
           </View>
           {book.link && (
             <TouchableOpacity style={dynamicStyles.readMoreButton} onPress={handleReadMorePress}>
@@ -303,18 +344,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    marginTop: 40,
   },
-  insightNumber: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 20,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+  lightbulbBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  insightTextContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   insightText: {
     fontSize: 22,
     lineHeight: 32,
     textAlign: 'center',
-    fontWeight: '400',
+    fontWeight: '700',
   },
 }); 

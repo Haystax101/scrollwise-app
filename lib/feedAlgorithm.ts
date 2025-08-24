@@ -39,15 +39,22 @@ export class FeedAlgorithm {
   private userId: string;
   private userIndustries: string[];
   private allIndustries: Industry[];
-  private fetchedIds: Set<number> = new Set();
-  private likedIds: Set<number> = new Set();
-  private savedIds: Set<number> = new Set();
+  private fetchedIds: Set<string> = new Set(); // Changed to string to handle bigint IDs
+  private likedIds: Set<string> = new Set(); // Changed to string to handle bigint IDs
+  private savedIds: Set<string> = new Set(); // Changed to string to handle bigint IDs
   private viewedIds: Set<string> = new Set(); // Track viewed content by type-id
 
   constructor(userId: string, userIndustries: string[], allIndustries: Industry[]) {
     this.userId = userId;
     this.userIndustries = userIndustries;
     this.allIndustries = allIndustries;
+  }
+
+  /**
+   * Normalize ID to string format to handle both number and bigint IDs consistently
+   */
+  private normalizeId(id: string | number | bigint): string {
+    return String(id);
   }
 
   /**
@@ -81,9 +88,9 @@ export class FeedAlgorithm {
         console.error('Error fetching liked content:', { likedArticlesError, likedPapersError, likedBooksError });
       } else {
         const allLikedIds = [
-          ...(likedArticles?.map(item => item.article_id) || []),
-          ...(likedPapers?.map(item => item.paper_id) || []),
-          ...(likedBooks?.map(item => item.book_id) || [])
+          ...(likedArticles?.map(item => this.normalizeId(item.article_id)) || []),
+          ...(likedPapers?.map(item => this.normalizeId(item.paper_id)) || []),
+          ...(likedBooks?.map(item => this.normalizeId(item.book_id)) || [])
         ];
         this.likedIds = new Set(allLikedIds);
       }
@@ -108,9 +115,9 @@ export class FeedAlgorithm {
         console.error('Error fetching saved content:', { savedArticlesError, savedPapersError, savedBooksError });
       } else {
         const allSavedIds = [
-          ...(savedArticles?.map(item => item.article_id) || []),
-          ...(savedPapers?.map(item => item.paper_id) || []),
-          ...(savedBooks?.map(item => item.book_id) || [])
+          ...(savedArticles?.map(item => this.normalizeId(item.article_id)) || []),
+          ...(savedPapers?.map(item => this.normalizeId(item.paper_id)) || []),
+          ...(savedBooks?.map(item => this.normalizeId(item.book_id)) || [])
         ];
         this.savedIds = new Set(allSavedIds);
       }
@@ -124,8 +131,9 @@ export class FeedAlgorithm {
       if (viewedError) {
         console.error('Error fetching viewed content:', viewedError);
       } else {
-        const viewedKeys = (viewedContent || []).map(view => `${view.content_type}-${view.content_id}`);
+        const viewedKeys = (viewedContent || []).map(view => `${view.content_type}-${this.normalizeId(view.content_id)}`);
         this.viewedIds = new Set(viewedKeys);
+        console.log(`🔍 FeedAlgorithm: Initialized ${this.viewedIds.size} viewed items, ${this.likedIds.size} liked items, ${this.savedIds.size} saved items`);
       }
     } catch (error) {
       console.error('Error in initializeUserInteractions:', error);
@@ -174,9 +182,66 @@ export class FeedAlgorithm {
       
       // Convert to FeedItem format
       const feedItems = balancedContent.map(this.mapToFeedItem);
+      
+      // Progressive fallback if we didn't get enough content
+      if (feedItems.length < Math.max(3, targetCount * 0.5)) {
+        console.log(`⚠️ FeedAlgorithm: Only got ${feedItems.length} items, applying fallback strategy...`);
+        const fallbackItems = await this.fetchFallbackContent(targetCount - feedItems.length);
+        feedItems.push(...fallbackItems);
+      }
+      
+      console.log(`✅ FeedAlgorithm: Returning ${feedItems.length} items (${feedItems.filter(item => item.type === 'article').length} articles, ${feedItems.filter(item => item.type === 'paper').length} papers, ${feedItems.filter(item => item.type === 'book').length} books)`);
       return feedItems;
     } catch (error) {
       console.error('Error in fetchArticles:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Fallback content fetcher when main algorithm doesn't return enough items
+   */
+  private async fetchFallbackContent(targetCount: number): Promise<FeedItem[]> {
+    try {
+      const fallbackItems: FeedItem[] = [];
+      const contentTypes: ('article' | 'paper' | 'book')[] = ['article', 'paper', 'book'];
+      
+      for (const contentType of contentTypes) {
+        if (fallbackItems.length >= targetCount) break;
+        
+        const tableName = contentType === 'paper' ? 'papers' : contentType === 'book' ? 'books' : 'articles';
+        
+        // First try: Get popular content from any industry, ignoring viewed filter
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .order('likes_count', { ascending: false })
+          .limit(Math.ceil(targetCount / 3));
+
+        if (!error && data) {
+          const filteredData = data.filter(item => {
+            const itemId = this.normalizeId(item.id);
+            return !this.fetchedIds.has(itemId); // Only exclude already fetched in this session
+          });
+
+          const mappedItems = filteredData.map(item => this.mapToFeedItem({
+            ...item,
+            type: contentType
+          }));
+
+          fallbackItems.push(...mappedItems.slice(0, Math.ceil(targetCount / 3)));
+          
+          // Track these as fetched
+          filteredData.slice(0, Math.ceil(targetCount / 3)).forEach(item => {
+            this.fetchedIds.add(this.normalizeId(item.id));
+          });
+        }
+      }
+      
+      console.log(`🔄 FeedAlgorithm: Fallback strategy returned ${fallbackItems.length} items`);
+      return fallbackItems.slice(0, targetCount);
+    } catch (error) {
+      console.error('Error in fetchFallbackContent:', error);
       return [];
     }
   }
@@ -203,24 +268,56 @@ export class FeedAlgorithm {
       const industryContentMap = new Map<string, Array<FetchedContent & { score: number }>>();
       
       for (const industryId of shuffledIndustries) {
-        const { data, error } = await supabase
+        // Get IDs to exclude (viewed content for this content type)
+        const viewedIdsToExclude = Array.from(this.viewedIds)
+          .filter(viewKey => viewKey.startsWith(`${contentType}-`))
+          .map(viewKey => viewKey.replace(`${contentType}-`, ''))
+          .map(id => parseInt(id, 10))
+          .filter(id => !isNaN(id));
+        
+        // Build query with exclusions
+        let query = supabase
           .from(tableName)
           .select('*')
           .eq('industry_id', industryId)
           .order('created_at', { ascending: false })
-          .limit(itemsPerIndustry * 2); // Get more options for better selection
+          .limit(itemsPerIndustry * 4); // Get more options since we're excluding viewed content
+        
+        // Exclude viewed content from the database query itself
+        if (viewedIdsToExclude.length > 0) {
+          console.log(`🔍 Excluding ${viewedIdsToExclude.length} viewed ${contentType} IDs from DB query:`, viewedIdsToExclude.slice(0, 5));
+          query = query.not('id', 'in', `(${viewedIdsToExclude.join(',')})`);
+        }
+        
+        const { data, error } = await query;
 
-        if (error || !data) continue;
+        if (error || !data) {
+          console.log(`⚠️ FeedAlgorithm: No data for ${contentType} in industry ${industryId}:`, error?.message || 'No data returned');
+          continue;
+        }
 
         const filteredData = data.filter(item => {
-          if (this.fetchedIds.has(item.id)) return false;
-          if (excludeInteracted && (this.likedIds.has(item.id) || this.savedIds.has(item.id))) {
+          const itemId = this.normalizeId(item.id);
+          
+          // Only apply session-based and interaction filters since viewed content is excluded at DB level
+          const isFetched = this.fetchedIds.has(itemId);
+          const isLiked = this.likedIds.has(itemId);
+          const isSaved = this.savedIds.has(itemId);
+          
+          if (isFetched) {
+            console.log(`🔍 Item ${itemId} FILTERED: already fetched`);
             return false;
           }
-          // Exclude already viewed content - this is the most important filter
-          const viewKey = `${contentType}-${item.id}`;
-          if (this.viewedIds.has(viewKey)) return false;
+          if (excludeInteracted && isLiked) {
+            console.log(`🔍 Item ${itemId} FILTERED: liked`);
+            return false;
+          }
+          if (excludeInteracted && isSaved) {
+            console.log(`🔍 Item ${itemId} FILTERED: saved`);
+            return false;
+          }
           
+          console.log(`✅ Item ${itemId} PASSES all filters`);
           return true;
         });
 
@@ -233,6 +330,14 @@ export class FeedAlgorithm {
         // Sort by score and take the best items from this industry
         industryContent.sort((a, b) => b.score - a.score);
         industryContentMap.set(industryId, industryContent.slice(0, itemsPerIndustry));
+        console.log(`📊 FeedAlgorithm: ${contentType} in ${industryId}: ${data.length} total → ${filteredData.length} after filtering → ${industryContent.slice(0, itemsPerIndustry).length} selected`);
+        
+        // Debug first few items if filtering is happening
+        if (data.length > 0 && filteredData.length === 0) {
+          console.log(`🔍 DEBUG: Sample IDs from data:`, data.slice(0, 2).map(item => `${this.normalizeId(item.id)} (${typeof item.id})`));
+          console.log(`🔍 DEBUG: fetchedIds size: ${this.fetchedIds.size}, first few:`, Array.from(this.fetchedIds).slice(0, 5));
+          console.log(`🔍 DEBUG: viewedIds size: ${this.viewedIds.size}, first few:`, Array.from(this.viewedIds).slice(0, 5));
+        }
       }
 
       // Round-robin selection to ensure content diversity
@@ -315,7 +420,7 @@ export class FeedAlgorithm {
           
           const item = contentByType[type][indices[type]];
           result.push(item);
-          this.fetchedIds.add(item.id);
+          this.fetchedIds.add(this.normalizeId(item.id));
           indices[type]++;
           addedThisRound = true;
         }
@@ -335,7 +440,7 @@ export class FeedAlgorithm {
     type: 'paper' | 'book' | 'article',
     industryId: string,
     excludeInteracted: boolean,
-    attemptedIds: Set<number>
+    attemptedIds: Set<string>
   ): Promise<FetchedContent | null> {
     try {
       const tableName = type === 'paper' ? 'papers' : type === 'book' ? 'books' : 'articles';
@@ -360,14 +465,15 @@ export class FeedAlgorithm {
       
       // Filter out content we want to exclude
       const availableContent = data.filter(item => {
+        const itemId = this.normalizeId(item.id);
         // Always exclude already fetched items in this session
-        if (this.fetchedIds.has(item.id) || attemptedIds.has(item.id)) {
+        if (this.fetchedIds.has(itemId) || attemptedIds.has(itemId)) {
           return false;
         }
         
         // Optionally exclude previously interacted items
         if (excludeInteracted) {
-          if (this.likedIds.has(item.id) || this.savedIds.has(item.id)) {
+          if (this.likedIds.has(itemId) || this.savedIds.has(itemId)) {
             return false;
           }
         }
@@ -510,7 +616,7 @@ export class FeedAlgorithm {
       }
       
       // Add to fetched IDs to avoid duplicates in regular feed
-      this.fetchedIds.add(contentItem.id);
+      this.fetchedIds.add(this.normalizeId(contentItem.id));
       
       // Convert to FeedItem format
       const feedItem = this.mapToFeedItem({
@@ -555,18 +661,19 @@ export class FeedAlgorithm {
    * Update user interaction tracking when user likes/saves content
    */
   updateUserInteraction(contentId: number, action: 'like' | 'save' | 'unlike' | 'unsave'): void {
+    const normalizedId = this.normalizeId(contentId);
     switch (action) {
       case 'like':
-        this.likedIds.add(contentId);
+        this.likedIds.add(normalizedId);
         break;
       case 'unlike':
-        this.likedIds.delete(contentId);
+        this.likedIds.delete(normalizedId);
         break;
       case 'save':
-        this.savedIds.add(contentId);
+        this.savedIds.add(normalizedId);
         break;
       case 'unsave':
-        this.savedIds.delete(contentId);
+        this.savedIds.delete(normalizedId);
         break;
     }
   }

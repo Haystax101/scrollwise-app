@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 
 interface LearningStats {
-  timeSpentLearning: string;
+  currentStreak: number;
   totalInteractions: number;
   contentEngaged: number;
 }
@@ -22,10 +22,10 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
 
   const statItems = [
     {
-      icon: 'clock',
-      label: 'Time Spent Learning',
-      value: stats.timeSpentLearning,
-      color: '#8B5CF6', // Purple
+      icon: 'trending-up',
+      label: 'Streak',
+      value: loading ? '...' : `${stats.currentStreak} ${stats.currentStreak === 1 ? 'day' : 'days'}`,
+      color: '#F97316', // Orange/Fire color
     },
     {
       icon: 'message-circle',

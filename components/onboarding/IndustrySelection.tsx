@@ -7,7 +7,7 @@ import { getIndustryIcon, getIndustryColor, LEGACY_INDUSTRY_MAPPING } from '../.
 
 const industries = [
   { id: 'finance', name: 'Finance and Economics', icon: getIndustryIcon('finance') },
-  { id: 'politics', name: 'Politics, Law and International Relations', icon: getIndustryIcon('politics') },
+  { id: 'politics', name: 'Politics and International Relations', icon: getIndustryIcon('politics') },
   { id: 'entrepreneurship', name: 'Entrepreneurship and Startups', icon: getIndustryIcon('entrepreneurship') },
   { id: 'technology', name: 'Technology and AI', icon: getIndustryIcon('technology') },
   { id: 'energy', name: 'Energy, Sustainability and Climate Innovation', icon: getIndustryIcon('energy') },

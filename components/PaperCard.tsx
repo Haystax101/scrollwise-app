@@ -9,6 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIndustries } from '../context/IndustriesContext';
 import { ExpandedTextModal } from './ExpandedTextModal';
+import { calculateDynamicTextLines, optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -63,8 +64,18 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
   const tableNames = useMemo(() => getTableNames(), []);
 
   const industryName = useMemo(() => {
-    return allIndustries.find(ind => ind.id === paper.industry_id)?.name;
+    const rawName = allIndustries.find(ind => ind.id === paper.industry_id)?.name;
+    return rawName ? optimizeIndustryName(rawName) : undefined;
   }, [allIndustries, paper.industry_id]);
+
+  const dynamicTextLines = useMemo(() => {
+    return calculateDynamicTextLines({
+      hasAuthor: !!(paper.authors && paper.authors.length > 0),
+      hasMultipleMetadataRows: true, // PaperCard has two metadata rows
+      containerHeight: screenHeight * 0.55, // Content section height
+      authorHeight: (paper.authors && paper.authors.length > 0) ? 32 : 0, // Slightly more height for author scroll
+    });
+  }, [paper.authors, screenHeight]);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -264,6 +275,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     authorContainer: {
         flexDirection: 'row',
         marginBottom: 12,
+        minHeight: 28, // Ensure minimum height for authors
     },
     authorTag: {
       backgroundColor: colors.accent + '20',
@@ -281,8 +293,8 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     contentText: {
       color: colors.text,
       fontSize: 16,
-      lineHeight: 24,
-      marginBottom: 16,
+      lineHeight: 22,
+      marginBottom: 12,
     },
     readMoreText: {
       color: colors.primary,
@@ -348,24 +360,27 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
                   )}
                 </View>
               </View>
-              <Text style={dynamicStyles.title} numberOfLines={2}>{paper.title}</Text>
+              <Text style={dynamicStyles.title} numberOfLines={2}>{removeHtmlTags(paper.title)}</Text>
               {paper.authors && paper.authors.length > 0 && (
-                <ScrollView 
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingRight: 16 }}
-                >
-                  <View style={dynamicStyles.authorContainer}>
-                    {paper.authors.map((author, index) => (
-                      <View key={index} style={dynamicStyles.authorTag}>
-                        <Text style={dynamicStyles.authorText}>{author}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </ScrollView>
+                <View style={{ marginBottom: 12 }}>
+                  <ScrollView 
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingRight: 16 }}
+                    style={{ maxHeight: 32 }} // Prevent scrollview from being squished
+                  >
+                    <View style={dynamicStyles.authorContainer}>
+                      {paper.authors.map((author, index) => (
+                        <View key={index} style={dynamicStyles.authorTag}>
+                          <Text style={dynamicStyles.authorText}>{author}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
               )}
               <TouchableOpacity onPress={handleToggleExpand}>
-                <Text style={dynamicStyles.contentText} numberOfLines={isExpanded ? undefined : 6}>
+                <Text style={dynamicStyles.contentText} numberOfLines={isExpanded ? undefined : dynamicTextLines}>
                   {isExpanded ? (showComplexContent ? paper.content_complex : paper.content_simple) : paper.content_simple}
                 </Text>
               </TouchableOpacity>
@@ -378,16 +393,16 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
                 <Text style={dynamicStyles.actionText}>{likes}</Text>
               </View>
               <View style={dynamicStyles.actionGroup}>
-                <TouchableOpacity style={dynamicStyles.actionButton} onPress={handleSavePress}>
-                  <Feather name="bookmark" size={20} color={hasSaved ? colors.accent : colors.text} />
-                </TouchableOpacity>
-                <Text style={dynamicStyles.actionText}>{saves}</Text>
-              </View>
-              <View style={dynamicStyles.actionGroup}>
                 <TouchableOpacity style={dynamicStyles.actionButton} onPress={handleCommentsPress}>
                   <Feather name="message-circle" size={20} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={dynamicStyles.actionText}>{paper.comments_count || 0}</Text>
+              </View>
+              <View style={dynamicStyles.actionGroup}>
+                <TouchableOpacity style={dynamicStyles.actionButton} onPress={handleSavePress}>
+                  <Feather name="bookmark" size={20} color={hasSaved ? colors.accent : colors.text} />
+                </TouchableOpacity>
+                <Text style={dynamicStyles.actionText}>{saves}</Text>
               </View>
               <TouchableOpacity style={dynamicStyles.readMoreButton} onPress={handleToggleExpand}>
                 <Text style={dynamicStyles.readMoreButtonText}>Read More</Text>

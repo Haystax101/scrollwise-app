@@ -59,7 +59,7 @@ const lightTheme: ThemeColors = {
   separator: '#F3F4F6',
   
   primary: '#EAB308',
-  primaryText: '#FFFFFF',
+  primaryText: '#000000',
   accent: '#EAB308',
   error: '#EF4444',
   
@@ -91,7 +91,7 @@ const darkTheme: ThemeColors = {
   separator: '#2D2D3A',
 
   primary: '#EAB308',
-  primaryText: '#FFFFFF',
+  primaryText: '#000000',
   accent: '#EAB308',
   error: '#EF4444',
   

@@ -18,6 +18,7 @@ import { ProfileCustomizationSections } from './ProfileCustomizationSections';
 import { IndustrySelectionPage } from './IndustrySelectionPage';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { CareerGoalEditModal } from './CareerGoalEditModal';
+import { SavedContentScrollView } from './SavedContentScrollView';
 
 interface NewProfileProps {
   user: any; // Supabase user
@@ -46,7 +47,7 @@ interface Industry {
 }
 
 interface LearningStats {
-  timeSpentLearning: string;
+  currentStreak: number;
   totalInteractions: number;
   contentEngaged: number;
 }
@@ -94,7 +95,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [careerGoal, setCareerGoal] = useState<CareerGoal | null>(null);
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [learningStats, setLearningStats] = useState<LearningStats>({
-    timeSpentLearning: '0h 0m',
+    currentStreak: 0,
     totalInteractions: 0,
     contentEngaged: 0
   });
@@ -184,24 +185,68 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         setIndustries(formattedIndustries);
       }
 
-      // Fetch learning stats using enhanced function
-      const { data: statsData, error: statsError } = await supabase
-        .rpc('get_enhanced_user_stats', { user_id_param: currentUser.id });
+      // Fetch streak data from user_streaks table
+      const { data: streakData, error: streakError } = await supabase
+        .from('user_streaks')
+        .select('current_streak')
+        .eq('user_id', currentUser.id)
+        .eq('streak_type', 'daily_learning')
+        .single();
 
-      if (statsError) {
-        console.error('Error fetching enhanced learning stats:', statsError);
-      } else if (statsData && statsData.length > 0) {
-        const stats = statsData[0];
-        const minutes = parseInt(stats.minutes_learned) || 0;
-        const hours = Math.floor(minutes / 60);
-        const remainingMinutes = minutes % 60;
-        
-        setLearningStats({
-          timeSpentLearning: `${hours}h ${remainingMinutes}m`,
-          totalInteractions: (parseInt(stats.posts_liked) || 0) + (parseInt(stats.posts_saved) || 0),
-          contentEngaged: parseInt(stats.content_pieces_engaged) || 0
-        });
+      // Fetch content engagement data by counting unique interactions
+      const [articleLikesRes, articleSavesRes, articleCommentsRes, paperLikesRes, paperSavesRes, paperCommentsRes, bookLikesRes, bookSavesRes, bookCommentsRes, insightLikesRes, insightSavesRes, insightCommentsRes] = await Promise.all([
+        supabase.from('article_likes').select('article_id').eq('user_id', currentUser.id),
+        supabase.from('article_saves').select('article_id').eq('user_id', currentUser.id),
+        supabase.from('comments').select('article_id').eq('user_id', currentUser.id),
+        supabase.from('paper_likes').select('paper_id').eq('user_id', currentUser.id),
+        supabase.from('paper_saves').select('paper_id').eq('user_id', currentUser.id),
+        supabase.from('paper_comments').select('paper_id').eq('user_id', currentUser.id),
+        supabase.from('book_likes').select('book_id').eq('user_id', currentUser.id),
+        supabase.from('book_saves').select('book_id').eq('user_id', currentUser.id),
+        supabase.from('book_comments').select('book_id').eq('user_id', currentUser.id),
+        supabase.from('insight_likes').select('insight_id').eq('user_id', currentUser.id),
+        supabase.from('insight_saves').select('insight_id').eq('user_id', currentUser.id),
+        supabase.from('insight_comments').select('insight_id').eq('user_id', currentUser.id)
+      ]);
+
+      // Calculate unique content pieces engaged with
+      const uniqueArticles = new Set([
+        ...(articleLikesRes.data?.map(r => `article_${r.article_id}`) || []),
+        ...(articleSavesRes.data?.map(r => `article_${r.article_id}`) || []),
+        ...(articleCommentsRes.data?.map(r => `article_${r.article_id}`) || [])
+      ]);
+      const uniquePapers = new Set([
+        ...(paperLikesRes.data?.map(r => `paper_${r.paper_id}`) || []),
+        ...(paperSavesRes.data?.map(r => `paper_${r.paper_id}`) || []),
+        ...(paperCommentsRes.data?.map(r => `paper_${r.paper_id}`) || [])
+      ]);
+      const uniqueBooks = new Set([
+        ...(bookLikesRes.data?.map(r => `book_${r.book_id}`) || []),
+        ...(bookSavesRes.data?.map(r => `book_${r.book_id}`) || []),
+        ...(bookCommentsRes.data?.map(r => `book_${r.book_id}`) || [])
+      ]);
+      const uniqueInsights = new Set([
+        ...(insightLikesRes.data?.map(r => `insight_${r.insight_id}`) || []),
+        ...(insightSavesRes.data?.map(r => `insight_${r.insight_id}`) || []),
+        ...(insightCommentsRes.data?.map(r => `insight_${r.insight_id}`) || [])
+      ]);
+
+      const totalInteractions = (articleLikesRes.data?.length || 0) + (articleSavesRes.data?.length || 0) + (articleCommentsRes.data?.length || 0) +
+                               (paperLikesRes.data?.length || 0) + (paperSavesRes.data?.length || 0) + (paperCommentsRes.data?.length || 0) +
+                               (bookLikesRes.data?.length || 0) + (bookSavesRes.data?.length || 0) + (bookCommentsRes.data?.length || 0) +
+                               (insightLikesRes.data?.length || 0) + (insightSavesRes.data?.length || 0) + (insightCommentsRes.data?.length || 0);
+
+      const contentEngaged = uniqueArticles.size + uniquePapers.size + uniqueBooks.size + uniqueInsights.size;
+
+      if (streakError) {
+        console.error('Error fetching streak data:', streakError);
       }
+
+      setLearningStats({
+        currentStreak: streakData?.current_streak || 1, // Default to 1 if no streak data
+        totalInteractions,
+        contentEngaged
+      });
 
       // Fetch enhanced profile data from new schema
       const [sectionsRes, skillsRes, experiencesRes, educationRes, projectsRes] = await Promise.all([
@@ -434,6 +479,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
         <LearningStatsGrid
           stats={learningStats}
+          loading={loading}
+        />
+
+        <SavedContentScrollView
           loading={loading}
         />
 

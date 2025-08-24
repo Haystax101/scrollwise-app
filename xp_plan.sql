@@ -7,24 +7,24 @@ BEGIN;
 CREATE OR REPLACE FUNCTION public.submit_quiz_attempt(
   p_user_id uuid,
   p_question_id uuid,
-  p_selected char(1)
+  p_selected integer
 ) RETURNS TABLE (is_correct boolean)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  correct_opt char(1);
+  correct_opt integer;
   was_inserted boolean := false;
 BEGIN
-  SELECT correct_option INTO correct_opt FROM public.quiz_questions WHERE id = p_question_id;
+  SELECT correct_option_index INTO correct_opt FROM public.quiz_questions WHERE id = p_question_id;
   IF correct_opt IS NULL THEN
     RETURN QUERY SELECT false;
     RETURN;
   END IF;
 
   -- Insert attempt (enforced UNIQUE (user_id, question_id))
-  INSERT INTO public.quiz_attempts (user_id, question_id, selected_option, is_correct)
+  INSERT INTO public.quiz_attempts (user_id, question_id, selected_option_index, is_correct)
   VALUES (p_user_id, p_question_id, p_selected, p_selected = correct_opt)
   ON CONFLICT (user_id, question_id) DO NOTHING;
 
@@ -35,7 +35,7 @@ BEGIN
   LIMIT 1;
 END;$$;
 
-GRANT EXECUTE ON FUNCTION public.submit_quiz_attempt(uuid, uuid, char) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.submit_quiz_attempt(uuid, uuid, integer) TO authenticated;
 
 -- Trigger to auto-grant XP when a correct quiz attempt is inserted
 CREATE OR REPLACE FUNCTION public.trg_quiz_attempts_grant_xp()
