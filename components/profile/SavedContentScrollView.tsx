@@ -51,7 +51,7 @@ interface SavedContentScrollViewProps {
 
 export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ loading: parentLoading = false }) => {
   const { user } = useAuth();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
   const { allIndustries } = useIndustries();
   const [savedContent, setSavedContent] = useState<SavedContent[]>([]);
@@ -194,7 +194,7 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
     router.push({
       pathname: '/feed',
       params: { 
-        reelId: content.id,
+        contentId: content.id.toString(),
         contentType: content.type
       }
     });
@@ -248,7 +248,10 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
 
   if (parentLoading || loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { 
+        backgroundColor: isDark ? colors.surface : colors.card,
+        borderColor: colors.border 
+      }]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>Saved Content</Text>
         </View>
@@ -261,7 +264,10 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
 
   if (savedContent.length === 0) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { 
+        backgroundColor: isDark ? colors.surface : colors.card,
+        borderColor: colors.border 
+      }]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>Saved Content</Text>
         </View>
@@ -279,7 +285,10 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { 
+      backgroundColor: isDark ? colors.surface : colors.card,
+      borderColor: colors.border 
+    }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Saved Content</Text>
         <TouchableOpacity onPress={() => router.push('/saved-feed')}>
@@ -300,8 +309,10 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 24,
+    borderWidth: 1,
   },
   header: {
     flexDirection: 'row',
@@ -331,6 +342,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+    overflow: 'hidden',
   },
   savedItemType: {
     fontSize: 12,
@@ -344,6 +356,7 @@ const styles = StyleSheet.create({
   },
   savedItemIndustry: {
     fontSize: 12,
+    flex: 1,
   },
   savedItemTitle: {
     fontSize: 14,

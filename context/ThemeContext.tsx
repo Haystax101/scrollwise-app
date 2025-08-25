@@ -25,6 +25,7 @@ export interface ThemeColors {
   // Interactive elements
   primary: string;
   primaryText: string;
+  readButtonText: string;
   accent: string;
   error: string;
   
@@ -60,6 +61,7 @@ const lightTheme: ThemeColors = {
   
   primary: '#EAB308',
   primaryText: '#000000',
+  readButtonText: '#000000',
   accent: '#EAB308',
   error: '#EF4444',
   
@@ -92,6 +94,7 @@ const darkTheme: ThemeColors = {
 
   primary: '#EAB308',
   primaryText: '#000000',
+  readButtonText: '#000000',
   accent: '#EAB308',
   error: '#EF4444',
   

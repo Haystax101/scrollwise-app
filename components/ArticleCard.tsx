@@ -299,7 +299,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
       paddingVertical: 8,
       borderRadius: 16,
     },
-    readMoreButtonText: { color: colors.primaryText, fontSize: 14, fontWeight: '600' },
+    readMoreButtonText: { color: colors.readButtonText, fontSize: 14, fontWeight: '600' },
   });
 
   return (

@@ -344,19 +344,19 @@ export const Discover: React.FC = () => {
         <View style={styles.statsRow}>
           <View style={styles.stat}>
             <Feather name="heart" size={14} color={colors.textTertiary} />
-            <Text style={dynamicStyles.statText}>{item.likes_count}</Text>
-          </View>
-          <View style={styles.stat}>
-            <Feather name="bookmark" size={14} color={colors.textTertiary} />
-            <Text style={dynamicStyles.statText}>{item.saves_count}</Text>
+            <Text style={dynamicStyles.statText}>{item.likes_count || 0}</Text>
           </View>
           <View style={styles.stat}>
             <Feather name="message-circle" size={14} color={colors.textTertiary} />
-            <Text style={dynamicStyles.statText}>{item.comments_count}</Text>
+            <Text style={dynamicStyles.statText}>{item.comments_count || 0}</Text>
+          </View>
+          <View style={styles.stat}>
+            <Feather name="bookmark" size={14} color={colors.textTertiary} />
+            <Text style={dynamicStyles.statText}>{item.saves_count || 0}</Text>
           </View>
           <View style={styles.stat}>
             <Feather name="eye" size={14} color={colors.textTertiary} />
-            <Text style={dynamicStyles.statText}>{item.views_count}</Text>
+            <Text style={dynamicStyles.statText}>{item.views_count || 0}</Text>
           </View>
           <View style={styles.stat}>
             <Feather name="calendar" size={14} color={colors.textTertiary} />

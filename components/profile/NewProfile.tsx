@@ -11,6 +11,7 @@ import SettingsModal from '../SettingsModal';
 import { NewProfileHeader } from './NewProfileHeader';
 import { LevelProgressCard } from './LevelProgressCard';
 import { LearningStatsGrid } from './LearningStatsGrid';
+import { LeaderboardCard } from './LeaderboardCard';
 import { AchievementsBelt } from './AchievementsBelt';
 import { CareerGoalCard } from './CareerGoalCard';
 import { IndustryInterestsCard } from './IndustryInterestsCard';
@@ -479,6 +480,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
         <LearningStatsGrid
           stats={learningStats}
+          loading={loading}
+        />
+
+        <LeaderboardCard
           loading={loading}
         />
 

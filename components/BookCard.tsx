@@ -149,6 +149,7 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
     }
   }).current;
 
+
   const viewabilityConfig: ViewabilityConfig = useMemo(() => ({
     itemVisiblePercentThreshold: 50,
     minimumViewTime: 200,
@@ -157,18 +158,15 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
   const renderSlide = useCallback(({ item }: { item: SlideItem }) => {
     if (item.type === 'cover') {
       return (
-        <View style={[styles.slide, { width: screenWidth }]}>
-          <View style={[styles.bookCover, { backgroundColor: industryColor, borderColor: industryColor + '30' }]}>
-            <View style={styles.bookSpine} />
-            <View style={[styles.bookContent, { backgroundColor: industryColor }]}>
-              <Text style={[styles.bookTitle, { color: 'white' }]}>{removeHtmlTags(book.title)}</Text>
-              {book.author && <Text style={[styles.bookAuthor, { color: 'rgba(255,255,255,0.8)' }]}>{book.author}</Text>}
-              {book.year && <Text style={[styles.bookYear, { color: 'rgba(255,255,255,0.8)' }]}>{book.year}</Text>}
-              <Text style={[styles.bookSummary, { color: 'rgba(255,255,255,0.9)' }]}>{book.short_summary}</Text>
-            </View>
+        <View style={[styles.slide, { width: screenWidth, backgroundColor: industryColor }]}>
+          <View style={[styles.bookContentSimple, { backgroundColor: industryColor }]}>
+            <Text style={[styles.bookTitle, { color: 'black' }]}>{removeHtmlTags(book.title)}</Text>
+            {book.author && <Text style={[styles.bookAuthor, { color: 'rgba(0,0,0,0.8)' }]}>{book.author}</Text>}
+            {book.year && <Text style={[styles.bookYear, { color: 'rgba(0,0,0,0.8)' }]}>{book.year}</Text>}
+            <Text style={[styles.bookSummary, { color: 'rgba(0,0,0,0.9)' }]}>{book.short_summary}</Text>
           </View>
           {slides.length > 1 && (
-            <Text style={[styles.swipeHint, { color: colors.textSecondary }]}>Swipe for insights →</Text>
+            <Text style={[styles.swipeHint, { color: 'rgba(0,0,0,0.7)' }]}>Swipe for insights →</Text>
           )}
         </View>
       );
@@ -197,15 +195,26 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
   const dynamicStyles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, height: screenHeight },
     contentSection: { flex: 1, backgroundColor: colors.background, paddingTop: 0, paddingBottom: insets.bottom + 60 },
-    slidesContainer: { flex: 1 },
-    slideIndicators: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 12 },
+    slidesContainer: { flex: 1, position: 'relative' },
+    slideIndicators: { 
+      flexDirection: 'row', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      paddingVertical: 12,
+      backgroundColor: 'transparent',
+      position: 'absolute',
+      bottom: 20,
+      left: 0,
+      right: 0,
+      zIndex: 10
+    },
     indicator: { width: 8, height: 8, borderRadius: 4, marginHorizontal: 4 },
     actionsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: colors.border },
     actionGroup: { flexDirection: 'row', alignItems: 'center' },
     actionButton: { padding: 8 },
     actionText: { color: colors.textSecondary, fontSize: 12, marginLeft: 4, fontWeight: '500' },
     readMoreButton: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16 },
-    readMoreButtonText: { color: colors.primaryText, fontSize: 14, fontWeight: '600' },
+    readMoreButtonText: { color: colors.readButtonText, fontSize: 14, fontWeight: '600' },
   });
 
   return (
@@ -224,21 +233,24 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
             viewabilityConfig={viewabilityConfig}
             bounces={false}
           />
+          
+          {slides.length > 1 && (
+            <View style={dynamicStyles.slideIndicators}>
+              {slides.map((_, index) => (
+                <View 
+                  key={index}
+                  style={[
+                    dynamicStyles.indicator,
+                    { backgroundColor: index === currentSlide 
+                      ? (currentSlide === 0 ? 'white' : industryColor)
+                      : (currentSlide === 0 ? 'rgba(255,255,255,0.4)' : colors.textSecondary + '40')
+                    }
+                  ]} 
+                />
+              ))}
+            </View>
+          )}
         </View>
-        
-        {slides.length > 1 && (
-          <View style={dynamicStyles.slideIndicators}>
-            {slides.map((_, index) => (
-              <View 
-                key={index}
-                style={[
-                  dynamicStyles.indicator,
-                  { backgroundColor: index === currentSlide ? industryColor : colors.textSecondary + '40' }
-                ]} 
-              />
-            ))}
-          </View>
-        )}
 
         <View style={dynamicStyles.actionsRow}>
           <View style={dynamicStyles.actionGroup}>
@@ -309,6 +321,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 6,
   },
+  bookContentSimple: {
+    flex: 1,
+    width: '100%',
+    padding: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   bookTitle: {
     fontSize: 24,
     fontWeight: '700',
@@ -335,9 +354,10 @@ const styles = StyleSheet.create({
   },
   swipeHint: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 60,
     fontSize: 14,
     fontStyle: 'italic',
+    alignSelf: 'center',
   },
   insightContainer: {
     flex: 1,
