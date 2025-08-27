@@ -1,20 +1,19 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { supabase } from '../../lib/supabase';
 
 interface NewProfileHeaderProps {
   fullName: string;
   avatarUrl?: string | null;
-  userId: string;
+  userLevel: number;
   onAvatarPress: () => void;
 }
 
 export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
   fullName,
   avatarUrl,
-  userId,
+  userLevel,
   onAvatarPress
 }) => {
   const { colors, isDark } = useTheme();
@@ -34,30 +33,52 @@ export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
       width: 112,
       height: 112,
       borderRadius: 56,
-      borderWidth: 2,
-      borderColor: 'white',
+      borderWidth: 3,
+      borderColor: '#EAB308',
     },
     avatarEditOverlay: {
       position: 'absolute',
-      bottom: 0,
-      right: 0,
-      backgroundColor: colors.primary,
+      bottom: -2,
+      right: -2,
+      backgroundColor: '#EAB308',
       borderRadius: 16,
       width: 32,
       height: 32,
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 2,
-      borderColor: 'white',
+      borderColor: isDark ? colors.surface : 'white',
     },
     nameContainer: {
-      marginBottom: 8,
+      alignItems: 'center',
+      marginBottom: 12,
     },
     userName: {
       fontSize: 24,
       fontWeight: 'bold',
       color: 'white',
       textAlign: 'center',
+      marginBottom: 4,
+    },
+    userHandle: {
+      fontSize: 16,
+      color: 'rgba(255, 255, 255, 0.8)',
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    levelBadge: {
+      backgroundColor: '#EAB308',
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+    },
+    levelBadgeText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#000000',
+      marginLeft: 4,
     },
   });
 
@@ -79,6 +100,11 @@ export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
       
       <View style={styles.nameContainer}>
         <Text style={styles.userName}>{fullName}</Text>
+        <Text style={styles.userHandle}>@{fullName.toLowerCase().replace(/\s+/g, '')}</Text>
+        <View style={styles.levelBadge}>
+          <Feather name="zap" size={16} color="#000000" />
+          <Text style={styles.levelBadgeText}>Level {userLevel}</Text>
+        </View>
       </View>
     </View>
   );

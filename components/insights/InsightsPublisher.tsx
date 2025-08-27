@@ -49,6 +49,13 @@ export const InsightsPublisher: React.FC<InsightsPublisherProps> = ({ onComplete
     setStep(3);
     
     try {
+      console.log('Publishing insight with data:', {
+        content: insightText.trim(),
+        author_id: user?.id,
+        contentLength: insightText.trim().length,
+        userExists: !!user?.id
+      });
+
       // Insert the insight into the database
       const { data, error } = await supabase.from('insights').insert({
         content: insightText.trim(),
@@ -57,6 +64,12 @@ export const InsightsPublisher: React.FC<InsightsPublisherProps> = ({ onComplete
 
       if (error) {
         console.error('Error publishing insight:', error);
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
         Alert.alert('Error', 'Failed to publish your insight. Please try again.');
         setStep(1); // Go back to input
         return;

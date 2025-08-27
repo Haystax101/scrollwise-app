@@ -14,16 +14,15 @@ const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 const getIndustryColor = (industryId: string): string => {
   // Array of vibrant colors for random selection
   const colors = [
-    '#3B82F6', // Bold Blue
-    '#10B981', // Bold Green
-    '#EF4444', // Bold Red
-    '#8B5CF6', // Bold Purple
-    '#F97316', // Bold Orange
-    '#F59E0B', // Bold Amber
-    '#64748B', // Bold Slate
-    '#06B6D4', // Bold Cyan
-    '#EC4899', // Bold Pink
-    '#84CC16', // Bold Lime
+    '#9C27B0', // Purple
+    '#B71C1C', // Red
+    '#1565C0', // Blue
+    '#1B5E20', // Green
+    '#5E35B1', // Purple
+    '#880E4F', // Pink
+    '#C51162', // Pink
+    '#311B92', // Purple
+    '#004D40', // Teal
   ];
   
   // Use industryId as seed for consistent randomness per book
@@ -160,13 +159,13 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
       return (
         <View style={[styles.slide, { width: screenWidth, backgroundColor: industryColor }]}>
           <View style={[styles.bookContentSimple, { backgroundColor: industryColor }]}>
-            <Text style={[styles.bookTitle, { color: 'black' }]}>{removeHtmlTags(book.title)}</Text>
-            {book.author && <Text style={[styles.bookAuthor, { color: 'rgba(0,0,0,0.8)' }]}>{book.author}</Text>}
-            {book.year && <Text style={[styles.bookYear, { color: 'rgba(0,0,0,0.8)' }]}>{book.year}</Text>}
-            <Text style={[styles.bookSummary, { color: 'rgba(0,0,0,0.9)' }]}>{book.short_summary}</Text>
+            <Text style={[styles.bookTitle, { color: colors.bookTitle }]}>{removeHtmlTags(book.title)}</Text>
+            {book.author && <Text style={[styles.bookAuthor, { color: colors.bookMeta }]}>{book.author}</Text>}
+            {book.year && <Text style={[styles.bookYear, { color: colors.bookMeta }]}>{book.year}</Text>}
+            <Text style={[styles.bookSummary, { color: colors.bookSummary }]}>{book.short_summary}</Text>
           </View>
           {slides.length > 1 && (
-            <Text style={[styles.swipeHint, { color: 'rgba(0,0,0,0.7)' }]}>Swipe for insights →</Text>
+            <Text style={[styles.swipeHint, { color: colors.bookSwipeHint }]}>Swipe for insights →</Text>
           )}
         </View>
       );

@@ -59,7 +59,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
   const [saves, setSaves] = useState(paper.saves_count || 0);
   const [hasSaved, setHasSaved] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showComplexContent, setShowComplexContent] = useState(false);
+  const [showComplexContent, setShowComplexContent] = useState(true);
 
   const tableNames = useMemo(() => getTableNames(), []);
 
@@ -195,12 +195,12 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
           >
             {showComplexContent ? (
               <Text style={[{ fontSize: 16, fontWeight: '600' }, { color: colors.primaryText }]}>
-                ❗ Woah, Too Deep!
+                Simplify
               </Text>
             ) : (
               <>
                 <Text style={[{ fontSize: 16, fontWeight: '600' }, { color: colors.primaryText }]}>
-                  ✨ Delve Deeper
+                  Delve Deeper
                 </Text>
               </>
             )}

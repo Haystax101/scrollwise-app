@@ -15,7 +15,9 @@ import { LeaderboardCard } from './LeaderboardCard';
 import { AchievementsBelt } from './AchievementsBelt';
 import { CareerGoalCard } from './CareerGoalCard';
 import { IndustryInterestsCard } from './IndustryInterestsCard';
-import { ProfileCustomizationSections } from './ProfileCustomizationSections';
+import { ExperienceCard } from './ExperienceCard';
+import { EducationCard } from './EducationCard';
+import { SkillsCard } from './SkillsCard';
 import { IndustrySelectionPage } from './IndustrySelectionPage';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { CareerGoalEditModal } from './CareerGoalEditModal';
@@ -404,9 +406,6 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     setShowIndustrySelection(false);
   };
 
-  const handleProfileDataUpdate = (newData: ProfileData) => {
-    setProfileData(newData);
-  };
 
   const styles = StyleSheet.create({
     container: {
@@ -468,7 +467,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           <NewProfileHeader
             fullName={fullName}
             avatarUrl={avatarUrl}
-            userId={currentUser?.id}
+            userLevel={userLevel}
             onAvatarPress={handleAvatarPress}
           />
         </LinearGradient>
@@ -508,12 +507,25 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           loading={loading}
         />
 
-        <ProfileCustomizationSections
-          profileData={profileData}
+        <ExperienceCard
+          experiences={profileData.experience || []}
           userId={currentUser?.id || ''}
-          onDataUpdate={handleProfileDataUpdate}
-          onRefresh={fetchProfileData}
           loading={loading}
+          onRefresh={fetchProfileData}
+        />
+
+        <EducationCard
+          education={profileData.education || []}
+          userId={currentUser?.id || ''}
+          loading={loading}
+          onRefresh={fetchProfileData}
+        />
+
+        <SkillsCard
+          skills={profileData.skills || []}
+          userId={currentUser?.id || ''}
+          loading={loading}
+          onRefresh={fetchProfileData}
         />
       </ScrollView>
 

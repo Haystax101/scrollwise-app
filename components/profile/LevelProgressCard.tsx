@@ -24,148 +24,103 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: isDark ? colors.surface : colors.card,
+      backgroundColor: isDark ? '#2D3748' : '#374151',
       padding: 20,
       borderRadius: 16,
       marginBottom: 24,
-      borderWidth: isDark ? 1 : 0,
-      borderColor: isDark ? colors.border : 'transparent',
+      marginHorizontal: 20,
     },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 12,
+      marginBottom: 16,
     },
     leftHeader: {
       flex: 1,
     },
     levelLabel: {
-      fontSize: 12,
-      color: colors.textSecondary,
+      fontSize: 14,
+      color: 'rgba(255, 255, 255, 0.7)',
       fontWeight: '500',
-      letterSpacing: 0.5,
-    },
-    levelContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 4,
-    },
-    lightningIcon: {
-      marginRight: 4,
-    },
-    levelText: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      color: colors.text,
     },
     rightHeader: {
       alignItems: 'flex-end',
     },
-    voltzLabel: {
-      fontSize: 12,
-      color: colors.textSecondary,
-      fontWeight: '500',
-      letterSpacing: 0.5,
-    },
     voltzText: {
-      fontSize: 20,
+      fontSize: 18,
       fontWeight: 'bold',
-      color: colors.primary,
-      marginTop: 4,
+      color: '#EAB308',
     },
-    batteryContainer: {
+    progressContainer: {
       position: 'relative',
-      height: 40,
-      backgroundColor: isDark ? '#2D2D3A' : '#F3F4F6',
+      height: 16,
+      backgroundColor: isDark ? '#1A202C' : '#1F2937',
       borderRadius: 8,
       overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: isDark ? '#3D3D4A' : '#E5E7EB',
-      flexDirection: 'row',
-      alignItems: 'center',
       marginBottom: 12,
-    },
-    batteryTerminal: {
-      position: 'absolute',
-      right: -1,
-      top: '50%',
-      marginTop: -12,
-      height: 24,
-      width: 6,
-      backgroundColor: isDark ? '#3D3D4A' : '#D1D5DB',
-      borderTopRightRadius: 3,
-      borderBottomRightRadius: 3,
     },
     progressFill: {
       height: '100%',
-      borderRadius: 6,
+      backgroundColor: '#EAB308',
+      borderRadius: 8,
       flexDirection: 'row',
       alignItems: 'center',
-      paddingLeft: 8,
+      justifyContent: 'center',
     },
-    lightningInBattery: {
-      marginRight: 4,
-    },
-    progressText: {
+    progressIcon: {
       position: 'absolute',
-      left: 0,
-      right: 0,
-      textAlign: 'center',
-      fontSize: 12,
-      fontWeight: 'bold',
-      color: colors.text,
-      zIndex: 2,
+      left: '50%',
+      marginLeft: -8,
+    },
+    progressLabels: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    levelText: {
+      fontSize: 14,
+      color: 'rgba(255, 255, 255, 0.7)',
+      fontWeight: '500',
     },
     totalVoltzText: {
       fontSize: 12,
-      color: colors.textSecondary,
+      color: 'rgba(255, 255, 255, 0.7)',
       textAlign: 'center',
     },
   });
 
-  const createLinearGradient = () => ({
-    backgroundColor: colors.primary,
-    // For React Native, we'll use a solid color instead of gradient
-    // You could implement react-native-linear-gradient here if needed
-  });
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.leftHeader}>
-          <Text style={styles.levelLabel}>CURRENT LEVEL</Text>
-          <View style={styles.levelContainer}>
-            <View style={styles.lightningIcon}>
-              <Feather name="zap" size={20} color={colors.primary} />
-            </View>
-            <Text style={styles.levelText}>Level {level}</Text>
-          </View>
+          <Text style={styles.levelLabel}>Voltz Level</Text>
         </View>
         <View style={styles.rightHeader}>
-          <Text style={styles.voltzLabel}>VOLTZ POINTS</Text>
-          <Text style={styles.voltzText}>{spendableVoltz.toLocaleString()}</Text>
+          <Text style={styles.voltzText}>{currentVoltz.toLocaleString()} Voltz</Text>
         </View>
       </View>
 
-      <View style={styles.batteryContainer}>
-        <View style={styles.batteryTerminal} />
+      <View style={styles.progressLabels}>
+        <Text style={styles.levelText}>Level {level}</Text>
+        <Text style={styles.levelText}>Level {level + 1}</Text>
+      </View>
+
+      <View style={styles.progressContainer}>
         <View 
           style={[
-            styles.progressFill, 
-            createLinearGradient(),
+            styles.progressFill,
             { width: `${progressPercentage}%` }
           ]}
         >
-          {progressPercentage > 15 && (
-            <View style={styles.lightningInBattery}>
-              <Feather name="zap" size={12} color="black" />
+          {progressPercentage > 30 && (
+            <View style={styles.progressIcon}>
+              <Feather name="zap" size={12} color="#000000" />
             </View>
           )}
         </View>
-        <Text style={styles.progressText}>
-          {progressPercentage.toFixed(0)}% to Level {level + 1}
-        </Text>
       </View>
 
       <Text style={styles.totalVoltzText}>Total Voltz Earned: {currentVoltz.toLocaleString()}</Text>

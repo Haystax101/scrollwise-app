@@ -29,6 +29,12 @@ export interface ThemeColors {
   accent: string;
   error: string;
   
+  // Book cover text colors
+  bookTitle: string;
+  bookMeta: string;
+  bookSummary: string;
+  bookSwipeHint: string;
+  
   // Status bar
   statusBarStyle: 'light-content' | 'dark-content';
   statusBarBackground: string;
@@ -65,6 +71,11 @@ const lightTheme: ThemeColors = {
   accent: '#EAB308',
   error: '#EF4444',
   
+  bookTitle: '#FFFFFF',
+  bookMeta: 'rgba(255,255,255,0.9)',
+  bookSummary: 'rgba(255,255,255,0.9)',
+  bookSwipeHint: 'rgba(255,255,255,0.8)',
+  
   statusBarStyle: 'dark-content',
   statusBarBackground: '#F9FAFB',
   
@@ -97,6 +108,11 @@ const darkTheme: ThemeColors = {
   readButtonText: '#000000',
   accent: '#EAB308',
   error: '#EF4444',
+  
+  bookTitle: '#FFFFFF',
+  bookMeta: 'rgba(255,255,255,0.9)',
+  bookSummary: 'rgba(255,255,255,0.9)',
+  bookSwipeHint: 'rgba(255,255,255,0.8)',
   
   statusBarStyle: 'light-content',
   statusBarBackground: '#0A0B1E',

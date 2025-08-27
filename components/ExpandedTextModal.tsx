@@ -47,7 +47,7 @@ export const ExpandedTextModal: React.FC<ExpandedTextModalProps> = ({ visible, o
         {externalLink && (
           <View style={styles.footer}>
             <TouchableOpacity style={[styles.readFullButton, { backgroundColor: colors.primary }]} onPress={handleReadFull}>
-              <Text style={[styles.readFullButtonText, { color: colors.text }]}>
+              <Text style={styles.readFullButtonText}>
                 Read full {contentType}
               </Text>
             </TouchableOpacity>

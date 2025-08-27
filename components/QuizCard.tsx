@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -162,9 +162,14 @@ export const QuizCard: React.FC<QuizCardProps> = ({ visible, onClose, question }
             </TouchableOpacity>
           ) : (
             <View style={styles.resultContainer}>
-              <Text style={[styles.resultText, { color: result.correct ? '#10B981' : '#EF4444' }]}>
-                {result.correct ? '🎉 +5 XP • Correct!' : '❌ Incorrect'}
-              </Text>
+              <View style={[styles.resultTextContainer, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}>
+                {result.correct && (
+                  <Feather name="zap" size={18} color="#EAB308" style={{ marginRight: 8 }} />
+                )}
+                <Text style={[styles.resultText, { color: result.correct ? '#10B981' : '#EF4444' }]}>
+                  {result.correct ? '+5 voltz • Correct!' : '❌ Incorrect'}
+                </Text>
+              </View>
               {!result.correct && (
                 <Text style={[styles.correctAnswerText, { color: colors.textSecondary }]}>
                   Correct answer: {result.correctAnswer}

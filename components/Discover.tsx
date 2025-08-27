@@ -25,16 +25,15 @@ function useDebounce<T>(value: T, delay: number): T {
 
 const getIndustryPillColor = (industryId: string): string => {
   const colors = [
-    '#3B82F6', // Bold Blue
-    '#10B981', // Bold Green
-    '#EF4444', // Bold Red
-    '#8B5CF6', // Bold Purple
-    '#F97316', // Bold Orange
-    '#F59E0B', // Bold Amber
-    '#64748B', // Bold Slate
-    '#06B6D4', // Bold Cyan
-    '#EC4899', // Bold Pink
-    '#84CC16', // Bold Lime
+    '#9C27B0', // Purple
+    '#B71C1C', // Red
+    '#1565C0', // Blue
+    '#1B5E20', // Green
+    '#5E35B1', // Purple
+    '#880E4F', // Pink
+    '#C51162', // Pink
+    '#311B92', // Purple
+    '#004D40', // Teal
   ];
   
   // Use industryId as seed for consistent color assignment
@@ -377,9 +376,14 @@ export const Discover: React.FC = () => {
       padding: 16,
       paddingTop: 60,
       zIndex: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
     searchContainer: {
       position: 'relative',
+      flex: 1,
+      marginRight: 16,
     },
     searchInput: {
       backgroundColor: colors.surface,
@@ -403,6 +407,14 @@ export const Discover: React.FC = () => {
       top: 14,
       right: 12,
       zIndex: 1,
+    },
+    lightningContainer: {
+      width: 48,
+      height: 48,
+      backgroundColor: '#EAB308',
+      borderRadius: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     filtersContainer: {
       paddingHorizontal: 16,
@@ -604,6 +616,9 @@ export const Discover: React.FC = () => {
               <Feather name="x-circle" size={20} color={colors.textTertiary} />
             </TouchableOpacity>
           )}
+        </View>
+        <View style={dynamicStyles.lightningContainer}>
+          <Feather name="zap" size={24} color="#000000" />
         </View>
       </View>
 

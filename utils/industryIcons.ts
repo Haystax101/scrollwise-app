@@ -74,29 +74,29 @@ export const INDUSTRY_ICON_MAP: { [key: string]: string } = {
 };
 
 export const INDUSTRY_COLOR_MAP: { [key: string]: string } = {
-  'finance': '#3B82F6',      // Blue
-  'banking': '#3B82F6',      // Blue
-  'investment': '#3B82F6',   // Blue
-  'politics': '#8B5CF6',     // Purple
-  'law': '#8B5CF6',          // Purple
-  'legal': '#8B5CF6',        // Purple
-  'entrepreneurship': '#EF4444', // Red
-  'startups': '#EF4444',     // Red
-  'technology': '#10B981',   // Green
-  'software development': '#10B981', // Green
-  'artificial intelligence': '#10B981', // Green
-  'energy': '#22C55E',       // Green (climate)
-  'sustainability': '#22C55E', // Green
-  'creative': '#F59E0B',     // Yellow/Orange
-  'marketing': '#F59E0B',    // Orange
-  'design': '#F59E0B',       // Orange
-  'engineering': '#6B7280',  // Gray
-  'automotive': '#6B7280',   // Gray
-  'manufacturing': '#6B7280', // Gray
-  'healthcare': '#EC4899',   // Pink
-  'medicine': '#EC4899',     // Pink
-  'education': '#F97316',    // Orange
-  'research': '#F97316',     // Orange
+  'finance': '#9C27B0',      // Purple
+  'banking': '#B71C1C',      // Red
+  'investment': '#1565C0',   // Blue
+  'politics': '#1B5E20',     // Green
+  'law': '#5E35B1',          // Purple
+  'legal': '#880E4F',        // Pink
+  'entrepreneurship': '#C51162', // Pink
+  'startups': '#311B92',     // Purple
+  'technology': '#004D40',   // Teal
+  'software development': '#9C27B0', // Purple
+  'artificial intelligence': '#B71C1C', // Red
+  'energy': '#1565C0',       // Blue
+  'sustainability': '#1B5E20', // Green
+  'creative': '#5E35B1',     // Purple
+  'marketing': '#880E4F',    // Pink
+  'design': '#C51162',       // Pink
+  'engineering': '#311B92',  // Purple
+  'automotive': '#004D40',   // Teal
+  'manufacturing': '#9C27B0', // Purple
+  'healthcare': '#B71C1C',   // Red
+  'medicine': '#1565C0',     // Blue
+  'education': '#1B5E20',    // Green
+  'research': '#5E35B1',     // Purple
 };
 
 export const getIndustryIcon = (industryName: string): string => {
@@ -141,13 +141,13 @@ export const getIndustryColor = (industryName: string, isSelected: boolean = fal
 
 // Legacy mapping for backward compatibility with the old hardcoded array
 export const LEGACY_INDUSTRY_MAPPING: { [key: string]: { icon: string, color: string } } = {
-  'finance': { icon: 'briefcase-outline', color: '#3B82F6' },
-  'politics': { icon: 'globe-outline', color: '#8B5CF6' },
-  'entrepreneurship': { icon: 'rocket-outline', color: '#EF4444' },
-  'technology': { icon: 'desktop-outline', color: '#10B981' },
-  'energy': { icon: 'leaf-outline', color: '#22C55E' },
-  'creative': { icon: 'color-palette-outline', color: '#F59E0B' },
-  'engineering': { icon: 'construct-outline', color: '#6B7280' },
-  'healthcare': { icon: 'medkit-outline', color: '#EC4899' },
-  'education': { icon: 'school-outline', color: '#F97316' },
+  'finance': { icon: 'briefcase-outline', color: '#9C27B0' },
+  'politics': { icon: 'globe-outline', color: '#B71C1C' },
+  'entrepreneurship': { icon: 'rocket-outline', color: '#1565C0' },
+  'technology': { icon: 'desktop-outline', color: '#1B5E20' },
+  'energy': { icon: 'leaf-outline', color: '#5E35B1' },
+  'creative': { icon: 'color-palette-outline', color: '#880E4F' },
+  'engineering': { icon: 'construct-outline', color: '#C51162' },
+  'healthcare': { icon: 'medkit-outline', color: '#311B92' },
+  'education': { icon: 'school-outline', color: '#004D40' },
 };

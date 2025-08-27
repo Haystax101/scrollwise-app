@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { getIndustryIcon, getIndustryColor } from '../../utils/industryIcons';
 
 interface Industry {
   name: string;
@@ -32,59 +33,41 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
       paddingHorizontal: 20,
     },
     headerIcon: {
-      marginRight: 8,
+      marginRight: 12,
     },
     title: {
       fontSize: 20,
       fontWeight: 'bold',
       color: colors.text,
     },
-    card: {
-      backgroundColor: isDark ? colors.surface : colors.card,
+    industriesGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      paddingHorizontal: 20,
+      gap: 16,
+    },
+    industryTile: {
+      backgroundColor: isDark ? '#2D3748' : '#374151',
       borderRadius: 16,
       padding: 20,
-      marginHorizontal: 20,
-      borderWidth: isDark ? 1 : 0,
-      borderColor: isDark ? colors.border : 'transparent',
-      position: 'relative',
-    },
-    editButton: {
-      position: 'absolute',
-      top: 16,
-      right: 16,
-      padding: 4,
-    },
-    industriesContent: {
-      paddingRight: 40,
-    },
-    industryItem: {
-      marginBottom: 16,
-      paddingLeft: 16,
-      borderLeftWidth: 2,
-      borderLeftColor: colors.border,
-    },
-    industryHeader: {
-      flexDirection: 'row',
+      width: '48%',
       alignItems: 'center',
-      marginBottom: 8,
+      minHeight: 120,
     },
     industryIcon: {
-      marginRight: 8,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 12,
     },
     industryName: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.text,
-      flex: 1,
-    },
-    industryStage: {
-      fontSize: 12,
-      color: colors.textSecondary,
-      backgroundColor: isDark ? colors.border : colors.surface,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 12,
-      overflow: 'hidden',
+      fontSize: 14,
+      fontWeight: '500',
+      color: 'white',
+      textAlign: 'center',
+      lineHeight: 18,
     },
     tagsContainer: {
       flexDirection: 'row',
@@ -107,33 +90,36 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
       fontWeight: '500',
     },
     emptyState: {
+      backgroundColor: isDark ? '#2D3748' : '#374151',
+      borderRadius: 16,
+      padding: 24,
       alignItems: 'center',
-      paddingVertical: 32,
+      marginHorizontal: 20,
     },
     emptyIcon: {
       marginBottom: 12,
     },
     emptyText: {
       fontSize: 16,
-      color: colors.textSecondary,
+      color: 'rgba(255, 255, 255, 0.7)',
       textAlign: 'center',
       marginBottom: 8,
     },
     emptySubtext: {
       fontSize: 14,
-      color: colors.textTertiary,
+      color: 'rgba(255, 255, 255, 0.5)',
       textAlign: 'center',
       marginBottom: 16,
     },
     addButton: {
-      backgroundColor: colors.primary,
+      backgroundColor: '#EAB308',
       paddingHorizontal: 20,
       paddingVertical: 12,
       borderRadius: 8,
       alignItems: 'center',
     },
     addButtonText: {
-      color: 'white',
+      color: '#000000',
       fontSize: 14,
       fontWeight: '600',
     },
@@ -144,11 +130,11 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerIcon}>
-            <Feather name="globe" size={20} color={colors.primary} />
+            <Feather name="globe" size={24} color="#EAB308" />
           </View>
           <Text style={styles.title}>Industry Interests</Text>
         </View>
-        <View style={styles.card}>
+        <View style={styles.emptyState}>
           <Text style={styles.emptyText}>Loading industries...</Text>
         </View>
       </View>
@@ -160,23 +146,21 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerIcon}>
-            <Feather name="globe" size={20} color={colors.primary} />
+            <Feather name="globe" size={24} color="#EAB308" />
           </View>
           <Text style={styles.title}>Industry Interests</Text>
         </View>
-        <View style={styles.card}>
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Feather name="globe" size={32} color={colors.textTertiary} />
-            </View>
-            <Text style={styles.emptyText}>Add your industry interests</Text>
-            <Text style={styles.emptySubtext}>
-              Tell others about the industries you're passionate about
-            </Text>
-            <TouchableOpacity style={styles.addButton} onPress={onEditPress}>
-              <Text style={styles.addButtonText}>Add Industries</Text>
-            </TouchableOpacity>
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIcon}>
+            <Feather name="globe" size={32} color="rgba(255, 255, 255, 0.3)" />
           </View>
+          <Text style={styles.emptyText}>Add your industry interests</Text>
+          <Text style={styles.emptySubtext}>
+            Tell others about the industries you're passionate about
+          </Text>
+          <TouchableOpacity style={styles.addButton} onPress={onEditPress}>
+            <Text style={styles.addButtonText}>Add Industries</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -186,41 +170,25 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerIcon}>
-          <Feather name="globe" size={20} color={colors.primary} />
+          <Feather name="globe" size={24} color="#EAB308" />
         </View>
         <Text style={styles.title}>Industry Interests</Text>
       </View>
-      <View style={styles.card}>
-        <TouchableOpacity style={styles.editButton} onPress={onEditPress}>
-          <Feather name="edit" size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-        
-        <View style={styles.industriesContent}>
-          {industries.map((industry, index) => (
-            <View key={index} style={styles.industryItem}>
-              <View style={styles.industryHeader}>
-                <View style={styles.industryIcon}>
-                  <Feather name="home" size={16} color={colors.textTertiary} />
-                </View>
-                <Text style={styles.industryName}>{industry.name}</Text>
-                {industry.stage && (
-                  <Text style={styles.industryStage}>{industry.stage}</Text>
-                )}
-              </View>
-            </View>
-          ))}
+      
+      <View style={styles.industriesGrid}>
+        {industries.map((industry, index) => {
+          const iconName = getIndustryIcon(industry.name);
+          const backgroundColor = getIndustryColor(industry.name);
           
-          {/* You can add tags here if you implement sub-interests later */}
-          {/* 
-          <View style={styles.tagsContainer}>
-            {subInterests.map((tag, index) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
+          return (
+            <TouchableOpacity key={index} style={styles.industryTile} onPress={onEditPress}>
+              <View style={[styles.industryIcon, { backgroundColor }]}>
+                <Feather name={iconName.replace('-outline', '') as any} size={24} color="white" />
               </View>
-            ))}
-          </View>
-          */}
-        </View>
+              <Text style={styles.industryName}>{industry.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );

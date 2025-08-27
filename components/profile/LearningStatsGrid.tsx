@@ -22,75 +22,69 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
 
   const statItems = [
     {
-      icon: 'trending-up',
-      label: 'Streak',
-      value: loading ? '...' : `${stats.currentStreak} ${stats.currentStreak === 1 ? 'day' : 'days'}`,
+      icon: 'flame',
+      label: 'Day Streak',
+      value: loading ? '...' : stats.currentStreak.toString(),
       color: '#F97316', // Orange/Fire color
     },
     {
-      icon: 'message-circle',
-      label: 'Interactions',
-      value: loading ? '...' : stats.totalInteractions.toString(),
-      color: '#10B981', // Green
-    },
-    {
-      icon: 'play-circle',
-      label: 'Content Engaged',
+      icon: 'book',
+      label: 'Learning Days',
       value: loading ? '...' : stats.contentEngaged.toString(),
       color: '#3B82F6', // Blue
+    },
+    {
+      icon: 'users',
+      label: 'Interactions',
+      value: loading ? '...' : stats.totalInteractions.toString(),
+      color: '#8B5CF6', // Purple
     },
   ];
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: isDark ? colors.surface : colors.card,
-      padding: 20,
-      borderRadius: 16,
+      paddingHorizontal: 20,
       marginBottom: 24,
-      borderWidth: isDark ? 1 : 0,
-      borderColor: isDark ? colors.border : 'transparent',
     },
     title: {
-      fontSize: 18,
+      fontSize: 20,
       fontWeight: 'bold',
       color: colors.text,
       marginBottom: 16,
+      textAlign: 'center',
     },
     statsGrid: {
       flexDirection: 'row',
       justifyContent: 'space-between',
+      marginHorizontal: -4,
     },
     statItem: {
+      backgroundColor: isDark ? '#2D3748' : '#374151',
       alignItems: 'center',
       flex: 1,
-      minHeight: 100, // Fixed minimum height for all pills
-      justifyContent: 'space-between', // Distribute content evenly
+      minHeight: 120,
+      justifyContent: 'space-between',
+      borderRadius: 16,
+      padding: 16,
+      marginHorizontal: 4,
     },
     iconContainer: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      marginBottom: 8,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      marginBottom: 12,
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.1,
-      shadowRadius: 3.84,
-      elevation: 5,
     },
     statValue: {
-      fontSize: 24,
+      fontSize: 28,
       fontWeight: 'bold',
-      color: colors.text,
+      color: 'white',
       marginBottom: 4,
     },
     statLabel: {
       fontSize: 12,
-      color: colors.textSecondary,
+      color: 'rgba(255, 255, 255, 0.7)',
       textAlign: 'center',
       lineHeight: 16,
     },
@@ -98,7 +92,7 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Learning Activity</Text>
+      <Text style={styles.title}>Your Progress</Text>
       <View style={styles.statsGrid}>
         {statItems.map((item, index) => (
           <View key={index} style={styles.statItem}>

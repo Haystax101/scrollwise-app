@@ -6,3 +6,6 @@ export { AchievementsBelt } from './AchievementsBelt';
 export { CareerGoalCard } from './CareerGoalCard';
 export { IndustryInterestsCard } from './IndustryInterestsCard';
 export { ProfileCustomizationSections } from './ProfileCustomizationSections';
+export { ExperienceCard } from './ExperienceCard';
+export { EducationCard } from './EducationCard';
+export { SkillsCard } from './SkillsCard';
