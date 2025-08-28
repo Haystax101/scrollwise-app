@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Alert, Switch, ScrollView } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, FontAwesome } from '@expo/vector-icons';
+import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
+import { DateInput, validateDate, validateDateRange, dateInputToDbDate, dbDateToDateInput } from '../../utils/dateUtils';
 
 interface Education {
   id?: string;
@@ -26,8 +28,8 @@ interface StructuredEducationData {
   degreeName?: string;
   universityName?: string;
   fieldOfStudy?: string;
-  startDate?: string;
-  endDate?: string;
+  startDate?: DateInput;
+  endDate?: DateInput;
   isCurrent?: boolean;
 }
 
@@ -41,10 +43,16 @@ export const EducationCard: React.FC<EducationCardProps> = ({
   const [showModal, setShowModal] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number>(-1);
   const [formData, setFormData] = useState<StructuredEducationData>({});
+  const [dateErrors, setDateErrors] = useState<{[key: string]: string}>({});
+  const [swipeableRefs, setSwipeableRefs] = useState<{[key: number]: Swipeable | null}>({});
 
   const handleAddEducation = () => {
     setEditingIndex(-1);
-    setFormData({});
+    setFormData({
+      startDate: { month: '', year: '' },
+      endDate: { month: '', year: '' }
+    });
+    setDateErrors({});
     setShowModal(true);
   };
 
@@ -55,25 +63,71 @@ export const EducationCard: React.FC<EducationCardProps> = ({
       degreeName: edu.degree || '',
       universityName: edu.university || '',
       fieldOfStudy: edu.stage || '',
-      isCurrent: edu.period?.includes('Present') || false
+      startDate: edu.startDate ? dbDateToDateInput(edu.startDate) : { month: '', year: '' },
+      endDate: edu.endDate ? dbDateToDateInput(edu.endDate) : { month: '', year: '' },
+      isCurrent: edu.period?.includes('Present') || edu.isCurrent || false
     });
+    setDateErrors({});
     setShowModal(true);
   };
 
-  const handleSave = async () => {
-    if (!formData.degreeName || !formData.universityName) {
-      Alert.alert('Error', 'Degree and university name are required.');
+  const validateAndSave = () => {
+    const errors: {[key: string]: string} = {};
+    
+    // Basic validation
+    if (!formData.degreeName?.trim()) {
+      errors.degreeName = 'Degree is required';
+    }
+    if (!formData.universityName?.trim()) {
+      errors.universityName = 'University is required';
+    }
+    
+    // Date validation
+    if (!formData.startDate || !formData.startDate.month || !formData.startDate.year) {
+      errors.startDate = 'Start date is required';
+    } else {
+      const startValidation = validateDate(formData.startDate);
+      if (!startValidation.isValid) {
+        errors.startDate = startValidation.error!;
+      }
+    }
+    
+    if (!formData.isCurrent) {
+      if (!formData.endDate || !formData.endDate.month || !formData.endDate.year) {
+        errors.endDate = 'End date is required';
+      } else {
+        const endValidation = validateDate(formData.endDate);
+        if (!endValidation.isValid) {
+          errors.endDate = endValidation.error!;
+        } else if (formData.startDate && formData.startDate.month && formData.startDate.year) {
+          const rangeValidation = validateDateRange(formData.startDate, formData.endDate);
+          if (!rangeValidation.isValid) {
+            errors.endDate = rangeValidation.error!;
+          }
+        }
+      }
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setDateErrors(errors);
       return;
     }
+    
+    handleSave();
+  };
 
+  const handleSave = async () => {
     try {
+      const startDbDate = formData.startDate ? dateInputToDbDate(formData.startDate) : null;
+      const endDbDate = !formData.isCurrent && formData.endDate ? dateInputToDbDate(formData.endDate) : null;
+      
       const educationData = {
         user_id: userId,
         degree_name: formData.degreeName,
         university_name: formData.universityName,
         field_of_study: formData.fieldOfStudy || null,
-        start_date: formData.startDate || null,
-        end_date: formData.isCurrent ? null : formData.endDate,
+        start_date: startDbDate,
+        end_date: endDbDate,
         is_current: formData.isCurrent || false
       };
 
@@ -86,6 +140,7 @@ export const EducationCard: React.FC<EducationCardProps> = ({
       Alert.alert('Success', 'Education added successfully!');
       setShowModal(false);
       setFormData({});
+      setDateErrors({});
 
       if (onRefresh) {
         await onRefresh();
@@ -96,10 +151,67 @@ export const EducationCard: React.FC<EducationCardProps> = ({
     }
   };
 
+  const handleDeleteEducation = async (index: number) => {
+    Alert.alert(
+      'Delete Education',
+      'Are you sure you want to delete this education entry?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const edu = education[index];
+              if (edu.id) {
+                const { error } = await supabase
+                  .from('user_education')
+                  .delete()
+                  .eq('id', edu.id)
+                  .eq('user_id', userId);
+                
+                if (error) throw error;
+              }
+              
+              if (onRefresh) {
+                await onRefresh();
+              }
+              
+              // Close the swipeable
+              if (swipeableRefs[index]) {
+                swipeableRefs[index]?.close();
+              }
+            } catch (error) {
+              console.error('Error deleting education:', error);
+              Alert.alert('Error', 'Failed to delete education.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const renderRightActions = (index: number) => (
+    <TouchableOpacity
+      onPress={() => handleDeleteEducation(index)}
+      style={styles.rightActionContainer}
+      accessibilityLabel="Delete education"
+      accessibilityRole="button"
+      activeOpacity={0.8}
+    >
+      <FontAwesome name="trash" size={18} color="#fff" />
+    </TouchableOpacity>
+  );
+
   const styles = StyleSheet.create({
     container: {
-      paddingHorizontal: 20,
+      backgroundColor: isDark ? colors.surface : colors.card,
+      borderRadius: 16,
+      padding: 20,
       marginBottom: 24,
+      marginHorizontal: 20,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: isDark ? colors.border : 'transparent',
     },
     header: {
       flexDirection: 'row',
@@ -149,6 +261,12 @@ export const EducationCard: React.FC<EducationCardProps> = ({
       color: 'rgba(255, 255, 255, 0.7)',
       marginLeft: 4,
     },
+    duration: {
+      fontSize: 12,
+      color: 'rgba(255, 255, 255, 0.6)',
+      marginBottom: 8,
+      fontStyle: 'italic',
+    },
     gpaContainer: {
       alignSelf: 'flex-start',
       backgroundColor: 'rgba(234, 179, 8, 0.2)',
@@ -163,14 +281,9 @@ export const EducationCard: React.FC<EducationCardProps> = ({
       fontWeight: '500',
     },
     addButton: {
-      backgroundColor: 'transparent',
-      borderWidth: 2,
-      borderColor: '#EAB308',
-      borderStyle: 'dashed',
-      borderRadius: 16,
-      paddingVertical: 16,
       alignItems: 'center',
-      marginTop: 8,
+      marginTop: 16,
+      paddingVertical: 8,
     },
     addButtonText: {
       fontSize: 16,
@@ -178,10 +291,8 @@ export const EducationCard: React.FC<EducationCardProps> = ({
       fontWeight: '500',
     },
     emptyState: {
-      backgroundColor: isDark ? '#2D3748' : '#374151',
-      borderRadius: 16,
-      padding: 24,
       alignItems: 'center',
+      paddingVertical: 32,
     },
     emptyText: {
       fontSize: 16,
@@ -268,6 +379,45 @@ export const EducationCard: React.FC<EducationCardProps> = ({
       color: 'white',
       fontWeight: '600',
     },
+    dateRow: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    dateInputContainer: {
+      flex: 1,
+    },
+    dateLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 4,
+    },
+    dateInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 14,
+      color: colors.text,
+      backgroundColor: colors.inputBackground,
+    },
+    errorInput: {
+      borderColor: '#EF4444',
+    },
+    errorText: {
+      fontSize: 12,
+      color: '#EF4444',
+      marginTop: 4,
+    },
+    rightActionContainer: {
+      width: 80,
+      backgroundColor: '#dc2626',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderTopRightRadius: 12,
+      borderBottomRightRadius: 12,
+      marginVertical: 6,
+    },
   });
 
   if (loading) {
@@ -294,31 +444,51 @@ export const EducationCard: React.FC<EducationCardProps> = ({
       </View>
 
       {education && education.length > 0 ? (
-        <View style={styles.educationList}>
+        <GestureHandlerRootView style={styles.educationList}>
           {education.map((edu, index) => (
-            <TouchableOpacity 
-              key={index} 
-              style={styles.educationItem}
-              onPress={() => handleEditEducation(index)}
+            <Swipeable
+              key={index}
+              ref={(ref) => {
+                if (ref) {
+                  setSwipeableRefs(prev => ({...prev, [index]: ref}));
+                }
+              }}
+              renderRightActions={() => renderRightActions(index)}
+              friction={2}
+              rightThreshold={40}
+              overshootRight={false}
             >
+              <TouchableOpacity 
+                style={styles.educationItem}
+                onPress={() => handleEditEducation(index)}
+              >
               <View style={styles.educationHeader}>
                 <Text style={styles.degreeTitle}>{edu.degree || 'Degree'}</Text>
-                <Text style={styles.period}>{edu.period || 'Period'}</Text>
+                <Text style={styles.period}>
+                  {edu.startDate ? formatPeriod(edu.startDate, edu.endDate, edu.isCurrent || false) : 'Period'}
+                </Text>
               </View>
               
               <View style={styles.university}>
                 <Feather name="book-open" size={16} color="#EAB308" />
                 <Text style={styles.universityText}>{edu.university || 'Institution'}</Text>
               </View>
+              
+              {edu.startDate && edu.endDate && !edu.isCurrent && (
+                <Text style={styles.duration}>
+                  {calculateDuration(edu.startDate, edu.endDate)}
+                </Text>
+              )}
 
               {edu.stage && edu.stage.includes('3.') && (
                 <View style={styles.gpaContainer}>
                   <Text style={styles.gpaText}>GPA: {edu.stage}</Text>
                 </View>
               )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </Swipeable>
           ))}
-        </View>
+        </GestureHandlerRootView>
       ) : (
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>
@@ -385,15 +555,112 @@ export const EducationCard: React.FC<EducationCardProps> = ({
                 />
               </View>
 
+              <View style={styles.formRow}>
+                <Text style={styles.formLabel}>Start Date *</Text>
+                <View style={styles.dateRow}>
+                  <View style={styles.dateInputContainer}>
+                    <Text style={styles.dateLabel}>Month</Text>
+                    <TextInput
+                      style={[styles.dateInput, dateErrors.startDate && styles.errorInput]}
+                      value={formData.startDate?.month || ''}
+                      onChangeText={(text) => {
+                        setFormData({...formData, startDate: {...formData.startDate!, month: text}});
+                        if (dateErrors.startDate) {
+                          const newErrors = {...dateErrors};
+                          delete newErrors.startDate;
+                          setDateErrors(newErrors);
+                        }
+                      }}
+                      placeholder="Jan"
+                      placeholderTextColor={colors.textTertiary}
+                    />
+                  </View>
+                  <View style={styles.dateInputContainer}>
+                    <Text style={styles.dateLabel}>Year</Text>
+                    <TextInput
+                      style={[styles.dateInput, dateErrors.startDate && styles.errorInput]}
+                      value={formData.startDate?.year || ''}
+                      onChangeText={(text) => {
+                        setFormData({...formData, startDate: {...formData.startDate!, year: text}});
+                        if (dateErrors.startDate) {
+                          const newErrors = {...dateErrors};
+                          delete newErrors.startDate;
+                          setDateErrors(newErrors);
+                        }
+                      }}
+                      placeholder="2020"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+                {dateErrors.startDate && (
+                  <Text style={styles.errorText}>{dateErrors.startDate}</Text>
+                )}
+              </View>
+
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>I currently study here</Text>
                 <Switch
                   value={formData.isCurrent || false}
-                  onValueChange={(value) => setFormData({...formData, isCurrent: value})}
+                  onValueChange={(value) => {
+                    setFormData({...formData, isCurrent: value});
+                    if (value && dateErrors.endDate) {
+                      const newErrors = {...dateErrors};
+                      delete newErrors.endDate;
+                      setDateErrors(newErrors);
+                    }
+                  }}
                   trackColor={{ false: colors.border, true: colors.primary }}
                   thumbColor={colors.card}
                 />
               </View>
+
+              {!formData.isCurrent && (
+                <View style={styles.formRow}>
+                  <Text style={styles.formLabel}>End Date *</Text>
+                  <View style={styles.dateRow}>
+                    <View style={styles.dateInputContainer}>
+                      <Text style={styles.dateLabel}>Month</Text>
+                      <TextInput
+                        style={[styles.dateInput, dateErrors.endDate && styles.errorInput]}
+                        value={formData.endDate?.month || ''}
+                        onChangeText={(text) => {
+                          setFormData({...formData, endDate: {...formData.endDate!, month: text}});
+                          if (dateErrors.endDate) {
+                            const newErrors = {...dateErrors};
+                            delete newErrors.endDate;
+                            setDateErrors(newErrors);
+                          }
+                        }}
+                        placeholder="Dec"
+                        placeholderTextColor={colors.textTertiary}
+                      />
+                    </View>
+                    <View style={styles.dateInputContainer}>
+                      <Text style={styles.dateLabel}>Year</Text>
+                      <TextInput
+                        style={[styles.dateInput, dateErrors.endDate && styles.errorInput]}
+                        value={formData.endDate?.year || ''}
+                        onChangeText={(text) => {
+                          setFormData({...formData, endDate: {...formData.endDate!, year: text}});
+                          if (dateErrors.endDate) {
+                            const newErrors = {...dateErrors};
+                            delete newErrors.endDate;
+                            setDateErrors(newErrors);
+                          }
+                        }}
+                        placeholder="2024"
+                        placeholderTextColor={colors.textTertiary}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+                  {dateErrors.endDate && (
+                    <Text style={styles.errorText}>{dateErrors.endDate}</Text>
+                  )}
+                </View>
+              )}
             </ScrollView>
 
             <View style={styles.modalButtons}>
@@ -405,7 +672,7 @@ export const EducationCard: React.FC<EducationCardProps> = ({
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.saveButton]} 
-                onPress={handleSave}
+                onPress={validateAndSave}
               >
                 <Text style={styles.modalButtonText}>Save</Text>
               </TouchableOpacity>

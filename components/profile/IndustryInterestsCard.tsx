@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { getIndustryIcon, getIndustryColor } from '../../utils/industryIcons';
 
@@ -24,13 +24,18 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
 
   const styles = StyleSheet.create({
     container: {
+      backgroundColor: isDark ? colors.surface : colors.card,
+      borderRadius: 16,
+      padding: 20,
       marginBottom: 24,
+      marginHorizontal: 20,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: isDark ? colors.border : 'transparent',
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       marginBottom: 16,
-      paddingHorizontal: 20,
     },
     headerIcon: {
       marginRight: 12,
@@ -39,20 +44,32 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
       fontSize: 20,
       fontWeight: 'bold',
       color: colors.text,
+      flex: 1,
     },
-    industriesGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      paddingHorizontal: 20,
-      gap: 16,
+    editButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    editButtonText: {
+      fontSize: 14,
+      color: colors.primary || '#EAB308',
+      fontWeight: '500',
+    },
+    scrollView: {
+      marginHorizontal: -20,
+      paddingLeft: 20,
+    },
+    scrollContainer: {
+      paddingRight: 20,
     },
     industryTile: {
       backgroundColor: isDark ? '#2D3748' : '#374151',
       borderRadius: 16,
       padding: 20,
-      width: '48%',
+      width: 140,
       alignItems: 'center',
       minHeight: 120,
+      marginRight: 16,
     },
     industryIcon: {
       width: 48,
@@ -90,11 +107,8 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
       fontWeight: '500',
     },
     emptyState: {
-      backgroundColor: isDark ? '#2D3748' : '#374151',
-      borderRadius: 16,
-      padding: 24,
       alignItems: 'center',
-      marginHorizontal: 20,
+      paddingVertical: 32,
     },
     emptyIcon: {
       marginBottom: 12,
@@ -133,6 +147,9 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
             <Feather name="globe" size={24} color="#EAB308" />
           </View>
           <Text style={styles.title}>Industry Interests</Text>
+          <TouchableOpacity style={styles.editButton} onPress={onEditPress}>
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>Loading industries...</Text>
@@ -149,6 +166,9 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
             <Feather name="globe" size={24} color="#EAB308" />
           </View>
           <Text style={styles.title}>Industry Interests</Text>
+          <TouchableOpacity style={styles.editButton} onPress={onEditPress}>
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
@@ -173,23 +193,34 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
           <Feather name="globe" size={24} color="#EAB308" />
         </View>
         <Text style={styles.title}>Industry Interests</Text>
+        <TouchableOpacity style={styles.editButton} onPress={onEditPress}>
+          <Text style={styles.editButtonText}>Edit</Text>
+        </TouchableOpacity>
       </View>
       
-      <View style={styles.industriesGrid}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContainer}
+        style={styles.scrollView}
+      >
         {industries.map((industry, index) => {
-          const iconName = getIndustryIcon(industry.name);
+          const iconConfig = getIndustryIcon(industry.name);
           const backgroundColor = getIndustryColor(industry.name);
+          
+          const IconComponent = iconConfig.family === 'MaterialIcons' ? MaterialIcons : 
+                              iconConfig.family === 'Ionicons' ? Ionicons : Feather;
           
           return (
             <TouchableOpacity key={index} style={styles.industryTile} onPress={onEditPress}>
               <View style={[styles.industryIcon, { backgroundColor }]}>
-                <Feather name={iconName.replace('-outline', '') as any} size={24} color="white" />
+                <IconComponent name={iconConfig.name as any} size={24} color="white" />
               </View>
               <Text style={styles.industryName}>{industry.name}</Text>
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 };

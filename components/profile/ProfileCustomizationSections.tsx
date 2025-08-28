@@ -243,7 +243,7 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
       start_date: structuredData.startDate || null,
       end_date: structuredData.isCurrent ? null : structuredData.endDate,
       is_current: structuredData.isCurrent || false,
-      employment_type: structuredData.employmentType || 'full-time'
+      employment_type: structuredData.employmentType || 'full_time'
     };
     
     // Insert new experience

@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons, FontAwesome } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 
 interface LearningStats {
   currentStreak: number;
   totalInteractions: number;
-  contentEngaged: number;
+  achievementsCount: number;
 }
 
 interface LearningStatsGridProps {
@@ -22,19 +22,22 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
 
   const statItems = [
     {
-      icon: 'flame',
+      iconFamily: 'MaterialIcons',
+      icon: 'local-fire-department',
       label: 'Day Streak',
       value: loading ? '...' : stats.currentStreak.toString(),
       color: '#F97316', // Orange/Fire color
     },
     {
-      icon: 'book',
-      label: 'Learning Days',
-      value: loading ? '...' : stats.contentEngaged.toString(),
-      color: '#3B82F6', // Blue
+      iconFamily: 'FontAwesome',
+      icon: 'trophy',
+      label: 'Achievements',
+      value: loading ? '...' : stats.achievementsCount.toString(),
+      color: '#EAB308', // Gold color for achievements
     },
     {
-      icon: 'users',
+      iconFamily: 'Ionicons',
+      icon: 'people',
       label: 'Interactions',
       value: loading ? '...' : stats.totalInteractions.toString(),
       color: '#8B5CF6', // Purple
@@ -50,7 +53,7 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
       fontSize: 20,
       fontWeight: 'bold',
       color: colors.text,
-      marginBottom: 16,
+      marginBottom: 8,
       textAlign: 'center',
     },
     statsGrid: {
@@ -86,7 +89,7 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
       fontSize: 12,
       color: 'rgba(255, 255, 255, 0.7)',
       textAlign: 'center',
-      lineHeight: 16,
+      lineHeight: 14,
     },
   });
 
@@ -94,19 +97,24 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
     <View style={styles.container}>
       <Text style={styles.title}>Your Progress</Text>
       <View style={styles.statsGrid}>
-        {statItems.map((item, index) => (
-          <View key={index} style={styles.statItem}>
-            <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
-              <Feather 
-                name={item.icon as any} 
-                size={20} 
-                color="white" 
-              />
+        {statItems.map((item, index) => {
+          const IconComponent = item.iconFamily === 'MaterialIcons' ? MaterialIcons : 
+                              item.iconFamily === 'FontAwesome' ? FontAwesome : Ionicons;
+          
+          return (
+            <View key={index} style={styles.statItem}>
+              <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
+                <IconComponent 
+                  name={item.icon as any} 
+                  size={20} 
+                  color="white" 
+                />
+              </View>
+              <Text style={styles.statValue}>{item.value}</Text>
+              <Text style={styles.statLabel}>{item.label}</Text>
             </View>
-            <Text style={styles.statValue}>{item.value}</Text>
-            <Text style={styles.statLabel}>{item.label}</Text>
-          </View>
-        ))}
+          );
+        })}
       </View>
     </View>
   );

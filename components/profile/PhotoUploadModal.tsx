@@ -149,13 +149,15 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
     },
     modalContent: {
       backgroundColor: colors.card,
-      borderRadius: 16,
+      borderRadius: 20,
       margin: 20,
-      width: '80%',
-      maxWidth: 350,
+      width: '85%',
+      maxWidth: 380,
+      overflow: 'hidden',
     },
     modalHeader: {
-      padding: 20,
+      paddingHorizontal: 24,
+      paddingVertical: 20,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
       alignItems: 'center',
@@ -166,13 +168,13 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
       color: colors.text,
     },
     optionsContainer: {
-      paddingVertical: 16,
+      paddingVertical: 8,
     },
     option: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
+      paddingHorizontal: 24,
+      paddingVertical: 18,
     },
     optionIcon: {
       marginRight: 16,
@@ -192,8 +194,8 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
     cancelButton: {
       borderTopWidth: 1,
       borderTopColor: colors.border,
-      paddingHorizontal: 20,
-      paddingVertical: 16,
+      paddingHorizontal: 24,
+      paddingVertical: 18,
       alignItems: 'center',
     },
     cancelText: {
@@ -205,7 +207,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 20,
+      paddingVertical: 32,
     },
     uploadingText: {
       fontSize: 16,

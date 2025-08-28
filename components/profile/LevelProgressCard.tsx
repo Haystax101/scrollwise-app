@@ -70,8 +70,9 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
     },
     progressIcon: {
       position: 'absolute',
-      left: '50%',
-      marginLeft: -8,
+      right: 4,
+      top: '50%',
+      marginTop: -6,
     },
     progressLabels: {
       flexDirection: 'row',
@@ -115,7 +116,7 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
             { width: `${progressPercentage}%` }
           ]}
         >
-          {progressPercentage > 30 && (
+          {progressPercentage > 10 && (
             <View style={styles.progressIcon}>
               <Feather name="zap" size={12} color="#000000" />
             </View>

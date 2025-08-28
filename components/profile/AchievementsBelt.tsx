@@ -50,13 +50,18 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
 
   const styles = StyleSheet.create({
     container: {
+      backgroundColor: isDark ? colors.surface : colors.card,
+      borderRadius: 16,
+      padding: 20,
       marginBottom: 24,
+      marginHorizontal: 20,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: isDark ? colors.border : 'transparent',
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       marginBottom: 16,
-      paddingHorizontal: 20,
     },
     headerIcon: {
       marginRight: 8,
@@ -67,6 +72,7 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
       color: colors.text,
     },
     scrollContainer: {
+      marginHorizontal: -20,
       paddingLeft: 20,
     },
     scrollContent: {
@@ -116,7 +122,6 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
     emptyState: {
       alignItems: 'center',
       paddingVertical: 32,
-      paddingHorizontal: 40,
     },
     emptyIcon: {
       marginBottom: 12,

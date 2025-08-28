@@ -311,6 +311,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     marginBottom: 24,
+    marginHorizontal: 20,
     borderWidth: 1,
   },
   header: {

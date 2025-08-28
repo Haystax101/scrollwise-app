@@ -3,7 +3,6 @@ import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import SettingsModal from '../SettingsModal';
 
@@ -52,7 +51,7 @@ interface Industry {
 interface LearningStats {
   currentStreak: number;
   totalInteractions: number;
-  contentEngaged: number;
+  achievementsCount: number;
 }
 
 interface ProfileData {
@@ -100,7 +99,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [learningStats, setLearningStats] = useState<LearningStats>({
     currentStreak: 0,
     totalInteractions: 0,
-    contentEngaged: 0
+    achievementsCount: 0
   });
   const [profileData, setProfileData] = useState<ProfileData>({});
   
@@ -241,6 +240,16 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
       const contentEngaged = uniqueArticles.size + uniquePapers.size + uniqueBooks.size + uniqueInsights.size;
 
+      // Fetch achievements count
+      const { data: achievementsCountData, error: achievementsCountError } = await supabase
+        .from('user_achievements')
+        .select('id')
+        .eq('user_id', currentUser.id);
+
+      if (achievementsCountError) {
+        console.error('Error fetching achievements count:', achievementsCountError);
+      }
+
       if (streakError) {
         console.error('Error fetching streak data:', streakError);
       }
@@ -248,7 +257,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       setLearningStats({
         currentStreak: streakData?.current_streak || 1, // Default to 1 if no streak data
         totalInteractions,
-        contentEngaged
+        achievementsCount: achievementsCountData?.length || 0
       });
 
       // Fetch enhanced profile data from new schema
@@ -332,7 +341,11 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           role: exp.position_title,
           company: exp.companies?.name || 'Unknown Company',
           description: exp.description,
-          period: formatDatePeriod(exp.start_date, exp.end_date, exp.is_current)
+          period: formatDatePeriod(exp.start_date, exp.end_date, exp.is_current),
+          startDate: exp.start_date,
+          endDate: exp.end_date,
+          isCurrent: exp.is_current,
+          employmentType: exp.employment_type
         }));
       }
       
@@ -344,7 +357,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           degree: `${edu.degree_name}${edu.field_of_study ? ` ${edu.field_of_study}` : ''}`,
           university: edu.university_name || 'Unknown Institution',
           stage: edu.field_of_study,
-          period: formatDatePeriod(edu.start_date, edu.end_date, edu.is_current)
+          period: formatDatePeriod(edu.start_date, edu.end_date, edu.is_current),
+          startDate: edu.start_date,
+          endDate: edu.end_date,
+          isCurrent: edu.is_current
         }));
       }
       
@@ -453,9 +469,8 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <LinearGradient
-          colors={['#4F46E5', '#8B5CF6']}
-          style={styles.gradientHeader}
+        <View
+          style={[styles.gradientHeader, { backgroundColor: colors.background }]}
         >
           <TouchableOpacity 
             style={styles.settingsButton} 
@@ -470,7 +485,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             userLevel={userLevel}
             onAvatarPress={handleAvatarPress}
           />
-        </LinearGradient>
+        </View>
         <LevelProgressCard
           level={userLevel}
           currentVoltz={totalVoltzEarned}

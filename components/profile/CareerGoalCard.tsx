@@ -24,13 +24,18 @@ export const CareerGoalCard: React.FC<CareerGoalCardProps> = ({
 
   const styles = StyleSheet.create({
     container: {
+      backgroundColor: isDark ? colors.surface : colors.card,
+      borderRadius: 16,
+      padding: 20,
       marginBottom: 24,
+      marginHorizontal: 20,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: isDark ? colors.border : 'transparent',
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       marginBottom: 16,
-      paddingHorizontal: 20,
     },
     headerIcon: {
       marginRight: 8,
@@ -41,12 +46,6 @@ export const CareerGoalCard: React.FC<CareerGoalCardProps> = ({
       color: colors.text,
     },
     card: {
-      backgroundColor: isDark ? colors.surface : colors.card,
-      borderRadius: 16,
-      padding: 20,
-      marginHorizontal: 20,
-      borderWidth: isDark ? 1 : 0,
-      borderColor: isDark ? colors.border : 'transparent',
       position: 'relative',
     },
     editButton: {
@@ -141,7 +140,7 @@ export const CareerGoalCard: React.FC<CareerGoalCardProps> = ({
           </View>
           <Text style={styles.title}>Career Goal</Text>
         </View>
-        <View style={styles.card}>
+        <View style={styles.emptyState}>
           <Text style={styles.emptyText}>Loading career goal...</Text>
         </View>
       </View>
@@ -157,19 +156,17 @@ export const CareerGoalCard: React.FC<CareerGoalCardProps> = ({
           </View>
           <Text style={styles.title}>Career Goal</Text>
         </View>
-        <View style={styles.card}>
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <Feather name="target" size={32} color={colors.textTertiary} />
-            </View>
-            <Text style={styles.emptyText}>Set your career goal</Text>
-            <Text style={styles.emptySubtext}>
-              Define where you want to be in your career journey
-            </Text>
-            <TouchableOpacity style={styles.addButton} onPress={onEditPress}>
-              <Text style={styles.addButtonText}>Add Career Goal</Text>
-            </TouchableOpacity>
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIcon}>
+            <Feather name="target" size={32} color={colors.textTertiary} />
           </View>
+          <Text style={styles.emptyText}>Set your career goal</Text>
+          <Text style={styles.emptySubtext}>
+            Define where you want to be in your career journey
+          </Text>
+          <TouchableOpacity style={styles.addButton} onPress={onEditPress}>
+            <Text style={styles.addButtonText}>Add Career Goal</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -183,6 +180,7 @@ export const CareerGoalCard: React.FC<CareerGoalCardProps> = ({
         </View>
         <Text style={styles.title}>Career Goal</Text>
       </View>
+      
       <View style={styles.card}>
         <TouchableOpacity style={styles.editButton} onPress={onEditPress}>
           <Feather name="edit" size={16} color={colors.textSecondary} />

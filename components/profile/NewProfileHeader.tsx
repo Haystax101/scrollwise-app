@@ -94,7 +94,7 @@ export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
           style={styles.avatar}
         />
         <View style={styles.avatarEditOverlay}>
-          <Feather name="edit-2" size={16} color="white" />
+          <Feather name="zap" size={16} color="#000000" />
         </View>
       </TouchableOpacity>
       

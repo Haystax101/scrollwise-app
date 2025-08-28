@@ -73,8 +73,13 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      paddingHorizontal: 20,
+      backgroundColor: isDark ? colors.surface : colors.card,
+      borderRadius: 16,
+      padding: 20,
       marginBottom: 24,
+      marginHorizontal: 20,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: isDark ? colors.border : 'transparent',
     },
     header: {
       flexDirection: 'row',
@@ -149,14 +154,9 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
       fontWeight: '300',
     },
     addButton: {
-      backgroundColor: 'transparent',
-      borderWidth: 2,
-      borderColor: '#EAB308',
-      borderStyle: 'dashed',
-      borderRadius: 16,
-      paddingVertical: 16,
       alignItems: 'center',
-      marginTop: 8,
+      marginTop: 16,
+      paddingVertical: 8,
     },
     addButtonText: {
       fontSize: 16,
@@ -164,10 +164,8 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
       fontWeight: '500',
     },
     emptyState: {
-      backgroundColor: isDark ? '#2D3748' : '#374151',
-      borderRadius: 16,
-      padding: 24,
       alignItems: 'center',
+      paddingVertical: 32,
     },
     emptyText: {
       fontSize: 16,

@@ -59,6 +59,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
       padding: 20,
       borderRadius: 16,
       marginBottom: 24,
+      marginHorizontal: 20,
       borderWidth: isDark ? 1 : 0,
       borderColor: colors.border,
     },

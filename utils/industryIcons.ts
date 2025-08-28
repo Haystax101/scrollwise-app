@@ -1,76 +1,77 @@
 // Shared industry icon mapping for consistent icons across onboarding and profile
-export const INDUSTRY_ICON_MAP: { [key: string]: string } = {
+// Now includes icon families for proper rendering
+export const INDUSTRY_ICON_MAP: { [key: string]: { name: string; family: string } } = {
   // Finance and Business
-  'finance': 'briefcase-outline',
-  'banking': 'briefcase-outline',
-  'investment': 'trending-up-outline',
-  'insurance': 'shield-outline',
-  'accounting': 'calculator-outline',
-  'consulting': 'people-outline',
-  'management': 'people-outline',
-  'strategy': 'analytics-outline',
-  'operations': 'settings-outline',
+  'finance': { name: 'business-center', family: 'MaterialIcons' },
+  'banking': { name: 'account-balance', family: 'MaterialIcons' },
+  'investment': { name: 'trending-up', family: 'MaterialIcons' },
+  'insurance': { name: 'shield', family: 'MaterialIcons' },
+  'accounting': { name: 'calculator', family: 'MaterialIcons' },
+  'consulting': { name: 'people', family: 'MaterialIcons' },
+  'management': { name: 'people', family: 'MaterialIcons' },
+  'strategy': { name: 'bar-chart', family: 'Ionicons' },
+  'operations': { name: 'settings', family: 'MaterialIcons' },
 
   // Politics and Law
-  'politics': 'globe-outline',
-  'law': 'library-outline',
-  'legal': 'library-outline',
-  'government': 'business-outline',
+  'politics': { name: 'public', family: 'MaterialIcons' },
+  'law': { name: 'gavel', family: 'MaterialIcons' },
+  'legal': { name: 'gavel', family: 'MaterialIcons' },
+  'government': { name: 'account-balance', family: 'MaterialIcons' },
 
   // Technology
-  'technology': 'desktop-outline',
-  'software development': 'code-outline',
-  'artificial intelligence': 'bulb-outline',
-  'cybersecurity': 'shield-checkmark-outline',
-  'data science': 'analytics-outline',
-  'cloud computing': 'cloud-outline',
-  'mobile development': 'phone-portrait-outline',
-  'web development': 'globe-outline',
-  'devops': 'server-outline',
+  'technology': { name: 'computer', family: 'MaterialIcons' },
+  'software development': { name: 'code', family: 'MaterialIcons' },
+  'artificial intelligence': { name: 'psychology', family: 'MaterialIcons' },
+  'cybersecurity': { name: 'security', family: 'MaterialIcons' },
+  'data science': { name: 'analytics', family: 'MaterialIcons' },
+  'cloud computing': { name: 'cloud', family: 'MaterialIcons' },
+  'mobile development': { name: 'phone-android', family: 'MaterialIcons' },
+  'web development': { name: 'web', family: 'MaterialIcons' },
+  'devops': { name: 'dns', family: 'MaterialIcons' },
 
   // Entrepreneurship
-  'entrepreneurship': 'rocket-outline',
-  'startups': 'rocket-outline',
+  'entrepreneurship': { name: 'rocket-launch', family: 'MaterialIcons' },
+  'startups': { name: 'rocket-launch', family: 'MaterialIcons' },
 
   // Energy and Environment
-  'energy': 'leaf-outline',
-  'sustainability': 'leaf-outline',
-  'climate': 'leaf-outline',
+  'energy': { name: 'bolt', family: 'MaterialIcons' },
+  'sustainability': { name: 'eco', family: 'MaterialIcons' },
+  'climate': { name: 'eco', family: 'MaterialIcons' },
 
   // Creative Industries
-  'creative': 'color-palette-outline',
-  'marketing': 'megaphone-outline',
-  'advertising': 'megaphone-outline',
-  'design': 'brush-outline',
-  'media': 'videocam-outline',
-  'entertainment': 'musical-notes-outline',
-  'content creation': 'create-outline',
+  'creative': { name: 'palette', family: 'MaterialIcons' },
+  'marketing': { name: 'campaign', family: 'MaterialIcons' },
+  'advertising': { name: 'campaign', family: 'MaterialIcons' },
+  'design': { name: 'brush', family: 'MaterialIcons' },
+  'media': { name: 'videocam', family: 'MaterialIcons' },
+  'entertainment': { name: 'music-note', family: 'MaterialIcons' },
+  'content creation': { name: 'create', family: 'MaterialIcons' },
 
   // Engineering
-  'engineering': 'construct-outline',
-  'manufacturing': 'build-outline',
-  'automotive': 'car-outline',
+  'engineering': { name: 'engineering', family: 'MaterialIcons' },
+  'manufacturing': { name: 'precision-manufacturing', family: 'MaterialIcons' },
+  'automotive': { name: 'directions-car', family: 'MaterialIcons' },
 
   // Healthcare
-  'healthcare': 'medkit-outline',
-  'medicine': 'medical-outline',
-  'nursing': 'heart-outline',
-  'pharmaceuticals': 'flask-outline',
-  'biotechnology': 'leaf-outline',
-  'medical devices': 'hardware-chip-outline',
+  'healthcare': { name: 'local-hospital', family: 'MaterialIcons' },
+  'medicine': { name: 'medical-services', family: 'MaterialIcons' },
+  'nursing': { name: 'favorite', family: 'MaterialIcons' },
+  'pharmaceuticals': { name: 'biotech', family: 'MaterialIcons' },
+  'biotechnology': { name: 'biotech', family: 'MaterialIcons' },
+  'medical devices': { name: 'memory', family: 'MaterialIcons' },
 
   // Education
-  'education': 'school-outline',
-  'research': 'library-outline',
-  'academia': 'book-outline',
-  'training': 'person-outline',
+  'education': { name: 'school', family: 'MaterialIcons' },
+  'research': { name: 'science', family: 'MaterialIcons' },
+  'academia': { name: 'menu-book', family: 'MaterialIcons' },
+  'training': { name: 'person', family: 'MaterialIcons' },
 
   // Other sectors
-  'retail': 'storefront-outline',
-  'real estate': 'home-outline',
-  'transportation': 'car-outline',
-  'non-profit': 'heart-outline',
-  'logistics': 'airplane-outline',
+  'retail': { name: 'storefront', family: 'MaterialIcons' },
+  'real estate': { name: 'home', family: 'MaterialIcons' },
+  'transportation': { name: 'local-shipping', family: 'MaterialIcons' },
+  'non-profit': { name: 'volunteer-activism', family: 'MaterialIcons' },
+  'logistics': { name: 'local-shipping', family: 'MaterialIcons' },
 };
 
 export const INDUSTRY_COLOR_MAP: { [key: string]: string } = {
@@ -99,7 +100,7 @@ export const INDUSTRY_COLOR_MAP: { [key: string]: string } = {
   'research': '#5E35B1',     // Purple
 };
 
-export const getIndustryIcon = (industryName: string): string => {
+export const getIndustryIcon = (industryName: string): { name: string; family: string } => {
   const lowerName = industryName.toLowerCase();
   
   // Direct match
@@ -108,14 +109,14 @@ export const getIndustryIcon = (industryName: string): string => {
   }
   
   // Partial match for compound names
-  for (const [key, icon] of Object.entries(INDUSTRY_ICON_MAP)) {
+  for (const [key, iconConfig] of Object.entries(INDUSTRY_ICON_MAP)) {
     if (lowerName.includes(key) || key.includes(lowerName)) {
-      return icon;
+      return iconConfig;
     }
   }
   
   // Default icon
-  return 'business-outline';
+  return { name: 'business', family: 'MaterialIcons' };
 };
 
 export const getIndustryColor = (industryName: string, isSelected: boolean = false): string => {
@@ -140,14 +141,14 @@ export const getIndustryColor = (industryName: string, isSelected: boolean = fal
 };
 
 // Legacy mapping for backward compatibility with the old hardcoded array
-export const LEGACY_INDUSTRY_MAPPING: { [key: string]: { icon: string, color: string } } = {
-  'finance': { icon: 'briefcase-outline', color: '#9C27B0' },
-  'politics': { icon: 'globe-outline', color: '#B71C1C' },
-  'entrepreneurship': { icon: 'rocket-outline', color: '#1565C0' },
-  'technology': { icon: 'desktop-outline', color: '#1B5E20' },
-  'energy': { icon: 'leaf-outline', color: '#5E35B1' },
-  'creative': { icon: 'color-palette-outline', color: '#880E4F' },
-  'engineering': { icon: 'construct-outline', color: '#C51162' },
-  'healthcare': { icon: 'medkit-outline', color: '#311B92' },
-  'education': { icon: 'school-outline', color: '#004D40' },
+export const LEGACY_INDUSTRY_MAPPING: { [key: string]: { icon: { name: string; family: string }, color: string } } = {
+  'finance': { icon: { name: 'business-center', family: 'MaterialIcons' }, color: '#9C27B0' },
+  'politics': { icon: { name: 'public', family: 'MaterialIcons' }, color: '#B71C1C' },
+  'entrepreneurship': { icon: { name: 'rocket-launch', family: 'MaterialIcons' }, color: '#1565C0' },
+  'technology': { icon: { name: 'computer', family: 'MaterialIcons' }, color: '#1B5E20' },
+  'energy': { icon: { name: 'bolt', family: 'MaterialIcons' }, color: '#5E35B1' },
+  'creative': { icon: { name: 'palette', family: 'MaterialIcons' }, color: '#880E4F' },
+  'engineering': { icon: { name: 'engineering', family: 'MaterialIcons' }, color: '#C51162' },
+  'healthcare': { icon: { name: 'local-hospital', family: 'MaterialIcons' }, color: '#311B92' },
+  'education': { icon: { name: 'school', family: 'MaterialIcons' }, color: '#004D40' },
 };

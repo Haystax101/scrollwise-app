@@ -9,7 +9,7 @@ import {
   TextInput,
   Alert
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
@@ -203,13 +203,9 @@ export const IndustrySelectionPage: React.FC<IndustrySelectionPageProps> = ({
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: colors.surface,
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 12,
-    },
-    industryIconSelected: {
-      backgroundColor: colors.primary + '20',
     },
     industryName: {
       flex: 1,
@@ -300,13 +296,20 @@ export const IndustrySelectionPage: React.FC<IndustrySelectionPageProps> = ({
                 >
                   <View style={[
                     styles.industryIcon,
-                    isSelected && styles.industryIconSelected
+                    { backgroundColor: getIndustryColor(industry.name) }
                   ]}>
-                    <Ionicons 
-                      name={getIndustryIcon(industry.name) as any} 
-                      size={20} 
-                      color={getIndustryIconColor(industry.name, isSelected)} 
-                    />
+                    {(() => {
+                      const iconConfig = getIndustryIcon(industry.name);
+                      const IconComponent = iconConfig.family === 'MaterialIcons' ? MaterialIcons : 
+                                          iconConfig.family === 'Ionicons' ? Ionicons : Feather;
+                      return (
+                        <IconComponent 
+                          name={iconConfig.name as any} 
+                          size={20} 
+                          color="white" 
+                        />
+                      );
+                    })()} 
                   </View>
                   <Text style={[
                     styles.industryName,
