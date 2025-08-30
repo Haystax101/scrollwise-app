@@ -24,11 +24,13 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: isDark ? '#2D3748' : '#374151',
+      backgroundColor: colors.surface,
       padding: 20,
       borderRadius: 16,
       marginBottom: 24,
       marginHorizontal: 20,
+      borderWidth: isDark ? 0 : 1,
+      borderColor: isDark ? 'transparent' : colors.border,
     },
     header: {
       flexDirection: 'row',
@@ -41,7 +43,7 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
     },
     levelLabel: {
       fontSize: 14,
-      color: 'rgba(255, 255, 255, 0.7)',
+      color: colors.textSecondary,
       fontWeight: '500',
     },
     rightHeader: {
@@ -55,7 +57,7 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
     progressContainer: {
       position: 'relative',
       height: 16,
-      backgroundColor: isDark ? '#1A202C' : '#1F2937',
+      backgroundColor: isDark ? '#1A202C' : colors.inputBackground,
       borderRadius: 8,
       overflow: 'hidden',
       marginBottom: 12,
@@ -82,12 +84,12 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
     },
     levelText: {
       fontSize: 14,
-      color: 'rgba(255, 255, 255, 0.7)',
+      color: colors.textSecondary,
       fontWeight: '500',
     },
     totalVoltzText: {
       fontSize: 12,
-      color: 'rgba(255, 255, 255, 0.7)',
+      color: colors.textSecondary,
       textAlign: 'center',
     },
   });

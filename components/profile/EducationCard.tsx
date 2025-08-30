@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Alert, Switch, ScrollView } from 'react-native';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
-import { DateInput, validateDate, validateDateRange, dateInputToDbDate, dbDateToDateInput } from '../../utils/dateUtils';
+import { DateInput, validateDate, validateDateRange, dateInputToDbDate, dbDateToDateInput, formatPeriod, calculateDuration } from '../../utils/dateUtils';
 
 interface Education {
   id?: string;
@@ -44,7 +44,7 @@ export const EducationCard: React.FC<EducationCardProps> = ({
   const [editingIndex, setEditingIndex] = useState<number>(-1);
   const [formData, setFormData] = useState<StructuredEducationData>({});
   const [dateErrors, setDateErrors] = useState<{[key: string]: string}>({});
-  const [swipeableRefs, setSwipeableRefs] = useState<{[key: number]: Swipeable | null}>({});
+  const swipeableRefs = useRef<{[key: number]: Swipeable | null}>({});
 
   const handleAddEducation = () => {
     setEditingIndex(-1);
@@ -163,27 +163,81 @@ export const EducationCard: React.FC<EducationCardProps> = ({
           onPress: async () => {
             try {
               const edu = education[index];
-              if (edu.id) {
-                const { error } = await supabase
-                  .from('user_education')
-                  .delete()
-                  .eq('id', edu.id)
-                  .eq('user_id', userId);
-                
-                if (error) throw error;
+              console.log('DELETE_EDUCATION_ATTEMPT', {
+                index,
+                eduId: edu.id,
+                eduData: edu,
+                userId,
+                hasEduId: !!edu.id,
+                hasUserId: !!userId,
+              });
+              
+              if (!edu.id) {
+                console.warn('DELETE_EDUCATION_SKIPPED: No edu.id found', { edu });
+                Alert.alert('Error', 'Cannot delete: Education entry has no ID.');
+                return;
               }
               
+              if (!userId) {
+                console.warn('DELETE_EDUCATION_SKIPPED: No userId found', { userId });
+                Alert.alert('Error', 'Cannot delete: User not authenticated.');
+                return;
+              }
+              
+              const { error, status, statusText, data } = await supabase
+                .from('user_education')
+                .delete()
+                .eq('id', edu.id)
+                .eq('user_id', userId)
+                .select(); // Add select to see what was actually deleted
+              
+              console.log('DELETE_EDUCATION_RESULT', {
+                error,
+                status,
+                statusText,
+                deletedData: data,
+                errorCode: (error as any)?.code,
+                errorMessage: error?.message,
+                errorDetails: (error as any)?.details,
+                errorHint: (error as any)?.hint,
+              });
+              
+              if (error) {
+                console.error('DELETE_EDUCATION_ERROR', {
+                  table: 'user_education',
+                  eduId: edu.id,
+                  userId,
+                  status,
+                  code: (error as any)?.code,
+                  details: (error as any)?.details,
+                  hint: (error as any)?.hint,
+                  message: error.message,
+                });
+                throw error;
+              }
+              
+              console.log('DELETE_EDUCATION_SUCCESS', {
+                deletedCount: data?.length || 0,
+                deletedItems: data,
+              });
+              
               if (onRefresh) {
+                console.log('REFRESH_EDUCATION_DATA: Calling onRefresh');
                 await onRefresh();
               }
               
               // Close the swipeable
-              if (swipeableRefs[index]) {
-                swipeableRefs[index]?.close();
+              if (swipeableRefs.current[index]) {
+                swipeableRefs.current[index]?.close();
               }
             } catch (error) {
-              console.error('Error deleting education:', error);
-              Alert.alert('Error', 'Failed to delete education.');
+              console.error('DELETE_EDUCATION_EXCEPTION:', {
+                error,
+                errorName: (error as any)?.name,
+                errorMessage: (error as any)?.message,
+                errorStack: (error as any)?.stack,
+              });
+              Alert.alert('Error', `Failed to delete education: ${(error as any)?.message || 'Unknown error'}`);
             }
           }
         }
@@ -230,8 +284,10 @@ export const EducationCard: React.FC<EducationCardProps> = ({
       gap: 16,
     },
     educationItem: {
-      backgroundColor: isDark ? '#2D3748' : '#374151',
+      backgroundColor: colors.surface,
       borderRadius: 16,
+      borderWidth: isDark ? 0 : 1,
+      borderColor: isDark ? 'transparent' : colors.border,
       padding: 20,
     },
     educationHeader: {
@@ -277,7 +333,7 @@ export const EducationCard: React.FC<EducationCardProps> = ({
     },
     gpaText: {
       fontSize: 12,
-      color: '#EAB308',
+      color: colors.primary,
       fontWeight: '500',
     },
     addButton: {
@@ -287,7 +343,7 @@ export const EducationCard: React.FC<EducationCardProps> = ({
     },
     addButtonText: {
       fontSize: 16,
-      color: '#EAB308',
+      color: colors.primary,
       fontWeight: '500',
     },
     emptyState: {
@@ -296,7 +352,7 @@ export const EducationCard: React.FC<EducationCardProps> = ({
     },
     emptyText: {
       fontSize: 16,
-      color: 'rgba(255, 255, 255, 0.7)',
+      color: colors.textSecondary,
       textAlign: 'center',
       marginBottom: 16,
     },
@@ -425,7 +481,7 @@ export const EducationCard: React.FC<EducationCardProps> = ({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerIcon}>
-            <Feather name="book-open" size={24} color="#EAB308" />
+            <Feather name="book-open" size={24} color={colors.primary} />
           </View>
           <Text style={styles.title}>Education</Text>
         </View>
@@ -449,9 +505,7 @@ export const EducationCard: React.FC<EducationCardProps> = ({
             <Swipeable
               key={index}
               ref={(ref) => {
-                if (ref) {
-                  setSwipeableRefs(prev => ({...prev, [index]: ref}));
-                }
+                swipeableRefs.current[index] = ref;
               }}
               renderRightActions={() => renderRightActions(index)}
               friction={2}
@@ -470,7 +524,7 @@ export const EducationCard: React.FC<EducationCardProps> = ({
               </View>
               
               <View style={styles.university}>
-                <Feather name="book-open" size={16} color="#EAB308" />
+                <Feather name="book-open" size={16} color={colors.primary} />
                 <Text style={styles.universityText}>{edu.university || 'Institution'}</Text>
               </View>
               

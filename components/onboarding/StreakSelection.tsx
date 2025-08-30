@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { OnboardingStyles } from './styles';
 
 const streakOptions = [
-  { days: 3, title: 'Starter', subtitle: '3 days per week', icon: 'flash' as const, color: '#22C55E' },
   { days: 4, title: 'Consistent', subtitle: '4 days per week', icon: 'flame' as const, color: '#3B82F6' },
   { days: 5, title: 'Committed', subtitle: '5 days per week', icon: 'trending-up' as const, color: '#F59E0B' },
   { days: 6, title: 'Dedicated', subtitle: '6 days per week', icon: 'rocket' as const, color: '#EF4444' },
@@ -18,7 +17,7 @@ interface StreakSelectionProps {
 }
 
 export const StreakSelection: React.FC<StreakSelectionProps> = ({ onNext }) => {
-  const [selectedDays, setSelectedDays] = useState<number>(3);
+  const [selectedDays, setSelectedDays] = useState<number>(4);
 
   const handleNext = () => {
     onNext({ weeklyGoal: selectedDays });

@@ -193,7 +193,7 @@ export const calculateDuration = (startDate: string, endDate: string): string =>
 };
 
 // Format period for display (Jan 2020 - Dec 2022)
-export const formatPeriod = (startDate: string, endDate: string | null, isCurrent: boolean): string => {
+export const formatPeriod = (startDate: string, endDate: string | null | undefined, isCurrent: boolean): string => {
   if (!startDate) return '';
   
   const startFormatted = dbDateToDisplayFormat(startDate);

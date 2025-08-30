@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Alert, Switch, ScrollView } from 'react-native';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
@@ -47,7 +47,7 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
   const [editingIndex, setEditingIndex] = useState<number>(-1);
   const [formData, setFormData] = useState<StructuredExperienceData>({});
   const [dateErrors, setDateErrors] = useState<{[key: string]: string}>({});
-  const [swipeableRefs, setSwipeableRefs] = useState<{[key: number]: Swipeable | null}>({});
+  const swipeableRefs = useRef<{[key: number]: Swipeable | null}>({});
 
   const handleAddExperience = () => {
     setEditingIndex(-1);
@@ -189,27 +189,81 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
           onPress: async () => {
             try {
               const exp = experiences[index];
-              if (exp.id) {
-                const { error } = await supabase
-                  .from('user_experiences')
-                  .delete()
-                  .eq('id', exp.id)
-                  .eq('user_id', userId);
-                
-                if (error) throw error;
+              console.log('DELETE_EXPERIENCE_ATTEMPT', {
+                index,
+                expId: exp.id,
+                expData: exp,
+                userId,
+                hasExpId: !!exp.id,
+                hasUserId: !!userId,
+              });
+              
+              if (!exp.id) {
+                console.warn('DELETE_EXPERIENCE_SKIPPED: No exp.id found', { exp });
+                Alert.alert('Error', 'Cannot delete: Experience entry has no ID.');
+                return;
               }
               
+              if (!userId) {
+                console.warn('DELETE_EXPERIENCE_SKIPPED: No userId found', { userId });
+                Alert.alert('Error', 'Cannot delete: User not authenticated.');
+                return;
+              }
+              
+              const { error, status, statusText, data } = await supabase
+                .from('user_experiences')
+                .delete()
+                .eq('id', exp.id)
+                .eq('user_id', userId)
+                .select(); // Add select to see what was actually deleted
+              
+              console.log('DELETE_EXPERIENCE_RESULT', {
+                error,
+                status,
+                statusText,
+                deletedData: data,
+                errorCode: (error as any)?.code,
+                errorMessage: error?.message,
+                errorDetails: (error as any)?.details,
+                errorHint: (error as any)?.hint,
+              });
+              
+              if (error) {
+                console.error('DELETE_EXPERIENCE_ERROR', {
+                  table: 'user_experiences',
+                  expId: exp.id,
+                  userId,
+                  status,
+                  code: (error as any)?.code,
+                  details: (error as any)?.details,
+                  hint: (error as any)?.hint,
+                  message: error.message,
+                });
+                throw error;
+              }
+              
+              console.log('DELETE_EXPERIENCE_SUCCESS', {
+                deletedCount: data?.length || 0,
+                deletedItems: data,
+              });
+              
               if (onRefresh) {
+                console.log('REFRESH_EXPERIENCE_DATA: Calling onRefresh');
                 await onRefresh();
               }
               
               // Close the swipeable
-              if (swipeableRefs[index]) {
-                swipeableRefs[index]?.close();
+              if (swipeableRefs.current[index]) {
+                swipeableRefs.current[index]?.close();
               }
             } catch (error) {
-              console.error('Error deleting experience:', error);
-              Alert.alert('Error', 'Failed to delete experience.');
+              console.error('DELETE_EXPERIENCE_EXCEPTION:', {
+                error,
+                errorName: (error as any)?.name,
+                errorMessage: (error as any)?.message,
+                errorStack: (error as any)?.stack,
+              });
+              Alert.alert('Error', `Failed to delete experience: ${(error as any)?.message || 'Unknown error'}`);
             }
           }
         }
@@ -256,8 +310,10 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
       gap: 16,
     },
     experienceItem: {
-      backgroundColor: isDark ? '#2D3748' : '#374151',
+      backgroundColor: colors.surface,
       borderRadius: 16,
+      borderWidth: isDark ? 0 : 1,
+      borderColor: isDark ? 'transparent' : colors.border,
       padding: 20,
     },
     experienceHeader: {
@@ -305,7 +361,7 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
     },
     addButtonText: {
       fontSize: 16,
-      color: '#EAB308',
+      color: colors.primary,
       fontWeight: '500',
     },
     emptyState: {
@@ -314,7 +370,7 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
     },
     emptyText: {
       fontSize: 16,
-      color: 'rgba(255, 255, 255, 0.7)',
+      color: colors.textSecondary,
       textAlign: 'center',
       marginBottom: 16,
     },
@@ -443,7 +499,7 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerIcon}>
-            <Feather name="briefcase" size={24} color="#EAB308" />
+            <Feather name="briefcase" size={24} color={colors.primary} />
           </View>
           <Text style={styles.title}>Work Experience</Text>
         </View>
@@ -467,9 +523,7 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
             <Swipeable
               key={index}
               ref={(ref) => {
-                if (ref) {
-                  setSwipeableRefs(prev => ({...prev, [index]: ref}));
-                }
+                swipeableRefs.current[index] = ref;
               }}
               renderRightActions={() => renderRightActions(index)}
               friction={2}
@@ -488,7 +542,7 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
               </View>
               
               <View style={styles.company}>
-                <Feather name="briefcase" size={16} color="#EAB308" />
+                <Feather name="briefcase" size={16} color={colors.primary} />
                 <Text style={styles.companyText}>{exp.company || 'Company'}</Text>
               </View>
               

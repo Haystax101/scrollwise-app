@@ -280,6 +280,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         supabase
           .from('user_experiences')
           .select(`
+            id,
             position_title,
             description,
             start_date,
@@ -295,6 +296,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         supabase
           .from('user_education')
           .select(`
+            id,
             degree_name,
             university_name,
             field_of_study,
@@ -338,6 +340,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         console.error('Error fetching experiences:', experiencesRes.error);
       } else {
         sectionMap.experience = (experiencesRes.data || []).map((exp: any) => ({
+          id: exp.id, // Add the ID for deletion
           role: exp.position_title,
           company: exp.companies?.name || 'Unknown Company',
           description: exp.description,
@@ -354,6 +357,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         console.error('Error fetching education:', educationRes.error);
       } else {
         sectionMap.education = (educationRes.data || []).map((edu: any) => ({
+          id: edu.id, // Add the ID for deletion
           degree: `${edu.degree_name}${edu.field_of_study ? ` ${edu.field_of_study}` : ''}`,
           university: edu.university_name || 'Unknown Institution',
           stage: edu.field_of_study,
@@ -476,7 +480,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             style={styles.settingsButton} 
             onPress={() => setIsSettingsModalVisible(true)}
           >
-            <Feather name="settings" size={24} color="white" />
+            <Feather name="settings" size={24} color={colors.text} />
           </TouchableOpacity>
           
           <NewProfileHeader

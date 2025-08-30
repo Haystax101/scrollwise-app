@@ -62,7 +62,7 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
       marginHorizontal: -4,
     },
     statItem: {
-      backgroundColor: isDark ? '#2D3748' : '#374151',
+      backgroundColor: colors.surface,
       alignItems: 'center',
       flex: 1,
       minHeight: 120,
@@ -70,6 +70,8 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
       borderRadius: 16,
       padding: 16,
       marginHorizontal: 4,
+      borderWidth: isDark ? 0 : 1,
+      borderColor: isDark ? 'transparent' : colors.border,
     },
     iconContainer: {
       width: 44,
@@ -82,12 +84,12 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
     statValue: {
       fontSize: 28,
       fontWeight: 'bold',
-      color: 'white',
+      color: colors.text,
       marginBottom: 4,
     },
     statLabel: {
       fontSize: 12,
-      color: 'rgba(255, 255, 255, 0.7)',
+      color: colors.textSecondary,
       textAlign: 'center',
       lineHeight: 14,
     },

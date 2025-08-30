@@ -120,9 +120,11 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
     skillTag: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: isDark ? '#2D3748' : '#374151',
+      backgroundColor: colors.surface,
       borderRadius: 24,
       paddingHorizontal: 16,
+      borderWidth: isDark ? 0 : 1,
+      borderColor: isDark ? 'transparent' : colors.border,
       paddingVertical: 12,
       marginBottom: 8,
     },
@@ -150,7 +152,7 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
     },
     addSkillText: {
       fontSize: 24,
-      color: '#EAB308',
+      color: colors.primary,
       fontWeight: '300',
     },
     addButton: {
@@ -160,7 +162,7 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
     },
     addButtonText: {
       fontSize: 16,
-      color: '#EAB308',
+      color: colors.primary,
       fontWeight: '500',
     },
     emptyState: {
@@ -169,7 +171,7 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
     },
     emptyText: {
       fontSize: 16,
-      color: 'rgba(255, 255, 255, 0.7)',
+      color: colors.textSecondary,
       textAlign: 'center',
       marginBottom: 16,
     },
@@ -247,7 +249,7 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={styles.headerIcon}>
-              <Feather name="code" size={24} color="#EAB308" />
+              <Feather name="code" size={24} color={colors.primary} />
             </View>
             <Text style={styles.title}>Skills</Text>
           </View>
@@ -262,7 +264,7 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.headerIcon}>
-            <Feather name="code" size={24} color="#EAB308" />
+            <Feather name="code" size={24} color={colors.primary} />
           </View>
           <Text style={styles.title}>Skills</Text>
         </View>

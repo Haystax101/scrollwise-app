@@ -110,6 +110,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-start',
     paddingTop: 20, // Add some space from the title
-    paddingHorizontal: 24,
   },
 });

@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Appearance, ColorSchemeName } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeMode = 'light' | 'dark';
 export type ActiveTheme = 'light' | 'dark';
 
 export interface ThemeColors {
@@ -144,16 +143,10 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const { user } = useAuth();
-  const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
-  const [systemTheme, setSystemTheme] = useState<ColorSchemeName>(Appearance.getColorScheme());
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('dark');
 
-  // Determine active theme based on mode and system preference
-  const activeTheme: ActiveTheme = 
-    themeMode === 'system' 
-      ? (systemTheme === 'dark' ? 'dark' : 'light')
-      : themeMode === 'dark' 
-      ? 'dark' 
-      : 'light';
+  // Determine active theme based on mode
+  const activeTheme: ActiveTheme = themeMode;
 
   const isDark = activeTheme === 'dark';
   const colors = isDark ? darkTheme : lightTheme;
@@ -186,14 +179,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     loadThemePreference();
   }, [user?.id]);
 
-  // Listen to system theme changes
-  useEffect(() => {
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      setSystemTheme(colorScheme);
-    });
-
-    return () => subscription?.remove();
-  }, []);
 
   // Save theme preference to Supabase
   const setThemeMode = async (mode: ThemeMode) => {

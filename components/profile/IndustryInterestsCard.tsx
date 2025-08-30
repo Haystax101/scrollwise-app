@@ -63,13 +63,15 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
       paddingRight: 20,
     },
     industryTile: {
-      backgroundColor: isDark ? '#2D3748' : '#374151',
+      backgroundColor: colors.surface,
       borderRadius: 16,
       padding: 20,
       width: 140,
       alignItems: 'center',
       minHeight: 120,
       marginRight: 16,
+      borderWidth: isDark ? 0 : 1,
+      borderColor: isDark ? 'transparent' : colors.border,
     },
     industryIcon: {
       width: 48,
@@ -82,7 +84,7 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
     industryName: {
       fontSize: 14,
       fontWeight: '500',
-      color: 'white',
+      color: colors.text,
       textAlign: 'center',
       lineHeight: 18,
     },
@@ -115,13 +117,13 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
     },
     emptyText: {
       fontSize: 16,
-      color: 'rgba(255, 255, 255, 0.7)',
+      color: colors.textSecondary,
       textAlign: 'center',
       marginBottom: 8,
     },
     emptySubtext: {
       fontSize: 14,
-      color: 'rgba(255, 255, 255, 0.5)',
+      color: colors.textTertiary,
       textAlign: 'center',
       marginBottom: 16,
     },
@@ -133,7 +135,7 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
       alignItems: 'center',
     },
     addButtonText: {
-      color: '#000000',
+      color: colors.primaryText,
       fontSize: 14,
       fontWeight: '600',
     },
@@ -144,7 +146,7 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerIcon}>
-            <Feather name="globe" size={24} color="#EAB308" />
+            <Feather name="globe" size={24} color={colors.primary} />
           </View>
           <Text style={styles.title}>Industry Interests</Text>
           <TouchableOpacity style={styles.editButton} onPress={onEditPress}>
@@ -163,7 +165,7 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerIcon}>
-            <Feather name="globe" size={24} color="#EAB308" />
+            <Feather name="globe" size={24} color={colors.primary} />
           </View>
           <Text style={styles.title}>Industry Interests</Text>
           <TouchableOpacity style={styles.editButton} onPress={onEditPress}>
@@ -172,7 +174,7 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
         </View>
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
-            <Feather name="globe" size={32} color="rgba(255, 255, 255, 0.3)" />
+            <Feather name="globe" size={32} color={colors.textTertiary} />
           </View>
           <Text style={styles.emptyText}>Add your industry interests</Text>
           <Text style={styles.emptySubtext}>

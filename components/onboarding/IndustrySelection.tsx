@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { Button } from './Button';
 import { OnboardingStyles } from './styles';
 import { getIndustryIcon, getIndustryColor, LEGACY_INDUSTRY_MAPPING } from '../../utils/industryIcons';
 
 const industries = [
-  { id: 'finance', name: 'Finance and Economics', icon: getIndustryIcon('finance') },
-  { id: 'politics', name: 'Politics and International Relations', icon: getIndustryIcon('politics') },
-  { id: 'entrepreneurship', name: 'Entrepreneurship and Startups', icon: getIndustryIcon('entrepreneurship') },
-  { id: 'technology', name: 'Technology and AI', icon: getIndustryIcon('technology') },
-  { id: 'energy', name: 'Energy, Sustainability and Climate Innovation', icon: getIndustryIcon('energy') },
-  { id: 'creative', name: 'Creative Industries and the Arts', icon: getIndustryIcon('creative') },
-  { id: 'engineering', name: 'Engineering and Automotive', icon: getIndustryIcon('engineering') },
-  { id: 'healthcare', name: 'Medicine and Healthcare', icon: getIndustryIcon('healthcare') },
-  { id: 'education', name: 'Education', icon: getIndustryIcon('education') },
+  { id: 'finance', name: 'Finance and Economics' },
+  { id: 'politics', name: 'Politics and International Relations' },
+  { id: 'entrepreneurship', name: 'Entrepreneurship and Startups' },
+  { id: 'technology', name: 'Technology and AI' },
+  { id: 'energy', name: 'Energy, Sustainability and Climate Innovation' },
+  { id: 'creative', name: 'Creative Industries and the Arts' },
+  { id: 'engineering', name: 'Engineering and Automotive' },
+  { id: 'healthcare', name: 'Medicine and Healthcare' },
+  { id: 'education', name: 'Education' },
 ];
 
 interface IndustrySelectionProps {
@@ -88,11 +88,18 @@ export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext }) 
                 styles.industryIcon,
                 isSelected && styles.industryIconSelected
               ]}>
-                <Ionicons 
-                  name={industry.icon as any} 
-                  size={24} 
-                  color={getIndustryIconColor(industry.id, isSelected)} 
-                />
+                {(() => {
+                  const iconConfig = getIndustryIcon(industry.id);
+                  const IconComponent = iconConfig.family === 'MaterialIcons' ? MaterialIcons : 
+                                      iconConfig.family === 'FontAwesome' ? FontAwesome : Ionicons;
+                  return (
+                    <IconComponent 
+                      name={iconConfig.name as any} 
+                      size={24} 
+                      color={getIndustryIconColor(industry.id, isSelected)} 
+                    />
+                  );
+                })()}
               </View>
               <Text style={[
                 styles.industryName,

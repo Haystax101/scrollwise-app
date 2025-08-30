@@ -56,13 +56,13 @@ export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
     userName: {
       fontSize: 24,
       fontWeight: 'bold',
-      color: 'white',
+      color: colors.text,
       textAlign: 'center',
       marginBottom: 4,
     },
     userHandle: {
       fontSize: 16,
-      color: 'rgba(255, 255, 255, 0.8)',
+      color: colors.textSecondary,
       textAlign: 'center',
       marginBottom: 8,
     },

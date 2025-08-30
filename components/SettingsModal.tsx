@@ -44,7 +44,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
     const themeOptions: { mode: ThemeMode; label: string; description: string }[] = [
       { mode: 'light', label: 'Light', description: 'Always use light theme' },
       { mode: 'dark', label: 'Dark', description: 'Always use dark theme' },
-      { mode: 'system', label: 'System', description: 'Follow device setting' },
     ];
 
     const dynamicStyles = StyleSheet.create({
