@@ -133,6 +133,9 @@ interface ThemeContextType {
   colors: ThemeColors;
   isDark: boolean;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
+  getCardTextColor: () => string;
+  getCardSecondaryTextColor: () => string;
+  getCardTertiaryTextColor: () => string;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -150,6 +153,21 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const isDark = activeTheme === 'dark';
   const colors = isDark ? darkTheme : lightTheme;
+
+  // Helper function to get appropriate text color for cards
+  const getCardTextColor = (): string => {
+    return isDark ? '#FFFFFF' : '#1F2937';
+  };
+
+  // Helper function to get secondary text color for cards
+  const getCardSecondaryTextColor = (): string => {
+    return isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(31, 41, 55, 0.7)';
+  };
+
+  // Helper function to get tertiary text color for cards  
+  const getCardTertiaryTextColor = (): string => {
+    return isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(31, 41, 55, 0.6)';
+  };
 
   // Load theme preference from Supabase when user is available
   useEffect(() => {
@@ -206,6 +224,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     colors,
     isDark,
     setThemeMode,
+    getCardTextColor,
+    getCardSecondaryTextColor,
+    getCardTertiaryTextColor,
   };
 
   return (

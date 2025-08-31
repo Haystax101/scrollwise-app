@@ -530,7 +530,7 @@ export const ProfileCustomizationSections: React.FC<ProfileCustomizationSections
       backgroundColor: colors.textTertiary,
     },
     modalButtonText: {
-      color: 'white',
+      color: '#FFFFFF', // Always white for button text
       fontWeight: '600',
     },
     formRow: {

@@ -39,7 +39,7 @@ export const EducationCard: React.FC<EducationCardProps> = ({
   loading = false,
   onRefresh
 }) => {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, getCardTextColor, getCardSecondaryTextColor, getCardTertiaryTextColor } = useTheme();
   const [showModal, setShowModal] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number>(-1);
   const [formData, setFormData] = useState<StructuredEducationData>({});
@@ -259,13 +259,13 @@ export const EducationCard: React.FC<EducationCardProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: isDark ? colors.surface : colors.card,
+      backgroundColor: colors.surface,
       borderRadius: 16,
       padding: 20,
       marginBottom: 24,
       marginHorizontal: 20,
-      borderWidth: isDark ? 1 : 0,
-      borderColor: isDark ? colors.border : 'transparent',
+      borderWidth: isDark ? 0 : 1,
+      borderColor: isDark ? 'transparent' : colors.border,
     },
     header: {
       flexDirection: 'row',
@@ -299,12 +299,12 @@ export const EducationCard: React.FC<EducationCardProps> = ({
     degreeTitle: {
       fontSize: 18,
       fontWeight: '600',
-      color: 'white',
+      color: getCardTextColor(),
       flex: 1,
     },
     period: {
       fontSize: 12,
-      color: 'rgba(255, 255, 255, 0.7)',
+      color: getCardSecondaryTextColor(),
       marginLeft: 16,
     },
     university: {
@@ -314,12 +314,12 @@ export const EducationCard: React.FC<EducationCardProps> = ({
     },
     universityText: {
       fontSize: 14,
-      color: 'rgba(255, 255, 255, 0.7)',
+      color: getCardSecondaryTextColor(),
       marginLeft: 4,
     },
     duration: {
       fontSize: 12,
-      color: 'rgba(255, 255, 255, 0.6)',
+      color: getCardTertiaryTextColor(),
       marginBottom: 8,
       fontStyle: 'italic',
     },
@@ -432,7 +432,7 @@ export const EducationCard: React.FC<EducationCardProps> = ({
       backgroundColor: colors.textTertiary,
     },
     modalButtonText: {
-      color: 'white',
+      color: '#FFFFFF', // Always white for button text
       fontWeight: '600',
     },
     dateRow: {

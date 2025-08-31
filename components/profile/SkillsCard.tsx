@@ -17,7 +17,7 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
   loading = false,
   onRefresh
 }) => {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, getCardTextColor } = useTheme();
   const [showModal, setShowModal] = useState(false);
   const [skillsText, setSkillsText] = useState('');
 
@@ -73,13 +73,13 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: isDark ? colors.surface : colors.card,
+      backgroundColor: colors.surface,
       borderRadius: 16,
       padding: 20,
       marginBottom: 24,
       marginHorizontal: 20,
-      borderWidth: isDark ? 1 : 0,
-      borderColor: isDark ? colors.border : 'transparent',
+      borderWidth: isDark ? 0 : 1,
+      borderColor: isDark ? 'transparent' : colors.border,
     },
     header: {
       flexDirection: 'row',
@@ -136,7 +136,7 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
     },
     skillText: {
       fontSize: 14,
-      color: 'white',
+      color: getCardTextColor(),
       fontWeight: '500',
     },
     addSkillButton: {
@@ -238,7 +238,7 @@ export const SkillsCard: React.FC<SkillsCardProps> = ({
       backgroundColor: colors.textTertiary,
     },
     modalButtonText: {
-      color: 'white',
+      color: '#FFFFFF', // Always white for button text
       fontWeight: '600',
     },
   });

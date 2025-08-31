@@ -46,7 +46,7 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
   currentGoal,
   userId
 }) => {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, getCardTextColor } = useTheme();
   const [goal, setGoal] = useState('');
   const [timeframe, setTimeframe] = useState('');
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
@@ -252,7 +252,7 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
       color: colors.text,
     },
     timeframeTextSelected: {
-      color: 'white',
+      color: '#FFFFFF', // Always white for selected text on colored background
     },
     companiesContainer: {
       marginTop: 12,
@@ -273,7 +273,7 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
       alignItems: 'center',
     },
     companyTagText: {
-      color: 'white',
+      color: '#FFFFFF', // Always white for text on colored background
       fontSize: 14,
       marginRight: 4,
     },
@@ -307,7 +307,7 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
       color: colors.text,
     },
     saveButtonText: {
-      color: 'white',
+      color: '#FFFFFF', // Always white for button text
     },
   });
 
@@ -389,7 +389,7 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
                           style={styles.removeButton}
                           onPress={() => handleRemoveCompany(company)}
                         >
-                          <Feather name="x" size={16} color="white" />
+                          <Feather name="x" size={16} color="#FFFFFF" />
                         </TouchableOpacity>
                       </View>
                     ))}

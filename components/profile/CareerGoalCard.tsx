@@ -24,13 +24,13 @@ export const CareerGoalCard: React.FC<CareerGoalCardProps> = ({
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: isDark ? colors.surface : colors.card,
+      backgroundColor: colors.surface,
       borderRadius: 16,
       padding: 20,
       marginBottom: 24,
       marginHorizontal: 20,
-      borderWidth: isDark ? 1 : 0,
-      borderColor: isDark ? colors.border : 'transparent',
+      borderWidth: isDark ? 0 : 1,
+      borderColor: isDark ? 'transparent' : colors.border,
     },
     header: {
       flexDirection: 'row',

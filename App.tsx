@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SafeAreaView, View, StatusBar, StyleSheet } from 'react-native';
-import { Onboarding } from './components/Onboarding';
 import { MainFeed } from './components/MainFeed';
-import { Profile } from './components/Profile';
 import { Header } from './components/Header';
 import { Discover } from './components/Discover';
 import Settings from './components/Settings';
@@ -50,21 +48,17 @@ export default function App() {
   const renderScreen = () => {
     switch (currentScreen) {
       case 'onboarding':
-        return <Onboarding onComplete={handleOnboardingComplete} onSignIn={handleSignIn} />;
+        return null; // Onboarding handled by expo-router
       case 'feed':
         return <MainFeed industries={selectedIndustries} />;
       case 'discover':
         return <Discover />;
       case 'profile':
-        // Map Supabase user to local User type
-        const localUser = user
-          ? { email: user.email ?? '', name: user.user_metadata?.name ?? '' }
-          : null;
-        return <Profile user={localUser} navigateTo={navigateTo as any} signOut={signOut} />;
+        return null; // Profile handled by expo-router
       case 'settings':
         return <Settings navigateTo={navigateTo as any} signOut={signOut} />;
       default:
-        return <Onboarding onComplete={handleOnboardingComplete} onSignIn={handleSignIn} />;
+        return null;
     }
   };
 

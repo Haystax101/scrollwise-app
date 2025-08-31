@@ -57,6 +57,8 @@ export const voltzService = {
     level: number;
     levelProgress: number;
     voltzToNextLevel: number;
+    voltzForCurrentLevel: number;
+    voltzForNextLevel: number;
   }> {
     try {
       const { data, error } = await supabase.rpc('get_user_voltz_stats', {
@@ -70,16 +72,23 @@ export const voltzService = {
           spendableVoltz: 0,
           level: 1,
           levelProgress: 0,
-          voltzToNextLevel: 20
+          voltzToNextLevel: 20,
+          voltzForCurrentLevel: 0,
+          voltzForNextLevel: 20
         };
       }
 
+      // The function returns a single row, so data is an array with one element
+      const stats = Array.isArray(data) ? data[0] : data;
+
       return {
-        totalVoltzEarned: data.total_voltz_earned || 0,
-        spendableVoltz: data.spendable_voltz || 0,
-        level: data.level || 1,
-        levelProgress: data.level_progress || 0,
-        voltzToNextLevel: data.voltz_to_next_level || 20
+        totalVoltzEarned: stats?.total_voltz_earned || 0,
+        spendableVoltz: stats?.spendable_voltz || 0,
+        level: stats?.level || 1,
+        levelProgress: stats?.level_progress || 0,
+        voltzToNextLevel: stats?.voltz_to_next_level || 20,
+        voltzForCurrentLevel: stats?.voltz_for_current_level || 0,
+        voltzForNextLevel: stats?.voltz_for_next_level || 20
       };
     } catch (error) {
       console.error('Exception fetching Voltz stats:', error);
@@ -88,7 +97,9 @@ export const voltzService = {
         spendableVoltz: 0,
         level: 1,
         levelProgress: 0,
-        voltzToNextLevel: 20
+        voltzToNextLevel: 20,
+        voltzForCurrentLevel: 0,
+        voltzForNextLevel: 20
       };
     }
   },

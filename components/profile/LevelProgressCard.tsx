@@ -7,20 +7,27 @@ interface LevelProgressCardProps {
   level: number;
   currentVoltz: number;
   spendableVoltz?: number;
+  levelProgress?: number;
+  voltzToNextLevel?: number;
+  voltzForCurrentLevel?: number;
+  voltzForNextLevel?: number;
 }
 
 export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
   level,
   currentVoltz,
-  spendableVoltz = 0
+  spendableVoltz = 0,
+  levelProgress = 0,
+  voltzForCurrentLevel = 0,
+  voltzForNextLevel = 20
 }) => {
   const { colors, isDark } = useTheme();
 
-  // Calculate progress within current level (each level requires 20 Voltz)
-  const currentLevelVoltz = (level - 1) * 20;
-  const nextLevelVoltz = level * 20;
-  const progressInCurrentLevel = currentVoltz - currentLevelVoltz;
-  const progressPercentage = Math.min((progressInCurrentLevel / 20) * 100, 100);
+  // Use provided level progression data instead of calculating client-side
+  const progressRange = voltzForNextLevel - voltzForCurrentLevel;
+  const progressPercentage = progressRange > 0 
+    ? Math.min((levelProgress / progressRange) * 100, 100) 
+    : 0;
 
   const styles = StyleSheet.create({
     container: {

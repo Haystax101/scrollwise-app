@@ -248,8 +248,9 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
   if (parentLoading || loading) {
     return (
       <View style={[styles.container, { 
-        backgroundColor: isDark ? colors.surface : colors.card,
-        borderColor: colors.border 
+        backgroundColor: colors.surface,
+        borderWidth: isDark ? 0 : 1,
+        borderColor: isDark ? 'transparent' : colors.border 
       }]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>Saved Content</Text>
@@ -264,8 +265,9 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
   if (savedContent.length === 0) {
     return (
       <View style={[styles.container, { 
-        backgroundColor: isDark ? colors.surface : colors.card,
-        borderColor: colors.border 
+        backgroundColor: colors.surface,
+        borderWidth: isDark ? 0 : 1,
+        borderColor: isDark ? 'transparent' : colors.border 
       }]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>Saved Content</Text>
@@ -285,8 +287,9 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
 
   return (
     <View style={[styles.container, { 
-      backgroundColor: isDark ? colors.surface : colors.card,
-      borderColor: colors.border 
+      backgroundColor: colors.surface,
+      borderWidth: isDark ? 0 : 1,
+      borderColor: isDark ? 'transparent' : colors.border 
     }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Saved Content</Text>
@@ -312,7 +315,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 24,
     marginHorizontal: 20,
-    borderWidth: 1,
   },
   header: {
     flexDirection: 'row',

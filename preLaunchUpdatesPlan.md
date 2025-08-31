@@ -1,9 +1,11 @@
 # Pre-Launch Updates Plan
 
 ## Overview
+
 This document outlines the comprehensive plan to prepare the Supercharged social learning app for beta testing. Based on the analysis of `zzz.md` and `achievementsList.md`, this plan focuses on implementing essential features while maintaining code quality and following 2025 React Native best practices.
 
 ## 🎯 Primary Objectives
+
 - Implement achievements system with proper voltz rewards
 - Enhance voltz awarding mechanisms across all user activities
 - Create post-onboarding completion tracking
@@ -65,24 +67,24 @@ DECLARE
   achievement_met BOOLEAN;
 BEGIN
   -- Loop through all active achievements
-  FOR achievement_record IN 
+  FOR achievement_record IN
     SELECT * FROM public.achievements WHERE is_active = true
   LOOP
     -- Check if user already has this achievement
     SELECT EXISTS(
-      SELECT 1 FROM public.user_achievements 
-      WHERE user_id = COALESCE(NEW.user_id, NEW.author_id) 
+      SELECT 1 FROM public.user_achievements
+      WHERE user_id = COALESCE(NEW.user_id, NEW.author_id)
       AND achievement_id = achievement_record.id
     ) INTO user_achievement_exists;
-    
+
     -- Skip if user already has achievement
     IF user_achievement_exists THEN
       CONTINUE;
     END IF;
-    
+
     -- Check achievement criteria based on the action
     achievement_met := FALSE;
-    
+
     -- Example criteria checking (expand based on your needs)
     IF achievement_record.criteria->>'action' = 'first_insight' AND TG_TABLE_NAME = 'insights' THEN
       achievement_met := TRUE;
@@ -91,11 +93,11 @@ BEGIN
     ELSIF achievement_record.criteria->>'action' = 'first_comment' AND TG_TABLE_NAME = 'insight_comments' THEN
       achievement_met := TRUE;
     END IF;
-    
+
     -- Award achievement if criteria met
     IF achievement_met THEN
       INSERT INTO public.user_achievements (
-        user_id, 
+        user_id,
         achievement_id,
         achievement_type,
         title,
@@ -111,13 +113,13 @@ BEGIN
         achievement_record.icon_name,
         NOW()
       );
-      
+
       -- Award voltz
-      UPDATE public.profiles 
+      UPDATE public.profiles
       SET spendable_voltz = spendable_voltz + achievement_record.voltz_reward,
           total_voltz_earned = total_voltz_earned + achievement_record.voltz_reward
       WHERE id = COALESCE(NEW.user_id, NEW.author_id);
-      
+
       -- Log voltz transaction
       INSERT INTO public.xp_ledger (user_id, amount, reason, subject_type, subject_id, transaction_type)
       VALUES (
@@ -130,7 +132,7 @@ BEGIN
       );
     END IF;
   END LOOP;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -150,6 +152,7 @@ CREATE TRIGGER achievement_trigger_comments
 ```
 
 #### Implementation Tasks
+
 - [ ] Create `services/achievementService.ts` for client-side achievement logic
 - [ ] Build `components/achievements/AchievementNotification.tsx` for real-time notifications
 - [ ] Implement `components/achievements/AchievementsList.tsx` for profile display
@@ -162,7 +165,7 @@ CREATE TRIGGER achievement_trigger_comments
 
 ```sql
 -- Update insights table to properly track voltz spent on supercharging
-ALTER TABLE public.insights 
+ALTER TABLE public.insights
   ALTER COLUMN voltz_spent SET NOT NULL DEFAULT 0;
 
 -- Create function for voltz rewards on social interactions
@@ -172,38 +175,38 @@ BEGIN
   -- Award voltz to content author for engagement
   IF TG_TABLE_NAME = 'insight_likes' THEN
     -- +5 voltz for likes received
-    UPDATE public.profiles 
+    UPDATE public.profiles
     SET spendable_voltz = spendable_voltz + 5,
         total_voltz_earned = total_voltz_earned + 5
     WHERE id = (SELECT author_id FROM public.insights WHERE id = NEW.insight_id);
-    
+
     INSERT INTO public.xp_ledger (user_id, amount, reason, subject_type, subject_id, transaction_type)
     SELECT author_id, 5, 'Like received on insight', 'insight', NEW.insight_id::text, 'earned'
     FROM public.insights WHERE id = NEW.insight_id;
-    
+
   ELSIF TG_TABLE_NAME = 'insight_comments' THEN
     -- +10 voltz for comments received
-    UPDATE public.profiles 
+    UPDATE public.profiles
     SET spendable_voltz = spendable_voltz + 10,
         total_voltz_earned = total_voltz_earned + 10
     WHERE id = (SELECT author_id FROM public.insights WHERE id = NEW.insight_id);
-    
+
     INSERT INTO public.xp_ledger (user_id, amount, reason, subject_type, subject_id, transaction_type)
     SELECT author_id, 10, 'Comment received on insight', 'insight', NEW.insight_id::text, 'earned'
     FROM public.insights WHERE id = NEW.insight_id;
-    
+
   ELSIF TG_TABLE_NAME = 'insight_saves' THEN
     -- +10 voltz for saves received
-    UPDATE public.profiles 
+    UPDATE public.profiles
     SET spendable_voltz = spendable_voltz + 10,
         total_voltz_earned = total_voltz_earned + 10
     WHERE id = (SELECT author_id FROM public.insights WHERE id = NEW.insight_id);
-    
+
     INSERT INTO public.xp_ledger (user_id, amount, reason, subject_type, subject_id, transaction_type)
     SELECT author_id, 10, 'Save received on insight', 'insight', NEW.insight_id::text, 'earned'
     FROM public.insights WHERE id = NEW.insight_id;
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -227,24 +230,24 @@ RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.is_correct THEN
     -- +20 voltz for correct answers
-    UPDATE public.profiles 
+    UPDATE public.profiles
     SET spendable_voltz = spendable_voltz + 20,
         total_voltz_earned = total_voltz_earned + 20
     WHERE id = NEW.user_id;
-    
+
     INSERT INTO public.xp_ledger (user_id, amount, reason, subject_type, subject_id, transaction_type)
     VALUES (NEW.user_id, 20, 'Correct quiz answer', 'quiz', NEW.question_id::text, 'earned');
   ELSE
     -- +5 voltz for incorrect answers (participation)
-    UPDATE public.profiles 
+    UPDATE public.profiles
     SET spendable_voltz = spendable_voltz + 5,
         total_voltz_earned = total_voltz_earned + 5
     WHERE id = NEW.user_id;
-    
+
     INSERT INTO public.xp_ledger (user_id, amount, reason, subject_type, subject_id, transaction_type)
     VALUES (NEW.user_id, 5, 'Quiz participation', 'quiz', NEW.question_id::text, 'earned');
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -276,11 +279,11 @@ DECLARE
 BEGIN
   -- Check last login
   SELECT login_date, streak_count INTO last_login_date, current_streak
-  FROM public.daily_logins 
-  WHERE user_id = user_uuid 
-  ORDER BY login_date DESC 
+  FROM public.daily_logins
+  WHERE user_id = user_uuid
+  ORDER BY login_date DESC
   LIMIT 1;
-  
+
   -- Calculate streak
   IF last_login_date = CURRENT_DATE THEN
     -- Already logged in today
@@ -296,29 +299,29 @@ BEGIN
     -- Streak broken or first login
     current_streak := 1;
   END IF;
-  
+
   -- Calculate streak bonus (every 5 days)
   IF current_streak % 5 = 0 THEN
     streak_bonus := current_streak * 5;
   END IF;
-  
+
   total_voltz := daily_voltz + streak_bonus;
-  
+
   -- Record login
   INSERT INTO public.daily_logins (user_id, login_date, streak_count, bonus_voltz)
   VALUES (user_uuid, CURRENT_DATE, current_streak, streak_bonus);
-  
+
   -- Award voltz
-  UPDATE public.profiles 
+  UPDATE public.profiles
   SET spendable_voltz = spendable_voltz + total_voltz,
       total_voltz_earned = total_voltz_earned + total_voltz,
       days_streak = current_streak
   WHERE id = user_uuid;
-  
+
   -- Log transaction
   INSERT INTO public.xp_ledger (user_id, amount, reason, transaction_type)
   VALUES (user_uuid, total_voltz, 'Daily login (streak: ' || current_streak || ')', 'earned');
-  
+
   RETURN json_build_object(
     'streak', current_streak,
     'daily_voltz', daily_voltz,
@@ -331,6 +334,7 @@ $$ LANGUAGE plpgsql;
 ```
 
 #### Implementation Tasks
+
 - [ ] Update `InsightCard.tsx` to show supercharged status with voltz amount
 - [ ] Modify voltz selector in `components/insights/VoltzSelector.tsx` to use integer values
 - [ ] Implement daily login tracking in `context/AuthContext.tsx`
@@ -376,53 +380,53 @@ BEGIN
     'join_conversation', json_build_object('voltz', 150, 'achievement', 'Community Member'),
     'share_knowledge', json_build_object('voltz', 200, 'achievement', 'First Words')
   );
-  
+
   -- Insert or update step completion
   INSERT INTO public.onboarding_progress (user_id, step_name, metadata)
   VALUES (user_uuid, step_name, step_metadata)
   ON CONFLICT (user_id, step_name) DO UPDATE SET
     completed_at = NOW(),
     metadata = step_metadata;
-  
+
   -- Count completed steps
   SELECT COUNT(*) INTO completed_steps
   FROM public.onboarding_progress
   WHERE user_id = user_uuid;
-  
+
   -- Calculate percentage
   completion_percentage := (completed_steps * 100) / total_steps;
-  
+
   -- Update profile completion percentage
   UPDATE public.profiles
   SET profile_completion_percentage = GREATEST(profile_completion_percentage, completion_percentage)
   WHERE id = user_uuid;
-  
+
   -- Award voltz and achievement for this step
   IF step_config ? step_name THEN
     voltz_reward := (step_config->step_name->>'voltz')::INTEGER;
     achievement_name := step_config->step_name->>'achievement';
-    
+
     -- Award voltz
-    UPDATE public.profiles 
+    UPDATE public.profiles
     SET spendable_voltz = spendable_voltz + voltz_reward,
         total_voltz_earned = total_voltz_earned + voltz_reward
     WHERE id = user_uuid;
-    
+
     -- Log voltz transaction
     INSERT INTO public.xp_ledger (user_id, amount, reason, transaction_type)
     VALUES (user_uuid, voltz_reward, 'Onboarding step: ' || step_name, 'earned');
-    
+
     -- Award achievement (if not already awarded)
     INSERT INTO public.user_achievements (
       user_id, achievement_type, title, description, icon_name, earned_at
-    ) 
+    )
     SELECT user_uuid, 'completion', achievement_name, 'Completed onboarding step', 'check-circle', NOW()
     WHERE NOT EXISTS (
-      SELECT 1 FROM public.user_achievements 
+      SELECT 1 FROM public.user_achievements
       WHERE user_id = user_uuid AND title = achievement_name
     );
   END IF;
-  
+
   -- Check for completion bonus
   IF completed_steps = total_steps THEN
     -- Award completion bonus
@@ -431,20 +435,20 @@ BEGIN
     )
     SELECT user_uuid, 'milestone', 'Tutorial Graduate', 'Completed all onboarding steps', 'graduation-cap', NOW()
     WHERE NOT EXISTS (
-      SELECT 1 FROM public.user_achievements 
+      SELECT 1 FROM public.user_achievements
       WHERE user_id = user_uuid AND title = 'Tutorial Graduate'
     );
-    
+
     -- Award completion voltz bonus
-    UPDATE public.profiles 
+    UPDATE public.profiles
     SET spendable_voltz = spendable_voltz + 1000,
         total_voltz_earned = total_voltz_earned + 1000
     WHERE id = user_uuid;
-    
+
     INSERT INTO public.xp_ledger (user_id, amount, reason, transaction_type)
     VALUES (user_uuid, 1000, 'Onboarding completion bonus', 'earned');
   END IF;
-  
+
   RETURN json_build_object(
     'completed_steps', completed_steps,
     'total_steps', total_steps,
@@ -457,6 +461,7 @@ $$ LANGUAGE plpgsql;
 ```
 
 #### Implementation Tasks
+
 - [ ] Create `components/onboarding/OnboardingProgressCard.tsx`
 - [ ] Implement step tracking in existing components
 - [ ] Add progress indicator to profile page
@@ -476,7 +481,7 @@ CREATE TABLE IF NOT EXISTS public.supercharged_insights_queue (
   boost_start_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   boost_duration_hours INTEGER DEFAULT 24,
   priority_score INTEGER GENERATED ALWAYS AS (
-    CASE 
+    CASE
       WHEN voltz_spent >= 500 THEN 100
       WHEN voltz_spent >= 300 THEN 80
       WHEN voltz_spent >= 200 THEN 60
@@ -499,7 +504,7 @@ BEGIN
       voltz_spent = NEW.voltz_spent,
       boost_start_time = NOW();
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -510,6 +515,7 @@ CREATE TRIGGER supercharge_queue_trigger
 ```
 
 #### Implementation Tasks
+
 - [ ] Update `lib/feedAlgorithm.ts` to prioritize supercharged content
 - [ ] Modify `components/MainFeed.tsx` to handle boosted content
 - [ ] Add visual indicators for supercharged posts
@@ -519,51 +525,53 @@ CREATE TRIGGER supercharge_queue_trigger
 ### 5. 🎨 UI/UX Improvements
 
 #### Light Theme Enhancements
+
 Based on the theme context analysis, the light theme needs improvements:
 
 ```typescript
 // Update context/ThemeContext.tsx with better light theme colors
 const lightTheme: ThemeColors = {
-  background: '#FFFFFF',
-  surface: '#F8F9FA',
-  card: '#FFFFFF',
-  overlay: 'rgba(0,0,0,0.05)',
-  
-  text: '#1A1A1A',
-  textSecondary: '#6C757D',
-  textTertiary: '#ADB5BD',
-  
-  border: '#E9ECEF',
-  separator: '#F1F3F4',
-  
-  primary: '#EAB308',
-  primaryText: '#000000',
-  readButtonText: '#000000',
-  accent: '#EAB308',
-  error: '#DC3545',
-  
+  background: "#FFFFFF",
+  surface: "#F8F9FA",
+  card: "#FFFFFF",
+  overlay: "rgba(0,0,0,0.05)",
+
+  text: "#1A1A1A",
+  textSecondary: "#6C757D",
+  textTertiary: "#ADB5BD",
+
+  border: "#E9ECEF",
+  separator: "#F1F3F4",
+
+  primary: "#EAB308",
+  primaryText: "#000000",
+  readButtonText: "#000000",
+  accent: "#EAB308",
+  error: "#DC3545",
+
   // Enhanced contrast for better readability
-  bookTitle: '#1A1A1A',
-  bookMeta: '#6C757D',
-  bookSummary: '#495057',
-  bookSwipeHint: '#ADB5BD',
-  
-  statusBarStyle: 'dark-content',
-  statusBarBackground: '#FFFFFF',
-  
-  navigationBackground: '#FFFFFF',
-  navigationBorder: '#E9ECEF',
-  navigationActive: '#EAB308',
-  navigationInactive: '#6C757D',
-  
-  inputBackground: '#F8F9FA',
-  inputBorder: '#DEE2E6',
-  inputText: '#1A1A1A',
-  inputPlaceholder: '#6C757D',
+  bookTitle: "#1A1A1A",
+  bookMeta: "#6C757D",
+  bookSummary: "#495057",
+  bookSwipeHint: "#ADB5BD",
+
+  statusBarStyle: "dark-content",
+  statusBarBackground: "#FFFFFF",
+
+  navigationBackground: "#FFFFFF",
+  navigationBorder: "#E9ECEF",
+  navigationActive: "#EAB308",
+  navigationInactive: "#6C757D",
+
+  inputBackground: "#F8F9FA",
+  inputBorder: "#DEE2E6",
+  inputText: "#1A1A1A",
+  inputPlaceholder: "#6C757D",
 };
 ```
 
 #### Implementation Tasks
+
 - [ ] Update all components to use theme colors consistently
 - [ ] Remove system theme option from settings
 - [ ] Set dark theme as default in `context/ThemeContext.tsx`
@@ -573,21 +581,12 @@ const lightTheme: ThemeColors = {
 ### 6. 🧹 Code Cleanup & Deprecated File Removal
 
 #### Deprecated Files to Remove
+
 Based on codebase analysis, these files are deprecated and can be safely removed:
 
 ```bash
-# Old onboarding step components (replaced by new onboarding flow)
-components/EducationBackgroundStep.tsx
-components/IndustryStep.tsx  
-components/CurrentProjectsStep.tsx
-components/CareerGoalsStep.tsx
-components/WorkExperienceStep.tsx
+(All removed)
 
-# Legacy profile component (replaced by NewProfile)
-components/Profile.tsx  # Keep for now as fallback, remove after testing
-
-# Legacy onboarding wrapper (redundant)
-components/Onboarding.tsx  # Keep as thin wrapper for compatibility
 
 # Legacy app files
 App.legacy.tsx
@@ -595,6 +594,7 @@ index.legacy.tsx
 ```
 
 #### Implementation Tasks
+
 - [ ] Verify no imports reference deprecated step components
 - [ ] Update profile.tsx to only use NewProfile component
 - [ ] Remove deprecated step components after verification
@@ -608,17 +608,17 @@ index.legacy.tsx
 ```typescript
 // Implement proper memoization for expensive components
 // Example: components/MainFeed.tsx
-import React, { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo } from "react";
 
 export const MainFeed = memo(() => {
   const memoizedPosts = useMemo(() => {
-    return posts.filter(post => post.isVisible);
+    return posts.filter((post) => post.isVisible);
   }, [posts]);
-  
+
   const handleLike = useCallback((postId: string) => {
     // Optimized like handler
   }, []);
-  
+
   return (
     <FlatList
       data={memoizedPosts}
@@ -633,6 +633,7 @@ export const MainFeed = memo(() => {
 ```
 
 #### Implementation Tasks
+
 - [ ] Add React.memo to expensive components
 - [ ] Implement proper useCallback for event handlers
 - [ ] Use useMemo for computed values
@@ -645,18 +646,21 @@ export const MainFeed = memo(() => {
 ## 🗂️ Implementation Priority
 
 ### Phase 1: Core Features (Week 1-2)
+
 1. Achievements system database setup
 2. Enhanced voltz awarding mechanisms
 3. Post-onboarding progress tracking
 4. UI theme improvements
 
 ### Phase 2: Advanced Features (Week 3)
+
 1. Feed algorithm enhancements
 2. Achievement notifications
 3. Performance optimizations
 4. Code cleanup
 
 ### Phase 3: Testing & Polish (Week 4)
+
 1. Comprehensive testing
 2. UI/UX refinements
 3. Beta testing preparation
@@ -667,18 +671,21 @@ export const MainFeed = memo(() => {
 ## 🧪 Testing Strategy
 
 ### Database Testing
+
 - Test all SQL functions with various user scenarios
 - Verify achievement triggers work correctly
 - Ensure voltz calculations are accurate
 - Test edge cases for streak calculations
 
 ### Component Testing
+
 - Test all components in light and dark modes
 - Verify achievement notifications display correctly
 - Test onboarding flow completion tracking
 - Ensure deprecated components are properly removed
 
 ### Integration Testing
+
 - Test full user journey from onboarding to achievement unlocking
 - Verify feed algorithm prioritizes supercharged content
 - Test voltz earning and spending flows
@@ -689,7 +696,9 @@ export const MainFeed = memo(() => {
 ## ⚠️ Known Issues to Address
 
 ### Achievement System Issues
-1. **Voltz to Level Progression**: 
+
+1. **Voltz to Level Progression**:
+
    - Issue: Voltz awarded from achievements are not triggering level-up calculations
    - Impact: Users earning achievements don't see their level increase appropriately
    - Root Cause: Likely missing trigger or calculation logic for level progression based on total_voltz_earned
@@ -703,6 +712,7 @@ export const MainFeed = memo(() => {
    - Priority: Medium - affects social engagement features
 
 ### Implementation Notes
+
 - Both issues were discovered during achievement system implementation
 - Voltz awarding works correctly, but level calculation needs investigation
 - Leaderboard queries likely need RLS policy adjustments to allow cross-user visibility for ranking purposes
@@ -713,18 +723,21 @@ export const MainFeed = memo(() => {
 ## 📊 Success Metrics
 
 ### User Engagement
+
 - Achievement unlock rate per user
 - Average voltz earned per session
 - Onboarding completion rate
 - Daily active user retention
 
 ### Technical Performance
+
 - Feed load time improvements
 - App startup time optimization
 - Memory usage reduction
 - Crash rate minimization
 
 ### Content Quality
+
 - Supercharged content engagement rates
 - User-generated content volume
 - Comment and like ratios
@@ -735,6 +748,7 @@ export const MainFeed = memo(() => {
 ## 🔧 Development Environment Setup
 
 ### Required Dependencies
+
 ```bash
 # Additional packages for achievements and notifications
 npm install @react-native-async-storage/async-storage
@@ -746,6 +760,7 @@ npm install flipper-plugin-performance
 ```
 
 ### Database Setup
+
 ```sql
 -- Run all SQL migrations in order
 -- Test with sample data
@@ -757,11 +772,13 @@ npm install flipper-plugin-performance
 ## 🚨 Risk Mitigation
 
 ### Technical Risks
+
 - **Database Performance**: Monitor query performance with complex achievement logic
 - **Real-time Updates**: Ensure Supabase realtime doesn't cause memory leaks
 - **Voltz Inflation**: Carefully balance reward amounts to prevent economic imbalance
 
 ### User Experience Risks
+
 - **Overwhelming Notifications**: Implement smart batching for achievement alerts
 - **Complex Onboarding**: Keep post-onboarding steps simple and optional
 - **Theme Inconsistencies**: Comprehensive testing across all components

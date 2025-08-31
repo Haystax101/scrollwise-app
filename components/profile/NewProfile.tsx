@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import SettingsModal from '../SettingsModal';
 import { AchievementService, UserAchievement } from '../../services/achievementService';
+import { voltzService } from '../../lib/voltzService';
 
 // New Profile Components
 import { NewProfileHeader } from './NewProfileHeader';
@@ -86,6 +87,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [totalVoltzEarned, setTotalVoltzEarned] = useState<number>(0);
   const [userLevel, setUserLevel] = useState<number>(1);
   const [spendableVoltz, setSpendableVoltz] = useState<number>(0);
+  const [levelProgress, setLevelProgress] = useState<number>(0);
+  const [voltzToNextLevel, setVoltzToNextLevel] = useState<number>(20);
+  const [voltzForCurrentLevel, setVoltzForCurrentLevel] = useState<number>(0);
+  const [voltzForNextLevel, setVoltzForNextLevel] = useState<number>(20);
   
   // Component data states
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
@@ -123,7 +128,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       // Fetch basic profile info
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('full_name, email, created_at, total_voltz_earned, level, avatar_url, spendable_voltz')
+        .select('full_name, email, created_at, avatar_url')
         .eq('id', currentUser.id)
         .single();
 
@@ -132,10 +137,17 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       } else if (profileData) {
         setFullName(profileData.full_name || '');
         setAvatarUrl(profileData.avatar_url);
-        setTotalVoltzEarned(profileData.total_voltz_earned ?? 0);
-        setUserLevel(profileData.level ?? 1);
-        setSpendableVoltz(profileData.spendable_voltz ?? 0);
       }
+
+      // Fetch comprehensive voltz stats using voltzService
+      const voltzStats = await voltzService.getVoltzStats(currentUser.id);
+      setTotalVoltzEarned(voltzStats.totalVoltzEarned);
+      setUserLevel(voltzStats.level);
+      setSpendableVoltz(voltzStats.spendableVoltz);
+      setLevelProgress(voltzStats.levelProgress);
+      setVoltzToNextLevel(voltzStats.voltzToNextLevel);
+      setVoltzForCurrentLevel(voltzStats.voltzForCurrentLevel);
+      setVoltzForNextLevel(voltzStats.voltzForNextLevel);
 
       // Fetch achievements using AchievementService
       try {
@@ -503,6 +515,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           level={userLevel}
           currentVoltz={totalVoltzEarned}
           spendableVoltz={spendableVoltz}
+          levelProgress={levelProgress}
+          voltzToNextLevel={voltzToNextLevel}
+          voltzForCurrentLevel={voltzForCurrentLevel}
+          voltzForNextLevel={voltzForNextLevel}
         />
 
         <LearningStatsGrid

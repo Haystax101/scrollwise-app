@@ -55,13 +55,13 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
 
   const styles = StyleSheet.create({
     container: {
-      backgroundColor: isDark ? colors.surface : colors.card,
+      backgroundColor: colors.surface,
       padding: 20,
       borderRadius: 16,
       marginBottom: 24,
       marginHorizontal: 20,
-      borderWidth: isDark ? 1 : 0,
-      borderColor: colors.border,
+      borderWidth: isDark ? 0 : 1,
+      borderColor: isDark ? 'transparent' : colors.border,
     },
     header: {
       marginBottom: 16,
