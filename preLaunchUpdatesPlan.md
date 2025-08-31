@@ -686,6 +686,30 @@ export const MainFeed = memo(() => {
 
 ---
 
+## ⚠️ Known Issues to Address
+
+### Achievement System Issues
+1. **Voltz to Level Progression**: 
+   - Issue: Voltz awarded from achievements are not triggering level-up calculations
+   - Impact: Users earning achievements don't see their level increase appropriately
+   - Root Cause: Likely missing trigger or calculation logic for level progression based on total_voltz_earned
+   - Priority: High - affects core progression system
+
+2. **Leaderboard RLS (Row Level Security) Issue**:
+   - Issue: Leaderboard is only showing the current user instead of top 3 users
+   - Impact: Users cannot see competitive leaderboard with other users
+   - Root Cause: RLS policies preventing access to other users' profile data needed for leaderboard
+   - Solution Needed: Update RLS policies to allow read access to specific profile fields (e.g., total_voltz_earned, full_name) for leaderboard display while maintaining privacy for other profile data
+   - Priority: Medium - affects social engagement features
+
+### Implementation Notes
+- Both issues were discovered during achievement system implementation
+- Voltz awarding works correctly, but level calculation needs investigation
+- Leaderboard queries likely need RLS policy adjustments to allow cross-user visibility for ranking purposes
+- Test thoroughly after fixes to ensure no security issues with RLS changes
+
+---
+
 ## 📊 Success Metrics
 
 ### User Engagement
