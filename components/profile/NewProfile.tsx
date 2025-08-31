@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import SettingsModal from '../SettingsModal';
+import { AchievementService, UserAchievement } from '../../services/achievementService';
 
 // New Profile Components
 import { NewProfileHeader } from './NewProfileHeader';
@@ -28,13 +29,7 @@ interface NewProfileProps {
   signOut?: () => Promise<void>;
 }
 
-interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon_name: string;
-  earned_at: string;
-}
+// Remove local Achievement interface, use the one from AchievementService
 
 interface CareerGoal {
   goal: string;
@@ -93,7 +88,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [spendableVoltz, setSpendableVoltz] = useState<number>(0);
   
   // Component data states
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [achievements, setAchievements] = useState<UserAchievement[]>([]);
   const [careerGoal, setCareerGoal] = useState<CareerGoal | null>(null);
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [learningStats, setLearningStats] = useState<LearningStats>({
@@ -142,17 +137,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         setSpendableVoltz(profileData.spendable_voltz ?? 0);
       }
 
-      // Fetch achievements
-      const { data: achievementsData, error: achievementsError } = await supabase
-        .from('user_achievements')
-        .select('id, title, description, icon_name, earned_at')
-        .eq('user_id', currentUser.id)
-        .order('earned_at', { ascending: false });
-
-      if (achievementsError) {
+      // Fetch achievements using AchievementService
+      try {
+        const achievementsData = await AchievementService.getUserAchievements(currentUser.id);
+        setAchievements(achievementsData);
+      } catch (achievementsError) {
         console.error('Error fetching achievements:', achievementsError);
-      } else {
-        setAchievements(achievementsData || []);
+        setAchievements([]);
       }
 
       // Fetch career goals using the enhanced schema
@@ -390,6 +381,24 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   useEffect(() => {
     fetchProfileData();
   }, [fetchProfileData]);
+
+  // Set up real-time subscription for achievements
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const subscription = AchievementService.subscribeToUserAchievements(
+      currentUser.id,
+      (newAchievement) => {
+        console.log('🏆 New achievement earned:', newAchievement.title);
+        // Add new achievement to the list
+        setAchievements(prev => [newAchievement, ...prev]);
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [currentUser?.id]);
 
   // Event handlers
   const handleAvatarPress = () => {

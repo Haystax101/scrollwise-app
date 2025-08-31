@@ -2,17 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-
-interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon_name: string;
-  earned_at: string;
-}
+import { AchievementService, UserAchievement } from '../../services/achievementService';
 
 interface AchievementsBeltProps {
-  achievements: Achievement[];
+  achievements: UserAchievement[];
   loading?: boolean;
 }
 
@@ -41,11 +34,7 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+    return AchievementService.formatEarnedDate(dateString);
   };
 
   const styles = StyleSheet.create({
