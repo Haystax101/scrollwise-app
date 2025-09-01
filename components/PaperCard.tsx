@@ -109,32 +109,43 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     if (!user) return;
 
     setHasLiked(isLiking);
+    const originalLikes = likes;
     setLikes(prev => isLiking ? prev + 1 : Math.max(0, prev - 1));
 
     const interactionData = { user_id: user.id, [tableNames.idField]: paper.id };
 
-    if (isLiking) {
-      await supabase.from(tableNames.likes).insert(interactionData);
-    } else {
-      await supabase.from(tableNames.likes).delete().match(interactionData);
-    }
-    onUserInteraction?.(paper.id, isLiking ? 'like' : 'unlike');
+    try {
+      if (isLiking) {
+        const { error } = await supabase.from(tableNames.likes).insert(interactionData);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from(tableNames.likes).delete().match(interactionData);
+        if (error) throw error;
+      }
+      onUserInteraction?.(paper.id, isLiking ? 'like' : 'unlike');
 
-     // Sync likes_count in papers table
-     try {
-       const { count, error: countError } = await supabase
-         .from(tableNames.likes)
-         .select('*', { count: 'exact', head: true })
-         .eq(tableNames.idField, paper.id);
-       if (!countError) {
-         await supabase
-           .from(tableNames.content)
-           .update({ likes_count: count ?? 0 })
-           .eq('id', paper.id);
-         if (typeof count === 'number') setLikes(count);
-       }
-     } catch {}
-  }, [user, paper.id, tableNames, onUserInteraction]);
+      // Sync likes_count in papers table
+      const { count, error: countError } = await supabase
+        .from(tableNames.likes)
+        .select('*', { count: 'exact', head: true })
+        .eq(tableNames.idField, paper.id);
+      
+      if (countError) throw countError;
+
+      if (typeof count === 'number') {
+        setLikes(count);
+        await supabase
+          .from(tableNames.content)
+          .update({ likes_count: count })
+          .eq('id', paper.id);
+      }
+    } catch (error) {
+      console.error(`Error toggling like for paper ${paper.id}:`, error);
+      // Revert optimistic UI update on error
+      setHasLiked(!isLiking);
+      setLikes(originalLikes);
+    }
+  }, [user, paper.id, tableNames, onUserInteraction, likes]);
 
   const toggleSave = useCallback(async (isSaving: boolean) => {
     if (!user) return;

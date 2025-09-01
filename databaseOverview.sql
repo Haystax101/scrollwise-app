@@ -371,6 +371,14 @@ CREATE TABLE public.insights (
   CONSTRAINT insights_pkey PRIMARY KEY (id),
   CONSTRAINT insights_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id)
 );
+CREATE TABLE public.leaderboard (
+  user_id uuid NOT NULL,
+  total_voltz_earned integer DEFAULT 0,
+  full_name text,
+  avatar_url text,
+  CONSTRAINT leaderboard_pkey PRIMARY KEY (user_id),
+  CONSTRAINT leaderboard_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
 CREATE TABLE public.learning_sessions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
@@ -539,8 +547,8 @@ CREATE TABLE public.paper_likes (
   paper_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT paper_likes_pkey PRIMARY KEY (user_id, paper_id),
-  CONSTRAINT paper_likes_paper_id_fkey FOREIGN KEY (paper_id) REFERENCES public.papers(id),
-  CONSTRAINT paper_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+  CONSTRAINT paper_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT paper_likes_paper_id_fkey FOREIGN KEY (paper_id) REFERENCES public.papers(id)
 );
 CREATE TABLE public.paper_saves (
   user_id uuid NOT NULL,

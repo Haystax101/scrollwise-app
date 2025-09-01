@@ -92,52 +92,47 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
     const table = isLikeAction ? 'book_likes' : 'book_saves';
     const stateSetter = isLikeAction ? setHasLiked : setHasSaved;
     const countSetter = isLikeAction ? setLikes : setSaves;
-    
+    const originalState = isLikeAction ? hasLiked : hasSaved;
+    const originalCount = isLikeAction ? likes : saves;
+
     stateSetter(isAdding);
     countSetter(prev => isAdding ? prev + 1 : Math.max(0, prev - 1));
 
     const interactionData = { user_id: user.id, book_id: book.id };
-    if (isAdding) {
-      await supabase.from(table).insert(interactionData);
-    } else {
-      await supabase.from(table).delete().match(interactionData);
-    }
-    onUserInteraction?.(book.id, action);
 
-    // If save/unsave, sync saves_count in books table using authoritative count
-    if (!isLikeAction) {
-      try {
-        const { count, error: countError } = await supabase
-          .from('book_saves')
-          .select('*', { count: 'exact', head: true })
-          .eq('book_id', book.id);
-        if (!countError) {
-          await supabase
-            .from('books')
-            .update({ saves_count: count ?? 0 })
-            .eq('id', book.id);
-          if (typeof count === 'number') setSaves(count);
-        }
-      } catch {}
-    }
+    try {
+      if (isAdding) {
+        const { error } = await supabase.from(table).insert(interactionData);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from(table).delete().match(interactionData);
+        if (error) throw error;
+      }
+      onUserInteraction?.(book.id, action);
 
-    // If like/unlike, sync likes_count in books table using authoritative count
-    if (isLikeAction) {
-      try {
-        const { count, error: countError } = await supabase
-          .from('book_likes')
-          .select('*', { count: 'exact', head: true })
-          .eq('book_id', book.id);
-        if (!countError) {
-          await supabase
-            .from('books')
-            .update({ likes_count: count ?? 0 })
-            .eq('id', book.id);
-          if (typeof count === 'number') setLikes(count);
-        }
-      } catch {}
+      // Sync count in the main 'books' table
+      const { count, error: countError } = await supabase
+        .from(table)
+        .select('*', { count: 'exact', head: true })
+        .eq('book_id', book.id);
+
+      if (countError) throw countError;
+
+      if (typeof count === 'number') {
+        const updateField = isLikeAction ? { likes_count: count } : { saves_count: count };
+        await supabase
+          .from('books')
+          .update(updateField)
+          .eq('id', book.id);
+        countSetter(count);
+      }
+    } catch (error) {
+      console.error(`Error toggling ${action} for book ${book.id}:`, error);
+      // Revert optimistic UI update on error
+      stateSetter(originalState);
+      countSetter(originalCount);
     }
-  }, [user, book.id, onUserInteraction]);
+  }, [user, book.id, onUserInteraction, hasLiked, hasSaved, likes, saves]);
 
   const handleCommentsPress = () => onOpenComments?.(book.id);
   const handleReadMorePress = () => { if (book.link) Linking.openURL(book.link); };

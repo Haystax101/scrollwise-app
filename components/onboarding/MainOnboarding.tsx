@@ -220,6 +220,20 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
       console.log('Current user found:', user.id);
       setUserId(user.id);
       
+      // CRITICAL FIX: Set the password for the user account
+      console.log('Setting password for user account...');
+      const { error: passwordError } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (passwordError) {
+        console.error('Error setting user password:', passwordError);
+        Alert.alert('Password Setup Error', 'Failed to set password. Please try again.');
+        return null;
+      }
+
+      console.log('Password set successfully');
+      
       // Update profile record (user already exists from OTP)
       const profileSuccess = await updateUserProfile(user.id, {
         firstName,

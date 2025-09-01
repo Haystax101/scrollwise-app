@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 interface LeaderboardUser {
-  id: string;
+  user_id: string;
   full_name: string;
   avatar_url: string | null;
   total_voltz_earned: number;
+  rank: number;
 }
 
 interface LeaderboardCardProps {
@@ -16,41 +18,55 @@ interface LeaderboardCardProps {
 
 export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: parentLoading = false }) => {
   const { colors, isDark } = useTheme();
-  const [users, setUsers] = useState<LeaderboardUser[]>([]);
+  const { user } = useAuth();
+  const [displayUsers, setDisplayUsers] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
+      if (!user) return;
+
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, full_name, avatar_url, total_voltz_earned')
-          .order('total_voltz_earned', { ascending: false })
-          .limit(3);
-        
-        if (!error && data) {
-          setUsers(data);
-        } else {
+        const { data, error } = await supabase.rpc('get_leaderboard_for_user', {
+          p_user_id: user.id,
+        });
+
+        if (error) {
           console.error('Error fetching leaderboard:', error);
+          return;
         }
-      } catch (error) {
-        console.error('Error fetching leaderboard:', error);
+
+        if (data) {
+          const currentUser = data.find((u) => u.user_id === user.id);
+          const top3 = data.filter((u) => u.rank <= 3);
+          
+          let finalUsers: LeaderboardUser[] = [];
+
+          if (!currentUser || currentUser.rank <= 3) {
+            finalUsers = top3.slice(0, 3);
+          } else {
+            const top2 = data.filter((u) => u.rank <= 2);
+            finalUsers = [...top2, currentUser];
+          }
+          
+          setDisplayUsers(finalUsers);
+        }
+      } catch (err) {
+        console.error('Caught exception fetching leaderboard:', err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchLeaderboard();
-  }, []);
+  }, [user]);
 
-  const getRankEmoji = (index: number) => {
-    switch (index) {
-      case 0: return '🥇';
-      case 1: return '🥈';
-      case 2: return '🥉';
-      default: return `${index + 1}.`;
-    }
+  const getRankDisplay = (rank: number) => {
+    if (rank === 1) return '🥇';
+    if (rank === 2) return '🥈';
+    if (rank === 3) return '🥉';
+    return `#${rank}`;
   };
 
   const styles = StyleSheet.create({
@@ -90,15 +106,21 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
       paddingHorizontal: 12,
       marginBottom: 8,
       borderRadius: 12,
-      backgroundColor: isDark ? colors.background : colors.surface,
+      backgroundColor: isDark ? colors.background : '#F8F8F8',
+    },
+    currentUserRow: {
+      backgroundColor: colors.primaryMuted,
+      borderWidth: 1,
+      borderColor: colors.primary,
     },
     rankContainer: {
-      width: 32,
+      width: 40,
       alignItems: 'center',
     },
     rankText: {
       fontSize: 16,
       fontWeight: '600',
+      color: colors.text,
     },
     avatar: {
       width: 36,
@@ -144,7 +166,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
     );
   }
 
-  if (users.length === 0) {
+  if (displayUsers.length === 0) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
@@ -163,31 +185,34 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
         <Text style={styles.title}>Leaderboard</Text>
       </View>
       
-      {users.map((user, index) => (
-        <View key={user.id} style={styles.userRow}>
-          <View style={styles.rankContainer}>
-            <Text style={styles.rankText}>{getRankEmoji(index)}</Text>
+      {displayUsers.map((u) => {
+        const isCurrentUser = u.user_id === user?.id;
+        return (
+          <View key={u.user_id} style={[styles.userRow, isCurrentUser && styles.currentUserRow]}>
+            <View style={styles.rankContainer}>
+              <Text style={styles.rankText}>{getRankDisplay(u.rank)}</Text>
+            </View>
+            
+            <Image 
+              source={{ uri: u.avatar_url || 'https://i.pravatar.cc/40' }} 
+              style={styles.avatar} 
+            />
+            
+            <View style={styles.userInfo}>
+              <Text style={styles.userName} numberOfLines={1}>
+                {isCurrentUser ? 'You' : u.full_name}
+              </Text>
+            </View>
+            
+            <View style={styles.voltzContainer}>
+              <Text style={styles.voltzText}>
+                {u.total_voltz_earned.toLocaleString()}
+              </Text>
+              <Text style={styles.voltzLabel}>Voltz</Text>
+            </View>
           </View>
-          
-          <Image 
-            source={{ uri: user.avatar_url || 'https://i.pravatar.cc/40' }} 
-            style={styles.avatar} 
-          />
-          
-          <View style={styles.userInfo}>
-            <Text style={styles.userName} numberOfLines={1}>
-              {user.full_name}
-            </Text>
-          </View>
-          
-          <View style={styles.voltzContainer}>
-            <Text style={styles.voltzText}>
-              {user.total_voltz_earned.toLocaleString()}
-            </Text>
-            <Text style={styles.voltzLabel}>Voltz</Text>
-          </View>
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 };

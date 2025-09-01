@@ -105,35 +105,44 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
     if (!user) return;
 
     setHasLiked(isLiking);
+    const originalLikes = likes;
     setLikes(prev => isLiking ? prev + 1 : Math.max(0, prev - 1));
 
     const interactionData = { user_id: user.id, [tableNames.idField]: article.id };
 
-    if (isLiking) {
-      await supabase.from(tableNames.likes).insert(interactionData);
-    } else {
-      await supabase.from(tableNames.likes).delete().match(interactionData);
-    }
-
-    onUserInteraction?.(article.id, isLiking ? 'like' : 'unlike');
-
-    // Sync likes_count in articles table using authoritative count
     try {
+      if (isLiking) {
+        const { error } = await supabase.from(tableNames.likes).insert(interactionData);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from(tableNames.likes).delete().match(interactionData);
+        if (error) throw error;
+      }
+
+      onUserInteraction?.(article.id, isLiking ? 'like' : 'unlike');
+
+      // Sync likes_count in articles table using authoritative count
       const { count, error: countError } = await supabase
         .from(tableNames.likes)
         .select('*', { count: 'exact', head: true })
         .eq(tableNames.idField, article.id);
-      if (!countError) {
+      
+      if (countError) throw countError;
+
+      if (typeof count === 'number') {
+        setLikes(count);
         await supabase
           .from(tableNames.content)
-          .update({ likes_count: count ?? 0 })
+          .update({ likes_count: count })
           .eq('id', article.id);
-        if (typeof count === 'number') setLikes(count);
       }
-    } catch {
-      // ignore
+    } catch (error) {
+      console.error(`Error toggling like for article ${article.id}:`, error);
+      // Revert optimistic UI update on error
+      setHasLiked(!isLiking);
+      setLikes(originalLikes);
     }
-  }, [user, article.id, tableNames, onUserInteraction]);
+  }, [user, article.id, tableNames, onUserInteraction, likes]);
 
   const toggleSave = useCallback(async (isSaving: boolean) => {
     if (!user) return;

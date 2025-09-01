@@ -482,30 +482,31 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     if (!user) return;
     const adding = !hasLiked;
     setHasLiked(adding);
+    const originalLikes = likes;
     setLikes(prev => adding ? prev + 1 : Math.max(0, prev - 1));
-    if (adding) {
-      await supabase.from('insight_likes').insert({ user_id: user.id, insight_id: insight.id });
-      // Grant XP to author for like (idempotent via DB)
-      try {
-        const ensuredAuthorId = authorId || (await supabase.from('insights').select('author_id').eq('id', insight.id).maybeSingle()).data?.author_id;
-        if (ensuredAuthorId) {
-          await supabase.rpc('grant_xp_for_insight_interaction', {
-            p_insight_id: insight.id,
-            p_author_id: ensuredAuthorId,
-            p_actor_id: user.id,
-            p_reason: 'insight_like',
-          });
-        }
-      } catch (e) {
-        // best-effort; idempotent and safe to skip on error
+
+    try {
+      if (adding) {
+        const { error } = await supabase.from('insight_likes').insert({ user_id: user.id, insight_id: insight.id });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('insight_likes').delete().match({ user_id: user.id, insight_id: insight.id });
+        if (error) throw error;
       }
-    } else {
-      await supabase.from('insight_likes').delete().match({ user_id: user.id, insight_id: insight.id });
+
+      const { count, error: countError } = await supabase.from('insight_likes').select('*', { count: 'exact', head: true }).eq('insight_id', insight.id);
+      if (countError) throw countError;
+
+      if (typeof count === 'number') {
+        setLikes(count);
+        await supabase.from('insights').update({ likes_count: count }).eq('id', insight.id);
+      }
+    } catch (error) {
+      console.error(`Error toggling like for insight ${insight.id}:`, error);
+      setHasLiked(!adding);
+      setLikes(originalLikes);
     }
-    const { count } = await supabase.from('insight_likes').select('*', { count: 'exact', head: true }).eq('insight_id', insight.id);
-    if (typeof count === 'number') setLikes(count);
-    await supabase.from('insights').update({ likes_count: count ?? 0 }).eq('id', insight.id);
-  }, [user, hasLiked, insight.id]);
+  }, [user, hasLiked, insight.id, likes]);
 
   const toggleSave = useCallback(async () => {
     if (!user) return;
