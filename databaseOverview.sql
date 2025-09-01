@@ -34,8 +34,8 @@ CREATE TABLE public.article_comment_likes (
   comment_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT article_comment_likes_pkey PRIMARY KEY (user_id, comment_id),
-  CONSTRAINT article_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.comments(id),
-  CONSTRAINT article_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+  CONSTRAINT article_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT article_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.comments(id)
 );
 CREATE TABLE public.article_likes (
   user_id uuid NOT NULL,
@@ -518,6 +518,15 @@ CREATE TABLE public.occupations (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT occupations_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.onboarding_progress (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  step_name text NOT NULL,
+  completed_at timestamp with time zone DEFAULT now(),
+  metadata jsonb DEFAULT '{}'::jsonb,
+  CONSTRAINT onboarding_progress_pkey PRIMARY KEY (id),
+  CONSTRAINT onboarding_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.paper_comment_likes (
   user_id uuid NOT NULL,

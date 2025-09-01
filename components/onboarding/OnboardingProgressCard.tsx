@@ -265,6 +265,7 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
 
       <View style={styles.stepsContainer}>
         {allSteps.map((step) => {
+          // step.key is now an achievement name, so check if that achievement is in steps_completed
           const isCompleted = progress.steps_completed.includes(step.key);
           
           return (

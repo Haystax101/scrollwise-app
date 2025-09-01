@@ -186,38 +186,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         setAchievements([]);
       }
 
-      // Step 4: Dynamic onboarding progress checking and auto-awarding
+      // Step 4: Check onboarding progress based on achievements
       try {
-        // First get current progress
-        let onboardingProgress = await onboardingService.getProgress(currentUser.id);
+        // Get current progress based on existing achievements
+        const onboardingProgress = await onboardingService.getProgress(currentUser.id);
         
-        // If user has no progress yet or progress isn't complete, check for newly completed steps
-        if (!onboardingProgress || !onboardingProgress.is_completed) {
-          console.log('Checking for completed onboarding steps...');
-          
-          // TODO: Add logic to check if user has completed any onboarding criteria
-          // For now, just check if they have published insights for "SHARE_KNOWLEDGE" step
-          const { data: userInsights } = await supabase
-            .from('insights')
-            .select('id')
-            .eq('author_id', currentUser.id)
-            .limit(1);
-            
-          if (userInsights && userInsights.length > 0) {
-            // User has published an insight - complete the SHARE_KNOWLEDGE step
-            const stepResult = await onboardingService.completeStep(
-              currentUser.id, 
-              'share_knowledge',
-              { insight_count: userInsights.length }
-            );
-            
-            if (stepResult) {
-              console.log('Automatically completed SHARE_KNOWLEDGE onboarding step!');
-              // Refresh progress after auto-completion
-              onboardingProgress = await onboardingService.getProgress(currentUser.id);
-            }
-          }
-        }
+        // Check if onboarding completion achievement should be awarded
+        await onboardingService.checkAndAwardCompletion(currentUser.id);
         
         // Show onboarding card for users who haven't completed all steps
         if (!onboardingProgress || !onboardingProgress.is_completed) {

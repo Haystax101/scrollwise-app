@@ -16,68 +16,43 @@ export interface OnboardingStepCompletion {
   step_completed: string;
 }
 
-// Define the onboarding steps
+// Define the onboarding steps mapped to their corresponding achievements
 export const ONBOARDING_STEPS = {
-  EXPLORE_ENGAGE: 'explore_engage',
-  COMPLETE_PROFILE: 'complete_profile', 
-  JOIN_CONVERSATION: 'join_conversation',
-  SHARE_KNOWLEDGE: 'share_knowledge'
+  EXPLORE_ENGAGE: 'The Supporter',        // Like your first post
+  COMPLETE_PROFILE: 'Profile Perfectionist', // Complete your profile 100%  
+  JOIN_CONVERSATION: 'Conversation Starter', // Leave your first comment
+  SHARE_KNOWLEDGE: 'First Words'          // Publish your first insight
 } as const;
 
 export type OnboardingStep = typeof ONBOARDING_STEPS[keyof typeof ONBOARDING_STEPS];
 
 export const onboardingService = {
-  // Complete a specific onboarding step
-  async completeStep(
-    userId: string, 
-    step: OnboardingStep, 
-    metadata: Record<string, any> = {}
-  ): Promise<OnboardingStepCompletion | null> {
-    try {
-      const { data, error } = await supabase.rpc('complete_onboarding_step', {
-        user_uuid: userId,
-        step_name: step,
-        step_metadata: metadata
-      });
-
-      if (error) {
-        console.error('Error completing onboarding step:', error);
-        return null;
-      }
-
-      const result = Array.isArray(data) ? data[0] : data;
-      return {
-        completed_steps: result?.completed_steps || 0,
-        total_steps: result?.total_steps || 4,
-        completion_percentage: result?.completion_percentage || 0,
-        was_already_completed: result?.was_already_completed || false,
-        step_completed: result?.step_completed || step
-      };
-    } catch (error) {
-      console.error('Exception completing onboarding step:', error);
-      return null;
-    }
-  },
-
-  // Get user's current onboarding progress
+  // Get user's current onboarding progress based on achievements
   async getProgress(userId: string): Promise<OnboardingProgress | null> {
     try {
-      const { data, error } = await supabase.rpc('get_onboarding_progress', {
-        user_uuid: userId
-      });
+      // Query user achievements to check which onboarding steps are complete
+      const { data, error } = await supabase
+        .from('user_achievements')
+        .select('achievement_type')
+        .eq('user_id', userId)
+        .in('achievement_type', Object.values(ONBOARDING_STEPS));
 
       if (error) {
         console.error('Error fetching onboarding progress:', error);
         return null;
       }
 
-      const result = Array.isArray(data) ? data[0] : data;
+      const completedAchievements = data?.map(a => a.achievement_type) || [];
+      const completedSteps = completedAchievements.length;
+      const totalSteps = 4;
+      const completionPercentage = (completedSteps * 100) / totalSteps;
+
       return {
-        completed_steps: result?.completed_steps || 0,
-        total_steps: result?.total_steps || 4,
-        completion_percentage: result?.completion_percentage || 0,
-        steps_completed: result?.steps_completed || [],
-        is_completed: result?.is_completed || false
+        completed_steps: completedSteps,
+        total_steps: totalSteps,
+        completion_percentage: completionPercentage,
+        steps_completed: completedAchievements,
+        is_completed: completedSteps >= totalSteps
       };
     } catch (error) {
       console.error('Exception fetching onboarding progress:', error);
@@ -85,14 +60,14 @@ export const onboardingService = {
     }
   },
 
-  // Check if a specific step is completed
+  // Check if a specific step is completed by checking if achievement exists
   async isStepCompleted(userId: string, step: OnboardingStep): Promise<boolean> {
     try {
       const { data, error } = await supabase
-        .from('onboarding_progress')
-        .select('step_name')
+        .from('user_achievements')
+        .select('achievement_type')
         .eq('user_id', userId)
-        .eq('step_name', step)
+        .eq('achievement_type', step)
         .maybeSingle();
 
       if (error) {
@@ -107,45 +82,65 @@ export const onboardingService = {
     }
   },
 
-  // Helper functions for specific step completions with contextual metadata
-  async completeExploreEngage(userId: string, metadata: { interactions_count?: number } = {}) {
-    return this.completeStep(userId, ONBOARDING_STEPS.EXPLORE_ENGAGE, metadata);
+  // Check if onboarding is complete and award completion achievement
+  async checkAndAwardCompletion(userId: string): Promise<void> {
+    try {
+      const progress = await this.getProgress(userId);
+      
+      // If all steps complete, check if completion achievement already awarded
+      if (progress?.is_completed) {
+        const { data: existingAchievement } = await supabase
+          .from('user_achievements')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('achievement_type', 'Onboarding Graduate')
+          .maybeSingle();
+
+        // Award completion achievement if not already awarded
+        if (!existingAchievement) {
+          const { data: achievement } = await supabase
+            .from('achievements')
+            .select('*')
+            .eq('name', 'Onboarding Graduate')
+            .maybeSingle();
+
+          if (achievement) {
+            await supabase.rpc('award_single_achievement', {
+              target_user_id: userId,
+              achievement_record: achievement
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Exception checking onboarding completion:', error);
+    }
   },
 
-  async completeProfile(userId: string, metadata: { completion_percentage?: number } = {}) {
-    return this.completeStep(userId, ONBOARDING_STEPS.COMPLETE_PROFILE, metadata);
-  },
+  // Helper functions to check achievement completion - these are automatic now via existing achievement system
 
-  async joinConversation(userId: string, metadata: { action?: 'like' | 'comment' | 'save'; target?: string } = {}) {
-    return this.completeStep(userId, ONBOARDING_STEPS.JOIN_CONVERSATION, metadata);
-  },
-
-  async shareKnowledge(userId: string, metadata: { insight_id?: string; content_type?: string } = {}) {
-    return this.completeStep(userId, ONBOARDING_STEPS.SHARE_KNOWLEDGE, metadata);
-  },
-
-  // Get step display information
+  // Get step display information with specific achievement requirements
   getStepInfo(step: OnboardingStep) {
     const stepInfo: Record<OnboardingStep, { title: string; description: string; icon: string }> = {
       [ONBOARDING_STEPS.EXPLORE_ENGAGE]: {
         title: 'Explore & Engage',
-        description: 'Browse the feed and interact with content',
-        icon: 'compass'
+        description: 'Like your first post to show support',
+        icon: 'heart'
       },
       [ONBOARDING_STEPS.COMPLETE_PROFILE]: {
         title: 'Complete Profile', 
-        description: 'Fill out your profile information',
-        icon: 'user'
+        description: 'Fill out your profile to 100% completion',
+        icon: 'user-check'
       },
       [ONBOARDING_STEPS.JOIN_CONVERSATION]: {
         title: 'Join the Conversation',
-        description: 'Like, comment, or save content',
+        description: 'Leave your first comment on content',
         icon: 'message-circle'
       },
       [ONBOARDING_STEPS.SHARE_KNOWLEDGE]: {
         title: 'Share Knowledge',
-        description: 'Publish your first insight',
-        icon: 'edit'
+        description: 'Publish your first insight to the community',
+        icon: 'edit-3'
       }
     };
 
