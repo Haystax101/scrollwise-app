@@ -65,6 +65,20 @@ export default function RootLayout() {
                       headerShown: false,
                     }}
                   />
+                  <Stack.Screen
+                    name="reset-password-request"
+                    options={{
+                      presentation: 'modal',
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="update-password"
+                    options={{
+                      presentation: 'modal',
+                      headerShown: false,
+                    }}
+                  />
                 </Stack>
                 <AppHeader />
               </IndustriesProvider>

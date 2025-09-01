@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FlagButton } from './common/FlagButton';
 import { processInsightText, removeHtmlTags } from '../utils/textUtils';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
@@ -187,7 +188,13 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
   }, [book, colors, slides.length, industryColor]);
 
   const dynamicStyles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background, height: screenHeight },
+    container: { flex: 1, backgroundColor: colors.background, height: screenHeight, position: 'relative' },
+    flagButton: {
+      position: 'absolute',
+      top: 52, // Increased to avoid iPhone status bar/notch
+      right: 12,
+      zIndex: 10,
+    },
     contentSection: { flex: 1, backgroundColor: colors.background, paddingTop: 0, paddingBottom: insets.bottom + 60 },
     slidesContainer: { flex: 1, position: 'relative' },
     slideIndicators: { 
@@ -213,6 +220,12 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
 
   return (
     <View style={dynamicStyles.container}>
+      <FlagButton
+        contentId={book.id}
+        contentType="book"
+        size={20}
+        style={dynamicStyles.flagButton}
+      />
       <View style={dynamicStyles.contentSection}>
         <View style={dynamicStyles.slidesContainer}>
           <FlatList

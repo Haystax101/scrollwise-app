@@ -6,6 +6,7 @@ import type { Insight } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { CommentsModal } from './CommentsModal';
+import { FlagButton } from './common/FlagButton';
 import { formatNumber } from '../lib/utils';
 import { profileImageService } from '../services/profileImageService';
 
@@ -79,10 +80,17 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         height: 2,
       },
       shadowOpacity: 0.1,
+      position: 'relative',
       shadowRadius: 8,
       elevation: 4,
       maxHeight: screenHeight * 0.85, // Constrain height to fit in feed container
       justifyContent: 'center', // Center content vertically
+    },
+    flagButton: {
+      position: 'absolute',
+      top: 52, // Increased to avoid iPhone status bar/notch
+      right: 12,
+      zIndex: 10,
     },
     // User header section
     userHeader: {
@@ -653,6 +661,12 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   return (
     <View style={dynamicStyles.wrapper}>
       <View style={dynamicStyles.container}>
+        <FlagButton
+          contentId={insight.id}
+          contentType="insight"
+          size={20}
+          style={dynamicStyles.flagButton}
+        />
         {/* User Header */}
         <TouchableOpacity style={dynamicStyles.userHeader} onPress={() => authorId && fetchUserProfile(authorId)}>
           <Image source={{ uri: profileImageService.getProfileImageUrl(insight.author.avatar) }} style={dynamicStyles.avatar} />

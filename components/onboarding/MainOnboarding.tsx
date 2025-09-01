@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Image, Alert } from 'react-native';
+import { View, Image, Alert, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { InputField } from './InputField';
@@ -693,6 +693,14 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
               onChangeText={setLoginPassword}
               secureTextEntry
             />
+            <View style={{ marginTop: 16, alignItems: 'center' }}>
+              <TouchableOpacity 
+                onPress={() => router.push('/reset-password-request')}
+                style={{ paddingVertical: 8 }}
+              >
+                <Text style={{ color: '#EAB308', fontSize: 16 }}>Forgot Password?</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         }
         buttonText={loggingIn ? "Signing In..." : "Sign In"}

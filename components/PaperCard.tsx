@@ -9,6 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIndustries } from '../context/IndustriesContext';
 import { ExpandedTextModal } from './ExpandedTextModal';
+import { FlagButton } from './common/FlagButton';
 import { calculateDynamicTextLines, optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -231,6 +232,13 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     visualSection: {
       height: screenHeight * 0.45,
       width: '100%',
+      position: 'relative',
+    },
+    flagButton: {
+      position: 'absolute',
+      top: 52, // Increased to avoid iPhone status bar/notch
+      right: 12,
+      zIndex: 10,
     },
     contentSection: {
       flex: 1,
@@ -337,6 +345,12 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       <View style={dynamicStyles.container}>
         <View style={dynamicStyles.visualSection}>
           <StaticVisual industry={paper.industry_id} postId={paper.id} />
+          <FlagButton
+            contentId={paper.id}
+            contentType="paper"
+            size={20}
+            style={dynamicStyles.flagButton}
+          />
         </View>
         <View style={dynamicStyles.contentSection}>
           <View style={dynamicStyles.contentBody}>
