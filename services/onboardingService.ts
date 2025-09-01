@@ -33,16 +33,16 @@ export const onboardingService = {
       // Query user achievements to check which onboarding steps are complete
       const { data, error } = await supabase
         .from('user_achievements')
-        .select('achievement_type')
+        .select('title')
         .eq('user_id', userId)
-        .in('achievement_type', Object.values(ONBOARDING_STEPS));
+        .in('title', Object.values(ONBOARDING_STEPS));
 
       if (error) {
         console.error('Error fetching onboarding progress:', error);
         return null;
       }
 
-      const completedAchievements = data?.map(a => a.achievement_type) || [];
+      const completedAchievements = data?.map(a => a.title) || [];
       const completedSteps = completedAchievements.length;
       const totalSteps = 4;
       const completionPercentage = (completedSteps * 100) / totalSteps;
@@ -65,9 +65,9 @@ export const onboardingService = {
     try {
       const { data, error } = await supabase
         .from('user_achievements')
-        .select('achievement_type')
+        .select('title')
         .eq('user_id', userId)
-        .eq('achievement_type', step)
+        .eq('title', step)
         .maybeSingle();
 
       if (error) {
