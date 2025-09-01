@@ -202,27 +202,10 @@ function Settings({ navigateTo, signOut }: SettingsProps) {
           </View>
         </View>
 
-        {/* Content Settings */}
+        {/* Account Settings */}
         <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>Content</Text>
+          <Text style={dynamicStyles.sectionTitle}>Account</Text>
           <View style={dynamicStyles.settingCard}>
-            <TouchableOpacity
-              style={dynamicStyles.settingItem}
-              onPress={handleContentPreferences}
-              accessibilityRole="button"
-              accessibilityLabel="Edit content preferences"
-            >
-              <View style={dynamicStyles.settingIcon}>
-                <Feather name="sliders" size={20} color={colors.textSecondary} />
-              </View>
-              <View style={dynamicStyles.settingContent}>
-                <Text style={dynamicStyles.settingTitle}>Content Preferences</Text>
-                <Text style={dynamicStyles.settingDescription}>Update your academic interests</Text>
-              </View>
-              <View style={dynamicStyles.settingAction}>
-                <Feather name="chevron-right" size={20} color={colors.textTertiary} />
-              </View>
-            </TouchableOpacity>
             <TouchableOpacity
               style={[dynamicStyles.settingItem, dynamicStyles.settingItemLast]}
               onPress={handleTutorialRewatch}
@@ -241,11 +224,6 @@ function Settings({ navigateTo, signOut }: SettingsProps) {
               </View>
             </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Account Settings */}
-        <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>Account</Text>
           <View style={[dynamicStyles.settingCard, dynamicStyles.signOutItem]}>
             <TouchableOpacity
               style={[dynamicStyles.settingItem, dynamicStyles.settingItemLast]}

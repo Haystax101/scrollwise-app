@@ -188,6 +188,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
       
       {displayUsers.map((u) => {
         const isCurrentUser = u.user_id === user?.id;
+        const imageUrl = profileImageService.getProfileImageUrl(u.avatar_url);
         return (
           <View key={u.user_id} style={[styles.userRow, isCurrentUser && styles.currentUserRow]}>
             <View style={styles.rankContainer}>
@@ -195,9 +196,8 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
             </View>
             
             <Image 
-              source={{ uri: profileImageService.getProfileImageUrl(u.avatar_url) }} 
+              source={imageUrl ? { uri: imageUrl } : require('../../assets/profileIconDefault.png')}
               style={styles.avatar}
-              defaultSource={{ uri: profileImageService.getDefaultImageUrl() }}
               onError={() => {
                 console.log('Leaderboard avatar failed to load, using default');
               }}

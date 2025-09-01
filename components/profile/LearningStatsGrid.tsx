@@ -68,7 +68,7 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
       minHeight: 120,
       justifyContent: 'space-between',
       borderRadius: 16,
-      padding: 16,
+      padding: 14,
       marginHorizontal: 4,
       borderWidth: isDark ? 0 : 1,
       borderColor: isDark ? 'transparent' : colors.border,

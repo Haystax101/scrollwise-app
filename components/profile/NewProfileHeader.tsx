@@ -87,9 +87,8 @@ export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
     <View style={styles.container}>
       <TouchableOpacity style={styles.avatarContainer} onPress={onAvatarPress}>
         <Image
-          source={{ uri: profileImageService.getProfileImageUrl(avatarUrl) }}
+          source={avatarUrl ? { uri: profileImageService.getProfileImageUrl(avatarUrl) } : require('../../assets/profileIconDefault.png')}
           style={styles.avatar}
-          defaultSource={{ uri: profileImageService.getDefaultImageUrl() }}
           onError={() => {
             console.log('Profile image failed to load, using default');
           }}

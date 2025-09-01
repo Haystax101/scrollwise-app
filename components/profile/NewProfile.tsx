@@ -590,7 +590,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             fullName={fullName}
             avatarUrl={avatarUrl}
             userLevel={userLevel}
-            onAvatarPress={handleAvatarPress}
+            onAvatarPress={() => {}}
           />
         </View>
         <LevelProgressCard
