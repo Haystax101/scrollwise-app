@@ -7,6 +7,8 @@ import { Feather } from '@expo/vector-icons';
 import SettingsModal from '../SettingsModal';
 import { AchievementService, UserAchievement } from '../../services/achievementService';
 import { voltzService } from '../../lib/voltzService';
+import { onboardingService } from '../../services/onboardingService';
+import { profileImageService } from '../../services/profileImageService';
 
 // New Profile Components
 import { NewProfileHeader } from './NewProfileHeader';
@@ -23,6 +25,7 @@ import { IndustrySelectionPage } from './IndustrySelectionPage';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { CareerGoalEditModal } from './CareerGoalEditModal';
 import { SavedContentScrollView } from './SavedContentScrollView';
+import { OnboardingProgressCard } from '../onboarding/OnboardingProgressCard';
 
 interface NewProfileProps {
   user: any; // Supabase user
@@ -96,6 +99,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
   const [careerGoal, setCareerGoal] = useState<CareerGoal | null>(null);
   const [industries, setIndustries] = useState<Industry[]>([]);
+  const [showOnboardingProgress, setShowOnboardingProgress] = useState<boolean>(false);
   const [learningStats, setLearningStats] = useState<LearningStats>({
     currentStreak: 0,
     totalInteractions: 0,
@@ -136,7 +140,8 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         console.error('Error fetching profile:', profileError);
       } else if (profileData) {
         setFullName(profileData.full_name || '');
-        setAvatarUrl(profileData.avatar_url);
+        // Use profile image service to get proper URL with default fallback
+        setAvatarUrl(profileImageService.getProfileImageUrl(profileData.avatar_url));
       }
 
       // Fetch comprehensive voltz stats using voltzService
@@ -149,13 +154,81 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       setVoltzForCurrentLevel(voltzStats.voltzForCurrentLevel);
       setVoltzForNextLevel(voltzStats.voltzForNextLevel);
 
-      // Fetch achievements using AchievementService
+      // CRITICAL: Proper update sequence for real-time changes
       try {
+        // Step 1: Check and award any new achievements the user has earned
+        console.log('Checking for new achievements...');
+        const { data: newAchievements, error: checkError } = await supabase
+          .rpc('check_all_user_achievements', { target_user_id: currentUser.id });
+        
+        if (checkError) {
+          console.error('Error checking new achievements:', checkError);
+        } else if (newAchievements && newAchievements[0]?.newly_awarded_count > 0) {
+          console.log(`Awarded ${newAchievements[0].newly_awarded_count} new achievements!`);
+          
+          // Step 2: If achievements were awarded, immediately refresh voltz stats to get updated level
+          console.log('Refreshing voltz stats after achievement awards...');
+          const updatedVoltzStats = await voltzService.getVoltzStats(currentUser.id);
+          setTotalVoltzEarned(updatedVoltzStats.totalVoltzEarned);
+          setUserLevel(updatedVoltzStats.level);
+          setSpendableVoltz(updatedVoltzStats.spendableVoltz);
+          setLevelProgress(updatedVoltzStats.levelProgress);
+          setVoltzToNextLevel(updatedVoltzStats.voltzToNextLevel);
+          setVoltzForCurrentLevel(updatedVoltzStats.voltzForCurrentLevel);
+          setVoltzForNextLevel(updatedVoltzStats.voltzForNextLevel);
+        }
+        
+        // Step 3: Fetch all user achievements (including any newly awarded ones)
         const achievementsData = await AchievementService.getUserAchievements(currentUser.id);
         setAchievements(achievementsData);
       } catch (achievementsError) {
         console.error('Error fetching achievements:', achievementsError);
         setAchievements([]);
+      }
+
+      // Step 4: Dynamic onboarding progress checking and auto-awarding
+      try {
+        // First get current progress
+        let onboardingProgress = await onboardingService.getProgress(currentUser.id);
+        
+        // If user has no progress yet or progress isn't complete, check for newly completed steps
+        if (!onboardingProgress || !onboardingProgress.is_completed) {
+          console.log('Checking for completed onboarding steps...');
+          
+          // TODO: Add logic to check if user has completed any onboarding criteria
+          // For now, just check if they have published insights for "SHARE_KNOWLEDGE" step
+          const { data: userInsights } = await supabase
+            .from('insights')
+            .select('id')
+            .eq('author_id', currentUser.id)
+            .limit(1);
+            
+          if (userInsights && userInsights.length > 0) {
+            // User has published an insight - complete the SHARE_KNOWLEDGE step
+            const stepResult = await onboardingService.completeStep(
+              currentUser.id, 
+              'share_knowledge',
+              { insight_count: userInsights.length }
+            );
+            
+            if (stepResult) {
+              console.log('Automatically completed SHARE_KNOWLEDGE onboarding step!');
+              // Refresh progress after auto-completion
+              onboardingProgress = await onboardingService.getProgress(currentUser.id);
+            }
+          }
+        }
+        
+        // Show onboarding card for users who haven't completed all steps
+        if (!onboardingProgress || !onboardingProgress.is_completed) {
+          setShowOnboardingProgress(true);
+        } else {
+          setShowOnboardingProgress(false);
+        }
+      } catch (onboardingError) {
+        console.error('Error handling onboarding progress:', onboardingError);
+        // Default to showing onboarding for new users
+        setShowOnboardingProgress(true);
       }
 
       // Fetch career goals using the enhanced schema
@@ -412,6 +485,52 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     };
   }, [currentUser?.id]);
 
+  // Set up real-time subscription for profile changes (voltz and level updates)
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    
+    const profileChannel = supabase
+      .channel('profile-updates')
+      .on('postgres_changes', 
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'profiles', 
+          filter: `id=eq.${currentUser.id}` 
+        },
+        async (payload) => {
+          console.log('⚡ Profile updated:', payload.new);
+          
+          // Update immediate state values
+          if (payload.new.total_voltz_earned !== undefined) {
+            setTotalVoltzEarned(payload.new.total_voltz_earned);
+          }
+          if (payload.new.level !== undefined) {
+            setUserLevel(payload.new.level);
+          }
+          if (payload.new.spendable_voltz !== undefined) {
+            setSpendableVoltz(payload.new.spendable_voltz);
+          }
+          
+          // Refresh comprehensive voltz stats to get updated progress calculations
+          try {
+            const voltzStats = await voltzService.getVoltzStats(currentUser.id);
+            setLevelProgress(voltzStats.levelProgress);
+            setVoltzToNextLevel(voltzStats.voltzToNextLevel);
+            setVoltzForCurrentLevel(voltzStats.voltzForCurrentLevel);
+            setVoltzForNextLevel(voltzStats.voltzForNextLevel);
+          } catch (error) {
+            console.error('Error refreshing voltz stats after profile update:', error);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(profileChannel);
+    };
+  }, [currentUser?.id]);
+
   // Event handlers
   const handleAvatarPress = () => {
     setShowPhotoUpload(true);
@@ -520,6 +639,16 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           voltzForCurrentLevel={voltzForCurrentLevel}
           voltzForNextLevel={voltzForNextLevel}
         />
+        
+        {showOnboardingProgress && currentUser && (
+          <OnboardingProgressCard 
+            userId={currentUser.id}
+            onStepPress={(step) => {
+              console.log('User wants to complete onboarding step:', step);
+              // Could navigate to relevant screen or show guidance
+            }}
+          />
+        )}
 
         <LearningStatsGrid
           stats={learningStats}

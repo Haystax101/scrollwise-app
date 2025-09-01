@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { CommentsModal } from './CommentsModal';
 import { formatNumber } from '../lib/utils';
+import { profileImageService } from '../services/profileImageService';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -654,7 +655,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       <View style={dynamicStyles.container}>
         {/* User Header */}
         <TouchableOpacity style={dynamicStyles.userHeader} onPress={() => authorId && fetchUserProfile(authorId)}>
-          <Image source={{ uri: insight.author.avatar }} style={dynamicStyles.avatar} />
+          <Image source={{ uri: profileImageService.getProfileImageUrl(insight.author.avatar) }} style={dynamicStyles.avatar} />
           <View style={dynamicStyles.userInfo}>
             <View style={dynamicStyles.headerRow}>
               <View style={dynamicStyles.textContainer}>
@@ -844,7 +845,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
                 {/* Header */}
                 <View style={{ alignItems: 'center', marginBottom: 20 }}>
                   <Image 
-                    source={{ uri: selectedUser.avatar_url || 'https://i.pravatar.cc/80' }} 
+                    source={{ uri: profileImageService.getProfileImageUrl(selectedUser.avatar_url) }} 
                     style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 12 }}
                   />
                   <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text, marginBottom: 4 }}>

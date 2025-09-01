@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { profileImageService } from '../../services/profileImageService';
 
 interface LeaderboardUser {
   user_id: string;
@@ -194,7 +195,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
             </View>
             
             <Image 
-              source={{ uri: u.avatar_url || 'https://i.pravatar.cc/40' }} 
+              source={{ uri: profileImageService.getProfileImageUrl(u.avatar_url) }} 
               style={styles.avatar} 
             />
             

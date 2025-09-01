@@ -114,7 +114,7 @@ BEGIN
         NOW()
       );
 
-      -- Award voltz
+      -- Award voltz using amount from achievements table
       UPDATE public.profiles
       SET spendable_voltz = spendable_voltz + achievement_record.voltz_reward,
           total_voltz_earned = total_voltz_earned + achievement_record.voltz_reward
@@ -416,27 +416,31 @@ BEGIN
     INSERT INTO public.xp_ledger (user_id, amount, reason, transaction_type)
     VALUES (user_uuid, voltz_reward, 'Onboarding step: ' || step_name, 'earned');
 
-    -- Award achievement (if not already awarded)
+    -- Award achievement (if not already awarded) - reference achievements table
     INSERT INTO public.user_achievements (
-      user_id, achievement_type, title, description, icon_name, earned_at
+      user_id, achievement_id, achievement_type, title, description, icon_name, earned_at
     )
-    SELECT user_uuid, 'completion', achievement_name, 'Completed onboarding step', 'check-circle', NOW()
-    WHERE NOT EXISTS (
-      SELECT 1 FROM public.user_achievements
-      WHERE user_id = user_uuid AND title = achievement_name
+    SELECT user_uuid, a.id, a.category, a.name, a.description, a.icon_name, NOW()
+    FROM public.achievements a
+    WHERE a.name = achievement_name
+    AND NOT EXISTS (
+      SELECT 1 FROM public.user_achievements ua
+      WHERE ua.user_id = user_uuid AND ua.achievement_id = a.id
     );
   END IF;
 
   -- Check for completion bonus
   IF completed_steps = total_steps THEN
-    -- Award completion bonus
+    -- Award completion bonus achievement - reference achievements table
     INSERT INTO public.user_achievements (
-      user_id, achievement_type, title, description, icon_name, earned_at
+      user_id, achievement_id, achievement_type, title, description, icon_name, earned_at
     )
-    SELECT user_uuid, 'milestone', 'Tutorial Graduate', 'Completed all onboarding steps', 'graduation-cap', NOW()
-    WHERE NOT EXISTS (
-      SELECT 1 FROM public.user_achievements
-      WHERE user_id = user_uuid AND title = 'Tutorial Graduate'
+    SELECT user_uuid, a.id, a.category, a.name, a.description, a.icon_name, NOW()
+    FROM public.achievements a
+    WHERE a.name = 'Tutorial Graduate'
+    AND NOT EXISTS (
+      SELECT 1 FROM public.user_achievements ua
+      WHERE ua.user_id = user_uuid AND ua.achievement_id = a.id
     );
 
     -- Award completion voltz bonus

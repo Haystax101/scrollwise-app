@@ -13,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
+import { profileImageService } from '../../services/profileImageService';
 
 interface PhotoUploadModalProps {
   visible: boolean;
@@ -61,43 +62,18 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   const uploadImage = async (uri: string) => {
     try {
       setUploading(true);
-
-      // Create form data for file upload
-      const formData = new FormData();
-      const filename = `profile-${userId}-${Date.now()}.jpg`;
       
-      // Append file to form data
-      formData.append('file', {
-        uri,
-        name: filename,
-        type: 'image/jpeg',
-      } as any);
-
-      // Upload to Supabase storage
-      const { data, error } = await supabase.storage
-        .from('avatars')
-        .upload(filename, formData, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: 'image/jpeg'
-        });
-
-      if (error) throw error;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(data.path);
-
-      // Update user profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', userId);
-
-      if (updateError) throw updateError;
-
-      onImageUploaded(publicUrl);
+      const result = await profileImageService.uploadProfileImage(userId, uri);
+      
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+      
+      if (!result.url) {
+        throw new Error('No URL returned from upload');
+      }
+      
+      onImageUploaded(result.url);
       onClose();
       Alert.alert('Success', 'Profile photo updated successfully!');
     } catch (error) {
@@ -113,7 +89,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
     if (!hasPermission) return;
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -129,7 +105,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
     if (!hasPermission) return;
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
