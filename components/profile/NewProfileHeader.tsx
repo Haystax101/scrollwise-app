@@ -89,6 +89,10 @@ export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
         <Image
           source={{ uri: profileImageService.getProfileImageUrl(avatarUrl) }}
           style={styles.avatar}
+          defaultSource={{ uri: profileImageService.getDefaultImageUrl() }}
+          onError={() => {
+            console.log('Profile image failed to load, using default');
+          }}
         />
         <View style={styles.avatarEditOverlay}>
           <Feather name="zap" size={16} color="#000000" />

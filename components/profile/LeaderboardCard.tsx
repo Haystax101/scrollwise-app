@@ -196,7 +196,11 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
             
             <Image 
               source={{ uri: profileImageService.getProfileImageUrl(u.avatar_url) }} 
-              style={styles.avatar} 
+              style={styles.avatar}
+              defaultSource={{ uri: profileImageService.getDefaultImageUrl() }}
+              onError={() => {
+                console.log('Leaderboard avatar failed to load, using default');
+              }}
             />
             
             <View style={styles.userInfo}>

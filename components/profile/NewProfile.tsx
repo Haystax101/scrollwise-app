@@ -91,9 +91,6 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [userLevel, setUserLevel] = useState<number>(1);
   const [spendableVoltz, setSpendableVoltz] = useState<number>(0);
   const [levelProgress, setLevelProgress] = useState<number>(0);
-  const [voltzToNextLevel, setVoltzToNextLevel] = useState<number>(20);
-  const [voltzForCurrentLevel, setVoltzForCurrentLevel] = useState<number>(0);
-  const [voltzForNextLevel, setVoltzForNextLevel] = useState<number>(20);
   
   // Component data states
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
@@ -150,9 +147,6 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       setUserLevel(voltzStats.level);
       setSpendableVoltz(voltzStats.spendableVoltz);
       setLevelProgress(voltzStats.levelProgress);
-      setVoltzToNextLevel(voltzStats.voltzToNextLevel);
-      setVoltzForCurrentLevel(voltzStats.voltzForCurrentLevel);
-      setVoltzForNextLevel(voltzStats.voltzForNextLevel);
 
       // CRITICAL: Proper update sequence for real-time changes
       try {
@@ -173,9 +167,6 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           setUserLevel(updatedVoltzStats.level);
           setSpendableVoltz(updatedVoltzStats.spendableVoltz);
           setLevelProgress(updatedVoltzStats.levelProgress);
-          setVoltzToNextLevel(updatedVoltzStats.voltzToNextLevel);
-          setVoltzForCurrentLevel(updatedVoltzStats.voltzForCurrentLevel);
-          setVoltzForNextLevel(updatedVoltzStats.voltzForNextLevel);
         }
         
         // Step 3: Fetch all user achievements (including any newly awarded ones)
@@ -491,9 +482,6 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           try {
             const voltzStats = await voltzService.getVoltzStats(currentUser.id);
             setLevelProgress(voltzStats.levelProgress);
-            setVoltzToNextLevel(voltzStats.voltzToNextLevel);
-            setVoltzForCurrentLevel(voltzStats.voltzForCurrentLevel);
-            setVoltzForNextLevel(voltzStats.voltzForNextLevel);
           } catch (error) {
             console.error('Error refreshing voltz stats after profile update:', error);
           }
@@ -610,9 +598,6 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           currentVoltz={totalVoltzEarned}
           spendableVoltz={spendableVoltz}
           levelProgress={levelProgress}
-          voltzToNextLevel={voltzToNextLevel}
-          voltzForCurrentLevel={voltzForCurrentLevel}
-          voltzForNextLevel={voltzForNextLevel}
         />
         
         {showOnboardingProgress && currentUser && (
