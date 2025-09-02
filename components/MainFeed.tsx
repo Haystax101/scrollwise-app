@@ -12,16 +12,28 @@ import { useIndustries } from '../context/IndustriesContext'; // <-- ADD THIS LI
 import { CommentsModal } from './CommentsModal';
 import QuizCard, { QuizQuestion } from './QuizCard';
 import { supabase } from '../lib/supabase';
+import { screenTracker } from '../lib/screenTracking';
 
 interface MainFeedProps {
   industries: Industry[]; // Changed from number[] to Industry[]
   initialArticleId?: number;
   initialContentType?: 'article' | 'paper' | 'book';
+  // Add tracking functions passed from parent
+  trackScroll?: (scrollPercent: number) => void;
+  trackInteraction?: (interactionType: string, data?: Record<string, any>) => void;
+  trackContentEngagement?: (contentType: string, contentId: string, engagementType: string, data?: Record<string, any>) => void;
 }
 
 const { height: screenHeight } = Dimensions.get('window');
 
-export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId, initialContentType }) => {
+export const MainFeed: React.FC<MainFeedProps> = ({ 
+  industries, 
+  initialArticleId, 
+  initialContentType,
+  trackScroll,
+  trackInteraction,
+  trackContentEngagement 
+}) => {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { allIndustries } = useIndustries(); // Get all industries
@@ -453,12 +465,36 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
       const currentItem = articles[newIndex];
       if (currentItem && ['article', 'paper', 'book', 'insight'].includes(currentItem.type)) {
         recordContentView(currentItem);
+        
+        // Track content engagement
+        trackContentEngagement?.(
+          currentItem.type,
+          currentItem.id.toString(),
+          'view',
+          {
+            content_title: 'title' in currentItem ? currentItem.title : 'Insight',
+            scroll_position: newIndex,
+            total_content_count: articles.length
+          }
+        );
       }
       
       // Count scrolls (only when moving forward)
       if (newIndex > oldIndex) {
         const newScrollCount = scrollCount + 1;
         setScrollCount(newScrollCount);
+        
+        // Track scroll activity
+        trackScroll?.(Math.round((newIndex / Math.max(articles.length - 1, 1)) * 100));
+        
+        // Track scroll interaction
+        trackInteraction?.('scroll', {
+          from_index: oldIndex,
+          to_index: newIndex,
+          scroll_direction: 'forward',
+          total_scrolls: newScrollCount,
+          content_type: currentItem?.type
+        });
         
         // Check if it's time to show a quiz - MUST have at least 8 scrolls AND viewed content
         if (newScrollCount >= Math.max(8, nextQuizAt) && 
@@ -502,7 +538,30 @@ export const MainFeed: React.FC<MainFeedProps> = ({ industries, initialArticleId
     if (feedAlgorithmRef.current) {
       feedAlgorithmRef.current.updateUserInteraction(articleId, action);
     }
-  }, []);
+
+    // Find the article to get its type and other details
+    const article = articles.find(a => a.id === articleId);
+    if (article) {
+      // Track content engagement
+      trackContentEngagement?.(
+        article.type,
+        articleId.toString(),
+        action,
+        {
+          content_title: 'title' in article ? article.title : 'Insight',
+          current_position: currentArticleIndex,
+          total_scrolls: scrollCount
+        }
+      );
+
+      // Track interaction
+      trackInteraction?.(action, {
+        content_id: articleId,
+        content_type: article.type,
+        engagement_type: action
+      });
+    }
+  }, [articles, currentArticleIndex, scrollCount, trackContentEngagement, trackInteraction]);
 
   // Memoized render item function - now with conditional rendering
   const renderItem = useCallback(({ item, index }: { item: FeedItem; index: number }) => {

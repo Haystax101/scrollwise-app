@@ -14,7 +14,7 @@ export default function AppHeader() {
     return null;
   }
 
-  const noHeaderScreens = ['/sign-in', '/sign-up', '/onboarding'];
+  const noHeaderScreens = ['/sign-in', '/sign-up', '/onboarding', '/reset-password-request', '/update-password'];
   if (noHeaderScreens.includes(pathname) || !user) {
     return null;
   }

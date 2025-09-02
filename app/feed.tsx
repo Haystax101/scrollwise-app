@@ -4,6 +4,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useSearchParams } from 'expo-router/build/hooks';
 import { useEffect, useState, useCallback } from 'react';
 import { useIndustries } from '../context/IndustriesContext';
+import { useScreenTime } from '../hooks/useScreenTime';
+import { screenTracker } from '../lib/screenTracking';
 
 export default function FeedScreen() {
   const { user, loading } = useAuth();
@@ -13,6 +15,24 @@ export default function FeedScreen() {
   const contentId = params.get('contentId');
   const contentType = params.get('contentType') as 'article' | 'paper' | 'book' | null;
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Initialize screen tracking for main feed
+  const { trackScroll, trackInteraction, trackContentEngagement } = useScreenTime({
+    screenName: 'MainFeed',
+    trackScrollDepth: true,
+    additionalData: {
+      industries_count: industries.length,
+      initial_content_id: contentId,
+      initial_content_type: contentType
+    }
+  });
+
+  // Initialize user tracking when user is available
+  useEffect(() => {
+    if (user?.id) {
+      screenTracker.initializeTracking(user.id);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     if (params.get('refresh') === 'true') {
@@ -43,6 +63,9 @@ export default function FeedScreen() {
       industries={industries} 
       initialArticleId={contentId ? Number(contentId) : undefined}
       initialContentType={contentType ?? undefined}
+      trackScroll={trackScroll}
+      trackInteraction={trackInteraction}
+      trackContentEngagement={trackContentEngagement}
     />
   );
 }
