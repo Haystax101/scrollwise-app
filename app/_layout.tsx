@@ -9,6 +9,15 @@ import AppHeader from '../components/AppHeader';
 import { PostHogProvider } from 'posthog-react-native';
 import { posthog } from '../lib/posthog';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { Text, TextInput } from 'react-native';
+
+// Set global font scaling limits - allow up to 1.2x scaling for accessibility
+// while preventing extreme scaling that breaks layouts
+Text.defaultProps = Text.defaultProps || {};
+Text.defaultProps.maxFontSizeMultiplier = 1.2;
+
+TextInput.defaultProps = TextInput.defaultProps || {};
+TextInput.defaultProps.maxFontSizeMultiplier = 1.2;
 
 // This is the main layout for the entire app.
 export default function RootLayout() {
