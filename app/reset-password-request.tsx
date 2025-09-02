@@ -53,7 +53,7 @@ export default function ResetPasswordRequest() {
   };
 
   const handleBackToLogin = () => {
-    router.back();
+    router.replace('/onboarding');
   };
 
   if (emailSent) {

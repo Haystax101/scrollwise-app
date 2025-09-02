@@ -6,6 +6,7 @@ import * as Linking from 'expo-linking';
 import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from '../lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
+import { analytics, ANALYTICS_EVENTS } from '../lib/posthog';
 
 // Define the shape of the context's value
 interface AuthContextData {
@@ -58,6 +59,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('AuthContext: Auth state changed:', event, session ? 'User logged in' : 'User logged out');
       setSession(session);
       setUser(session?.user ?? null);
+
+      // Track authentication events with PostHog
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Identify the user with PostHog
+        analytics.identify(session.user.id, {
+          email: session.user.email,
+          created_at: session.user.created_at,
+          app_metadata: session.user.app_metadata,
+          user_metadata: session.user.user_metadata
+        });
+
+        // Track sign in event
+        analytics.track(ANALYTICS_EVENTS.USER_SIGNED_IN, {
+          user_id: session.user.id,
+          email: session.user.email,
+          sign_in_method: session.user.app_metadata?.provider || 'email',
+          timestamp: new Date().toISOString()
+        });
+      } else if (event === 'SIGNED_OUT') {
+        // Track sign out event
+        analytics.track(ANALYTICS_EVENTS.USER_SIGNED_OUT, {
+          timestamp: new Date().toISOString()
+        });
+        
+        // Reset PostHog user data
+        analytics.reset();
+      } else if (event === 'PASSWORD_RECOVERY') {
+        // Track password reset
+        analytics.track(ANALYTICS_EVENTS.PASSWORD_RESET_REQUESTED, {
+          timestamp: new Date().toISOString()
+        });
+      }
     });
 
     // Cleanup the subscriptions when the component unmounts
@@ -69,8 +102,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Define the signOut function
   const signOut = async () => {
     console.log('AuthContext: Signing out user...');
+    
+    // Track sign out initiation
+    analytics.track(ANALYTICS_EVENTS.USER_SIGNED_OUT, {
+      timestamp: new Date().toISOString(),
+      initiated_by: 'user_action'
+    });
+    
     await supabase.auth.signOut();
     console.log('AuthContext: Sign out completed, user should be redirected to onboarding');
+    
+    // Reset PostHog user data
+    analytics.reset();
+    
     // The onAuthStateChange listener will handle setting user and session to null
   };
 

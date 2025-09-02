@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
@@ -30,13 +30,24 @@
     },
     "plugins": [
       "expo-router",
-      "expo-video"
+      "expo-video",
+      "expo-font",
+      "expo-secure-store",
+      "expo-localization",
+      "expo-updates"
     ],
+    "updates": {
+      "url": "https://u.expo.dev/75912aaa-18b2-4f42-89ca-8e8bc19698db"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "cbebf2d0-1bc1-41be-a230-d8c47443d98d"
+        "projectId": "75912aaa-18b2-4f42-89ca-8e8bc19698db"
       }
-    }
+    },
+    "owner": "gdwhastings"
   }
 }

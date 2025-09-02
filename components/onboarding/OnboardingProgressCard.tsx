@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { onboardingService, OnboardingProgress, ONBOARDING_STEPS } from '../../services/onboardingService';
+import { supabase } from '../../lib/supabase';
 
 interface OnboardingProgressCardProps {
   userId: string;
@@ -32,6 +33,50 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
     if (userId) {
       fetchProgress();
     }
+  }, [userId]);
+
+  // Set up real-time subscription for user achievements to update onboarding progress
+  useEffect(() => {
+    if (!userId) return;
+
+    console.log('Setting up onboarding progress subscription for user:', userId);
+
+    const subscription = supabase
+      .channel(`onboarding_progress_${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'user_achievements',
+          filter: `user_id=eq.${userId}`,
+        },
+        async (payload) => {
+          console.log('New achievement earned, updating onboarding progress:', payload.new);
+          
+          // Check if the new achievement is one of the onboarding steps
+          const achievementTitle = (payload.new as any).title;
+          const onboardingAchievements = Object.values(ONBOARDING_STEPS);
+          
+          if (onboardingAchievements.includes(achievementTitle)) {
+            console.log('Onboarding-related achievement earned:', achievementTitle);
+            
+            // Refresh the progress data
+            try {
+              const updatedProgress = await onboardingService.getProgress(userId);
+              setProgress(updatedProgress);
+            } catch (error) {
+              console.error('Error refreshing onboarding progress:', error);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up onboarding progress subscription');
+      supabase.removeChannel(subscription);
+    };
   }, [userId]);
 
   const styles = StyleSheet.create({

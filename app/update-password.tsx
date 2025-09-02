@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { InputField } from '../components/onboarding/InputField';
 import { Button } from '../components/onboarding/Button';
 import { OnboardingScreen } from '../components/onboarding/OnboardingScreen';
+import { analytics, ANALYTICS_EVENTS } from '../lib/posthog';
 
 export default function UpdatePassword() {
   const router = useRouter();
@@ -28,13 +29,30 @@ export default function UpdatePassword() {
     // Function to parse Supabase URL with fragments
     const parseSupabaseUrl = (url: string) => {
       try {
-        // Replace hash with query parameter for easier parsing
-        let parsedUrl = url;
+        console.log('Parsing URL:', url);
+        
+        // Supabase sends tokens in the fragment (after #), not query params
+        let params: Record<string, any> = {};
+        
+        // Handle fragment-based parameters (after #)
         if (url.includes('#')) {
-          parsedUrl = url.replace('#', '?');
+          const fragmentPart = url.split('#')[1];
+          if (fragmentPart) {
+            const fragmentParams = new URLSearchParams(fragmentPart);
+            fragmentParams.forEach((value, key) => {
+              params[key] = value;
+            });
+          }
         }
-        const parsed = Linking.parse(parsedUrl);
-        return parsed.queryParams || {};
+        
+        // Also handle query parameters (after ?)
+        if (url.includes('?')) {
+          const parsed = Linking.parse(url);
+          params = { ...params, ...(parsed.queryParams || {}) };
+        }
+        
+        console.log('Parsed parameters:', params);
+        return params;
       } catch (error) {
         console.error('Error parsing URL:', error);
         return {};
@@ -43,15 +61,22 @@ export default function UpdatePassword() {
 
     // Listen for auth state changes to detect password recovery
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state change:', event, session?.user?.id);
-      console.log('Session access token:', session?.access_token ? 'Present' : 'Missing');
+      console.log('Auth state change event:', event);
+      console.log('Session user ID:', session?.user?.id);
+      console.log('Session access token:', session?.access_token ? `Present (${session.access_token.substring(0, 20)}...)` : 'Missing');
+      console.log('Session expires at:', session?.expires_at);
       
       if (event === 'PASSWORD_RECOVERY') {
-        console.log('Password recovery event detected');
+        console.log('PASSWORD_RECOVERY event detected - setting valid session');
         setIsValidSession(true);
       } else if (event === 'SIGNED_IN' && session?.user) {
-        console.log('User signed in during password reset flow');
+        console.log('SIGNED_IN event detected during password reset flow');
         setIsValidSession(true);
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        console.log('TOKEN_REFRESHED event detected - session should be valid');
+        setIsValidSession(true);
+      } else {
+        console.log('Unhandled auth event during password reset:', event);
       }
     });
 
@@ -71,7 +96,9 @@ export default function UpdatePassword() {
             return;
           }
           
-          if (parsedParams.access_token && parsedParams.refresh_token) {
+          // Check for password recovery tokens
+          if (parsedParams.access_token && parsedParams.refresh_token && parsedParams.type === 'recovery') {
+            console.log('Found recovery tokens in initial URL');
             await setSessionFromTokens(parsedParams.access_token as string, parsedParams.refresh_token as string);
             return;
           }
@@ -94,7 +121,9 @@ export default function UpdatePassword() {
         return;
       }
       
-      if (parsedParams.access_token && parsedParams.refresh_token) {
+      // Check for password recovery tokens  
+      if (parsedParams.access_token && parsedParams.refresh_token && parsedParams.type === 'recovery') {
+        console.log('Found recovery tokens in linking URL');
         await setSessionFromTokens(parsedParams.access_token as string, parsedParams.refresh_token as string);
       }
     });
@@ -117,21 +146,29 @@ export default function UpdatePassword() {
     // Handle URL parameters from expo-router params (fallback)
     const handleRouterParams = async () => {
       console.log('Checking router params for auth tokens...');
+      console.log('Available params:', Object.keys(params));
       
       const accessToken = params.access_token || params.token;
       const refreshToken = params.refresh_token;
+      const tokenType = params.type;
       
-      if (accessToken && refreshToken) {
-        console.log('Found tokens in router params');
+      if (accessToken && refreshToken && tokenType === 'recovery') {
+        console.log('Found recovery tokens in router params');
         await setSessionFromTokens(accessToken as string, refreshToken as string);
       } else {
-        console.log('No auth tokens found in router params');
+        console.log('No valid recovery tokens found in router params');
+        console.log('Access token:', accessToken ? 'Present' : 'Missing');
+        console.log('Refresh token:', refreshToken ? 'Present' : 'Missing');
+        console.log('Token type:', tokenType);
       }
     };
 
     // Function to set session from tokens
     const setSessionFromTokens = async (accessToken: string, refreshToken: string) => {
       console.log('Setting session with tokens...');
+      console.log('Access token length:', accessToken.length);
+      console.log('Refresh token length:', refreshToken.length);
+      
       try {
         const { data, error } = await supabase.auth.setSession({
           access_token: accessToken,
@@ -140,9 +177,23 @@ export default function UpdatePassword() {
         
         if (error) {
           console.error('Error setting session from tokens:', error);
+          console.error('Error details:', error.message);
+          
+          // Handle specific error cases
+          if (error.message.includes('expired') || error.message.includes('invalid')) {
+            setLinkError('This password reset link has expired or is invalid. Please request a new one.');
+          }
         } else if (data.session) {
           console.log('Successfully set session from tokens');
-          setIsValidSession(true);
+          console.log('Session user ID:', data.session.user?.id);
+          console.log('Session expires at:', data.session.expires_at);
+          
+          // Wait a moment for auth state to propagate
+          setTimeout(() => {
+            setIsValidSession(true);
+          }, 100);
+        } else {
+          console.error('No session returned from setSession');
         }
       } catch (error) {
         console.error('Exception setting session from tokens:', error);
@@ -158,11 +209,43 @@ export default function UpdatePassword() {
       }
     };
 
+    // Alternative approach: Use Supabase's exchangeCodeForSession for password recovery
+    const handleCodeExchange = async () => {
+      try {
+        console.log('Attempting to exchange code for session...');
+        
+        // Check if we have an auth code in the URL
+        const code = params.code as string;
+        if (code) {
+          console.log('Found auth code, exchanging for session...');
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (error) {
+            console.error('Error exchanging code for session:', error);
+          } else if (data.session) {
+            console.log('Successfully exchanged code for session');
+            setIsValidSession(true);
+            return true;
+          }
+        }
+        return false;
+      } catch (error) {
+        console.error('Exception during code exchange:', error);
+        return false;
+      }
+    };
+
     // Execute all checks
     const initializeAuth = async () => {
-      await handleInitialUrl();
-      await handleRouterParams();
-      await checkExistingSession();
+      // First try the new code exchange method
+      const codeExchangeSuccess = await handleCodeExchange();
+      
+      if (!codeExchangeSuccess) {
+        // Fall back to the original token-based approach
+        await handleInitialUrl();
+        await handleRouterParams();
+        await checkExistingSession();
+      }
     };
 
     initializeAuth();
@@ -192,20 +275,52 @@ export default function UpdatePassword() {
       return;
     }
 
+    // Validate session before attempting update
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      console.error('No valid session found for password update');
+      Alert.alert(
+        'Session Expired',
+        'Your password reset session has expired. Please request a new reset link.'
+      );
+      router.replace('/reset-password-request');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      console.log('Attempting to update password for user:', session.user.id);
+      
+      const { data, error } = await supabase.auth.updateUser({
         password: password
       });
 
       if (error) {
         console.error('Error updating password:', error);
-        Alert.alert(
-          'Error',
-          'Failed to update password. Please try again.'
-        );
+        
+        // Handle specific error cases
+        if (error.message.includes('session')) {
+          Alert.alert(
+            'Session Expired',
+            'Your password reset session has expired. Please request a new reset link.'
+          );
+          router.replace('/reset-password-request');
+        } else {
+          Alert.alert(
+            'Update Failed',
+            error.message || 'Failed to update password. Please try again.'
+          );
+        }
       } else {
+        console.log('Password updated successfully:', data);
+        
+        // Track successful password reset completion
+        analytics.track(ANALYTICS_EVENTS.PASSWORD_RESET_COMPLETED, {
+          user_id: session.user.id,
+          timestamp: new Date().toISOString()
+        });
+        
         setPasswordUpdated(true);
       }
     } catch (error) {
@@ -220,7 +335,7 @@ export default function UpdatePassword() {
   };
 
   const handleBackToLogin = () => {
-    router.push('/onboarding');
+    router.replace('/onboarding');
   };
 
   // Show error state for link issues (expired, invalid, etc.)

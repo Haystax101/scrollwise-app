@@ -9,6 +9,7 @@ import { AchievementService, UserAchievement } from '../../services/achievementS
 import { voltzService } from '../../lib/voltzService';
 import { onboardingService } from '../../services/onboardingService';
 import { profileImageService } from '../../services/profileImageService';
+import { analytics, ANALYTICS_EVENTS } from '../../lib/posthog';
 
 // New Profile Components
 import { NewProfileHeader } from './NewProfileHeader';
@@ -431,7 +432,20 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
   useEffect(() => {
     fetchProfileData();
-  }, [fetchProfileData]);
+    
+    // Track profile view
+    if (currentUser?.id) {
+      analytics.screen('Profile', {
+        user_id: currentUser.id,
+        timestamp: new Date().toISOString()
+      });
+      
+      analytics.track(ANALYTICS_EVENTS.PROFILE_VIEWED, {
+        user_id: currentUser.id,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [fetchProfileData, currentUser?.id]);
 
   // Set up real-time subscription for achievements
   useEffect(() => {
@@ -441,6 +455,16 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       currentUser.id,
       (newAchievement) => {
         console.log('🏆 New achievement earned:', newAchievement.title);
+        
+        // Track achievement earned event
+        analytics.track(ANALYTICS_EVENTS.ACHIEVEMENT_EARNED, {
+          user_id: currentUser.id,
+          achievement_id: newAchievement.achievement_id,
+          achievement_title: newAchievement.title,
+          achievement_type: newAchievement.achievement_type,
+          timestamp: new Date().toISOString()
+        });
+        
         // Add new achievement to the list
         setAchievements(prev => [newAchievement, ...prev]);
       }
@@ -466,6 +490,17 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         },
         async (payload) => {
           console.log('⚡ Profile updated:', payload.new);
+          
+          // Track level up if level increased
+          if (payload.new.level !== undefined && payload.new.level > userLevel) {
+            analytics.track(ANALYTICS_EVENTS.LEVEL_UP, {
+              user_id: currentUser.id,
+              previous_level: userLevel,
+              new_level: payload.new.level,
+              total_voltz_earned: payload.new.total_voltz_earned,
+              timestamp: new Date().toISOString()
+            });
+          }
           
           // Update immediate state values
           if (payload.new.total_voltz_earned !== undefined) {

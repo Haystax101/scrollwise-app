@@ -6,17 +6,21 @@ import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import AppHeader from '../components/AppHeader';
-import { Platform } from 'react-native';
+import { PostHogProvider } from 'posthog-react-native';
+import { posthog } from '../lib/posthog';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 // This is the main layout for the entire app.
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <ThemeProvider>
-          <NavigationProvider>
-            <BottomSheetModalProvider>
-              <IndustriesProvider>
+    <PostHogProvider client={posthog}>
+      <ErrorBoundary>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <AuthProvider>
+            <ThemeProvider>
+              <NavigationProvider>
+                <BottomSheetModalProvider>
+                  <IndustriesProvider>
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen
                     name="feed" 
@@ -68,24 +72,24 @@ export default function RootLayout() {
                   <Stack.Screen
                     name="reset-password-request"
                     options={{
-                      presentation: 'modal',
                       headerShown: false,
                     }}
                   />
                   <Stack.Screen
                     name="update-password"
                     options={{
-                      presentation: 'modal',
                       headerShown: false,
                     }}
                   />
                 </Stack>
-                <AppHeader />
-              </IndustriesProvider>
-            </BottomSheetModalProvider>
-          </NavigationProvider>
-        </ThemeProvider>
-      </AuthProvider>
-    </GestureHandlerRootView>
+                    <AppHeader />
+                  </IndustriesProvider>
+                </BottomSheetModalProvider>
+              </NavigationProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </GestureHandlerRootView>
+      </ErrorBoundary>
+    </PostHogProvider>
   );
 }
