@@ -12,7 +12,7 @@ export default function OnboardingScreen() {
   const tutorialOnly = params.get('tutorialOnly') === 'true';
   
   const onComplete = () => {
-    router.replace('/feed?refresh=true');
+    router.replace('/profile');
   };
   
   const onSignIn = () => {

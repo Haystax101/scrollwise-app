@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { OnboardingStyles } from './styles';
@@ -25,42 +25,38 @@ export const OnboardingPage: React.FC<OnboardingPageProps> = ({
 }) => {
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          {onBack && (
-            <TouchableOpacity onPress={onBack} style={styles.backButton}>
-              <Ionicons name="chevron-back" size={24} color="#1F2937" />
-            </TouchableOpacity>
-          )}
-        </View>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
 
-        {/* Content */}
-        <View style={styles.content}>
-          <View style={styles.textContainer}>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subtitle}>{subtitle}</Text>
-          </View>
-          
-          <View style={styles.childrenContainer}>
-            {children}
-          </View>
-        </View>
+          {/* Content */}
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.content}>
+              <View style={styles.textContainer}>
+                <Text style={styles.title}>{title}</Text>
+                <Text style={styles.subtitle}>{subtitle}</Text>
+              </View>
+              
+              <View style={styles.childrenContainer}>
+                {children}
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <Button
-            onPress={onNext}
-            disabled={buttonDisabled}
-            style={styles.button}
-          >
-            {buttonText}
-          </Button>
-        </View>
-      </KeyboardAvoidingView>
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Button
+              onPress={onNext}
+              disabled={buttonDisabled}
+              style={styles.button}
+            >
+              {buttonText}
+            </Button>
+          </View>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 };
@@ -77,7 +73,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 86, //this isn't there anymore
     height: OnboardingStyles.headerHeight,
   },
   backButton: {
@@ -88,6 +84,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingVertical: 86,
     justifyContent: 'flex-start',
   },
   textContainer: {

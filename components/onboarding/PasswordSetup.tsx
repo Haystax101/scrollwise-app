@@ -10,17 +10,19 @@ interface PasswordSetupProps {
 
 export const PasswordSetup: React.FC<PasswordSetupProps> = ({ onNext, onBack }) => {
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleNext = () => {
-    if (password && password === confirmPassword) {
+    if (password && isValidPassword) {
       onNext({ password });
     }
   };
 
-  const isValidPassword = password.length >= 6;
-  const passwordsMatch = password === confirmPassword;
-  const canContinue = isValidPassword && passwordsMatch && confirmPassword.length > 0;
+  // Enhanced password validation
+  const hasMinLength = password.length >= 8;
+  const hasCapitalLetter = /[A-Z]/.test(password);
+  const hasPunctuation = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const isValidPassword = hasMinLength && hasCapitalLetter && hasPunctuation;
+  const canContinue = isValidPassword;
 
   return (
     <OnboardingPage
@@ -38,19 +40,19 @@ export const PasswordSetup: React.FC<PasswordSetupProps> = ({ onNext, onBack }) 
           onChangeText={setPassword}
           secureTextEntry
         />
-        <InputField
-          label="Confirm Password"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-        />
         
-        {confirmPassword.length > 0 && !passwordsMatch && (
-          <Text style={styles.errorText}>Passwords don't match</Text>
-        )}
-        
-        {password.length > 0 && !isValidPassword && (
-          <Text style={styles.errorText}>Password must be at least 6 characters</Text>
+        {password.length > 0 && (
+          <View style={styles.validationContainer}>
+            {!hasMinLength && (
+              <Text style={styles.errorText}>• Password must be at least 8 characters</Text>
+            )}
+            {!hasCapitalLetter && (
+              <Text style={styles.errorText}>• Password must include at least one capital letter</Text>
+            )}
+            {!hasPunctuation && (
+              <Text style={styles.errorText}>• Password must include at least one punctuation mark</Text>
+            )}
+          </View>
         )}
       </View>
     </OnboardingPage>
@@ -63,9 +65,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingTop: 20, // Add some space from the title
   },
+  validationContainer: {
+    marginTop: 16, // More space after input field
+    marginBottom: 12,
+  },
   errorText: {
     color: '#EF4444',
     fontSize: 14,
-    marginTop: 8,
+    marginTop: 4,
+    lineHeight: 20,
   },
 });

@@ -7,6 +7,7 @@ import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from '../lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { analytics, ANALYTICS_EVENTS } from '../lib/posthog';
+import { ContentPreloader } from '../lib/ContentPreloader';
 
 // Define the shape of the context's value
 interface AuthContextData {
@@ -50,6 +51,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // Start content preloading if user is already signed in
+      if (session?.user) {
+        startContentPreloading(session.user.id);
+      }
     };
 
     fetchSession();
@@ -77,6 +83,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           sign_in_method: session.user.app_metadata?.provider || 'email',
           timestamp: new Date().toISOString()
         });
+
+        // Start content preloading for signed-in users
+        startContentPreloading(session.user.id);
       } else if (event === 'SIGNED_OUT') {
         // Track sign out event
         analytics.track(ANALYTICS_EVENTS.USER_SIGNED_OUT, {
@@ -98,6 +107,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       authSubscription.unsubscribe();
     };
   }, []);
+
+  // Start content preloading for authenticated users
+  const startContentPreloading = async (userId: string) => {
+    try {
+      // Get user's industries for targeted content preloading
+      const { data: userIndustries } = await supabase
+        .from('user_industries')
+        .select('industry_id')
+        .eq('user_id', userId);
+
+      const industryIds = userIndustries?.map(ui => ui.industry_id) || [];
+      
+      // Start preloading in background
+      const preloader = ContentPreloader.getInstance();
+      preloader.startPreloading(industryIds);
+      
+      console.log('🚀 Content preloading started for user industries:', industryIds);
+    } catch (error) {
+      console.error('❌ Failed to start content preloading:', error);
+    }
+  };
 
   // Define the signOut function
   const signOut = async () => {

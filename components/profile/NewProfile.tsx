@@ -628,13 +628,6 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             onAvatarPress={() => {}}
           />
         </View>
-        <LevelProgressCard
-          level={userLevel}
-          currentVoltz={totalVoltzEarned}
-          spendableVoltz={spendableVoltz}
-          levelProgress={levelProgress}
-        />
-        
         {showOnboardingProgress && currentUser && (
           <OnboardingProgressCard 
             userId={currentUser.id}
@@ -644,6 +637,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             }}
           />
         )}
+        
+        <LevelProgressCard
+          level={userLevel}
+          currentVoltz={totalVoltzEarned}
+          spendableVoltz={spendableVoltz}
+          levelProgress={levelProgress}
+        />
 
         <LearningStatsGrid
           stats={learningStats}

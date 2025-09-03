@@ -5,6 +5,7 @@ import { OnboardingPage } from './OnboardingPage';
 
 interface DreamRoleProps {
   onNext: (data: { dreamRole: string; dreamCompany: string }) => void;
+  onBack?: () => void;
 }
 
 interface AutocompleteResult {
@@ -16,7 +17,7 @@ interface AutocompleteResult {
   relevance_score: number;
 }
 
-export const DreamRole: React.FC<DreamRoleProps> = ({ onNext }) => {
+export const DreamRole: React.FC<DreamRoleProps> = ({ onNext, onBack }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [dreamRole, setDreamRole] = useState('');
   const [dreamCompany, setDreamCompany] = useState('');
@@ -41,6 +42,8 @@ export const DreamRole: React.FC<DreamRoleProps> = ({ onNext }) => {
   const handleStepBack = () => {
     if (currentStep === 1) {
       setCurrentStep(0);
+    } else if (currentStep === 0 && onBack) {
+      onBack(); // Go back to previous onboarding screen
     }
   };
 
@@ -61,6 +64,7 @@ export const DreamRole: React.FC<DreamRoleProps> = ({ onNext }) => {
         title="Dream Role"
         subtitle="What position would you love to have one day?"
         onNext={handleRoleNext}
+        onBack={onBack ? handleStepBack : undefined}
         buttonText="Continue"
         buttonDisabled={!isValidRole}
       >
@@ -71,7 +75,6 @@ export const DreamRole: React.FC<DreamRoleProps> = ({ onNext }) => {
             onChangeText={setDreamRole}
             onSelect={handleRoleSelect}
             searchType="occupations"
-            placeholder="e.g. Software Engineer, Product Manager"
             maxResults={6}
           />
         </View>
@@ -87,7 +90,6 @@ export const DreamRole: React.FC<DreamRoleProps> = ({ onNext }) => {
       onBack={handleStepBack}
       buttonText="Continue"
       buttonDisabled={!isValidCompany}
-      showBackButton={true}
     >
       <View style={styles.container}>
         <DatabaseAutocompleteInput
@@ -96,9 +98,8 @@ export const DreamRole: React.FC<DreamRoleProps> = ({ onNext }) => {
           onChangeText={setDreamCompany}
           onSelect={handleCompanySelect}
           searchType="companies"
-          placeholder="e.g. Google, Microsoft, Apple"
           maxResults={6}
-          countryFilter="GB" // Focus on UK companies
+          countryFilter="GB"
         />
       </View>
     </OnboardingPage>

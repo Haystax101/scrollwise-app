@@ -17,8 +17,8 @@ const tutorialTexts = [
   "This is your discover page. Search for anything, and upgrade to pro for advanced search capabilities",
   "This is the insights tab, where you can create insights to appear in others' feeds",
   "This is your profile. You can check the leaderboard, track your progress and strengthen your profile",
-  "These are your voltz, which you'll earn from quizzes and insight reactions. You can use them to boost your insight views. Complete your profile to earn bonus voltz!",
-  "You're all set!"
+  "These are your voltz, which you'll earn from quizzes, insights and achievements. We're getting you started with 100 Voltz to begin your learning journey! You can use them to boost your insights.",
+  "You're all set! Ready to start learning?"
 ];
 
 export const FinalOnboardingScreen: React.FC<FinalOnboardingScreenProps> = ({ onNext }) => {

@@ -21,6 +21,8 @@ import { CurrentWork } from './CurrentWork';
 import { StreakSelection } from './StreakSelection';
 import { Notifications } from './Notifications';
 import { CongratulationsScreen } from './CongratulationsScreen';
+import { YoureAllSetScreen } from './YoureAllSetScreen';
+import { OnboardingProgressBar } from './OnboardingProgressBar';
 import { FinalOnboardingScreen } from './FinalOnboardingScreen';
 import { OtpVerificationScreen } from './OtpVerificationScreen';
 
@@ -45,7 +47,7 @@ interface OnboardingData {
   dreamCompany?: string;
   currentRole?: string;
   currentCompany?: string;
-  weeklyGoal?: number;
+  streakGoal?: number;
   enableNotifications?: boolean;
 }
 
@@ -136,7 +138,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
         setCurrentStep(0);
       }
     } else if (currentSection === 'registration') {
-      if (currentStep < 9) { // 10 registration screens (0-9)
+      if (currentStep < 10) { // 11 registration screens (0-10)
         setCurrentStep(prev => prev + 1);
       } else {
         // Move to tutorial section
@@ -167,7 +169,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     } else if (currentSection === 'tutorial') {
       // Go back to registration
       setCurrentSection('registration');
-      setCurrentStep(9); // Last registration step
+      setCurrentStep(10); // Last registration step (YoureAllSetScreen)
     }
   };
 
@@ -462,19 +464,25 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
       setEmailExistsError(false);
       updateOnboardingData(data);
       
-      // Send OTP for email verification
+      // Send OTP for email verification (not magic link)
       console.log('Sending OTP for email verification:', email);
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
+        options: {
+          shouldCreateUser: true,
+          // Don't set emailRedirectTo to ensure OTP is sent instead of magic link
+        },
       });
 
       if (otpError) {
         console.error('Error sending OTP:', otpError);
+        console.error('OTP Error details:', JSON.stringify(otpError, null, 2));
         Alert.alert('Error', 'Failed to send verification code. Please try again.');
         return;
       }
 
       console.log('OTP sent successfully for email verification');
+      console.log('Expected: User should receive a 6-digit verification code, NOT a magic link');
       nextStep(); // Move to OTP verification step
     }
   };
@@ -525,7 +533,21 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     
     if (userId) {
       console.log('Attempting to save industry selections:', data.industries);
-      // Save all selected industries
+      
+      // First, clear all existing industry selections for this user
+      console.log('Clearing existing industry selections for user:', userId);
+      const { error: deleteError } = await supabase
+        .from('user_industries')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (deleteError) {
+        console.error('Failed to clear existing industries:', deleteError);
+        Alert.alert('Database Error', `Failed to clear existing industries: ${deleteError.message}`);
+        return; // Don't proceed if deletion failed
+      }
+      
+      // Now save all selected industries
       for (const industry of data.industries) {
         const success = await saveIndustrySelection(userId, industry);
         if (!success) {
@@ -555,15 +577,15 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     nextStep();
   };
 
-  const handleStreakSelection = async (data: { weeklyGoal: number }) => {
+  const handleStreakSelection = async (data: { streakGoal: number }) => {
     updateOnboardingData(data);
     
     if (userId) {
-      console.log('Setting up user learning streak:', data.weeklyGoal);
+      console.log('Setting up user learning streak:', data.streakGoal);
       // Use the new streak management system instead of storing in user_goals
       const { error } = await supabase.rpc('setup_user_learning_streak', {
         user_id_param: userId,
-        target_days_param: data.weeklyGoal
+        target_days_param: data.streakGoal
       });
       
       if (error) {
@@ -588,38 +610,68 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     nextStep();
   };
 
+  const handleYoureAllSet = () => {
+    console.log('YoureAllSetScreen: Transitioning from registration to tutorial');
+    // Transition from registration to tutorial
+    setCurrentSection('tutorial');
+    setCurrentStep(0);
+  };
+
 
   // Render different sections
   const renderRegistrationStep = () => {
-    switch (currentStep) {
-      case 0:
-        return <EmailInput onNext={handleEmailInput} onBack={prevStep} emailExistsError={emailExistsError} onGoToLogin={goToLogin} />;
-      case 1:
-        return <OtpVerificationScreen 
-          email={onboardingData.email} 
-          onSuccess={handleOtpSuccess} 
-          onBack={handleOtpBack}
-          skipInitialOtpSend={true} // OTP was already sent in EmailInput
-        />;
-      case 2:
-        return <PasswordSetup onNext={handlePasswordSetup} onBack={prevStep} />;
-      case 3:
-        return <PersonalInfo onNext={handlePersonalInfo} onBack={prevStep} isLoading={creatingAccount} />;
-      case 4:
-        return <IndustrySelection onNext={handleIndustrySelection} />;
-      case 5:
-        return <CongratulationsScreen onNext={nextStep} />;
-      case 6:
-        return <DreamRole onNext={handleDreamRole} />;
-      case 7:
-        return <StreakSelection onNext={handleStreakSelection} />;
-      case 8:
-        return <CurrentWork onNext={handleCurrentWork} />;
-      case 9:
-        return <Notifications onNext={handleNotifications} />;
-      default:
-        return null;
-    }
+    // Show progress bar starting from IndustrySelection (step 4) onwards
+    const showProgressBar = currentStep >= 4;
+    const totalProgressSteps = 7; // Steps 4-10 (IndustrySelection through YoureAllSetScreen)
+    const currentProgressStep = Math.max(1, currentStep - 3); // Adjust to start from 1
+
+    const stepContent = (() => {
+      switch (currentStep) {
+        case 0:
+          return <EmailInput onNext={handleEmailInput} onBack={prevStep} emailExistsError={emailExistsError} onGoToLogin={goToLogin} />;
+        case 1:
+          return <OtpVerificationScreen 
+            email={onboardingData.email} 
+            onSuccess={handleOtpSuccess} 
+            onBack={handleOtpBack}
+            skipInitialOtpSend={true} // OTP was already sent in EmailInput
+          />;
+        case 2:
+          return <PasswordSetup onNext={handlePasswordSetup} onBack={prevStep} />;
+        case 3:
+          return <PersonalInfo onNext={handlePersonalInfo} onBack={prevStep} isLoading={creatingAccount} />;
+        case 4:
+          return <IndustrySelection onNext={handleIndustrySelection} />;
+        case 5:
+          return <CongratulationsScreen onNext={nextStep} onBack={prevStep} />;
+        case 6:
+          return <DreamRole onNext={handleDreamRole} onBack={showProgressBar ? undefined : prevStep} />;
+        case 7:
+          return <StreakSelection onNext={handleStreakSelection} onBack={showProgressBar ? undefined : prevStep} />;
+        case 8:
+          return <CurrentWork onNext={handleCurrentWork} onBack={showProgressBar ? undefined : prevStep} />;
+        case 9:
+          return <Notifications onNext={handleNotifications} />;
+        case 10:
+          return <YoureAllSetScreen onNext={handleYoureAllSet} />;
+        default:
+          return null;
+      }
+    })();
+
+    return (
+      <View style={{ flex: 1 }}>
+        {stepContent}
+        {showProgressBar && (
+          <OnboardingProgressBar 
+            currentStep={currentProgressStep} 
+            totalSteps={totalProgressSteps}
+            onBack={prevStep}
+            hideBackButton={currentStep === 4} // Hide back button on IndustrySelection
+          />
+        )}
+      </View>
+    );
   };
 
   if (currentSection === 'registration') {

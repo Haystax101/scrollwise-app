@@ -140,8 +140,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
+    paddingTop: 120, // Move down to accommodate progress bar overlay (60px top + 60px progress bar area)
     marginBottom: OnboardingStyles.contentMarginBottom,
-    height: OnboardingStyles.headerHeight,
+    height: OnboardingStyles.headerHeight + 104, // Increase height for extra padding
     paddingHorizontal: OnboardingStyles.textPaddingHorizontal, // Added text padding
   },
   headerTitle: {
@@ -179,6 +180,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    maxHeight: '60%', // Limit content height to make room for moved header
   },
   industriesWrapper: {
     paddingHorizontal: 16,

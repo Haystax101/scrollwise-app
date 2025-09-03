@@ -1,5 +1,5 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Dimensions, Image, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Dimensions, Image, SafeAreaView, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -50,10 +50,26 @@ interface IntroScrollerProps {
 export const IntroScroller: React.FC<IntroScrollerProps> = ({ onComplete, onBack }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
+  const dotAnimations = useRef(introSteps.map(() => new Animated.Value(0))).current;
+
+  // Initialize first dot as active
+  useEffect(() => {
+    dotAnimations[0].setValue(1);
+  }, []);
 
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
-      setActiveIndex(viewableItems[0].index);
+      const newIndex = viewableItems[0].index;
+      setActiveIndex(newIndex);
+      
+      // Animate progress dots
+      dotAnimations.forEach((anim, index) => {
+        Animated.timing(anim, {
+          toValue: index === newIndex ? 1 : 0,
+          duration: 200,
+          useNativeDriver: false,
+        }).start();
+      });
     }
   }).current;
 
@@ -91,16 +107,33 @@ export const IntroScroller: React.FC<IntroScrollerProps> = ({ onComplete, onBack
           itemVisiblePercentThreshold: 50,
         }}
         style={{ flex: 1 }}
+        decelerationRate="fast"
+        snapToAlignment="center"
+        snapToInterval={width}
+        scrollEventThrottle={16}
+        bounces={false}
+        overScrollMode="never"
       />
 
       <View style={styles.footer}>
         <View style={styles.progressContainer}>
           {Array.from({ length: introSteps.length }).map((_, index) => (
-            <View
+            <Animated.View
               key={index}
               style={[
                 styles.progressDot,
-                index === activeIndex && styles.progressDotActive,
+                {
+                  backgroundColor: dotAnimations[index].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['#E5E7EB', '#F59E0B'],
+                  }),
+                  transform: [{
+                    scale: dotAnimations[index].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 1.2],
+                    })
+                  }]
+                }
               ]}
             />
           ))}
@@ -178,9 +211,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#E5E7EB',
     marginHorizontal: 4,
-  },
-  progressDotActive: {
-    backgroundColor: '#F59E0B',
   },
   nextButton: {
     width: '100%',

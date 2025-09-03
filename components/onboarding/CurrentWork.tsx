@@ -5,6 +5,7 @@ import { OnboardingPage } from './OnboardingPage';
 
 interface CurrentWorkProps {
   onNext: (data: { currentRole: string; currentCompany: string }) => void;
+  onBack?: () => void;
 }
 
 interface AutocompleteResult {
@@ -16,7 +17,7 @@ interface AutocompleteResult {
   relevance_score: number;
 }
 
-export const CurrentWork: React.FC<CurrentWorkProps> = ({ onNext }) => {
+export const CurrentWork: React.FC<CurrentWorkProps> = ({ onNext, onBack }) => {
   const [currentRole, setCurrentRole] = useState('');
   const [currentCompany, setCurrentCompany] = useState('');
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
@@ -43,6 +44,7 @@ export const CurrentWork: React.FC<CurrentWorkProps> = ({ onNext }) => {
       title="Current Work"
       subtitle="Tell us about your current position (leave blank if unemployed or student)"
       onNext={handleNext}
+      onBack={onBack}
       buttonText="Continue"
     >
       <View style={styles.container}>
@@ -52,7 +54,6 @@ export const CurrentWork: React.FC<CurrentWorkProps> = ({ onNext }) => {
           onChangeText={setCurrentRole}
           onSelect={handleRoleSelect}
           searchType="occupations"
-          placeholder="e.g. Software Engineer, Student (optional)"
           maxResults={6}
         />
         <DatabaseAutocompleteInput
@@ -61,7 +62,6 @@ export const CurrentWork: React.FC<CurrentWorkProps> = ({ onNext }) => {
           onChangeText={setCurrentCompany}
           onSelect={handleCompanySelect}
           searchType="companies"
-          placeholder="e.g. Google, University of Oxford (optional)"
           maxResults={6}
           countryFilter="GB"
         />

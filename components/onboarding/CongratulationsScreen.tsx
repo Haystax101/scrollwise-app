@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Animated, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Animated, Dimensions, ActivityIndicator, TouchableOpacity } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -21,6 +22,7 @@ const CheckIcon = () => (
 
 interface CongratulationsScreenProps {
   onNext: () => void;
+  onBack?: () => void;
 }
 
 // Industry-specific congratulations messages
@@ -55,7 +57,7 @@ const extractTitleAndBody = (message: string): { title: string; body: string } =
   return { title: generalBackupTitle, body: message };
 };
 
-export const CongratulationsScreen: React.FC<CongratulationsScreenProps> = ({ onNext }) => {
+export const CongratulationsScreen: React.FC<CongratulationsScreenProps> = ({ onNext, onBack }) => {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const { user } = useAuth();
   
@@ -137,9 +139,6 @@ export const CongratulationsScreen: React.FC<CongratulationsScreenProps> = ({ on
       ]}
     >
       <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header} />
-
       {/* Content */}
       <View style={styles.content}>
         <View style={styles.iconContainer}>
@@ -181,6 +180,21 @@ const styles = StyleSheet.create({
   },
   header: {
     height: 60,
+    justifyContent: 'center',
+    paddingTop: 16,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginLeft: 4,
+    fontWeight: '500',
   },
   content: {
     flex: 1,

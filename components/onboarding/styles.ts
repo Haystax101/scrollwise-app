@@ -24,16 +24,17 @@ export const OnboardingStyles = {
   inputBorderRadius: 8,
   inputPaddingHorizontal: 16,
   
-  // Colors - Light Mode Theme
+  // Colors - Light Mode Theme  
   backgroundColor: '#FFFBF0',        // Warm cream background
-  textPrimary: '#1F2937',            // Dark grey for primary text
+  textPrimary: '#1F2937',            // Dark grey for primary text (NOTE: Text on golden buttons should be #000000)
   textSecondary: '#6B7280',          // Medium grey for secondary text
   textTertiary: '#9CA3AF',           // Light grey for tertiary text
-  accent: '#FBBF24',                 // Rich yellow accent (matching insights publisher)
-  accentHover: '#F59E0B',            // Darker yellow for hover states
+  accent: '#EAB308',                 // Golden yellow primary color (consistent across app)
+  accentHover: '#D97706',            // Darker golden yellow for hover states
+  buttonTextColor: '#000000',        // Black text for golden buttons (accessibility)
   inputBackground: '#FFFFFF',         // Pure white for inputs
   cardBackground: '#FFFFFF',          // White for cards/containers
   borderColor: '#E5E7EB',            // Light grey borders
-  borderColorActive: '#FBBF24',       // Yellow borders when active (matching accent)
+  borderColorActive: '#EAB308',       // Golden borders when active (matching accent)
   shadowColor: 'rgba(0, 0, 0, 0.1)', // Subtle shadows
 } as const;
