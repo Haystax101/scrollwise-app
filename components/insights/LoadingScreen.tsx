@@ -29,9 +29,9 @@ export const LoadingScreen: React.FC<Props> = ({ supercharged }) => {
           clearInterval(interval);
           return 100;
         }
-        return prev + 5;
+        return prev + 1;
       });
-    }, 150);
+    }, 30);
 
     return () => clearInterval(interval);
   }, []);

@@ -156,7 +156,9 @@ export const VoltzSelector: React.FC<Props> = ({
     controlButton: {
       width: 48,
       height: 48,
-      backgroundColor: colors.gray[800],
+      backgroundColor: colors.insightsCard,
+      borderColor: colors.insightsBorder,
+      borderWidth: 1,
       borderRadius: borderRadius.full,
       justifyContent: 'center',
       alignItems: 'center',
@@ -174,7 +176,9 @@ export const VoltzSelector: React.FC<Props> = ({
       color: colors.insightsTextSecondary,
     },
     reachContainer: {
-      backgroundColor: colors.gray[800],
+      backgroundColor: colors.insightsCard,
+      borderColor: colors.insightsBorder,
+      borderWidth: 1,
       padding: spacing.md,
       borderRadius: borderRadius.lg,
     },
@@ -194,7 +198,7 @@ export const VoltzSelector: React.FC<Props> = ({
     progressBarContainer: {
       width: '100%',
       height: 8,
-      backgroundColor: colors.gray[700],
+      backgroundColor: colors.insightsBorder,
       borderRadius: borderRadius.full,
       overflow: 'hidden',
     },

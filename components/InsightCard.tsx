@@ -9,6 +9,7 @@ import { CommentsModal } from './CommentsModal';
 import { FlagButton } from './common/FlagButton';
 import { formatNumber } from '../lib/utils';
 import { profileImageService } from '../services/profileImageService';
+const defaultProfileImage = require('../assets/profileIconDefault.png');
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -518,33 +519,109 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   }, [user, hasLiked, insight.id, likes]);
 
   const toggleSave = useCallback(async () => {
-    if (!user) return;
-    const adding = !hasSaved;
-    setHasSaved(adding);
-    setSaves(prev => adding ? prev + 1 : Math.max(0, prev - 1));
-    if (adding) {
-      await supabase.from('insight_saves').insert({ user_id: user.id, insight_id: insight.id });
-      // Grant XP to author for save (idempotent via DB)
-      try {
-        const ensuredAuthorId = authorId || (await supabase.from('insights').select('author_id').eq('id', insight.id).maybeSingle()).data?.author_id;
-        if (ensuredAuthorId) {
-          await supabase.rpc('grant_xp_for_insight_interaction', {
-            p_insight_id: insight.id,
-            p_author_id: ensuredAuthorId,
-            p_actor_id: user.id,
-            p_reason: 'insight_save',
-          });
-        }
-      } catch (e) {
-        // best-effort
-      }
-    } else {
-      await supabase.from('insight_saves').delete().match({ user_id: user.id, insight_id: insight.id });
+    if (!user) {
+      console.log('No user - cannot save');
+      return;
     }
-    const { count } = await supabase.from('insight_saves').select('*', { count: 'exact', head: true }).eq('insight_id', insight.id);
-    if (typeof count === 'number') setSaves(count);
-    await supabase.from('insights').update({ saves_count: count ?? 0 }).eq('id', insight.id);
-  }, [user, hasSaved, insight.id]);
+    
+    console.log('toggleSave called:', { 
+      adding: !hasSaved, 
+      userId: user.id, 
+      insightId: insight.id,
+      currentSaves: saves
+    });
+    
+    const adding = !hasSaved;
+    
+    // Optimistic update
+    setHasSaved(adding);
+    const originalSaves = saves;
+    setSaves(prev => adding ? prev + 1 : Math.max(0, prev - 1));
+    
+    try {
+      if (adding) {
+        console.log('Attempting to insert save...');
+        const { data, error } = await supabase
+          .from('insight_saves')
+          .insert({ user_id: user.id, insight_id: insight.id });
+        
+        if (error) {
+          console.error('Error inserting save:', error);
+          // Revert optimistic update
+          setHasSaved(false);
+          setSaves(originalSaves);
+          return;
+        }
+        
+        console.log('Save inserted successfully:', data);
+        
+        // Grant XP to author for save (idempotent via DB)
+        try {
+          const ensuredAuthorId = authorId || (await supabase.from('insights').select('author_id').eq('id', insight.id).maybeSingle()).data?.author_id;
+          if (ensuredAuthorId) {
+            await supabase.rpc('grant_xp_for_insight_interaction', {
+              p_insight_id: insight.id,
+              p_author_id: ensuredAuthorId,
+              p_actor_id: user.id,
+              p_reason: 'insight_save',
+            });
+          }
+        } catch (e) {
+          console.log('XP grant failed (non-critical):', e);
+        }
+      } else {
+        console.log('Attempting to delete save...');
+        const { error } = await supabase
+          .from('insight_saves')
+          .delete()
+          .match({ user_id: user.id, insight_id: insight.id });
+          
+        if (error) {
+          console.error('Error deleting save:', error);
+          // Revert optimistic update
+          setHasSaved(true);
+          setSaves(originalSaves);
+          return;
+        }
+        
+        console.log('Save deleted successfully');
+      }
+      
+      // Update the count from database
+      console.log('Fetching updated save count...');
+      const { count, error: countError } = await supabase
+        .from('insight_saves')
+        .select('*', { count: 'exact', head: true })
+        .eq('insight_id', insight.id);
+        
+      if (countError) {
+        console.error('Error fetching save count:', countError);
+      } else {
+        console.log('Save count from DB:', count);
+        if (typeof count === 'number') {
+          setSaves(count);
+          
+          // Update the insight's save count in the insights table
+          const { error: updateError } = await supabase
+            .from('insights')
+            .update({ saves_count: count })
+            .eq('id', insight.id);
+            
+          if (updateError) {
+            console.error('Error updating insight saves_count:', updateError);
+          } else {
+            console.log('Updated insight saves_count to:', count);
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error('Unexpected error in toggleSave:', error);
+      // Revert optimistic updates
+      setHasSaved(!adding);
+      setSaves(originalSaves);
+    }
+  }, [user, hasSaved, insight.id, saves, authorId]);
 
 
 
@@ -560,6 +637,32 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     } else {
       return `${Math.floor(diffInMinutes / 1440)}d`;
     }
+  };
+
+  const calculateLevel = (totalVoltz: number): number => {
+    // Level thresholds: 100, 300, 600, 1000, 1500, 2100, 2800, 3600, etc.
+    // Pattern: each level adds 100 more than the previous gap
+    // Level 1: 0-99, Level 2: 100-299, Level 3: 300-599, Level 4: 600-999, Level 5: 1000-1499, etc.
+    
+    let level = 1;
+    let threshold = 100;
+    let increment = 200; // starts at 200 for level 3 (300-100=200)
+    
+    while (totalVoltz >= threshold) {
+      level++;
+      if (level === 2) {
+        threshold += 200; // 100 + 200 = 300
+      } else if (level === 3) {
+        threshold += 300; // 300 + 300 = 600  
+      } else if (level === 4) {
+        threshold += 400; // 600 + 400 = 1000
+      } else {
+        threshold += increment;
+        increment += 100; // increment grows by 100 each level
+      }
+    }
+    
+    return level;
   };
 
   const toggleCommentLike = useCallback(async () => {
@@ -632,12 +735,12 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         .eq('user_id', userId)
         .maybeSingle();
 
-      const industries = industriesData?.map((i: any) => i.industries.name) || [];
+      const industries = industriesData?.map((i: any) => i.industries?.name).filter(Boolean) || [];
       const education = educationData 
-        ? `${educationData.universities?.name || ''} - ${educationData.degrees?.name || ''} (${educationData.stage || ''})`.replace(/^- |  - $/, '').trim()
+        ? `${(educationData as any).universities?.name || ''} - ${(educationData as any).degrees?.name || ''} (${educationData.stage || ''})`.replace(/^- |  - $/, '').trim()
         : '';
       const experience = experienceData
-        ? `${experienceData.companies?.name || ''} (${experienceData.experience_level || ''})${experienceData.description ? ` - ${experienceData.description}` : ''}`.replace(/^- |  - $/, '').trim()
+        ? `${(experienceData as any).companies?.name || ''} (${experienceData.experience_level || ''})${experienceData.description ? ` - ${experienceData.description}` : ''}`.replace(/^- |  - $/, '').trim()
         : '';
       const goals = goalsData
         ? `${goalsData.goal || ''} (${goalsData.timeframe || ''})`.replace(/^- |  - $/, '').trim()
@@ -669,14 +772,11 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         />
         {/* User Header */}
         <TouchableOpacity style={dynamicStyles.userHeader} onPress={() => authorId && fetchUserProfile(authorId)}>
-          <Image source={{ uri: profileImageService.getProfileImageUrl(insight.author.avatar) }} style={dynamicStyles.avatar} />
+          <Image source={defaultProfileImage} style={dynamicStyles.avatar} />
           <View style={dynamicStyles.userInfo}>
             <View style={dynamicStyles.headerRow}>
               <View style={dynamicStyles.textContainer}>
                 <Text style={dynamicStyles.name}>{insight.author.name}</Text>
-                <Text style={dynamicStyles.role}>
-                  {insight.author.role} at {insight.author.company}
-                </Text>
                 {insight.created_at && (
                   <View style={dynamicStyles.timestampContainer}>
                     <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
@@ -741,6 +841,9 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
                 size={20}
                 color={hasSaved ? "#FDE047" : colors.text}
               />
+              <Text style={[dynamicStyles.actionText, hasSaved && { color: '#FDE047' }]}>
+                {formatNumber(saves)}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -751,7 +854,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
             <View style={dynamicStyles.commentDisplay}>
               <View style={dynamicStyles.commentHeader}>
                 <Image
-                  source={{ uri: topComment.user?.photo || 'https://via.placeholder.com/32' }}
+                  source={defaultProfileImage}
                   style={dynamicStyles.commentAvatar}
                 />
                 <View style={dynamicStyles.commentContent}>
@@ -859,14 +962,14 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
                 {/* Header */}
                 <View style={{ alignItems: 'center', marginBottom: 20 }}>
                   <Image 
-                    source={{ uri: profileImageService.getProfileImageUrl(selectedUser.avatar_url) }} 
+                    source={defaultProfileImage} 
                     style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 12 }}
                   />
                   <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text, marginBottom: 4 }}>
                     {selectedUser.full_name}
                   </Text>
                   <Text style={{ color: colors.textSecondary, marginBottom: 8 }}>
-                    Level {selectedUser.level} • {selectedUser.total_voltz_earned} Voltz
+                    Level {calculateLevel(selectedUser.total_voltz_earned)} • {selectedUser.total_voltz_earned} Voltz
                   </Text>
                   <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
                     Joined {new Date(selectedUser.created_at).toLocaleDateString()}

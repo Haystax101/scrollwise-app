@@ -34,8 +34,8 @@ CREATE TABLE public.article_comment_likes (
   comment_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT article_comment_likes_pkey PRIMARY KEY (user_id, comment_id),
-  CONSTRAINT article_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT article_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.comments(id)
+  CONSTRAINT article_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.comments(id),
+  CONSTRAINT article_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.article_likes (
   user_id uuid NOT NULL,
@@ -88,6 +88,8 @@ CREATE TABLE public.articles (
   embedding USER-DEFINED,
   author text,
   questions ARRAY,
+  flag smallint NOT NULL DEFAULT '0'::smallint,
+  longer_summary text,
   CONSTRAINT articles_pkey PRIMARY KEY (id),
   CONSTRAINT articles_industry_id_fkey FOREIGN KEY (industry_id) REFERENCES public.industries(id)
 );
@@ -110,25 +112,25 @@ CREATE TABLE public.book_comments (
   reply_count bigint NOT NULL DEFAULT 0,
   depth_level integer NOT NULL DEFAULT 0 CHECK (depth_level <= 3),
   CONSTRAINT book_comments_pkey PRIMARY KEY (id),
-  CONSTRAINT book_comments_parent_comment_id_fkey FOREIGN KEY (parent_comment_id) REFERENCES public.book_comments(id),
+  CONSTRAINT book_comments_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id),
   CONSTRAINT book_comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT book_comments_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id)
+  CONSTRAINT book_comments_parent_comment_id_fkey FOREIGN KEY (parent_comment_id) REFERENCES public.book_comments(id)
 );
 CREATE TABLE public.book_likes (
   user_id uuid NOT NULL,
   book_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT book_likes_pkey PRIMARY KEY (user_id, book_id),
-  CONSTRAINT book_likes_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id),
-  CONSTRAINT book_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+  CONSTRAINT book_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT book_likes_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id)
 );
 CREATE TABLE public.book_saves (
   user_id uuid NOT NULL,
   book_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT book_saves_pkey PRIMARY KEY (user_id, book_id),
-  CONSTRAINT book_saves_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id),
-  CONSTRAINT book_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+  CONSTRAINT book_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT book_saves_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id)
 );
 CREATE TABLE public.book_views (
   id bigint NOT NULL DEFAULT nextval('book_views_id_seq'::regclass),
@@ -136,8 +138,8 @@ CREATE TABLE public.book_views (
   book_id bigint NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT book_views_pkey PRIMARY KEY (id),
-  CONSTRAINT book_views_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT book_views_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id)
+  CONSTRAINT book_views_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id),
+  CONSTRAINT book_views_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.books (
   id bigint NOT NULL DEFAULT nextval('books_id_seq'::regclass),
@@ -155,6 +157,7 @@ CREATE TABLE public.books (
   key_insights ARRAY,
   search_vector tsvector,
   questions ARRAY,
+  flag smallint NOT NULL DEFAULT '0'::smallint,
   CONSTRAINT books_pkey PRIMARY KEY (id),
   CONSTRAINT books_industry_id_fkey FOREIGN KEY (industry_id) REFERENCES public.industries(id)
 );
@@ -184,8 +187,8 @@ CREATE TABLE public.chat_messages (
   content text NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT chat_messages_pkey PRIMARY KEY (id),
-  CONSTRAINT chat_messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.profiles(id),
-  CONSTRAINT chat_messages_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.chats(id)
+  CONSTRAINT chat_messages_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.chats(id),
+  CONSTRAINT chat_messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.chats (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -204,8 +207,8 @@ CREATE TABLE public.comments (
   reply_count bigint NOT NULL DEFAULT 0,
   depth_level integer NOT NULL DEFAULT 0 CHECK (depth_level <= 3),
   CONSTRAINT comments_pkey PRIMARY KEY (id),
-  CONSTRAINT comments_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.articles(id),
   CONSTRAINT comments_parent_comment_id_fkey FOREIGN KEY (parent_comment_id) REFERENCES public.comments(id),
+  CONSTRAINT comments_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.articles(id),
   CONSTRAINT comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.companies (
@@ -240,8 +243,8 @@ CREATE TABLE public.connections (
   user_id_2 uuid NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT connections_pkey PRIMARY KEY (user_id_1, user_id_2),
-  CONSTRAINT connections_user_id_2_fkey FOREIGN KEY (user_id_2) REFERENCES public.profiles(id),
-  CONSTRAINT connections_user_id_1_fkey FOREIGN KEY (user_id_1) REFERENCES public.profiles(id)
+  CONSTRAINT connections_user_id_1_fkey FOREIGN KEY (user_id_1) REFERENCES public.profiles(id),
+  CONSTRAINT connections_user_id_2_fkey FOREIGN KEY (user_id_2) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.content_views (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -316,9 +319,9 @@ CREATE TABLE public.insight_comments (
   reply_count bigint NOT NULL DEFAULT 0,
   depth_level integer NOT NULL DEFAULT 0 CHECK (depth_level <= 3),
   CONSTRAINT insight_comments_pkey PRIMARY KEY (id),
+  CONSTRAINT insight_comments_insight_id_fkey FOREIGN KEY (insight_id) REFERENCES public.insights(id),
   CONSTRAINT insight_comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT insight_comments_parent_comment_id_fkey FOREIGN KEY (parent_comment_id) REFERENCES public.insight_comments(id),
-  CONSTRAINT insight_comments_insight_id_fkey FOREIGN KEY (insight_id) REFERENCES public.insights(id)
+  CONSTRAINT insight_comments_parent_comment_id_fkey FOREIGN KEY (parent_comment_id) REFERENCES public.insight_comments(id)
 );
 CREATE TABLE public.insight_likes (
   user_id uuid NOT NULL,
@@ -336,9 +339,9 @@ CREATE TABLE public.insight_responses (
   created_at timestamp with time zone DEFAULT now(),
   insight_id uuid,
   CONSTRAINT insight_responses_pkey PRIMARY KEY (id),
-  CONSTRAINT insight_responses_responder_id_fkey FOREIGN KEY (responder_id) REFERENCES public.profiles(id),
   CONSTRAINT insight_responses_insight_id_fkey FOREIGN KEY (insight_id) REFERENCES public.insights(id),
-  CONSTRAINT insight_responses_original_author_id_fkey FOREIGN KEY (original_author_id) REFERENCES public.profiles(id)
+  CONSTRAINT insight_responses_original_author_id_fkey FOREIGN KEY (original_author_id) REFERENCES public.profiles(id),
+  CONSTRAINT insight_responses_responder_id_fkey FOREIGN KEY (responder_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.insight_saves (
   user_id uuid NOT NULL,
@@ -368,6 +371,7 @@ CREATE TABLE public.insights (
   supercharged boolean DEFAULT false,
   voltz_spent integer DEFAULT 0,
   views_count bigint NOT NULL DEFAULT 0,
+  flag smallint NOT NULL DEFAULT '0'::smallint,
   CONSTRAINT insights_pkey PRIMARY KEY (id),
   CONSTRAINT insights_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id)
 );
@@ -547,9 +551,9 @@ CREATE TABLE public.paper_comments (
   reply_count bigint NOT NULL DEFAULT 0,
   depth_level integer NOT NULL DEFAULT 0 CHECK (depth_level <= 3),
   CONSTRAINT paper_comments_pkey PRIMARY KEY (id),
-  CONSTRAINT paper_comments_paper_id_fkey FOREIGN KEY (paper_id) REFERENCES public.papers(id),
   CONSTRAINT paper_comments_parent_comment_id_fkey FOREIGN KEY (parent_comment_id) REFERENCES public.paper_comments(id),
-  CONSTRAINT paper_comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+  CONSTRAINT paper_comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT paper_comments_paper_id_fkey FOREIGN KEY (paper_id) REFERENCES public.papers(id)
 );
 CREATE TABLE public.paper_likes (
   user_id uuid NOT NULL,
@@ -564,8 +568,8 @@ CREATE TABLE public.paper_saves (
   paper_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT paper_saves_pkey PRIMARY KEY (user_id, paper_id),
-  CONSTRAINT paper_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT paper_saves_paper_id_fkey FOREIGN KEY (paper_id) REFERENCES public.papers(id)
+  CONSTRAINT paper_saves_paper_id_fkey FOREIGN KEY (paper_id) REFERENCES public.papers(id),
+  CONSTRAINT paper_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.paper_views (
   id bigint NOT NULL DEFAULT nextval('paper_views_id_seq'::regclass),
@@ -573,8 +577,8 @@ CREATE TABLE public.paper_views (
   paper_id bigint NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT paper_views_pkey PRIMARY KEY (id),
-  CONSTRAINT paper_views_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT paper_views_paper_id_fkey FOREIGN KEY (paper_id) REFERENCES public.papers(id)
+  CONSTRAINT paper_views_paper_id_fkey FOREIGN KEY (paper_id) REFERENCES public.papers(id),
+  CONSTRAINT paper_views_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.papers (
   id bigint NOT NULL DEFAULT nextval('papers_id_seq'::regclass),
@@ -594,6 +598,7 @@ CREATE TABLE public.papers (
   search_vector tsvector,
   embedding USER-DEFINED,
   questions ARRAY,
+  flag smallint NOT NULL DEFAULT '0'::smallint,
   CONSTRAINT papers_pkey PRIMARY KEY (id),
   CONSTRAINT papers_industry_id_fkey FOREIGN KEY (industry_id) REFERENCES public.industries(id)
 );
@@ -755,8 +760,8 @@ CREATE TABLE public.user_achievement_progress (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT user_achievement_progress_pkey PRIMARY KEY (id),
-  CONSTRAINT user_achievement_progress_achievement_id_fkey FOREIGN KEY (achievement_id) REFERENCES public.achievements(id),
-  CONSTRAINT user_achievement_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+  CONSTRAINT user_achievement_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT user_achievement_progress_achievement_id_fkey FOREIGN KEY (achievement_id) REFERENCES public.achievements(id)
 );
 CREATE TABLE public.user_achievements (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -792,6 +797,15 @@ CREATE TABLE public.user_certifications (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT user_certifications_pkey PRIMARY KEY (id),
   CONSTRAINT user_certifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.user_content_flags (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  content_type text NOT NULL CHECK (content_type = ANY (ARRAY['article'::text, 'paper'::text, 'book'::text, 'insight'::text])),
+  content_id bigint NOT NULL,
+  flagged_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_content_flags_pkey PRIMARY KEY (id),
+  CONSTRAINT user_content_flags_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.user_content_interactions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -846,9 +860,9 @@ CREATE TABLE public.user_education (
   is_current boolean DEFAULT false,
   university_name text,
   CONSTRAINT user_education_pkey PRIMARY KEY (id),
-  CONSTRAINT user_education_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
   CONSTRAINT user_education_university_id_fkey FOREIGN KEY (university_id) REFERENCES public.universities(id),
-  CONSTRAINT user_education_degree_id_fkey FOREIGN KEY (degree_id) REFERENCES public.degrees(id)
+  CONSTRAINT user_education_degree_id_fkey FOREIGN KEY (degree_id) REFERENCES public.degrees(id),
+  CONSTRAINT user_education_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.user_experiences (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -1004,8 +1018,8 @@ CREATE TABLE public.user_skill_endorsements (
   endorsement_text text,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT user_skill_endorsements_pkey PRIMARY KEY (id),
-  CONSTRAINT user_skill_endorsements_skill_id_fkey FOREIGN KEY (skill_id) REFERENCES public.user_skills(id),
-  CONSTRAINT user_skill_endorsements_endorsed_by_user_id_fkey FOREIGN KEY (endorsed_by_user_id) REFERENCES public.profiles(id)
+  CONSTRAINT user_skill_endorsements_endorsed_by_user_id_fkey FOREIGN KEY (endorsed_by_user_id) REFERENCES public.profiles(id),
+  CONSTRAINT user_skill_endorsements_skill_id_fkey FOREIGN KEY (skill_id) REFERENCES public.user_skills(id)
 );
 CREATE TABLE public.user_skills (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

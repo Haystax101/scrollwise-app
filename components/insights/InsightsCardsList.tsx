@@ -9,7 +9,6 @@ interface InsightsCardsListProps {
   insights: Insight[];
   loading?: boolean;
   onInsightPress?: (insight: Insight) => void;
-  onEditPress?: (insight: Insight) => void;
   onDeletePress?: (insight: Insight) => void;
 }
 
@@ -17,7 +16,6 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
   insights,
   loading = false,
   onInsightPress,
-  onEditPress,
   onDeletePress
 }) => {
   const { colors, isDark } = useTheme();
@@ -48,11 +46,6 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
     return content.substring(0, maxLength) + '...';
   };
 
-  const getTitle = (content: string, maxLength: number = 50): string => {
-    const firstSentence = content.split('.')[0];
-    if (firstSentence.length <= maxLength) return firstSentence;
-    return content.substring(0, maxLength) + '...';
-  };
 
   const styles = StyleSheet.create({
     container: {
@@ -115,7 +108,7 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
       borderRadius: 20,
       padding: 6,
     },
-    cardContent: {
+    cardBody: {
       padding: 16,
     },
     cardMeta: {
@@ -132,17 +125,11 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
       fontSize: 12,
       color: colors.textTertiary,
     },
-    cardTitle: {
+    cardContent: {
       fontSize: 16,
       fontWeight: 'bold',
       color: colors.text,
-      marginBottom: 8,
       lineHeight: 22,
-    },
-    cardExcerpt: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      lineHeight: 20,
       marginBottom: 12,
     },
     cardFooter: {
@@ -167,13 +154,13 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
       color: colors.textSecondary,
       marginLeft: 4,
     },
-    editButton: {
+    deleteButton: {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 16,
-      backgroundColor: colors.primary,
+      backgroundColor: colors.error || '#EF4444',
     },
-    editButtonText: {
+    deleteButtonText: {
       fontSize: 12,
       color: 'white',
       fontWeight: '500',
@@ -228,13 +215,13 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
             />
             <TouchableOpacity 
               style={styles.moreButton}
-              onPress={() => onEditPress?.(insight)}
+              onPress={() => onDeletePress?.(insight)}
             >
-              <Feather name="more-vertical" size={16} color="white" />
+              <Feather name="trash-2" size={16} color="white" />
             </TouchableOpacity>
           </View>
           
-          <View style={styles.cardContent}>
+          <View style={styles.cardBody}>
             <View style={styles.cardMeta}>
               <Text style={styles.publishedDate}>
                 {formatDate(insight.created_at)}
@@ -244,11 +231,7 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
               </Text>
             </View>
             
-            <Text style={styles.cardTitle}>
-              {getTitle(insight.content)}
-            </Text>
-            
-            <Text style={styles.cardExcerpt}>
+            <Text style={styles.cardContent}>
               {getTruncatedContent(insight.content)}
             </Text>
             
@@ -275,10 +258,10 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
               </View>
               
               <TouchableOpacity 
-                style={styles.editButton}
-                onPress={() => onEditPress?.(insight)}
+                style={styles.deleteButton}
+                onPress={() => onDeletePress?.(insight)}
               >
-                <Text style={styles.editButtonText}>Edit</Text>
+                <Text style={styles.deleteButtonText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>

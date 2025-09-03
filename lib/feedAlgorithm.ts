@@ -1,12 +1,12 @@
 import { supabase } from './supabase';
-import type { FeedItem, Article, Paper, Book, Industry } from '../types';
+import type { FeedItem, Article, Paper, Book, Industry, Insight } from '../types';
 
 export interface FetchedContent {
-  id: number;
-  type: 'paper' | 'book' | 'article';
+  id: number | string; // Support both integer IDs and uuid strings for insights
+  type: 'paper' | 'book' | 'article' | 'insight';
   title: string;
   link: string;
-  industry_id: string;
+  industry_id?: string; // Optional for insights
   likes_count: number;
   saves_count: number;
   comments_count: number;
@@ -23,6 +23,12 @@ export interface FetchedContent {
   year?: number; // book
   short_summary?: string; // book
   key_insights?: string[]; // book
+  // Insight-specific fields
+  content?: string; // insight - full content text
+  author_id?: string; // insight - author UUID
+  author_name?: string; // insight - author display name
+  author_avatar_url?: string; // insight - author avatar
+  voltz_spent?: number; // insight - supercharge amount
 }
 
 export interface FeedState {
@@ -150,16 +156,18 @@ export class FeedAlgorithm {
       
       // Improved algorithm with weighted content type distribution
       const contentTypeWeights = {
-        'article': 0.4,  // 40% articles (news, current events)
-        'paper': 0.25,   // 25% papers (research, in-depth)
-        'book': 0.35     // 35% books (learning, development)
+        'article': 0.35,  // 35% articles (news, current events)
+        'paper': 0.20,    // 20% papers (research, in-depth)
+        'book': 0.30,     // 30% books (learning, development)
+        'insight': 0.15   // 15% insights (user-generated content)
       };
       
       // Calculate target counts for each content type
       const targetCounts = {
         'article': Math.ceil(targetCount * contentTypeWeights.article),
         'paper': Math.ceil(targetCount * contentTypeWeights.paper),
-        'book': Math.ceil(targetCount * contentTypeWeights.book)
+        'book': Math.ceil(targetCount * contentTypeWeights.book),
+        'insight': Math.ceil(targetCount * contentTypeWeights.insight)
       };
       
       // Fetch content with time-based scoring for each type
@@ -167,7 +175,7 @@ export class FeedAlgorithm {
       
       for (const [contentType, targetTypeCount] of Object.entries(targetCounts)) {
         const typeContent = await this.fetchContentWithTimeScoring(
-          contentType as 'article' | 'paper' | 'book',
+          contentType as 'article' | 'paper' | 'book' | 'insight',
           targetTypeCount * 2, // Fetch more than needed for better selection
           excludeInteracted
         );
@@ -190,7 +198,7 @@ export class FeedAlgorithm {
         feedItems.push(...fallbackItems);
       }
       
-      console.log(`✅ FeedAlgorithm: Returning ${feedItems.length} items (${feedItems.filter(item => item.type === 'article').length} articles, ${feedItems.filter(item => item.type === 'paper').length} papers, ${feedItems.filter(item => item.type === 'book').length} books)`);
+      console.log(`✅ FeedAlgorithm: Returning ${feedItems.length} items (${feedItems.filter(item => item.type === 'article').length} articles, ${feedItems.filter(item => item.type === 'paper').length} papers, ${feedItems.filter(item => item.type === 'book').length} books, ${feedItems.filter(item => item.type === 'insight').length} insights)`);
       return feedItems;
     } catch (error) {
       console.error('Error in fetchArticles:', error);
@@ -250,14 +258,21 @@ export class FeedAlgorithm {
    * Fetch content with time-based scoring for a specific content type
    */
   private async fetchContentWithTimeScoring(
-    contentType: 'article' | 'paper' | 'book',
+    contentType: 'article' | 'paper' | 'book' | 'insight',
     targetCount: number,
     excludeInteracted: boolean
   ): Promise<Array<FetchedContent & { score: number }>> {
-    const tableName = contentType === 'paper' ? 'papers' : contentType === 'book' ? 'books' : 'articles';
+    const tableName = contentType === 'paper' ? 'papers' : 
+                     contentType === 'book' ? 'books' : 
+                     contentType === 'insight' ? 'insights' : 'articles';
     const scoredContent: Array<FetchedContent & { score: number }> = [];
     
     try {
+      // Handle insights separately since they don't have industries
+      if (contentType === 'insight') {
+        return await this.fetchInsightsContent(targetCount, excludeInteracted);
+      }
+      
       // Calculate items per industry for round-robin distribution
       const itemsPerIndustry = Math.ceil(targetCount / this.userIndustries.length);
       
@@ -271,22 +286,27 @@ export class FeedAlgorithm {
         // Get IDs to exclude (viewed content for this content type)
         const viewedIdsToExclude = Array.from(this.viewedIds)
           .filter(viewKey => viewKey.startsWith(`${contentType}-`))
-          .map(viewKey => viewKey.replace(`${contentType}-`, ''))
-          .map(id => parseInt(id, 10))
-          .filter(id => !isNaN(id));
+          .map(viewKey => viewKey.replace(`${contentType}-`, ''));
+        
+        // For insights (UUIDs), keep as strings; for others, convert to integers
+        const processedViewedIds = contentType === 'insight' 
+          ? viewedIdsToExclude 
+          : viewedIdsToExclude.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
         
         // Build query with exclusions
         let query = supabase
           .from(tableName)
           .select('*')
-          .eq('industry_id', industryId)
           .order('created_at', { ascending: false })
           .limit(itemsPerIndustry * 4); // Get more options since we're excluding viewed content
         
+        // Add industry filter (insights are handled separately)
+        query = query.eq('industry_id', industryId);
+        
         // Exclude viewed content from the database query itself
-        if (viewedIdsToExclude.length > 0) {
-          console.log(`🔍 Excluding ${viewedIdsToExclude.length} viewed ${contentType} IDs from DB query:`, viewedIdsToExclude.slice(0, 5));
-          query = query.not('id', 'in', `(${viewedIdsToExclude.join(',')})`);
+        if (processedViewedIds.length > 0) {
+          console.log(`🔍 Excluding ${processedViewedIds.length} viewed ${contentType} IDs from DB query:`, processedViewedIds.slice(0, 5));
+          query = query.not('id', 'in', `(${processedViewedIds.join(',')})`);
         }
         
         const { data, error } = await query;
@@ -361,6 +381,115 @@ export class FeedAlgorithm {
   }
 
   /**
+   * Fetch insights content (separate method since insights don't have industries)
+   */
+  private async fetchInsightsContent(targetCount: number, excludeInteracted: boolean): Promise<Array<FetchedContent & { score: number }>> {
+    try {
+      // Get IDs to exclude (viewed insights)
+      const viewedIdsToExclude = Array.from(this.viewedIds)
+        .filter(viewKey => viewKey.startsWith('insight-'))
+        .map(viewKey => viewKey.replace('insight-', ''));
+
+      // Build insights query
+      let query = supabase
+        .from('insights')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(targetCount * 4) // Get more options for better selection
+        .not('author_id', 'eq', this.userId); // Exclude current user's insights
+
+      // Exclude viewed content
+      if (viewedIdsToExclude.length > 0) {
+        console.log(`🔍 Excluding ${viewedIdsToExclude.length} viewed insights from DB query:`, viewedIdsToExclude.slice(0, 5));
+        query = query.not('id', 'in', `(${viewedIdsToExclude.map(id => `'${id}'`).join(',')})`);
+      }
+
+      const { data, error } = await query;
+
+      if (error || !data) {
+        console.log(`⚠️ FeedAlgorithm: No insights data:`, error?.message || 'No data returned');
+        return [];
+      }
+
+      // Fetch author information separately
+      let processedData = data;
+      if (data.length > 0) {
+        const authorIds = [...new Set(data.map(item => item.author_id).filter(Boolean))];
+        if (authorIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select(`
+              id, 
+              full_name, 
+              avatar_url,
+              user_education!user_education_user_id_fkey(
+                degree_name,
+                field_of_study,
+                university_name,
+                is_current
+              )
+            `)
+            .in('id', authorIds);
+          
+          const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+          
+          processedData = data.map(item => ({
+            ...item,
+            author_name: profileMap.get(item.author_id)?.full_name || 'Anonymous',
+            author_avatar_url: profileMap.get(item.author_id)?.avatar_url
+          }));
+        }
+      }
+
+      // Apply session-based filters
+      const filteredData = processedData.filter(item => {
+        const itemId = this.normalizeId(item.id);
+        
+        const isFetched = this.fetchedIds.has(itemId);
+        const isLiked = this.likedIds.has(itemId);
+        const isSaved = this.savedIds.has(itemId);
+        
+        if (isFetched) {
+          console.log(`🔍 Insight ${itemId} FILTERED: already fetched`);
+          return false;
+        }
+        if (excludeInteracted && isLiked) {
+          console.log(`🔍 Insight ${itemId} FILTERED: liked`);
+          return false;
+        }
+        if (excludeInteracted && isSaved) {
+          console.log(`🔍 Insight ${itemId} FILTERED: saved`);
+          return false;
+        }
+        
+        console.log(`✅ Insight ${itemId} PASSES all filters`);
+        return true;
+      });
+
+      // Map and score the insights
+      const scoredInsights = filteredData.map(item => ({
+        ...item,
+        type: 'insight' as const,
+        title: item.content ? item.content.substring(0, 50) + (item.content.length > 50 ? '...' : '') : '',
+        link: `#insight-${item.id}`,
+        flag: Number(item.flag) || 0, // Ensure valid integer, prevent NaN
+        score: this.calculateTimeScore(item)
+      }));
+
+      // Sort by score and return the best ones
+      scoredInsights.sort((a, b) => b.score - a.score);
+      const selectedInsights = scoredInsights.slice(0, targetCount);
+
+      console.log(`📊 FeedAlgorithm: insights: ${data.length} total → ${filteredData.length} after filtering → ${selectedInsights.length} selected`);
+
+      return selectedInsights;
+    } catch (error) {
+      console.error('Error in fetchInsightsContent:', error);
+      return [];
+    }
+  }
+
+  /**
    * Calculate time-based score using decaying function
    * Formula: base_score * e^(-decay_rate * hours_old)
    */
@@ -369,16 +498,32 @@ export class FeedAlgorithm {
     const contentDate = new Date(content.created_at || content.date);
     const hoursOld = (now.getTime() - contentDate.getTime()) / (1000 * 60 * 60);
     
-    // Base score from engagement metrics (normalized 0-1)
-    const engagementScore = Math.min(1, 
-      (content.likes_count * 0.4 + content.saves_count * 0.6) / 100
-    );
+    let baseScore: number;
+    let decayRate: number;
     
-    // Base score: engagement (0-1) + quality boost (0.2) 
-    const baseScore = Math.max(0.2, engagementScore);
-    
-    // Decay rate: slower decay for papers/books (research content), faster for articles (news)
-    const decayRate = content.type === 'article' ? 0.02 : 0.005;
+    if (content.type === 'insight') {
+      // Insights use special scoring formula: (likes × 1) + (comments × 2) + (voltz_spent)
+      const insightScore = (content.likes_count || 0) + 
+                          ((content.comments_count || 0) * 2) + 
+                          (content.voltz_spent || 0);
+      
+      // Normalize to 0-1 range (assuming max reasonable score of 1000)
+      baseScore = Math.min(1, insightScore / 1000);
+      
+      // Insights decay slower than articles but faster than papers
+      decayRate = 0.01;
+    } else {
+      // Standard scoring for other content types
+      const engagementScore = Math.min(1, 
+        (content.likes_count * 0.4 + content.saves_count * 0.6) / 100
+      );
+      
+      // Base score: engagement (0-1) + quality boost (0.2) 
+      baseScore = Math.max(0.2, engagementScore);
+      
+      // Decay rate: slower decay for papers/books (research content), faster for articles (news)
+      decayRate = content.type === 'article' ? 0.02 : 0.005;
+    }
     
     // Apply time decay
     const timeScore = baseScore * Math.exp(-decayRate * hoursOld);
@@ -392,17 +537,18 @@ export class FeedAlgorithm {
   private balanceContentTypes(
     allContent: Array<FetchedContent & { score: number }>,
     targetCount: number,
-    weights: { article: number; paper: number; book: number }
+    weights: { article: number; paper: number; book: number; insight: number }
   ): FetchedContent[] {
     const contentByType = {
       article: allContent.filter(c => c.type === 'article'),
       paper: allContent.filter(c => c.type === 'paper'),
-      book: allContent.filter(c => c.type === 'book')
+      book: allContent.filter(c => c.type === 'book'),
+      insight: allContent.filter(c => c.type === 'insight')
     };
 
     const result: FetchedContent[] = [];
-    const indices = { article: 0, paper: 0, book: 0 };
-    const typeOrder: ('article' | 'paper' | 'book')[] = ['article', 'book', 'paper'];
+    const indices = { article: 0, paper: 0, book: 0, insight: 0 };
+    const typeOrder: ('article' | 'paper' | 'book' | 'insight')[] = ['article', 'book', 'insight', 'paper'];
 
     // Round-robin selection with type weighting
     while (result.length < targetCount) {
@@ -556,6 +702,31 @@ export class FeedAlgorithm {
           short_summary: content.short_summary || '',
           key_insights: content.key_insights,
         } as Book;
+      
+      case 'insight':
+        return {
+          id: String(content.id), // Ensure string ID for insights
+          type: 'insight',
+          content: content.content || '',
+          title: content.content ? content.content.substring(0, 50) + (content.content.length > 50 ? '...' : '') : '',
+          author: {
+            name: content.author_name || 'Anonymous',
+            handle: `@${(content.author_name || 'anonymous').toLowerCase().replace(/\s+/g, '')}`,
+            avatar: content.author_avatar_url || '',
+            role: '',
+            company: '',
+            industry: '',
+            location: '',
+            currentProject: '',
+            projectTags: []
+          },
+          likes_count: content.likes_count || 0,
+          comments_count: content.comments_count || 0,
+          saves_count: 0, // Insights don't have saves yet
+          views_count: content.views_count || 0,
+          created_at: content.created_at,
+          link: `#insight-${content.id}` // Placeholder link
+        } as any; // Using any to match FeedItem union constraints
       
       default:
         throw new Error(`Unknown content type: ${content.type}`);

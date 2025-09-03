@@ -70,11 +70,6 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
     return content.substring(0, maxLength) + '...';
   };
 
-  const getTitle = (content: string, maxLength: number = 50): string => {
-    const firstSentence = content.split('.')[0];
-    if (firstSentence.length <= maxLength) return firstSentence;
-    return content.substring(0, maxLength) + '...';
-  };
 
   const handleOptionsPress = (insight: SavedInsight) => {
     setSelectedInsight(insight);
@@ -185,7 +180,7 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
       borderRadius: 20,
       padding: 6,
     },
-    cardContent: {
+    cardBody: {
       padding: 16,
     },
     cardMeta: {
@@ -202,17 +197,11 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
       fontSize: 12,
       color: colors.textTertiary,
     },
-    cardTitle: {
+    cardContent: {
       fontSize: 16,
       fontWeight: 'bold',
       color: colors.text,
-      marginBottom: 8,
       lineHeight: 22,
-    },
-    cardExcerpt: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      lineHeight: 20,
       marginBottom: 12,
     },
     authorInfo: {
@@ -315,7 +304,7 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
             </TouchableOpacity>
           </View>
           
-          <View style={styles.cardContent}>
+          <View style={styles.cardBody}>
             <View style={styles.cardMeta}>
               <Text style={styles.publishedDate}>
                 {formatDate(insight.created_at)}
@@ -325,17 +314,13 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
               </Text>
             </View>
             
-            <Text style={styles.cardTitle}>
-              {getTitle(insight.content)}
-            </Text>
-            
             {insight.author && (
               <Text style={styles.authorInfo}>
                 By {insight.author.full_name}
               </Text>
             )}
             
-            <Text style={styles.cardExcerpt}>
+            <Text style={styles.cardContent}>
               {getTruncatedContent(insight.content)}
             </Text>
             

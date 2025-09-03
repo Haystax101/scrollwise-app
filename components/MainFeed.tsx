@@ -51,29 +51,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   const [viewedContent, setViewedContent] = useState<Set<string>>(new Set());
   const flatListRef = useRef<FlatList>(null);
 
-  // Function to randomly intersperse insights into the content feed
-  const intersperseInsights = (content: FeedItem[], insights: FeedItem[]): FeedItem[] => {
-    if (insights.length === 0) return content;
-    
-    const result: FeedItem[] = [];
-    const insightsCopy = [...insights];
-    
-    // Add content items and randomly insert insights
-    for (let i = 0; i < content.length; i++) {
-      result.push(content[i]);
-      
-      // Randomly insert an insight (roughly every 3-5 items)
-      if (insightsCopy.length > 0 && Math.random() < 0.25) {
-        const randomInsight = insightsCopy.splice(Math.floor(Math.random() * insightsCopy.length), 1)[0];
-        result.push(randomInsight);
-      }
-    }
-    
-    // Add any remaining insights
-    result.push(...insightsCopy);
-    
-    return result;
-  };
 
   const feedAlgorithmRef = useRef<FeedAlgorithm | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -113,67 +90,12 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         }
       }
       
-      // Load additional articles from algorithm
-      const algorithmArticles = await feedAlgorithmRef.current.fetchArticles(2);
+      // Load content using unified algorithm (now includes insights)
+      const algorithmContent = await feedAlgorithmRef.current.fetchArticles(10);
       
-      // Fetch insights from other users
-      if (user) {
-        const { data: insightsData, error: insightsError } = await supabase
-          .from('insights')
-          .select(`
-            id,
-            content,
-            author_id,
-            likes_count,
-            saves_count,
-            comments_count,
-            views_count,
-            created_at,
-            author:profiles!author_id (
-              full_name,
-              avatar_url
-            )
-          `)
-          .not('author_id', 'eq', user.id);
-          
-        if (insightsError) {
-          console.error('Error fetching insights for feed:', insightsError);
-        }
-        
-        const insights: Insight[] = (insightsData || [])
-          .filter((item: any) => item.author) // Filter out insights with no author
-          .map((item: any) => ({
-            id: item.id,
-            type: 'insight',
-            title: item.content.substring(0, 50) + (item.content.length > 50 ? '...' : ''), // Add a title
-            content: item.content,
-            likes_count: item.likes_count || 0,
-            saves_count: item.saves_count || 0,
-            comments_count: item.comments_count || 0,
-            views_count: item.views_count || 0,
-            created_at: item.created_at,
-            author: {
-              name: item.author.full_name,
-              handle: item.author.full_name.toLowerCase().replace(/\s/g, ''),
-              avatar: item.author.avatar_url,
-              role: 'Software Engineer',
-              company: 'Google',
-              industry: 'Technology',
-              location: 'Mountain View, CA',
-              currentProject: 'Gemini',
-              projectTags: ['AI', 'Machine Learning'],
-            },
-          }));
-        
-        // Randomly intersperse insights with articles and algorithm content
-        const allContent = [...newArticles, ...algorithmArticles];
-        const combinedFeed: FeedItem[] = intersperseInsights(allContent, insights);
-        
-        setArticles(combinedFeed);
-      } else {
-        // If no user, just show articles
-        setArticles([...newArticles, ...algorithmArticles]);
-      }
+      // Combine with any specific initial article
+      const allContent = [...newArticles, ...algorithmContent];
+      setArticles(allContent);
       
       setHasMore(true);
       

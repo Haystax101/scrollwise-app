@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { Feather } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import { useRouter } from 'expo-router';
 import { InsightsPublisher } from './insights/InsightsPublisher';
 import { InsightsStatsOverview } from './insights/InsightsStatsOverview';
 import { InsightsCardsList } from './insights/InsightsCardsList';
 import { SavedInsightsList } from './insights/SavedInsightsList';
+import { FloatingCreateButton } from './insights/FloatingCreateButton';
 import { Insight } from '../types';
 
 interface InsightsStats {
@@ -19,9 +18,8 @@ interface InsightsStats {
 }
 
 const Insights = () => {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { user } = useAuth();
-  const router = useRouter();
   
   // State management
   const [userInsights, setUserInsights] = useState<Insight[]>([]);
@@ -169,31 +167,6 @@ const Insights = () => {
     contentContainer: {
       paddingBottom: 100,
     },
-    createInsightButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.primary,
-      paddingVertical: 16,
-      paddingHorizontal: 24,
-      borderRadius: 30,
-      marginVertical: 20,
-      marginHorizontal: 20,
-      shadowColor: colors.primary,
-      shadowOffset: {
-        width: 0,
-        height: 4,
-      },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
-    },
-    createInsightButtonText: {
-      color: 'white',
-      fontSize: 16,
-      fontWeight: '600',
-      marginLeft: 8,
-    },
     sectionHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -225,15 +198,6 @@ const Insights = () => {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Create Insight Button */}
-        <TouchableOpacity 
-          style={styles.createInsightButton} 
-          onPress={() => setShowPublisher(true)}
-        >
-          <Feather name="plus" size={18} color="white" />
-          <Text style={styles.createInsightButtonText}>Create Insight</Text>
-        </TouchableOpacity>
-
         {/* Stats Overview */}
         <InsightsStatsOverview
           stats={insightsStats}
@@ -251,7 +215,6 @@ const Insights = () => {
           insights={userInsights}
           loading={loading}
           onInsightPress={handleInsightPress}
-          onEditPress={handleEditInsight}
           onDeletePress={handleDeleteInsight}
         />
 
@@ -277,6 +240,9 @@ const Insights = () => {
           }}
         />
       </ScrollView>
+      
+      {/* Floating Create Button */}
+      <FloatingCreateButton onPress={() => setShowPublisher(true)} />
     </View>
   );
 };
