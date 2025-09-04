@@ -1,14 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, ScrollView, StyleSheet, Text } from 'react-native';
+import { router } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { feedContentPreloader } from '../services/FeedContentPreloader';
 import { InsightsPublisher } from './insights/InsightsPublisher';
 import { InsightsStatsOverview } from './insights/InsightsStatsOverview';
 import { InsightsCardsList } from './insights/InsightsCardsList';
 import { SavedInsightsList } from './insights/SavedInsightsList';
 import { FloatingCreateButton } from './insights/FloatingCreateButton';
 import { Insight } from '../types';
+
+interface SavedInsight {
+  id: string;
+  content: string;
+  created_at: string;
+  likes_count: number;
+  comments_count: number;
+  views_count: number;
+  author_id?: string;
+  author?: {
+    full_name: string;
+  };
+}
 
 interface InsightsStats {
   postsCount: number;
@@ -23,7 +38,7 @@ const Insights = () => {
   
   // State management
   const [userInsights, setUserInsights] = useState<Insight[]>([]);
-  const [savedInsights, setSavedInsights] = useState<Insight[]>([]);
+  const [savedInsights, setSavedInsights] = useState<SavedInsight[]>([]);
   const [insightsStats, setInsightsStats] = useState<InsightsStats>({
     postsCount: 0,
     totalLikes: 0,
@@ -53,13 +68,25 @@ const Insights = () => {
       } else {
         const formattedInsights = (ownInsights || []).map((item: any) => ({
           id: item.id,
+          type: 'insight' as const,
           content: item.content,
           created_at: item.created_at,
+          title: item.content ? item.content.substring(0, 50) + (item.content.length > 50 ? '...' : '') : '',
           likes_count: item.likes_count || 0,
           comments_count: item.comments_count || 0,
           views_count: item.views_count || 0,
           saves_count: item.saves_count || 0,
-          author: item.author
+          author: {
+            name: item.author?.full_name || 'You',
+            handle: '@' + (item.author?.full_name?.toLowerCase().replace(/\s+/g, '') || 'you'),
+            avatar: item.author?.avatar_url || '',
+            role: '',
+            company: '',
+            industry: '',
+            location: '',
+            currentProject: '',
+            projectTags: []
+          }
         }));
         setUserInsights(formattedInsights);
       }
@@ -80,7 +107,24 @@ const Insights = () => {
         console.error('Error fetching saved insights:', savedInsightsError);
       } else {
         const formattedSaved = (savedInsightsData || [])
-          .map((item: any) => item.insights)
+          .map((item: any) => {
+            const insight = item.insights;
+            if (!insight) return null;
+            
+            // Map to SavedInsight interface format
+            return {
+              id: insight.id,
+              content: insight.content,
+              created_at: insight.created_at,
+              likes_count: insight.likes_count || 0,
+              comments_count: insight.comments_count || 0,
+              views_count: insight.views_count || 0,
+              author_id: insight.author_id,
+              author: insight.author ? {
+                full_name: insight.author.full_name
+              } : undefined
+            };
+          })
           .filter(Boolean);
         setSavedInsights(formattedSaved);
       }
@@ -112,9 +156,32 @@ const Insights = () => {
   }, [fetchData]);
 
   // Event handlers
-  const handleInsightPress = (insight: Insight) => {
-    // Navigate to insight detail or open modal
-    console.log('Insight pressed:', insight.id);
+  const handleInsightPress = async (insight: Insight) => {
+    // Preload the insight for instant display in MainFeed
+    await feedContentPreloader.preloadContent(insight.id, 'insight');
+    
+    // Navigate to feed with this insight at the top
+    router.push({
+      pathname: '/feed',
+      params: {
+        contentId: insight.id,
+        contentType: 'insight'
+      }
+    });
+  };
+
+  const handleSavedInsightPress = async (savedInsight: SavedInsight) => {
+    // Preload the insight for instant display in MainFeed
+    await feedContentPreloader.preloadContent(savedInsight.id, 'insight');
+    
+    // Navigate to feed with this insight at the top
+    router.push({
+      pathname: '/feed',
+      params: {
+        contentId: savedInsight.id,
+        contentType: 'insight'
+      }
+    });
   };
 
   const handleEditInsight = (insight: Insight) => {
@@ -133,14 +200,14 @@ const Insights = () => {
     }
   };
 
-  const handleUnsaveInsight = async (insight: Insight) => {
+  const handleUnsaveInsight = async (savedInsight: SavedInsight) => {
     try {
       await supabase
         .from('insight_saves')
         .delete()
         .eq('user_id', user?.id)
-        .eq('insight_id', insight.id);
-      setSavedInsights(prev => prev.filter(i => i.id !== insight.id));
+        .eq('insight_id', savedInsight.id);
+      setSavedInsights(prev => prev.filter(i => i.id !== savedInsight.id));
     } catch (error) {
       console.error('Error unsaving insight:', error);
     }
@@ -226,7 +293,7 @@ const Insights = () => {
         <SavedInsightsList
           savedInsights={savedInsights}
           loading={loading}
-          onInsightPress={handleInsightPress}
+          onInsightPress={handleSavedInsightPress}
           onUnsavePress={handleUnsaveInsight}
           onInsightUpdate={(updatedInsight) => {
             setSavedInsights(prev => 

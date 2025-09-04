@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity, Keyboard } from 'react-native';
 import { BottomSheetModal, BottomSheetFlatList, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -66,6 +66,9 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ videoId, visible, 
   // Add comment
   const handleAddComment = async () => {
     if (!user || !input.trim() || !videoId) return;
+    
+    // Dismiss keyboard immediately when send button is pressed
+    Keyboard.dismiss();
     setSubmitting(true);
     const { error, data } = await supabase
       .from('comments')

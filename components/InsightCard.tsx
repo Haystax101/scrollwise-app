@@ -150,6 +150,11 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       lineHeight: 24,
       color: colors.text,
     },
+    // Views section (above separator)
+    viewsSection: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
     // Engagement bar
     engagementSection: {
       paddingHorizontal: 16,
@@ -796,22 +801,16 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           <Text style={dynamicStyles.contentText}>{insight.content}</Text>
         </View>
 
+        {/* Views Section - Above separator */}
+        <View style={dynamicStyles.viewsSection}>
+          <View style={dynamicStyles.viewsContainer}>
+            <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
+            <Text style={dynamicStyles.viewsText}>{formatNumber(views)} views</Text>
+          </View>
+        </View>
+
         {/* Engagement Bar */}
         <View style={dynamicStyles.engagementSection}>
-          <View style={dynamicStyles.topRow}>
-            <View style={dynamicStyles.viewsContainer}>
-              <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
-              <Text style={dynamicStyles.viewsText}>{formatNumber(views)} views</Text>
-            </View>
-            {isSupercharged && (<View style={[dynamicStyles.superchargeButton, isSupercharged && dynamicStyles.superchargedButton]}>
-              <Ionicons name="flash" size={16} color="#FDE047" />
-              <Text style={dynamicStyles.superchargeText}>
-                Supercharged
-              </Text>
-            </View>)}
-            
-          </View>
-          
           <View style={dynamicStyles.actionRow}>
             <TouchableOpacity
               style={dynamicStyles.actionButton}
@@ -841,10 +840,14 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
                 size={20}
                 color={hasSaved ? "#FDE047" : colors.text}
               />
-              <Text style={[dynamicStyles.actionText, hasSaved && { color: '#FDE047' }]}>
-                {formatNumber(saves)}
-              </Text>
             </TouchableOpacity>
+
+            {isSupercharged && (
+              <View style={[dynamicStyles.superchargeButton, dynamicStyles.superchargedButton]}>
+                <Text style={dynamicStyles.superchargeText}>Supercharged</Text>
+                <Ionicons name="flash" size={16} color="#FDE047" style={{ marginLeft: 4 }} />
+              </View>
+            )}
           </View>
         </View>
 

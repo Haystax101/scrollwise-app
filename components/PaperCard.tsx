@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Linking, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, StyleSheet, ScrollView } from 'react-native';
 import { Feather, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import type { Paper } from '../types';
 import { StaticVisual } from './StaticVisual';
@@ -183,7 +183,6 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
   const handleLikePress = () => toggleLike(!hasLiked);
   const handleSavePress = () => toggleSave(!hasSaved);
   const handleCommentsPress = () => onOpenComments?.(paper.id);
-  const handleReadMorePress = () => { if (paper.link) Linking.openURL(paper.link); };
 
   const expandedContent = useMemo(() => {
     const content = showComplexContent ? paper.content_complex : paper.content_simple;
@@ -385,7 +384,11 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
                   )}
                 </View>
               </View>
-              <Text style={dynamicStyles.title} numberOfLines={2}>{removeHtmlTags(paper.title)}</Text>
+              <TouchableOpacity onPress={handleToggleExpand} activeOpacity={0.7}>
+                <Text style={dynamicStyles.title} numberOfLines={2}>
+                  {removeHtmlTags(paper.title)}
+                </Text>
+              </TouchableOpacity>
               {paper.authors && paper.authors.length > 0 && (
                 <View style={{ marginBottom: 12 }}>
                   <ScrollView 

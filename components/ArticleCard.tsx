@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Linking, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
 import { Feather, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import type { Article } from '../types';
 import { StaticVisual } from './StaticVisual';
@@ -181,7 +181,6 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
   const handleLikePress = () => toggleLike(!hasLiked);
   const handleSavePress = () => toggleSave(!hasSaved);
   const handleCommentsPress = () => onOpenComments?.(article.id);
-  const handleReadMorePress = () => { if (article.link) Linking.openURL(article.link); };
 
   // When modal updates comment count, also persist to articles table so future loads are correct
   useEffect(() => {
@@ -364,7 +363,11 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
                     )}
                 </View>
               </View>
-              <Text style={dynamicStyles.title} numberOfLines={2}>{removeHtmlTags(article.title)}</Text>
+              <TouchableOpacity onPress={handleToggleExpand} activeOpacity={0.7}>
+                <Text style={dynamicStyles.title} numberOfLines={2}>
+                  {removeHtmlTags(article.title)}
+                </Text>
+              </TouchableOpacity>
               {article.author && (
                 <View style={dynamicStyles.authorContainer}>
                     <View style={dynamicStyles.authorTag}>
@@ -408,7 +411,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
         visible={isExpanded}
         onClose={handleToggleExpand}
         title={article.title}
-        content={article.summary}
+        content={article.longer_summary || article.summary}
         externalLink={article.link}
         contentType="article"
       />

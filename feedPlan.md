@@ -5,6 +5,7 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
 ## 🎯 **Phase 1: Social Interaction & RLS Fixes** (Critical Issues)
 
 ### 1.1 **Like Count Display Bug** (Issue #1 - Critical)
+
 - **Current**: Other users' likes are not being shown on content pieces
 - **Problem**: Like counts from other users are not displaying properly
 - **Root Cause**: Likely RLS (Row Level Security) policy preventing like visibility
@@ -15,7 +16,8 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
   - Test like visibility across different user accounts
   - Verify like aggregation queries include all user likes
 
-### 1.2 **Comment Username Display Bug** (Issue #2 - Critical)  
+### 1.2 **Comment Username Display Bug** (Issue #2 - Critical)
+
 - **Current**: Comments ARE being shown, but username displays as "User" instead of actual name
 - **Problem**: Comment author names not properly populated from profiles table
 - **Root Cause**: RLS policy or query join issue preventing username resolution
@@ -27,8 +29,9 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
   - Test comment name visibility across different content types
 
 ### 1.3 **RLS Policy Updates Required**
+
 - **Recommendation**: Enable authenticated users to view:
-  - Article/book/paper comments and their author usernames  
+  - Article/book/paper comments and their author usernames
   - Like counts from all users on content
   - Public profile information for social features
 - **Security**: Maintain privacy while enabling social interaction visibility
@@ -37,15 +40,17 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
 ## 🎯 **Phase 2: Button Styling & Consistency**
 
 ### 2.1 **"Read More" Button Styling** (Issue #3)
+
 - **Current**: Inconsistent button styling in feed items
 - **Fix**: Ensure all "Read More" buttons use theme primary color `#EAB308` with black text
-- **Implementation**: 
+- **Implementation**:
   - Update `FeedItem.tsx` or similar component button styling
   - Apply consistent golden theme color with proper contrast
   - Ensure button matches onboarding button styling
   - Verify text color is black (`#000000`) for accessibility
 
 ### 2.2 **Button Component Consistency**
+
 - **Update**: All feed-related buttons to use unified styling
 - **Ensure**: Proper hover/press states with golden theme
 - **Verify**: Consistent spacing and typography across feed buttons
@@ -53,6 +58,7 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
 ## 🎯 **Phase 3: Like Button Enhancement**
 
 ### 3.1 **Like Button Color Fix** (Issue #4)
+
 - **Current**: Like button doesn't show proper golden color when active
 - **Fix**: Implement proper active state with golden yellow (#EAB308)
 - **Implementation**:
@@ -62,29 +68,30 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
   - Test with both light and dark themes if applicable
 
 ### 3.2 **Like Button Interaction**
+
 - **Animation**: Smooth color transition when toggling like state
 - **Feedback**: Haptic feedback on like/unlike actions
 - **State**: Proper visual indication of current like status
 
 ## 🎯 **Phase 4: Content Presentation**
 
-### 4.1 **Summary Quality Improvement** (Issue #5)
-- **Current**: AI-generated summaries need improvement
-- **Enhancement**: Refine summary generation for better quality and relevance
+### 4.1 **Summary Detail Improvement** (Issue #5)
+
+- **Current**: Articles use summary field when expanded and non-expanded.
+- **Enhancement**: When non-expanded, use summary field. When expanded, use longer_summary field.
 - **Implementation**:
-  - Review and optimize summary generation prompts/algorithms
-  - Ensure summaries capture key points effectively
-  - Maintain consistent length and readability
-  - Focus on actionable insights for users
+  - Update supabase query logic to get summaries from both tables.
+  - Update article card to display the right summary at the right time.
 
 ### 4.2 **Summary Display**
-- **Formatting**: Consistent typography and spacing for summaries
-- **Length**: Optimal summary length for mobile reading
+
+- **Formatting**: Slightly larger line spacing for summaries. Ensure it still fits in the space provided.
 - **Clarity**: Clear distinction between original content and summary
 
 ## 🎯 **Phase 5: Book Content Readability**
 
 ### 5.1 **Book Content Enhancement** (Issue #6)
+
 - **Current**: Book content difficult to read in feed format
 - **Fix**: Improve book content presentation and formatting
 - **Implementation**:
@@ -94,6 +101,7 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
   - Optimize for mobile reading experience
 
 ### 4.2 **Book Content Layout**
+
 - **Typography**: Larger font size and better line spacing for book content
 - **Visual**: Distinct styling to differentiate books from other content
 - **Navigation**: Easy access to full book content from feed item
@@ -101,6 +109,7 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
 ## 🎯 **Phase 5: Title Interaction**
 
 ### 5.1 **Title Tapping Navigation** (Issue #5)
+
 - **Current**: Tapping article titles doesn't navigate to full content
 - **Fix**: Implement title tapping to open full article/content
 - **Implementation**:
@@ -110,6 +119,7 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
   - Ensure consistent navigation behavior across all content types
 
 ### 5.2 **Title Styling**
+
 - **Visual**: Subtle indication that titles are interactive (underline, color)
 - **Feedback**: Brief visual feedback when title is tapped
 - **Consistency**: Uniform title interaction across all feed items
@@ -117,11 +127,13 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
 ## 🎯 **Phase 6: Feed Performance & UX**
 
 ### 6.1 **Loading Optimization**
+
 - **Integration**: Use pre-loaded content from splash screen implementation
 - **Caching**: Implement efficient feed item caching
 - **Pagination**: Smooth infinite scroll with proper loading states
 
 ### 6.2 **Feed Interaction**
+
 - **Animations**: Smooth transitions for all feed interactions
 - **Responsiveness**: Immediate feedback for user actions
 - **Accessibility**: Proper screen reader support and navigation
@@ -129,23 +141,28 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
 ## 🎯 **Phase 7: Components to Update**
 
 ### Updated Components:
+
 1. **FeedItem.tsx** - Main feed item component improvements
+
    - Button styling consistency (#EAB308)
    - Title tapping functionality
    - Like button color states
    - Book content readability
 
 2. **LikeButton.tsx** - Like button with proper golden state
+
    - Active state golden color (#EAB308)
    - Smooth animation transitions
    - Proper visual feedback
 
 3. **ContentSummary.tsx** - Enhanced summary display
+
    - Improved typography and formatting
    - Better visual hierarchy
    - Consistent styling across content types
 
 4. **BookContent.tsx** - Specialized book content display
+
    - Enhanced readability formatting
    - Distinct visual treatment
    - Optimized mobile reading experience
@@ -158,11 +175,13 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
 ## 🎯 **Phase 8: Visual Design Consistency**
 
 ### 8.1 **Golden Theme Integration**
+
 - **Primary Color**: Consistent use of #EAB308 across all feed elements
 - **Contrast**: Proper text contrast ratios for accessibility
 - **Hierarchy**: Clear visual hierarchy using golden accents
 
 ### 8.2 **Feed Layout**
+
 - **Spacing**: Consistent padding and margins
 - **Typography**: Unified font sizes and weights
 - **Alignment**: Proper content alignment and spacing
@@ -170,11 +189,13 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
 ## 🎯 **Phase 9: Technical Implementation**
 
 ### 9.1 **State Management**
+
 - **Like States**: Proper like/unlike state management
 - **Navigation**: Smooth transitions to full content views
 - **Caching**: Efficient content and state caching
 
 ### 9.2 **Performance**
+
 - **Rendering**: Optimized feed item rendering
 - **Memory**: Efficient memory usage for long feeds
 - **Network**: Smart content loading and caching
@@ -182,21 +203,25 @@ Based on alpha testing feedback, here's a comprehensive plan to improve the main
 ## 🎯 **Success Criteria & Measurements**
 
 ✅ **Visual Consistency**
+
 - All feed buttons consistently use golden yellow (#EAB308) with black text
 - Like buttons show proper golden color when active
 - Titles are clearly interactive with proper visual feedback
 
 ✅ **Content Quality**
+
 - Improved AI-generated summaries with better relevance
 - Enhanced book content readability in feed format
 - Clear distinction between different content types
 
 ✅ **User Interaction**
+
 - Tapping article titles navigates to full content
 - Smooth like button animations with proper color states
 - Immediate visual feedback for all user interactions
 
 ✅ **Technical Performance**
+
 - Efficient feed rendering and smooth scrolling
 - Proper state management for likes and interactions
 - Integration with pre-loaded content system

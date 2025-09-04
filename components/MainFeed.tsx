@@ -16,8 +16,8 @@ import { screenTracker } from '../lib/screenTracking';
 
 interface MainFeedProps {
   industries: Industry[]; // Changed from number[] to Industry[]
-  initialArticleId?: number;
-  initialContentType?: 'article' | 'paper' | 'book';
+  initialArticleId?: number | string;
+  initialContentType?: 'article' | 'paper' | 'book' | 'insight';
   // Add tracking functions passed from parent
   trackScroll?: (scrollPercent: number) => void;
   trackInteraction?: (interactionType: string, data?: Record<string, any>) => void;
@@ -25,6 +25,37 @@ interface MainFeedProps {
 }
 
 const { height: screenHeight } = Dimensions.get('window');
+
+// Utility function to deduplicate articles by ID
+const deduplicateArticles = (existing: FeedItem[], newItems: FeedItem[]): FeedItem[] => {
+  const existingIds = new Set(existing.map(item => String(item.id)));
+  return newItems.filter(item => !existingIds.has(String(item.id)));
+};
+
+// Progressive content loading utility
+const createProgressiveLoader = (
+  feedAlgorithm: any,
+  setArticles: React.Dispatch<React.SetStateAction<FeedItem[]>>
+) => {
+  const stages = [
+    { count: 3, delay: 100 },     // Stage 1: Immediate scrolling content
+    { count: 4, delay: 2500 },    // Stage 2: Reading time content  
+    { count: 8, delay: 10000 },   // Stage 3: Deep browsing content
+  ];
+  
+  stages.forEach(({ count, delay }) => {
+    setTimeout(async () => {
+      try {
+        if (feedAlgorithm?.current) {
+          const content = await feedAlgorithm.current.fetchArticles(count);
+          setArticles(prev => [...prev, ...deduplicateArticles(prev, content)]);
+        }
+      } catch (error) {
+        console.error(`Error loading progressive content (${count} items):`, error);
+      }
+    }, delay);
+  });
+};
 
 export const MainFeed: React.FC<MainFeedProps> = ({ 
   industries, 
@@ -79,35 +110,81 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     try {
       let newArticles: Article[] = [];
       
-      // If we have an initialArticleId (from search), fetch that specific content first
+      // If we have an initialArticleId (from navigation), fetch that specific content first
       if (initialArticleId) {
-        const typeToFetch: 'article' | 'paper' | 'book' = initialContentType || 'article';
+        const typeToFetch: 'article' | 'paper' | 'book' | 'insight' = initialContentType || 'article';
         const specificArticle = await feedAlgorithmRef.current.fetchSpecificContent(initialArticleId, typeToFetch);
         
         if (specificArticle) {
           newArticles.push(specificArticle as Article);
           setCurrentArticleIndex(0); // Start viewing the specific article
+          
+          // Set the specific content immediately for instant display
+          setArticles(newArticles);
+          setIsLoading(false); // Stop loading immediately to show content
+          
+          // Use progressive loading utility
+          createProgressiveLoader(feedAlgorithmRef, setArticles);
+          setHasMore(true);
+          
+          return; // Exit early since we've set up the content
         }
       }
       
-      // Load content using unified algorithm (now includes insights)
-      const algorithmContent = await feedAlgorithmRef.current.fetchArticles(10);
+      // Load content using instant loading strategy - get first 2 articles immediately
+      const initialArticles = await feedAlgorithmRef.current.fetchArticles(2);
       
-      // Combine with any specific initial article
-      const allContent = [...newArticles, ...algorithmContent];
-      setArticles(allContent);
-      
-      setHasMore(true);
-      
-      // Set initial index - 0 if we have a specific article, otherwise 0 for first algorithm article
-      if (!initialArticleId) {
+      if (initialArticles.length > 0) {
+        // Show first 2 articles immediately to eliminate loading screen completely
+        setArticles(initialArticles);
+        setIsLoading(false); // Stop loading immediately to show content
+        setCurrentArticleIndex(0);
+        setHasMore(true);
+        
+        // Immediate follow-up: Load 5 more articles right after first 2 are shown
+        setTimeout(async () => {
+          try {
+            if (feedAlgorithmRef.current) {
+              const followUpContent = await feedAlgorithmRef.current.fetchArticles(5);
+              setArticles(prev => [...prev, ...deduplicateArticles(prev, followUpContent)]);
+            }
+          } catch (error) {
+            console.error('Error loading follow-up content:', error);
+          }
+        }, 50); // Very short delay to let UI render first 2 articles
+        
+        // Continue with progressive loading for deeper content
+        setTimeout(async () => {
+          try {
+            if (feedAlgorithmRef.current) {
+              const moreContent = await feedAlgorithmRef.current.fetchArticles(6);
+              setArticles(prev => [...prev, ...deduplicateArticles(prev, moreContent)]);
+            }
+          } catch (error) {
+            console.error('Error loading more content:', error);
+          }
+        }, 2000); // 2 seconds for reading time
+        
+        // Final bulk loading for extended browsing
+        setTimeout(async () => {
+          try {
+            if (feedAlgorithmRef.current) {
+              const bulkContent = await feedAlgorithmRef.current.fetchArticles(10);
+              setArticles(prev => [...prev, ...deduplicateArticles(prev, bulkContent)]);
+            }
+          } catch (error) {
+            console.error('Error loading bulk content:', error);
+          }
+        }, 8000); // 8 seconds for extended browsing
+        
+        return; // Exit early since we've set up progressive loading
+      } else {
+        // Fallback to traditional loading if no initial articles available
+        const algorithmContent = await feedAlgorithmRef.current.fetchArticles(5);
+        setArticles(algorithmContent);
+        setHasMore(true);
         setCurrentArticleIndex(0);
       }
-      
-      // Start background prefetching immediately after initial load
-      setTimeout(() => {
-        prefetchMoreArticles();
-      }, 100); // Small delay to ensure UI is responsive
       
     } catch (error) {
       console.error('Error loading initial feed:', error);
@@ -116,16 +193,29 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     setIsLoading(false);
   };
 
-  // Background prefetch function for smoother experience
+  // Progressive prefetch function for smoother experience
   const prefetchMoreArticles = useCallback(async () => {
     if (!feedAlgorithmRef.current || isLoadingMore || !hasMore) return;
     
     try {
-      const newArticles = await feedAlgorithmRef.current.fetchArticles(5); // Prefetch 5 more for better performance
+      // Start with immediate content for scrolling
+      const immediateArticles = await feedAlgorithmRef.current.fetchArticles(2);
       
-      if (newArticles.length > 0) {
-        setArticles(prev => [...prev, ...newArticles]);
-        setHasMore(newArticles.length === 5); // If we got less than 5, probably no more
+      if (immediateArticles.length > 0) {
+        setArticles(prev => [...prev, ...deduplicateArticles(prev, immediateArticles)]);
+        
+        // Load more content progressively
+        setTimeout(async () => {
+          try {
+            const moreArticles = await feedAlgorithmRef.current.fetchArticles(3);
+            setArticles(prev => [...prev, ...deduplicateArticles(prev, moreArticles)]);
+            setHasMore(moreArticles.length > 0);
+          } catch (error) {
+            console.error('Error prefetching additional articles:', error);
+          }
+        }, 1500); // 1.5 second delay for additional content
+        
+        setHasMore(true);
       } else {
         setHasMore(false);
       }
@@ -156,7 +246,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
       }
       
       if (newArticles.length > 0) {
-        setArticles(prev => [...prev, ...newArticles]);
+        // Deduplicate by ID to prevent duplicate content
+        setArticles(prev => [...prev, ...deduplicateArticles(prev, newArticles)]);
         // Keep loading as long as we get some content
         setHasMore(newArticles.length >= 3);
       } else {
@@ -356,8 +447,15 @@ export const MainFeed: React.FC<MainFeedProps> = ({
       
       if (error || !recentlyViewed || recentlyViewed.length === 0) return;
       
+      // Filter to only content types that have quizzes (articles, papers, books - not insights)
+      const quizEligibleContent = recentlyViewed.filter(content => 
+        ['article', 'paper', 'book'].includes(content.content_type)
+      );
+      
+      if (quizEligibleContent.length === 0) return;
+      
       // Randomly select one piece of recently viewed content to quiz on
-      const randomViewedContent = recentlyViewed[Math.floor(Math.random() * Math.min(5, recentlyViewed.length))];
+      const randomViewedContent = quizEligibleContent[Math.floor(Math.random() * Math.min(5, quizEligibleContent.length))];
       
       // Get quiz question for this content
       const quiz = await getQuizForContent({

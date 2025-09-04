@@ -5,6 +5,10 @@ import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
 import { useIndustries } from '../context/IndustriesContext';
 import { immediateKeywordSearch, progressiveSearch, checkProPlan, SearchResult } from '../lib/smartSearchService';
+import { IndustryColorBadge } from './discover/IndustryColorBadge';
+import { instantContentLoader } from '../services/InstantContentLoader';
+import { feedContentPreloader } from '../services/FeedContentPreloader';
+import { SearchResultSkeleton } from './discover/SkeletonLoader';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -23,27 +27,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-const getIndustryPillColor = (industryId: string): string => {
-  const colors = [
-    '#9C27B0', // Purple
-    '#B71C1C', // Red
-    '#1565C0', // Blue
-    '#1B5E20', // Green
-    '#5E35B1', // Purple
-    '#880E4F', // Pink
-    '#C51162', // Pink
-    '#311B92', // Purple
-    '#004D40', // Teal
-  ];
-  
-  // Use industryId as seed for consistent color assignment
-  const hash = industryId.split('').reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0);
-    return a & a;
-  }, 0);
-  
-  return colors[Math.abs(hash) % colors.length];
-};
+// Removed getIndustryPillColor - now using centralized industry color system
 
 export const Discover: React.FC = () => {
   const { colors, isDark } = useTheme();
@@ -62,6 +46,7 @@ export const Discover: React.FC = () => {
   const [searchMode, setSearchMode] = useState<'typing' | 'submitted'>('typing');
   const [isProUser, setIsProUser] = useState(false);
   const [showUpgradeMessage, setShowUpgradeMessage] = useState(false);
+  const [showingCachedContent, setShowingCachedContent] = useState(false);
   
   // Debounce search query for better performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -74,9 +59,17 @@ export const Discover: React.FC = () => {
     };
     checkUserPlan();
     
-    // Load initial content (most interacted content)
+    // Load initial content
     loadInitialContent();
-  }, []);
+    
+    // Pre-load content for other industries in background
+    if (allIndustries.length > 0) {
+      const industryIds = allIndustries.slice(0, 8).map(ind => ind.id); // Pre-load top 8 industries
+      instantContentLoader.preloadMultipleIndustries(industryIds, '').catch(error => {
+        console.error('Background pre-loading failed:', error);
+      });
+    }
+  }, [allIndustries.length]);
 
   // Load initial content when component mounts or when industry filter changes
   useEffect(() => {
@@ -97,27 +90,47 @@ export const Discover: React.FC = () => {
   }, [selectedIndustry]);
 
   const loadInitialContent = useCallback(async () => {
-    setLoading(true);
     setError(null);
+    setShowingCachedContent(false);
     
     try {
-      // Call the search service with empty query to get most liked content
-      const response = await immediateKeywordSearch('', selectedIndustry || undefined, undefined);
+      // Get instant content (cached first, then fresh)
+      const { cachedContent, freshContent } = await instantContentLoader.getInstantContent(selectedIndustry, '');
       
-      if (response.error) {
-        setError(response.error);
-        setSearchResults([]);
+      // Show cached content immediately if available
+      if (cachedContent && cachedContent.length > 0) {
+        console.log(`⚡ Discover: Showing cached content for ${selectedIndustry || 'all'}`);
+        setSearchResults(cachedContent);
+        setKeywordResults(cachedContent);
+        setShowingCachedContent(true);
+        setLoading(false);
       } else {
-        setSearchResults(response.results);
-        setKeywordResults(response.results);
+        setLoading(true);
+      }
+      
+      // Get fresh content
+      const freshResults = await freshContent;
+      
+      if (freshResults.length > 0) {
+        console.log(`🔄 Discover: Updating with fresh content for ${selectedIndustry || 'all'}`);
+        setSearchResults(freshResults);
+        setKeywordResults(freshResults);
+        setShowingCachedContent(false);
+      } else if (!cachedContent) {
+        // Only show error if we don't have cached content either
+        setError('No content available. Please try again.');
+        setSearchResults([]);
       }
     } catch (err) {
-      setError('Failed to load content. Please try again.');
-      setSearchResults([]);
+      if (!showingCachedContent) {
+        setError('Failed to load content. Please try again.');
+        setSearchResults([]);
+      }
+      console.error('Error in loadInitialContent:', err);
     } finally {
       setLoading(false);
     }
-  }, [selectedIndustry]);
+  }, [selectedIndustry, showingCachedContent]);
 
   // Get the name of an industry from its ID
   const getIndustryName = (id: string) => {
@@ -308,7 +321,10 @@ export const Discover: React.FC = () => {
       style={dynamicStyles.resultCard}
       accessibilityLabel={`View article: ${item.title}`}
       accessibilityRole="button"
-      onPress={() => {
+      onPress={async () => {
+        // Preload the content for instant display in MainFeed
+        await feedContentPreloader.preloadContent(item.id, item.type);
+        
         // Navigate to feed with the specific content at the top
         router.push({ pathname: '/feed', params: { contentId: item.id.toString(), contentType: item.type } });
       }}
@@ -321,9 +337,13 @@ export const Discover: React.FC = () => {
           </Text>
         </View>
                  {item.industry_id && (
-           <Text style={dynamicStyles.industryTag}>
-             {getIndustryName(item.industry_id)}
-           </Text>
+           <IndustryColorBadge
+             industryId={item.industry_id}
+             industryName={getIndustryName(item.industry_id)}
+             size="small"
+             variant="tag"
+             onPress={undefined}
+           />
          )}
       </View>
       
@@ -415,6 +435,14 @@ export const Discover: React.FC = () => {
       borderRadius: 24,
       justifyContent: 'center',
       alignItems: 'center',
+      shadowColor: '#EAB308',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5, // Android shadow
     },
     filtersContainer: {
       paddingHorizontal: 16,
@@ -617,9 +645,17 @@ export const Discover: React.FC = () => {
             </TouchableOpacity>
           )}
         </View>
-        <View style={dynamicStyles.lightningContainer}>
+        <TouchableOpacity 
+          style={dynamicStyles.lightningContainer} 
+          activeOpacity={0.8}
+          onPress={() => {
+            // Easter egg: clear cache when logo is tapped
+            instantContentLoader.clearCache();
+            loadInitialContent();
+          }}
+        >
           <Feather name="zap" size={24} color="#000000" />
-        </View>
+        </TouchableOpacity>
       </View>
 
       <View style={dynamicStyles.filtersContainer}>
@@ -634,33 +670,22 @@ export const Discover: React.FC = () => {
           >
             <Text style={[dynamicStyles.categoryText, selectedIndustry === null ? dynamicStyles.activeCategoryText : dynamicStyles.inactiveCategoryText]}>All</Text>
           </TouchableOpacity>
-          {allIndustries.map((industry) => {
-            const pillColor = getIndustryPillColor(industry.id);
-            return (
-              <TouchableOpacity
-                key={industry.id}
-                style={[
-                  dynamicStyles.categoryPill, 
-                  selectedIndustry === industry.id 
-                    ? { backgroundColor: pillColor }
-                    : { backgroundColor: pillColor + '20', borderWidth: 1, borderColor: pillColor + '40' }
-                ]}
-                onPress={() => setSelectedIndustry(industry.id)}
-              >
-                <Text style={[
-                  dynamicStyles.categoryText, 
-                  selectedIndustry === industry.id 
-                    ? { color: 'white', fontWeight: '600' }
-                    : { color: pillColor, fontWeight: '500' }
-                ]}>{industry.name}</Text>
-              </TouchableOpacity>
-            );
-          })}
+          {allIndustries.map((industry) => (
+            <IndustryColorBadge
+              key={industry.id}
+              industryId={industry.id}
+              industryName={industry.name}
+              selected={selectedIndustry === industry.id}
+              onPress={() => setSelectedIndustry(industry.id)}
+              size="medium"
+              variant="pill"
+            />
+          ))}
         </ScrollView>
       </View>
 
       {loading && searchResults.length === 0 ? (
-        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
+        <SearchResultSkeleton count={5} />
       ) : error && searchResults.length === 0 ? (
         <View style={dynamicStyles.errorContainer}>
           <Feather name="alert-triangle" size={40} color="#EF4444" />

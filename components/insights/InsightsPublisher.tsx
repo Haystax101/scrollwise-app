@@ -80,7 +80,7 @@ export const InsightsPublisher: React.FC<InsightsPublisherProps> = ({ onComplete
 
       // If supercharged, spend voltz using the atomic function
       if (supercharged && user?.id && insightId) {
-        const success = await voltzService.spendVoltz(user.id, voltz, insightId.toString());
+        const success = await voltzService.spendVoltz(user.id, voltz, 'insight_supercharge', 'insight', insightId.toString());
         
         if (!success) {
           Alert.alert('Error', 'Failed to supercharge your insight. It has been published normally.');

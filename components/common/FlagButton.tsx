@@ -37,8 +37,8 @@ export const FlagButton: React.FC<FlagButtonProps> = ({
 
     try {
       // Simple direct query to check if user has flagged this content
-      // Handle both numeric IDs (articles, papers, books) and UUID strings (insights)
-      const processedContentId = contentType === 'insight' ? String(contentId) : Number(contentId);
+      // Convert content ID to string format for consistency
+      const processedContentId = String(contentId);
       
       const { data, error } = await supabase
         .from('user_content_flags')
@@ -99,8 +99,8 @@ export const FlagButton: React.FC<FlagButtonProps> = ({
     setIsLoading(true);
 
     try {
-      // Handle both numeric IDs (articles, papers, books) and UUID strings (insights)
-      const processedContentId = contentType === 'insight' ? String(contentId) : Number(contentId);
+      // Convert content ID to string format for RPC function (handles both numeric and UUID)
+      const processedContentId = String(contentId);
       
       const { data, error } = await supabase.rpc('toggle_content_flag', {
         p_user_id: user!.id,

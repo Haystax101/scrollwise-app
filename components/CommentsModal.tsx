@@ -71,6 +71,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
   const [submitting, setSubmitting] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+  const [isTextInputFocused, setIsTextInputFocused] = useState(false);
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const textInputRef = useRef<TextInput>(null);
   // Keep stable references for the lifetime of the open modal to avoid drift between renders
@@ -214,6 +215,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
   // Add comment or reply
   const handleAddComment = async () => {
     if (!user || !input.trim() || !videoId) return;
+    
     setSubmitting(true);
     
     try {
@@ -288,6 +290,8 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
           
           setInput('');
           setReplyingTo(null);
+          // Dismiss keyboard only after successful submission
+          Keyboard.dismiss();
           onCommentsCountChange && onCommentsCountChange(comments.length + 1);
         }
       } else {
@@ -326,6 +330,8 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
           };
           setComments((prev) => [newComment, ...prev]);
           setInput('');
+          // Dismiss keyboard only after successful submission
+          Keyboard.dismiss();
           onCommentsCountChange && onCommentsCountChange(comments.length + 1);
           
           // Update comments_count in content table
@@ -380,15 +386,27 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
     try {
       if (wasLiked) {
         // Remove like
-        await supabase
+        const { error: deleteError } = await supabase
           .from('insight_comment_likes')
           .delete()
           .match({ user_id: user.id, comment_id: comment.id });
+        
+        if (deleteError) {
+          console.error('Error removing comment like:', deleteError);
+          throw deleteError;
+        }
+        console.log('Successfully removed comment like for comment:', comment.id);
       } else {
         // Add like
-        await supabase
+        const { error: insertError } = await supabase
           .from('insight_comment_likes')
           .insert({ user_id: user.id, comment_id: comment.id });
+        
+        if (insertError) {
+          console.error('Error adding comment like:', insertError);
+          throw insertError;
+        }
+        console.log('Successfully added comment like for comment:', comment.id);
       }
     } catch (error) {
       console.error('Error toggling comment like:', error);
@@ -772,7 +790,15 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
       onRequestClose={onClose}
     >
       <GestureHandlerRootView style={dynamicStyles.modalContainer}>
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <Pressable style={{ flex: 1 }} onPress={() => {
+          if (isTextInputFocused) {
+            // Only dismiss keyboard when text input is focused
+            Keyboard.dismiss();
+          } else {
+            // Close modal when text input is not focused
+            onClose();
+          }
+        }} />
         <Animated.View 
           style={[
             dynamicStyles.modalContent,
@@ -837,6 +863,8 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
               multiline
               onSubmitEditing={handleAddComment}
               returnKeyType="send"
+              onFocus={() => setIsTextInputFocused(true)}
+              onBlur={() => setIsTextInputFocused(false)}
             />
             <TouchableOpacity
               style={[

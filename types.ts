@@ -67,6 +67,7 @@ export interface BaseContent {
 export interface Article extends BaseContent {
   type: 'article';
   summary: string;
+  longer_summary?: string; // For expanded view, falls back to summary if not available
   author?: string;
 }
 

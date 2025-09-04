@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { FeedItem, Article, Paper, Book, Industry, Insight } from '../types';
+import { feedContentPreloader } from '../services/FeedContentPreloader';
 
 export interface FetchedContent {
   id: number | string; // Support both integer IDs and uuid strings for insights
@@ -385,10 +386,17 @@ export class FeedAlgorithm {
    */
   private async fetchInsightsContent(targetCount: number, excludeInteracted: boolean): Promise<Array<FetchedContent & { score: number }>> {
     try {
-      // Get IDs to exclude (viewed insights)
-      const viewedIdsToExclude = Array.from(this.viewedIds)
-        .filter(viewKey => viewKey.startsWith('insight-'))
-        .map(viewKey => viewKey.replace('insight-', ''));
+      // Fetch viewed insights from insight_views table
+      const { data: viewedInsights, error: viewedError } = await supabase
+        .from('insight_views')
+        .select('insight_id')
+        .eq('user_id', this.userId);
+      
+      if (viewedError) {
+        console.error('Error fetching viewed insights:', viewedError);
+      }
+      
+      const viewedInsightIds = (viewedInsights || []).map(view => view.insight_id);
 
       // Build insights query
       let query = supabase
@@ -398,10 +406,10 @@ export class FeedAlgorithm {
         .limit(targetCount * 4) // Get more options for better selection
         .not('author_id', 'eq', this.userId); // Exclude current user's insights
 
-      // Exclude viewed content
-      if (viewedIdsToExclude.length > 0) {
-        console.log(`🔍 Excluding ${viewedIdsToExclude.length} viewed insights from DB query:`, viewedIdsToExclude.slice(0, 5));
-        query = query.not('id', 'in', `(${viewedIdsToExclude.map(id => `'${id}'`).join(',')})`);
+      // Exclude viewed insights using insight_views table data
+      if (viewedInsightIds.length > 0) {
+        console.log(`🔍 Excluding ${viewedInsightIds.length} viewed insights from DB query:`, viewedInsightIds.slice(0, 5));
+        query = query.not('id', 'in', `(${viewedInsightIds.join(',')})`);
       }
 
       const { data, error } = await query;
@@ -736,9 +744,28 @@ export class FeedAlgorithm {
   /**
    * Fetch a specific content item by ID and type
    */
-  async fetchSpecificContent(contentId: number, contentType: 'article' | 'paper' | 'book'): Promise<FeedItem | null> {
+  async fetchSpecificContent(contentId: number | string, contentType: 'article' | 'paper' | 'book' | 'insight'): Promise<FeedItem | null> {
     try {
-      const tableName = contentType === 'paper' ? 'papers' : contentType === 'book' ? 'books' : 'articles';
+      // Check for preloaded content first for instant display
+      const preloadedContent = feedContentPreloader.getCachedContent(contentId, contentType);
+      if (preloadedContent) {
+        console.log(`⚡ FeedAlgorithm: Using preloaded ${contentType} ${contentId}`);
+        
+        // Add to fetched IDs to avoid duplicates in regular feed
+        this.fetchedIds.add(this.normalizeId(contentId));
+        
+        // Convert to FeedItem format
+        return this.mapToFeedItem({
+          ...preloadedContent,
+          type: contentType
+        });
+      }
+
+      console.log(`🔄 FeedAlgorithm: Fetching ${contentType} ${contentId} from database`);
+      
+      const tableName = contentType === 'paper' ? 'papers' : 
+                        contentType === 'book' ? 'books' : 
+                        contentType === 'insight' ? 'insights' : 'articles';
       
       const { data, error } = await supabase
         .from(tableName)
@@ -759,10 +786,18 @@ export class FeedAlgorithm {
       const contentItem = data[0]; // Get first (and should be only) item
 
       // Ensure interaction counters are accurate on first load by reading from join tables
-      const likesTable = contentType === 'paper' ? 'paper_likes' : contentType === 'book' ? 'book_likes' : 'article_likes';
-      const savesTable = contentType === 'paper' ? 'paper_saves' : contentType === 'book' ? 'book_saves' : 'article_saves';
-      const commentsTable = contentType === 'paper' ? 'paper_comments' : contentType === 'book' ? 'book_comments' : 'comments';
-      const idField = contentType === 'paper' ? 'paper_id' : contentType === 'book' ? 'book_id' : 'article_id';
+      const likesTable = contentType === 'paper' ? 'paper_likes' : 
+                         contentType === 'book' ? 'book_likes' : 
+                         contentType === 'insight' ? 'insight_likes' : 'article_likes';
+      const savesTable = contentType === 'paper' ? 'paper_saves' : 
+                        contentType === 'book' ? 'book_saves' : 
+                        contentType === 'insight' ? 'insight_saves' : 'article_saves';
+      const commentsTable = contentType === 'paper' ? 'paper_comments' : 
+                           contentType === 'book' ? 'book_comments' : 
+                           contentType === 'insight' ? 'insight_comments' : 'comments';
+      const idField = contentType === 'paper' ? 'paper_id' : 
+                     contentType === 'book' ? 'book_id' : 
+                     contentType === 'insight' ? 'insight_id' : 'article_id';
 
       const [likesCountRes, savesCountRes, commentsCountRes] = await Promise.all([
         supabase.from(likesTable).select('*', { count: 'exact', head: true }).eq(idField, contentId),
@@ -774,12 +809,38 @@ export class FeedAlgorithm {
       const safeSaves = (savesCountRes.count as number | null) ?? contentItem.saves_count ?? 0;
       const safeComments = (commentsCountRes.count as number | null) ?? contentItem.comments_count ?? 0;
 
-      const hydratedData = {
+      let hydratedData = {
         ...contentItem,
         likes_count: safeLikes,
         saves_count: safeSaves,
         comments_count: safeComments,
       };
+
+      // For insights, fetch author information
+      if (contentType === 'insight' && contentItem.author_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url')
+          .eq('id', contentItem.author_id)
+          .maybeSingle();
+        
+        if (profile) {
+          hydratedData = {
+            ...hydratedData,
+            author: {
+              name: profile.full_name || 'Anonymous',
+              handle: '@' + (profile.full_name?.toLowerCase().replace(/\s+/g, '') || 'anonymous'),
+              avatar: profile.avatar_url || '',
+              role: '', 
+              company: '', 
+              industry: '', 
+              location: '', 
+              currentProject: '',
+              projectTags: []
+            }
+          };
+        }
+      }
 
       // Initialize user interactions if not already done
       if (this.likedIds.size === 0 && this.savedIds.size === 0 && this.userId) {
@@ -793,6 +854,11 @@ export class FeedAlgorithm {
       const feedItem = this.mapToFeedItem({
         ...hydratedData,
         type: contentType
+      });
+      
+      // Cache the content for future instant display
+      feedContentPreloader.preloadContent(contentId, contentType).catch(error => {
+        console.error(`Error caching fetched content ${contentType} ${contentId}:`, error);
       });
       
       return feedItem;

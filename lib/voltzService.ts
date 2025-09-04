@@ -123,6 +123,24 @@ export const voltzService = {
         return false;
       }
 
+      // If supercharging an insight, update the insights table
+      if (reason.includes('supercharg') && subjectId && subjectType === 'insight') {
+        const { error: updateError } = await supabase
+          .from('insights')
+          .update({ 
+            supercharged: true,
+            voltz_spent: amount 
+          })
+          .eq('id', subjectId);
+
+        if (updateError) {
+          console.error('Error updating insight supercharge status:', updateError);
+          // Don't fail the entire transaction - voltz was still spent correctly
+        } else {
+          console.log(`Successfully updated insight ${subjectId} with ${amount} voltz spent`);
+        }
+      }
+
       return true;
     } catch (error) {
       console.error('Exception spending voltz:', error);

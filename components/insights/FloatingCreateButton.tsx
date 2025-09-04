@@ -32,7 +32,7 @@ export const FloatingCreateButton: React.FC<FloatingCreateButtonProps> = ({ onPr
   const styles = StyleSheet.create({
     container: {
       position: 'absolute',
-      bottom: insets.bottom + 90, // Above navbar (typical tab bar height ~50-60px + margin)
+      bottom: insets.bottom + 50, // Above navbar (typical tab bar height ~50-60px + margin)
       right: 20,
       zIndex: 1000,
     },
