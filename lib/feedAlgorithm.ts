@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import type { FeedItem, Article, Paper, Book, Industry, Insight } from '../types';
 import { feedContentPreloader } from '../services/FeedContentPreloader';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MMKV } from 'react-native-mmkv';
 
 export interface FetchedContent {
   id: number | string; // Support both integer IDs and uuid strings for insights
@@ -43,7 +43,8 @@ export interface FeedState {
   currentPage: number;
 }
 
-// AsyncStorage keys for persistence across app sessions
+// MMKV storage for synchronous persistence across app sessions
+const storage = new MMKV();
 const VIEWED_CONTENT_KEY = 'feed_viewed_content';
 const FAST_CACHE_KEY = 'feed_fast_cache';
 
@@ -64,41 +65,82 @@ export class FeedAlgorithm {
     this.userIndustries = userIndustries;
     this.allIndustries = allIndustries;
     
-    // Load persistent data asynchronously
-    this.loadPersistentData();
+    // Load persistent data SYNCHRONOUSLY with MMKV - fixes race condition!
+    this.loadPersistentDataSync();
   }
 
   /**
-   * Load viewed content and cache from AsyncStorage
+   * Nuclear reset - clear all tracking and cache for completely fresh start
+   * Use this when user reports seeing same content repeatedly
    */
-  private async loadPersistentData(): Promise<void> {
+  nuclearReset(): void {
     try {
-      // Load viewed content
+      console.log('🔥 NUCLEAR RESET: Clearing all tracking and cache data');
+      
+      // Clear all in-memory state
+      this.viewedIds.clear();
+      this.fetchedIds.clear();
+      this.fastFetchCache = [];
+      this.fastFetchCacheTimestamp = 0;
+      
+      // Clear all MMKV data for this user (synchronous)
       const viewedKey = `${VIEWED_CONTENT_KEY}_${this.userId}`;
-      const viewedData = await AsyncStorage.getItem(viewedKey);
+      const cacheKey = `${FAST_CACHE_KEY}_${this.userId}`;
+      
+      storage.delete(viewedKey);
+      storage.delete(cacheKey);
+      
+      console.log('🔥 NUCLEAR RESET: Complete - all data cleared');
+    } catch (error) {
+      console.error('🔥 NUCLEAR RESET: Error during reset:', error);
+    }
+  }
+
+  /**
+   * Load viewed content and cache from MMKV synchronously - fixes race condition!
+   */
+  private loadPersistentDataSync(): void {
+    try {
+      // Load viewed content synchronously
+      const viewedKey = `${VIEWED_CONTENT_KEY}_${this.userId}`;
+      const viewedData = storage.getString(viewedKey);
       if (viewedData) {
         const viewedArray = JSON.parse(viewedData);
         this.viewedIds = new Set(viewedArray);
-        console.log(`📦 AsyncStorage: Loaded ${this.viewedIds.size} viewed items`);
+        console.log(`🔥 MMKV: Loaded ${this.viewedIds.size} viewed items SYNCHRONOUSLY`);
       }
 
-      // Load fast fetch cache
+      // Load fast fetch cache synchronously with freshness check
       const cacheKey = `${FAST_CACHE_KEY}_${this.userId}`;
-      const cacheData = await AsyncStorage.getItem(cacheKey);
+      const cacheData = storage.getString(cacheKey);
       if (cacheData) {
         const cached = JSON.parse(cacheData);
         
-        // Check if cache is not expired
-        if (Date.now() - cached.timestamp < this.FAST_CACHE_TTL) {
-          this.fastFetchCache = cached.cache;
-          this.fastFetchCacheTimestamp = cached.timestamp;
-          console.log(`📦 AsyncStorage: Loaded ${this.fastFetchCache.length} cached items`);
+        // Aggressive cache expiration to prevent stale content
+        const cacheAge = Date.now() - cached.timestamp;
+        const shortTTL = 2 * 60 * 1000; // 2 minutes
+        
+        if (cacheAge < shortTTL && cached.cache && cached.cache.length > 0) {
+          // Only load cache if it contains articles we haven't viewed
+          const potentiallyFresh = cached.cache.filter((item: any) => 
+            !this.viewedIds.has(`article-${this.normalizeId(item.id)}`)
+          );
+          
+          if (potentiallyFresh.length >= 2) {
+            this.fastFetchCache = cached.cache;
+            this.fastFetchCacheTimestamp = cached.timestamp;
+            console.log(`🔥 MMKV: Loaded ${this.fastFetchCache.length} cached items (${potentiallyFresh.length} unviewed)`);
+          } else {
+            console.log(`🔥 MMKV: Cache contains mostly viewed content, clearing`);
+            storage.delete(cacheKey);
+          }
         } else {
-          console.log(`📦 AsyncStorage: Cache expired, will fetch fresh`);
+          console.log(`🔥 MMKV: Cache expired (${Math.round(cacheAge / 1000)}s old), clearing`);
+          storage.delete(cacheKey);
         }
       }
     } catch (error) {
-      console.error('📦 AsyncStorage: Error loading persistent data:', error);
+      console.error('🔥 MMKV: Error loading persistent data:', error);
     }
   }
 
@@ -199,11 +241,13 @@ export class FeedAlgorithm {
   }
 
   /**
-   * Fast fetch method for immediate content display - uses smart caching
+   * Fast fetch method for immediate content display - with MMKV synchronous persistence
    * Use this for initial load to eliminate loading screens
    */
   async fetchArticlesFast(targetCount: number = 2): Promise<FeedItem[]> {
     try {
+      console.log(`🔥 MMKV FAST FETCH: Starting with ${this.viewedIds.size} viewed items loaded synchronously`);
+      
       // Check if we can use cached articles (not viewed, not expired)
       if (this.canUseFastCache()) {
         const unviewedCache = this.fastFetchCache.filter(item => 
@@ -211,33 +255,37 @@ export class FeedAlgorithm {
         );
         
         if (unviewedCache.length >= targetCount) {
-          console.log(`⚡ Fast fetch: Using ${unviewedCache.length} cached unviewed articles`);
+          console.log(`🔥 MMKV: Using ${unviewedCache.length} cached unviewed articles`);
           return unviewedCache.slice(0, targetCount);
         }
       }
 
       // Need to refresh cache - fetch new articles excluding viewed ones
-      console.log(`🔄 Fast fetch: Refreshing cache (viewed: ${this.viewedIds.size} articles)`);
+      console.log(`🔥 MMKV: Refreshing cache - excluding ${this.viewedIds.size} viewed items`);
       
       // Get articles that haven't been viewed
       const viewedArticleIds = Array.from(this.viewedIds)
         .filter(id => id.startsWith('article-'))
         .map(id => id.replace('article-', ''));
       
+      // Also exclude recently fetched articles to ensure variety
+      const recentlyFetchedIds = Array.from(this.fetchedIds);
+      const allExcludeIds = [...new Set([...viewedArticleIds, ...recentlyFetchedIds])];
+      
       let query = supabase
         .from('articles')
         .select('*')
         .order('created_at', { ascending: false });
         
-      // Exclude viewed articles if we have any
-      if (viewedArticleIds.length > 0) {
-        query = query.not('id', 'in', `(${viewedArticleIds.join(',')})`);
+      // Exclude viewed AND recently fetched articles for better variety
+      if (allExcludeIds.length > 0) {
+        query = query.not('id', 'in', `(${allExcludeIds.join(',')})`);
       }
       
-      const { data: articles, error: articlesError } = await query.limit(targetCount + 3); // Get extra for cache
+      const { data: articles, error: articlesError } = await query.limit(targetCount + 5); // Get extra for cache
 
       if (articlesError) {
-        console.error('Error in fast fetch articles:', articlesError);
+        console.error('🔥 MMKV: Error in fast fetch articles:', articlesError);
         return [];
       }
 
@@ -247,10 +295,10 @@ export class FeedAlgorithm {
         type: 'article'
       }));
 
-      // Update cache with fresh unviewed articles
+      // Update cache with fresh unviewed articles and persist synchronously
       this.fastFetchCache = feedItems;
       this.fastFetchCacheTimestamp = Date.now();
-      this.persistCache();
+      this.persistCache(); // Now synchronous with MMKV!
 
       // Track the returned items as fetched to avoid duplicates later
       const returnItems = feedItems.slice(0, targetCount);
@@ -258,7 +306,7 @@ export class FeedAlgorithm {
         this.fetchedIds.add(this.normalizeId(item.id));
       });
 
-      console.log(`⚡ Fast fetch: Retrieved ${returnItems.length} fresh articles, cached ${feedItems.length} total`);
+      console.log(`🔥 MMKV: Retrieved ${returnItems.length} fresh articles, cached ${feedItems.length} total`);
       return returnItems;
       
     } catch (error) {
@@ -277,33 +325,33 @@ export class FeedAlgorithm {
   }
 
   /**
-   * Persist cache to AsyncStorage
+   * Persist cache to MMKV synchronously
    */
-  private async persistCache(): Promise<void> {
+  private persistCache(): void {
     try {
       const cacheKey = `${FAST_CACHE_KEY}_${this.userId}`;
       const cacheData = {
         cache: this.fastFetchCache,
         timestamp: this.fastFetchCacheTimestamp
       };
-      await AsyncStorage.setItem(cacheKey, JSON.stringify(cacheData));
-      console.log(`💾 AsyncStorage: Persisted cache with ${this.fastFetchCache.length} items`);
+      storage.set(cacheKey, JSON.stringify(cacheData));
+      console.log(`🔥 MMKV: Persisted cache with ${this.fastFetchCache.length} items`);
     } catch (error) {
-      console.error('💾 AsyncStorage: Error persisting cache:', error);
+      console.error('🔥 MMKV: Error persisting cache:', error);
     }
   }
 
   /**
-   * Persist viewed content to AsyncStorage
+   * Persist viewed content to MMKV synchronously  
    */
-  private async persistViewedContent(): Promise<void> {
+  private persistViewedContent(): void {
     try {
       const viewedKey = `${VIEWED_CONTENT_KEY}_${this.userId}`;
       const viewedArray = Array.from(this.viewedIds);
-      await AsyncStorage.setItem(viewedKey, JSON.stringify(viewedArray));
-      console.log(`💾 AsyncStorage: Persisted ${viewedArray.length} viewed items`);
+      storage.set(viewedKey, JSON.stringify(viewedArray));
+      console.log(`🔥 MMKV: Persisted ${viewedArray.length} viewed items`);
     } catch (error) {
-      console.error('💾 AsyncStorage: Error persisting viewed content:', error);
+      console.error('🔥 MMKV: Error persisting viewed content:', error);
     }
   }
 
@@ -362,10 +410,8 @@ export class FeedAlgorithm {
       this.viewedIds.add(viewKey);
       console.log(`👁️ Marked as viewed: ${viewKey} (total viewed: ${this.viewedIds.size})`);
       
-      // Persist viewed content to AsyncStorage
-      this.persistViewedContent().catch(error => {
-        console.error('Failed to persist viewed content:', error);
-      });
+      // Persist viewed content to MMKV synchronously
+      this.persistViewedContent();
       
       // If user viewed articles from our fast cache, refresh it in background
       if (contentType === 'article' && this.fastFetchCache.some(item => 
