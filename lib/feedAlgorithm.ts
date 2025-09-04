@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import type { FeedItem, Article, Paper, Book, Industry, Insight } from '../types';
 import { feedContentPreloader } from '../services/FeedContentPreloader';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface FetchedContent {
   id: number | string; // Support both integer IDs and uuid strings for insights
@@ -42,9 +43,9 @@ export interface FeedState {
   currentPage: number;
 }
 
-// Static storage for viewed content (persists across component mounts)
-const globalViewedContent = new Map<string, Set<string>>();
-const globalFastFetchCache = new Map<string, { cache: FeedItem[], timestamp: number }>();
+// AsyncStorage keys for persistence across app sessions
+const VIEWED_CONTENT_KEY = 'feed_viewed_content';
+const FAST_CACHE_KEY = 'feed_fast_cache';
 
 export class FeedAlgorithm {
   private userId: string;
@@ -63,23 +64,41 @@ export class FeedAlgorithm {
     this.userIndustries = userIndustries;
     this.allIndustries = allIndustries;
     
-    // Load persistent viewed content for this user
-    const userViewedKey = `viewed_${userId}`;
-    if (globalViewedContent.has(userViewedKey)) {
-      this.viewedIds = globalViewedContent.get(userViewedKey)!;
-      console.log(`📦 Loaded ${this.viewedIds.size} viewed items from persistent storage`);
-    } else {
-      this.viewedIds = new Set();
-      globalViewedContent.set(userViewedKey, this.viewedIds);
-    }
-    
-    // Load persistent cache for this user
-    const userCacheKey = `cache_${userId}`;
-    if (globalFastFetchCache.has(userCacheKey)) {
-      const cached = globalFastFetchCache.get(userCacheKey)!;
-      this.fastFetchCache = cached.cache;
-      this.fastFetchCacheTimestamp = cached.timestamp;
-      console.log(`📦 Loaded ${this.fastFetchCache.length} cached items from persistent storage`);
+    // Load persistent data asynchronously
+    this.loadPersistentData();
+  }
+
+  /**
+   * Load viewed content and cache from AsyncStorage
+   */
+  private async loadPersistentData(): Promise<void> {
+    try {
+      // Load viewed content
+      const viewedKey = `${VIEWED_CONTENT_KEY}_${this.userId}`;
+      const viewedData = await AsyncStorage.getItem(viewedKey);
+      if (viewedData) {
+        const viewedArray = JSON.parse(viewedData);
+        this.viewedIds = new Set(viewedArray);
+        console.log(`📦 AsyncStorage: Loaded ${this.viewedIds.size} viewed items`);
+      }
+
+      // Load fast fetch cache
+      const cacheKey = `${FAST_CACHE_KEY}_${this.userId}`;
+      const cacheData = await AsyncStorage.getItem(cacheKey);
+      if (cacheData) {
+        const cached = JSON.parse(cacheData);
+        
+        // Check if cache is not expired
+        if (Date.now() - cached.timestamp < this.FAST_CACHE_TTL) {
+          this.fastFetchCache = cached.cache;
+          this.fastFetchCacheTimestamp = cached.timestamp;
+          console.log(`📦 AsyncStorage: Loaded ${this.fastFetchCache.length} cached items`);
+        } else {
+          console.log(`📦 AsyncStorage: Cache expired, will fetch fresh`);
+        }
+      }
+    } catch (error) {
+      console.error('📦 AsyncStorage: Error loading persistent data:', error);
     }
   }
 
@@ -252,15 +271,34 @@ export class FeedAlgorithm {
   }
 
   /**
-   * Persist cache to global storage
+   * Persist cache to AsyncStorage
    */
-  private persistCache(): void {
-    const userCacheKey = `cache_${this.userId}`;
-    globalFastFetchCache.set(userCacheKey, {
-      cache: this.fastFetchCache,
-      timestamp: this.fastFetchCacheTimestamp
-    });
-    console.log(`💾 Persisted cache with ${this.fastFetchCache.length} items`);
+  private async persistCache(): Promise<void> {
+    try {
+      const cacheKey = `${FAST_CACHE_KEY}_${this.userId}`;
+      const cacheData = {
+        cache: this.fastFetchCache,
+        timestamp: this.fastFetchCacheTimestamp
+      };
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      console.log(`💾 AsyncStorage: Persisted cache with ${this.fastFetchCache.length} items`);
+    } catch (error) {
+      console.error('💾 AsyncStorage: Error persisting cache:', error);
+    }
+  }
+
+  /**
+   * Persist viewed content to AsyncStorage
+   */
+  private async persistViewedContent(): Promise<void> {
+    try {
+      const viewedKey = `${VIEWED_CONTENT_KEY}_${this.userId}`;
+      const viewedArray = Array.from(this.viewedIds);
+      await AsyncStorage.setItem(viewedKey, JSON.stringify(viewedArray));
+      console.log(`💾 AsyncStorage: Persisted ${viewedArray.length} viewed items`);
+    } catch (error) {
+      console.error('💾 AsyncStorage: Error persisting viewed content:', error);
+    }
   }
 
   /**
@@ -317,6 +355,11 @@ export class FeedAlgorithm {
     if (!this.viewedIds.has(viewKey)) {
       this.viewedIds.add(viewKey);
       console.log(`👁️ Marked as viewed: ${viewKey} (total viewed: ${this.viewedIds.size})`);
+      
+      // Persist viewed content to AsyncStorage
+      this.persistViewedContent().catch(error => {
+        console.error('Failed to persist viewed content:', error);
+      });
       
       // If user viewed articles from our fast cache, refresh it in background
       if (contentType === 'article' && this.fastFetchCache.some(item => 
