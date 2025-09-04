@@ -174,7 +174,7 @@ export class FeedAlgorithm {
         this.savedIds = new Set(allSavedIds);
       }
 
-      // Fetch user's viewed content
+      // Fetch user's viewed content from database and merge with AsyncStorage data
       const { data: viewedContent, error: viewedError } = await supabase
         .from('content_views')
         .select('content_type, content_id')
@@ -183,9 +183,15 @@ export class FeedAlgorithm {
       if (viewedError) {
         console.error('Error fetching viewed content:', viewedError);
       } else {
-        const viewedKeys = (viewedContent || []).map(view => `${view.content_type}-${this.normalizeId(view.content_id)}`);
-        this.viewedIds = new Set(viewedKeys);
-        console.log(`🔍 FeedAlgorithm: Initialized ${this.viewedIds.size} viewed items, ${this.likedIds.size} liked items, ${this.savedIds.size} saved items`);
+        const dbViewedKeys = (viewedContent || []).map(view => `${view.content_type}-${this.normalizeId(view.content_id)}`);
+        
+        // CRITICAL FIX: Merge database viewed content with AsyncStorage viewed content
+        // Don't overwrite - combine both sources for complete viewed content tracking
+        const existingViewedCount = this.viewedIds.size;
+        dbViewedKeys.forEach(key => this.viewedIds.add(key));
+        
+        console.log(`🔍 FeedAlgorithm: Merged viewed content - AsyncStorage: ${existingViewedCount}, DB: ${dbViewedKeys.length}, Total: ${this.viewedIds.size} viewed items`);
+        console.log(`🔍 FeedAlgorithm: Initialized ${this.likedIds.size} liked items, ${this.savedIds.size} saved items`);
       }
     } catch (error) {
       console.error('Error in initializeUserInteractions:', error);
