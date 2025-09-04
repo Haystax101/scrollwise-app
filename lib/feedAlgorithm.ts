@@ -42,6 +42,10 @@ export interface FeedState {
   currentPage: number;
 }
 
+// Static storage for viewed content (persists across component mounts)
+const globalViewedContent = new Map<string, Set<string>>();
+const globalFastFetchCache = new Map<string, { cache: FeedItem[], timestamp: number }>();
+
 export class FeedAlgorithm {
   private userId: string;
   private userIndustries: string[];
@@ -50,11 +54,33 @@ export class FeedAlgorithm {
   private likedIds: Set<string> = new Set(); // Changed to string to handle bigint IDs
   private savedIds: Set<string> = new Set(); // Changed to string to handle bigint IDs
   private viewedIds: Set<string> = new Set(); // Track viewed content by type-id
+  private fastFetchCache: FeedItem[] = []; // Cache for instant loading
+  private fastFetchCacheTimestamp: number = 0; // When cache was created
+  private readonly FAST_CACHE_TTL = 5 * 60 * 1000; // 5 minutes TTL
 
   constructor(userId: string, userIndustries: string[], allIndustries: Industry[]) {
     this.userId = userId;
     this.userIndustries = userIndustries;
     this.allIndustries = allIndustries;
+    
+    // Load persistent viewed content for this user
+    const userViewedKey = `viewed_${userId}`;
+    if (globalViewedContent.has(userViewedKey)) {
+      this.viewedIds = globalViewedContent.get(userViewedKey)!;
+      console.log(`📦 Loaded ${this.viewedIds.size} viewed items from persistent storage`);
+    } else {
+      this.viewedIds = new Set();
+      globalViewedContent.set(userViewedKey, this.viewedIds);
+    }
+    
+    // Load persistent cache for this user
+    const userCacheKey = `cache_${userId}`;
+    if (globalFastFetchCache.has(userCacheKey)) {
+      const cached = globalFastFetchCache.get(userCacheKey)!;
+      this.fastFetchCache = cached.cache;
+      this.fastFetchCacheTimestamp = cached.timestamp;
+      console.log(`📦 Loaded ${this.fastFetchCache.length} cached items from persistent storage`);
+    }
   }
 
   /**
@@ -144,6 +170,257 @@ export class FeedAlgorithm {
       }
     } catch (error) {
       console.error('Error in initializeUserInteractions:', error);
+    }
+  }
+
+  /**
+   * Fast fetch method for immediate content display - uses smart caching
+   * Use this for initial load to eliminate loading screens
+   */
+  async fetchArticlesFast(targetCount: number = 2): Promise<FeedItem[]> {
+    try {
+      // Check if we can use cached articles (not viewed, not expired)
+      if (this.canUseFastCache()) {
+        const unviewedCache = this.fastFetchCache.filter(item => 
+          !this.viewedIds.has(`article-${this.normalizeId(item.id)}`)
+        );
+        
+        if (unviewedCache.length >= targetCount) {
+          console.log(`⚡ Fast fetch: Using ${unviewedCache.length} cached unviewed articles`);
+          return unviewedCache.slice(0, targetCount);
+        }
+      }
+
+      // Need to refresh cache - fetch new articles excluding viewed ones
+      console.log(`🔄 Fast fetch: Refreshing cache (viewed: ${this.viewedIds.size} articles)`);
+      
+      // Get articles that haven't been viewed
+      const viewedArticleIds = Array.from(this.viewedIds)
+        .filter(id => id.startsWith('article-'))
+        .map(id => id.replace('article-', ''));
+      
+      let query = supabase
+        .from('articles')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      // Exclude viewed articles if we have any
+      if (viewedArticleIds.length > 0) {
+        query = query.not('id', 'in', `(${viewedArticleIds.join(',')})`);
+      }
+      
+      const { data: articles, error: articlesError } = await query.limit(targetCount + 3); // Get extra for cache
+
+      if (articlesError) {
+        console.error('Error in fast fetch articles:', articlesError);
+        return [];
+      }
+
+      // Convert to FeedItem format quickly
+      const feedItems = (articles || []).map(item => this.mapToFeedItem({
+        ...item,
+        type: 'article'
+      }));
+
+      // Update cache with fresh unviewed articles
+      this.fastFetchCache = feedItems;
+      this.fastFetchCacheTimestamp = Date.now();
+      this.persistCache();
+
+      // Track the returned items as fetched to avoid duplicates later
+      const returnItems = feedItems.slice(0, targetCount);
+      returnItems.forEach(item => {
+        this.fetchedIds.add(this.normalizeId(item.id));
+      });
+
+      console.log(`⚡ Fast fetch: Retrieved ${returnItems.length} fresh articles, cached ${feedItems.length} total`);
+      return returnItems;
+      
+    } catch (error) {
+      console.error('Error in fetchArticlesFast:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Check if fast fetch cache is still valid and has unviewed content
+   */
+  private canUseFastCache(): boolean {
+    const isNotExpired = Date.now() - this.fastFetchCacheTimestamp < this.FAST_CACHE_TTL;
+    const hasContent = this.fastFetchCache.length > 0;
+    return isNotExpired && hasContent;
+  }
+
+  /**
+   * Persist cache to global storage
+   */
+  private persistCache(): void {
+    const userCacheKey = `cache_${this.userId}`;
+    globalFastFetchCache.set(userCacheKey, {
+      cache: this.fastFetchCache,
+      timestamp: this.fastFetchCacheTimestamp
+    });
+    console.log(`💾 Persisted cache with ${this.fastFetchCache.length} items`);
+  }
+
+  /**
+   * Refresh fast fetch cache in background - call when user scrolls past content
+   * or switches tabs to ensure fresh content is ready
+   */
+  async refreshFastCacheBackground(): Promise<void> {
+    try {
+      console.log('🔄 Background: Refreshing fast cache...');
+      
+      // Get articles that haven't been viewed
+      const viewedArticleIds = Array.from(this.viewedIds)
+        .filter(id => id.startsWith('article-'))
+        .map(id => id.replace('article-', ''));
+      
+      let query = supabase
+        .from('articles')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      // Exclude viewed articles if we have any
+      if (viewedArticleIds.length > 0) {
+        query = query.not('id', 'in', `(${viewedArticleIds.join(',')})`);
+      }
+      
+      const { data: articles, error } = await query.limit(5); // Cache 5 for instant access
+
+      if (!error && articles) {
+        const feedItems = articles.map(item => this.mapToFeedItem({
+          ...item,
+          type: 'article'
+        }));
+
+        this.fastFetchCache = feedItems;
+        this.fastFetchCacheTimestamp = Date.now();
+        this.persistCache();
+        
+        console.log(`✅ Background: Fast cache refreshed with ${feedItems.length} fresh articles`);
+      } else {
+        console.error('Error refreshing fast cache:', error);
+      }
+    } catch (error) {
+      console.error('Error in background cache refresh:', error);
+    }
+  }
+
+  /**
+   * Mark content as viewed and trigger cache refresh if needed
+   * Call this when user scrolls past content or switches tabs
+   */
+  markContentAsViewed(contentId: number | string, contentType: string = 'article'): void {
+    const viewKey = `${contentType}-${this.normalizeId(contentId)}`;
+    
+    if (!this.viewedIds.has(viewKey)) {
+      this.viewedIds.add(viewKey);
+      console.log(`👁️ Marked as viewed: ${viewKey} (total viewed: ${this.viewedIds.size})`);
+      
+      // If user viewed articles from our fast cache, refresh it in background
+      if (contentType === 'article' && this.fastFetchCache.some(item => 
+        this.normalizeId(item.id) === this.normalizeId(contentId)
+      )) {
+        console.log('🔄 Triggering background cache refresh (viewed cached content)');
+        // Refresh in background without blocking
+        this.refreshFastCacheBackground().catch(error => {
+          console.error('Background cache refresh failed:', error);
+        });
+      }
+    }
+  }
+
+  /**
+   * Force refresh fast cache - call on pull-to-refresh or tab changes
+   */
+  async forceFastCacheRefresh(): Promise<void> {
+    console.log('🔄 Force refreshing fast cache...');
+    this.fastFetchCacheTimestamp = 0; // Invalidate current cache
+    await this.refreshFastCacheBackground();
+  }
+
+  /**
+   * Proactive cache refresh when navigating away from feed
+   * Checks which cached articles have been viewed and replaces them
+   */
+  async proactiveCacheRefresh(): Promise<void> {
+    console.log('🎯 Proactive: Checking cache for viewed articles...');
+    
+    if (!this.canUseFastCache()) {
+      console.log('🎯 Proactive: No valid cache, performing full refresh');
+      await this.refreshFastCacheBackground();
+      return;
+    }
+
+    // Check which cached articles have been viewed
+    const unviewedInCache = this.fastFetchCache.filter(item => 
+      !this.viewedIds.has(`article-${this.normalizeId(item.id)}`)
+    );
+    
+    const viewedInCache = this.fastFetchCache.filter(item => 
+      this.viewedIds.has(`article-${this.normalizeId(item.id)}`)
+    );
+
+    console.log(`🎯 Proactive: Cache status - ${unviewedInCache.length} unviewed, ${viewedInCache.length} viewed`);
+
+    // If we have enough unviewed articles, we're good
+    if (unviewedInCache.length >= 2) {
+      console.log('🎯 Proactive: Cache is fresh, no refresh needed');
+      return;
+    }
+
+    // Need to fetch replacement articles for viewed ones
+    const articlesToFetch = 2 - unviewedInCache.length;
+    
+    try {
+      const viewedArticleIds = Array.from(this.viewedIds)
+        .filter(id => id.startsWith('article-'))
+        .map(id => id.replace('article-', ''));
+      
+      // Get fresh articles excluding all viewed ones
+      let query = supabase
+        .from('articles')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (viewedArticleIds.length > 0) {
+        query = query.not('id', 'in', `(${viewedArticleIds.join(',')})`);
+      }
+      
+      const { data: articles, error } = await query.limit(articlesToFetch + 2); // Get extra for buffer
+
+      if (!error && articles) {
+        const newFeedItems = articles.map(item => this.mapToFeedItem({
+          ...item,
+          type: 'article'
+        }));
+
+        // Replace cache with combination of unviewed + new articles
+        this.fastFetchCache = [...unviewedInCache, ...newFeedItems].slice(0, 5);
+        this.fastFetchCacheTimestamp = Date.now();
+        this.persistCache();
+        
+        console.log(`✅ Proactive: Replaced ${articlesToFetch} viewed articles with fresh ones (total cache: ${this.fastFetchCache.length})`);
+      } else {
+        console.error('🎯 Proactive: Error fetching replacement articles:', error);
+      }
+    } catch (error) {
+      console.error('🎯 Proactive: Exception in cache refresh:', error);
+    }
+  }
+
+  /**
+   * Initialize the algorithm in background after fast fetch
+   * This can run while user is reading the first articles
+   */
+  async initializeInBackground(): Promise<void> {
+    try {
+      console.log('🔄 Starting background algorithm initialization...');
+      await this.initializeUserInteractions();
+      console.log('✅ Background algorithm initialization complete');
+    } catch (error) {
+      console.error('Error in background initialization:', error);
     }
   }
 

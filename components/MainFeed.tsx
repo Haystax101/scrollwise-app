@@ -13,6 +13,7 @@ import { CommentsModal } from './CommentsModal';
 import QuizCard, { QuizQuestion } from './QuizCard';
 import { supabase } from '../lib/supabase';
 import { screenTracker } from '../lib/screenTracking';
+import { feedNavigationService } from '../services/FeedNavigationService';
 
 interface MainFeedProps {
   industries: Industry[]; // Changed from number[] to Industry[]
@@ -93,10 +94,22 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   useEffect(() => {
     if (user && industryIds.length > 0 && allIndustries.length > 0) {
       feedAlgorithmRef.current = new FeedAlgorithm(user.id, industryIds, allIndustries);
+      
+      // Register with navigation service for proactive cache management
+      feedNavigationService.registerFeedAlgorithm(feedAlgorithmRef.current);
+      feedNavigationService.onFeedTabActive();
+      
       loadInitialFeed();
     } else if (!user || industryIds.length === 0) {
       setIsLoading(false);
     }
+
+    // Cleanup function
+    return () => {
+      // Trigger proactive cache refresh when component unmounts (user navigating away)
+      feedNavigationService.onFeedTabInactive();
+      feedNavigationService.unregisterFeedAlgorithm();
+    };
   }, [user, industryIds.join(','), allIndustries]);
 
   // Load initial feed (first 3 articles for faster loading, or specific article if provided)
@@ -131,8 +144,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         }
       }
       
-      // Load content using instant loading strategy - get first 2 articles immediately
-      const initialArticles = await feedAlgorithmRef.current.fetchArticles(2);
+      // Load content using instant loading strategy - get first 2 articles with fast fetch
+      const initialArticles = await feedAlgorithmRef.current.fetchArticlesFast(2);
       
       if (initialArticles.length > 0) {
         // Show first 2 articles immediately to eliminate loading screen completely
@@ -141,7 +154,13 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         setCurrentArticleIndex(0);
         setHasMore(true);
         
+        // Start background initialization immediately
+        if (feedAlgorithmRef.current) {
+          feedAlgorithmRef.current.initializeInBackground();
+        }
+        
         // Immediate follow-up: Load 5 more articles right after first 2 are shown
+        // Use regular fetchArticles now that background init is running
         setTimeout(async () => {
           try {
             if (feedAlgorithmRef.current) {
@@ -321,6 +340,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     setIsRefreshing(true);
     try {
       feedAlgorithmRef.current.reset(); // Reset algorithm state
+      await feedAlgorithmRef.current.forceFastCacheRefresh(); // Force refresh fast cache
       
       let newArticles: Article[] = [];
       
@@ -485,6 +505,11 @@ export const MainFeed: React.FC<MainFeedProps> = ({
       const currentItem = articles[newIndex];
       if (currentItem && ['article', 'paper', 'book', 'insight'].includes(currentItem.type)) {
         recordContentView(currentItem);
+        
+        // Mark content as viewed in feed algorithm for cache invalidation
+        if (feedAlgorithmRef.current) {
+          feedAlgorithmRef.current.markContentAsViewed(currentItem.id, currentItem.type);
+        }
         
         // Track content engagement
         trackContentEngagement?.(

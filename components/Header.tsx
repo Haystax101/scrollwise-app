@@ -3,6 +3,7 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useDirectionalNavigation } from '../context/NavigationContext';
+import { feedNavigationService } from '../services/FeedNavigationService';
 
 type ScreenName = 'home' | 'discover' | 'profile' | 'chats' | 'saved-feed';
 
@@ -21,6 +22,23 @@ const NAV_ITEMS = [
 export const Header: React.FC<HeaderProps> = ({ currentScreen, navigateTo }) => {
   const { colors } = useTheme();
   const { navigateWithDirection } = useDirectionalNavigation();
+
+  const handleNavigation = (path: string, screenName: ScreenName) => {
+    const isLeavingFeed = currentScreen === 'home' && screenName !== 'home';
+    const isGoingToFeed = currentScreen !== 'home' && screenName === 'home';
+
+    console.log(`🚀 Navigation: ${currentScreen} → ${screenName} (leavingFeed: ${isLeavingFeed}, goingToFeed: ${isGoingToFeed})`);
+
+    if (isLeavingFeed) {
+      // User is navigating away from feed - trigger proactive cache refresh
+      feedNavigationService.onFeedTabInactive();
+    } else if (isGoingToFeed) {
+      // User is navigating to feed - mark as active
+      feedNavigationService.onFeedTabActive();
+    }
+
+    navigateWithDirection(path);
+  };
 
   const dynamicStyles = StyleSheet.create({
     header: {
@@ -56,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({ currentScreen, navigateTo }) => 
           return (
             <TouchableOpacity
               key={item.screenName}
-              onPress={() => navigateWithDirection(item.path)}
+              onPress={() => handleNavigation(item.path, item.screenName)}
               style={styles.navItem}
               accessibilityLabel={item.accessibilityLabel}
               accessibilityRole="button"
