@@ -651,6 +651,7 @@ CREATE TABLE public.profiles (
   bio text,
   profile_completion_percentage integer DEFAULT 0 CHECK (profile_completion_percentage >= 0 AND profile_completion_percentage <= 100),
   total_voltz_earned integer DEFAULT 0,
+  is_levelled boolean DEFAULT false,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );

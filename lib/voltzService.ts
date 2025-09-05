@@ -59,6 +59,7 @@ export const voltzService = {
     voltzToNextLevel: number;
     voltzForCurrentLevel: number;
     voltzForNextLevel: number;
+    isLevelled: boolean;
   }> {
     try {
       const { data, error } = await supabase.rpc('get_user_voltz_stats', {
@@ -74,7 +75,8 @@ export const voltzService = {
           levelProgress: 0,
           voltzToNextLevel: 20,
           voltzForCurrentLevel: 0,
-          voltzForNextLevel: 20
+          voltzForNextLevel: 20,
+          isLevelled: false
         };
       }
 
@@ -88,7 +90,8 @@ export const voltzService = {
         levelProgress: stats?.level_progress || 0,
         voltzToNextLevel: stats?.voltz_to_next_level || 20,
         voltzForCurrentLevel: stats?.voltz_for_current_level || 0,
-        voltzForNextLevel: stats?.voltz_for_next_level || 20
+        voltzForNextLevel: stats?.voltz_for_next_level || 20,
+        isLevelled: stats?.is_levelled || false
       };
     } catch (error) {
       console.error('Exception fetching Voltz stats:', error);
@@ -99,8 +102,29 @@ export const voltzService = {
         levelProgress: 0,
         voltzToNextLevel: 20,
         voltzForCurrentLevel: 0,
-        voltzForNextLevel: 20
+        voltzForNextLevel: 20,
+        isLevelled: false
       };
+    }
+  },
+
+  // Reset the level-up flag after showing the animation
+  async resetLevelUpFlag(userId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase.rpc('reset_level_up_flag', {
+        p_user_id: userId
+      });
+
+      if (error) {
+        console.error('Error resetting level-up flag:', error);
+        return false;
+      }
+
+      console.log('✅ Level-up flag reset for user:', userId);
+      return true;
+    } catch (error) {
+      console.error('Exception resetting level-up flag:', error);
+      return false;
     }
   },
 

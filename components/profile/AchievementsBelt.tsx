@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { AchievementService, UserAchievement } from '../../services/achievementService';
+import { getAchievementColors } from '../../utils/achievementColors';
 
 interface AchievementsBeltProps {
   achievements: UserAchievement[];
@@ -68,14 +69,12 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
       paddingRight: 20,
     },
     achievementCard: {
-      backgroundColor: isDark ? colors.surface : colors.card,
       borderRadius: 16,
       padding: 12,
       marginRight: 12,
       alignItems: 'flex-start',
       minWidth: 240,
-      borderWidth: isDark ? 1 : 0,
-      borderColor: isDark ? colors.border : 'transparent',
+      // backgroundColor and borderColor are set dynamically based on achievement type
     },
     achievementHeader: {
       flexDirection: 'row',
@@ -84,10 +83,10 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
       width: '100%',
     },
     iconContainer: {
-      backgroundColor: colors.primary,
       padding: 8,
       borderRadius: 12,
       marginRight: 12,
+      // backgroundColor is set dynamically based on achievement type
     },
     achievementContent: {
       flex: 1,
@@ -181,33 +180,47 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
         contentContainerStyle={styles.scrollContent}
         style={styles.scrollContainer}
       >
-        {achievements.map((achievement) => (
-          <TouchableOpacity 
-            key={achievement.id} 
-            style={styles.achievementCard}
-          >
-            <View style={styles.achievementHeader}>
-              <View style={styles.iconContainer}>
-                <Feather 
-                  name={getIconName(achievement.icon_name)} 
-                  size={20} 
-                  color="white" 
-                />
+        {achievements.map((achievement) => {
+          const colorScheme = getAchievementColors(achievement.achievement_type);
+          
+          return (
+            <TouchableOpacity 
+              key={achievement.id} 
+              style={[
+                styles.achievementCard,
+                {
+                  borderColor: colorScheme.border,
+                  borderWidth: 2,
+                  backgroundColor: isDark ? colors.surface : colorScheme.background,
+                }
+              ]}
+            >
+              <View style={styles.achievementHeader}>
+                <View style={[styles.iconContainer, { backgroundColor: colorScheme.primary }]}>
+                  <Feather 
+                    name={getIconName(achievement.icon_name || 'award')} 
+                    size={20} 
+                    color="white" 
+                  />
+                </View>
+                <View style={styles.achievementContent}>
+                  <Text style={[
+                    styles.achievementTitle,
+                    isDark ? {} : { color: colorScheme.text }
+                  ]}>
+                    {achievement.title}
+                  </Text>
+                  <Text style={styles.achievementDescription}>
+                    {achievement.description}
+                  </Text>
+                  <Text style={styles.achievementDate}>
+                    {formatDate(achievement.earned_at)}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.achievementContent}>
-                <Text style={styles.achievementTitle}>
-                  {achievement.title}
-                </Text>
-                <Text style={styles.achievementDescription}>
-                  {achievement.description}
-                </Text>
-                <Text style={styles.achievementDate}>
-                  {formatDate(achievement.earned_at)}
-                </Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </View>
   );

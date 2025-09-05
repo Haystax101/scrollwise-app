@@ -17,6 +17,7 @@
 - Use `LIMIT` and `OFFSET` for pagination instead
 - When working with arrays, use proper PostgreSQL array functions
 - Always test queries for PostgreSQL compatibility before suggesting
+- **IMPORTANT**: Cannot use `CREATE OR REPLACE FUNCTION` in Supabase - must `DROP FUNCTION` first, then `CREATE FUNCTION`
 
 ## Current Critical Issues (Priority Order)
 

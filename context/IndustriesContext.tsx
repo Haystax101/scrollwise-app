@@ -84,6 +84,27 @@ export const IndustriesProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchAllIndustries();
     fetchUserIndustries();
+    
+    // Set up real-time subscription for user industry changes
+    if (user?.id) {
+      const subscription = supabase
+        .channel(`user_industries_${user.id}`)
+        .on('postgres_changes', {
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'user_industries',
+          filter: `user_id=eq.${user.id}`,
+        }, (payload) => {
+          console.log('🔄 IndustriesContext: Real-time industry change detected:', payload);
+          // Refresh industries when any change is detected
+          fetchUserIndustries();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subscription);
+      };
+    }
     // eslint-disable-next-line
   }, [user]);
 

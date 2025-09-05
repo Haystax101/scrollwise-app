@@ -31,12 +31,29 @@ export class FeedManager {
   private async loadViewedContent(): Promise<void> {
     try {
       const viewedKey = `viewed_content_${this.userId}`;
+      console.log(`📱 FeedManager: Loading viewed content with key: ${viewedKey}`);
+      
       const viewedData = await AsyncStorage.getItem(viewedKey);
       
       if (viewedData) {
         const viewedArray = JSON.parse(viewedData);
         this.viewedContentIds = new Set(viewedArray);
         console.log(`📱 FeedManager: Loaded ${this.viewedContentIds.size} viewed items from AsyncStorage`);
+        
+        // Log first few viewed items for debugging
+        const viewedSample = Array.from(this.viewedContentIds).slice(0, 10);
+        console.log(`📱 FeedManager: Sample viewed items:`, viewedSample);
+        
+        // Show breakdown by content type
+        const byType = {
+          article: viewedArray.filter((id: string) => id.startsWith('article-')).length,
+          paper: viewedArray.filter((id: string) => id.startsWith('paper-')).length,
+          book: viewedArray.filter((id: string) => id.startsWith('book-')).length,
+          insight: viewedArray.filter((id: string) => id.startsWith('insight-')).length
+        };
+        console.log(`📱 FeedManager: Viewed content by type:`, byType);
+      } else {
+        console.log(`📱 FeedManager: No viewed content found in AsyncStorage`);
       }
     } catch (error) {
       console.error('📱 FeedManager: Error loading viewed content:', error);
@@ -104,6 +121,57 @@ export class FeedManager {
     try {
       let query: any;
       
+      console.log(`📡 FeedManager: Starting fetchContentByType for ${contentType}, target count: ${count}`);
+      
+      console.log(`📡 FeedManager: Using efficient database-level filtering for ${contentType}`);
+
+      // Use RPC function to get unviewed content directly from database
+      // This excludes viewed content at the SQL level, much more efficient
+      const { data, error } = await supabase.rpc('get_unviewed_content_by_type', {
+        p_user_id: this.userId,
+        p_content_type: contentType,
+        p_industry_ids: contentType === 'insight' ? null : this.userIndustries,
+        p_limit: count * 3 // Get extra in case some fail conversion
+      });
+
+      if (error) {
+        console.error(`📡 FeedManager: RPC error for ${contentType}:`, error);
+        console.log(`📡 FeedManager: Falling back to simple query without view filtering...`);
+        
+        // Fallback to original method if RPC doesn't exist yet
+        return this.fetchContentByTypeOriginal(contentType, count);
+      }
+
+      if (!data || data.length === 0) {
+        console.log(`📡 FeedManager: No unviewed ${contentType} data returned from RPC`);
+        return [];
+      }
+
+      console.log(`📡 FeedManager: RPC returned ${data.length} unviewed ${contentType} items`);
+
+      // Convert to FeedItem format - no client-side filtering needed since DB already filtered
+      const feedItems = data.slice(0, count).map((item: any) => 
+        this.convertToFeedItem(item, contentType)
+      );
+
+      console.log(`📡 FeedManager: Final ${contentType} result: ${feedItems.length} items`);
+      return feedItems;
+    } catch (error) {
+      console.error(`📡 FeedManager: Exception in fetchContentByType for ${contentType}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Fallback method - original client-side filtering approach
+   */
+  private async fetchContentByTypeOriginal(
+    contentType: 'article' | 'paper' | 'book' | 'insight', 
+    count: number
+  ): Promise<FeedItem[]> {
+    try {
+      let query: any;
+      
       // Handle insights separately (no industry filtering)
       if (contentType === 'insight') {
         query = supabase
@@ -115,11 +183,10 @@ export class FeedManager {
               avatar_url
             )
           `)
-          .neq('author_id', this.userId) // Don't show user's own insights
+          .neq('author_id', this.userId)
           .order('created_at', { ascending: false })
-          .limit(count * 3); // Get extra for filtering
+          .limit(count * 5); // Get more to account for filtering
       } else {
-        // Standard content types with industry filtering
         const tableName = contentType === 'paper' ? 'papers' : 
                          contentType === 'book' ? 'books' : 'articles';
         
@@ -128,31 +195,30 @@ export class FeedManager {
           .select('*')
           .in('industry_id', this.userIndustries)
           .order('created_at', { ascending: false })
-          .limit(count * 3); // Get extra for filtering
+          .limit(count * 5);
       }
 
       const { data, error } = await query;
 
       if (error || !data) {
-        console.log(`📡 FeedManager: No ${contentType} data:`, error?.message);
+        console.error(`📡 FeedManager: Fallback query error for ${contentType}:`, error);
         return [];
       }
 
-      // Filter out viewed content - simple and reliable
+      // Filter out viewed content client-side
       const viewedKeys = Array.from(this.viewedContentIds);
-      const unviewedData = data.filter(item => {
+      const unviewedData = data.filter((item: any) => {
         const itemKey = `${contentType}-${item.id}`;
         return !viewedKeys.includes(itemKey);
       });
 
-      // Convert to FeedItem format
-      const feedItems = unviewedData.slice(0, count).map(item => 
+      const feedItems = unviewedData.slice(0, count).map((item: any) => 
         this.convertToFeedItem(item, contentType)
       );
 
       return feedItems;
     } catch (error) {
-      console.error(`📡 FeedManager: Error fetching ${contentType}:`, error);
+      console.error(`📡 FeedManager: Fallback error for ${contentType}:`, error);
       return [];
     }
   }

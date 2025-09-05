@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useIndustries } from '../../context/IndustriesContext';
 import { Feather } from '@expo/vector-icons';
 import SettingsModal from '../SettingsModal';
 import { AchievementService, UserAchievement } from '../../services/achievementService';
@@ -13,7 +14,7 @@ import { analytics, ANALYTICS_EVENTS } from '../../lib/posthog';
 
 // New Profile Components
 import { NewProfileHeader } from './NewProfileHeader';
-import { LevelProgressCard } from './LevelProgressCard';
+import { AnimatedLevelProgressBar } from './AnimatedLevelProgressBar';
 import { LearningStatsGrid } from './LearningStatsGrid';
 import { LeaderboardCard } from './LeaderboardCard';
 import { AchievementsBelt } from './AchievementsBelt';
@@ -83,6 +84,7 @@ const formatDatePeriod = (startDate: string | null, endDate: string | null, isCu
 export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigateTo, signOut }) => {
   const { colors, isDark } = useTheme();
   const router = useRouter();
+  const { refreshIndustries } = useIndustries();
   
   // Core profile data
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -92,6 +94,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [userLevel, setUserLevel] = useState<number>(1);
   const [spendableVoltz, setSpendableVoltz] = useState<number>(0);
   const [levelProgress, setLevelProgress] = useState<number>(0);
+  const [voltzForCurrentLevel, setVoltzForCurrentLevel] = useState<number>(0);
+  const [voltzForNextLevel, setVoltzForNextLevel] = useState<number>(100);
+  const [isLevelled, setIsLevelled] = useState<boolean>(false);
+  
+  // Track previous values for level-up animations (simplified - mainly for debugging)
+  const [previousLevel, setPreviousLevel] = useState<number | undefined>(undefined);
+  const [previousVoltz, setPreviousVoltz] = useState<number | undefined>(undefined);
 
   // Refs to track subscription state and component lifecycle
   const achievementsSubscriptionRef = useRef<any>(null);
@@ -163,10 +172,20 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       // Fetch comprehensive voltz stats using voltzService
       const voltzStats = await voltzService.getVoltzStats(currentUser.id);
       if (isMountedRef.current) {
+        // Store previous values for debugging
+        setPreviousLevel(userLevel);
+        setPreviousVoltz(totalVoltzEarned);
+        
+        // Update all voltz and level data
         setTotalVoltzEarned(voltzStats.totalVoltzEarned);
         setUserLevel(voltzStats.level);
         setSpendableVoltz(voltzStats.spendableVoltz);
         setLevelProgress(voltzStats.levelProgress);
+        setVoltzForCurrentLevel(voltzStats.voltzForCurrentLevel);
+        setVoltzForNextLevel(voltzStats.voltzForNextLevel);
+        setIsLevelled(voltzStats.isLevelled);
+        
+        console.log('📊 Profile loaded - isLevelled:', voltzStats.isLevelled, 'Level:', voltzStats.level);
       }
 
       // CRITICAL: Proper update sequence for real-time changes
@@ -181,14 +200,21 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         } else if (newAchievements && newAchievements[0]?.newly_awarded_count > 0) {
           console.log(`Awarded ${newAchievements[0].newly_awarded_count} new achievements!`);
           
-          // Step 2: If achievements were awarded, immediately refresh voltz stats to get updated level
+          // Step 2: If achievements were awarded, refresh voltz stats 
+          // The database trigger will automatically set is_levelled=true if user leveled up
           console.log('Refreshing voltz stats after achievement awards...');
           const updatedVoltzStats = await voltzService.getVoltzStats(currentUser.id);
           if (isMountedRef.current) {
+            // Update all voltz and level data
             setTotalVoltzEarned(updatedVoltzStats.totalVoltzEarned);
             setUserLevel(updatedVoltzStats.level);
             setSpendableVoltz(updatedVoltzStats.spendableVoltz);
             setLevelProgress(updatedVoltzStats.levelProgress);
+            setVoltzForCurrentLevel(updatedVoltzStats.voltzForCurrentLevel);
+            setVoltzForNextLevel(updatedVoltzStats.voltzForNextLevel);
+            setIsLevelled(updatedVoltzStats.isLevelled);
+            
+            console.log('🏆 After achievements - isLevelled:', updatedVoltzStats.isLevelled);
           }
         }
         
@@ -565,7 +591,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             
             console.log('⚡ Profile updated:', payload.new);
             
-            // Track level up if level increased
+            // Track level up for analytics if level increased
             if (payload.new.level !== undefined && payload.new.level > userLevel) {
               analytics.track(ANALYTICS_EVENTS.LEVEL_UP, {
                 user_id: currentUser.id,
@@ -576,7 +602,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
               });
             }
             
-            // Update immediate state values
+            // Update immediate state values from payload
             if (payload.new.total_voltz_earned !== undefined) {
               setTotalVoltzEarned(payload.new.total_voltz_earned);
             }
@@ -586,12 +612,19 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             if (payload.new.spendable_voltz !== undefined) {
               setSpendableVoltz(payload.new.spendable_voltz);
             }
+            if (payload.new.is_levelled !== undefined) {
+              setIsLevelled(payload.new.is_levelled);
+              console.log('📡 Real-time update - isLevelled:', payload.new.is_levelled);
+            }
             
             // Refresh comprehensive voltz stats to get updated progress calculations
             try {
               const voltzStats = await voltzService.getVoltzStats(currentUser.id);
               if (isMountedRef.current) {
                 setLevelProgress(voltzStats.levelProgress);
+                setVoltzForCurrentLevel(voltzStats.voltzForCurrentLevel);
+                setVoltzForNextLevel(voltzStats.voltzForNextLevel);
+                setIsLevelled(voltzStats.isLevelled);
               }
             } catch (error) {
               console.error('Error refreshing voltz stats after profile update:', error);
@@ -645,13 +678,34 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const handleIndustrySave = async (selectedIndustries: any[]) => {
     if (!isMountedRef.current) return;
     
-    // Update local state
-    const formattedIndustries = selectedIndustries.map(industry => ({
-      name: industry.name,
-      stage: 'interested'
-    }));
-    setIndustries(formattedIndustries);
-    setShowIndustrySelection(false);
+    try {
+      // Update local state
+      const formattedIndustries = selectedIndustries.map(industry => ({
+        name: industry.name,
+        stage: 'interested'
+      }));
+      setIndustries(formattedIndustries);
+      setShowIndustrySelection(false);
+      
+      // CRITICAL: Refresh industries context to update feed algorithm
+      console.log('🔄 Profile: Refreshing industries context after industry update...');
+      await refreshIndustries();
+      console.log('✅ Profile: Industries context refreshed successfully');
+      
+      // Optional: Clear viewed content in AsyncStorage so user sees fresh content
+      // This ensures they get content from their newly selected industries immediately
+      try {
+        const AsyncStorage = await import('@react-native-async-storage/async-storage');
+        const viewedKey = `viewed_content_${currentUser?.id}`;
+        await AsyncStorage.default.removeItem(viewedKey);
+        console.log('🧹 Profile: Cleared viewed content cache to show fresh industry content');
+      } catch (cacheError) {
+        console.warn('⚠️ Profile: Failed to clear viewed content cache:', cacheError);
+      }
+      
+    } catch (error) {
+      console.error('❌ Profile: Error in handleIndustrySave:', error);
+    }
   };
 
 
@@ -715,7 +769,11 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             fullName={fullName}
             avatarUrl={avatarUrl}
             userLevel={userLevel}
-            onAvatarPress={() => {}}
+            onAvatarPress={() => {
+              if (isMountedRef.current) {
+                setShowPhotoUpload(true);
+              }
+            }}
           />
         </View>
         {showOnboardingProgress && currentUser && (
@@ -728,11 +786,24 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           />
         )}
         
-        <LevelProgressCard
+        <AnimatedLevelProgressBar
           level={userLevel}
           currentVoltz={totalVoltzEarned}
           spendableVoltz={spendableVoltz}
           levelProgress={levelProgress}
+          voltzForCurrentLevel={voltzForCurrentLevel}
+          voltzForNextLevel={voltzForNextLevel}
+          previousLevel={previousLevel}
+          previousVoltz={previousVoltz}
+          triggerLevelUpAnimation={isLevelled}
+          onLevelUpAnimationComplete={async () => {
+            // Reset the is_levelled flag in database after animation completes
+            if (currentUser?.id) {
+              console.log('🎬 Level-up animation complete, resetting flag...');
+              await voltzService.resetLevelUpFlag(currentUser.id);
+              setIsLevelled(false);
+            }
+          }}
         />
 
         <LearningStatsGrid

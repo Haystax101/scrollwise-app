@@ -152,7 +152,11 @@ function useContentTracking(
   feedManager: FeedManager | null,
   trackScroll?: (scrollPercent: number) => void,
   trackInteraction?: (interactionType: string, data?: Record<string, any>) => void,
-  trackContentEngagement?: (contentType: string, contentId: string, engagementType: string, data?: Record<string, any>) => void
+  trackContentEngagement?: (contentType: string, contentId: string, engagementType: string, data?: Record<string, any>) => void,
+  recordContentView?: (contentId: string | number, contentType: string) => Promise<void>,
+  showQuizForRecentContent?: () => Promise<void>,
+  nextQuizAt?: number,
+  feedLocked?: boolean
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [scrollCount, setScrollCount] = useState(0);
@@ -180,9 +184,12 @@ function useContentTracking(
             scroll_position: newIndex
           }
         );
+
+        // Record content view in database for quiz system
+        recordContentView?.(currentItem.id, currentItem.type);
       }
 
-      // Track scroll activity
+      // Track scroll activity and check for quiz triggers
       if (newIndex > oldIndex) {
         const newScrollCount = scrollCount + 1;
         setScrollCount(newScrollCount);
@@ -193,9 +200,19 @@ function useContentTracking(
           to_index: newIndex,
           content_type: currentItem?.type
         });
+
+        // Check if it's time to show a quiz - MUST have at least required scrolls AND viewed content
+        if (!feedLocked && 
+            nextQuizAt && 
+            newScrollCount >= nextQuizAt && 
+            newScrollCount % 8 === 0 && 
+            showQuizForRecentContent) {
+          console.log(`🎯 Quiz trigger: scrollCount=${newScrollCount}, nextQuizAt=${nextQuizAt}`);
+          showQuizForRecentContent();
+        }
       }
     }
-  }, [currentIndex, scrollCount, feedManager, trackScroll, trackInteraction, trackContentEngagement]);
+  }, [currentIndex, scrollCount, feedManager, trackScroll, trackInteraction, trackContentEngagement, recordContentView, showQuizForRecentContent, nextQuizAt, feedLocked]);
 
   const handleUserInteraction = useCallback((contentId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => {
     trackInteraction?.(action, {
@@ -229,9 +246,11 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   // Comments modal state
   const [commentsArticleId, setCommentsArticleId] = useState<number | null>(null);
 
-  // Quiz state (simplified)
+  // Quiz state with full functionality
   const [quizVisible, setQuizVisible] = useState(false);
   const [quizQuestion, setQuizQuestion] = useState<QuizQuestion | null>(null);
+  const [feedLocked, setFeedLocked] = useState(false);
+  const [nextQuizAt, setNextQuizAt] = useState(8);
 
   // Create feed manager
   const feedManager = useMemo(() => {
@@ -243,31 +262,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     return new FeedManager(user.id, industryIds, allIndustries);
   }, [user, industries, allIndustries]);
 
-  // Use custom hooks for data and tracking
-  const {
-    feedItems,
-    isLoading,
-    isLoadingMore,
-    isRefreshing,
-    hasMore,
-    loadInitialContent,
-    loadMoreContent,
-    refreshContent
-  } = useFeedData(feedManager, initialArticleId, initialContentType);
-
-  const {
-    currentIndex,
-    handleViewableItemsChanged,
-    handleUserInteraction
-  } = useContentTracking(feedManager, trackScroll, trackInteraction, trackContentEngagement);
-
-  // Load initial content when feed manager is ready
-  useEffect(() => {
-    if (feedManager) {
-      loadInitialContent();
-    }
-  }, [feedManager, loadInitialContent]);
-
   // Memoized callbacks
   const handleOpenComments = useCallback((articleId: number) => {
     setCommentsArticleId(articleId);
@@ -277,10 +271,161 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     setCommentsArticleId(null);
   }, []);
 
-  const handleCommentsCountChange = useCallback((count: number) => {
+  const handleCommentsCountChange = useCallback((_count: number) => {
     // Update comment count in feed items - simple approach
     // In a production app, you might want to use a state management solution here
   }, []);
+
+  // Record content view in database for quiz system
+  const recordContentView = useCallback(async (contentId: string | number, contentType: string) => {
+    if (!user) return;
+    
+    try {
+      await supabase.rpc('record_content_view', {
+        p_user_id: user.id,
+        p_content_type: contentType,
+        p_content_id: contentId,
+        p_view_duration: 3
+      });
+    } catch (error) {
+      console.error('Error recording content view:', error);
+    }
+  }, [user]);
+
+  // Get quiz question for a specific piece of content
+  const getQuizForContent = useCallback(async (contentItem: FeedItem): Promise<QuizQuestion | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('quiz_questions')
+        .select('*')
+        .eq('content_type', contentItem.type)
+        .eq('content_id', contentItem.id)
+        .maybeSingle();
+
+      if (error || !data) {
+        console.log('No quiz found for content:', contentItem.type, contentItem.id);
+        return null;
+      }
+
+      // Validate that all options are present and non-empty
+      const options = [data.option_a, data.option_b, data.option_c, data.option_d];
+      const hasValidOptions = options.every(option => option && option.trim().length > 0);
+      
+      if (!hasValidOptions) {
+        console.log('Quiz has blank options, skipping:', data.id);
+        return null;
+      }
+
+      // Validate that the question text exists and correct_option_index is valid
+      if (!data.question || data.question.trim().length === 0) {
+        console.log('Quiz has blank question, skipping:', data.id);
+        return null;
+      }
+
+      if (data.correct_option_index < 0 || data.correct_option_index > 3) {
+        console.log('Quiz has invalid correct_option_index, skipping:', data.id);
+        return null;
+      }
+
+      return {
+        id: data.id,
+        question: data.question,
+        option_a: data.option_a,
+        option_b: data.option_b, 
+        option_c: data.option_c,
+        option_d: data.option_d,
+        correct_option_index: data.correct_option_index,
+        content_type: data.content_type,
+        content_id: data.content_id,
+        content_title: 'title' in contentItem ? contentItem.title : 'Content'
+      };
+    } catch (error) {
+      console.error('Error fetching quiz question:', error);
+      return null;
+    }
+  }, []);
+
+  // Show quiz for recently viewed content
+  const showQuizForRecentContent = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      // Get recently viewed content from database
+      const { data: recentlyViewed, error } = await supabase.rpc('get_recently_viewed_content', {
+        p_user_id: user.id,
+        p_limit: nextQuizAt
+      });
+      
+      if (error || !recentlyViewed || recentlyViewed.length === 0) return;
+      
+      // Filter to only content types that have quizzes (articles, papers, books - not insights)
+      const quizEligibleContent = recentlyViewed.filter((content: any) => 
+        ['article', 'paper', 'book'].includes(content.content_type)
+      );
+      
+      if (quizEligibleContent.length === 0) return;
+      
+      // Randomly select one piece of recently viewed content to quiz on
+      const randomViewedContent = quizEligibleContent[Math.floor(Math.random() * Math.min(5, quizEligibleContent.length))];
+      
+      // Get quiz question for this content
+      const quiz = await getQuizForContent({
+        id: randomViewedContent.content_id,
+        type: randomViewedContent.content_type,
+        title: randomViewedContent.content_title || 'Recently viewed content'
+      } as FeedItem);
+      
+      if (quiz) {
+        setQuizQuestion(quiz);
+        setQuizVisible(true);
+        setFeedLocked(true);
+      }
+    } catch (error) {
+      console.error('Error showing quiz for recent content:', error);
+    }
+  }, [user, nextQuizAt, getQuizForContent]);
+
+  // Handle quiz close
+  const handleQuizClose = useCallback(() => {
+    setQuizVisible(false);
+    setFeedLocked(false);
+    setQuizQuestion(null);
+    // Reset quiz timing - next quiz after another 8+ scrolls
+    setNextQuizAt(nextQuizAt + 8);
+  }, [nextQuizAt]);
+
+  // Use custom hooks for data and tracking
+  const {
+    feedItems,
+    isLoading,
+    isLoadingMore,
+    isRefreshing,
+    loadInitialContent,
+    loadMoreContent,
+    refreshContent
+  } = useFeedData(feedManager, initialArticleId, initialContentType);
+
+  const {
+    currentIndex,
+    handleViewableItemsChanged,
+    handleUserInteraction
+  } = useContentTracking(
+    feedManager, 
+    trackScroll, 
+    trackInteraction, 
+    trackContentEngagement,
+    recordContentView,
+    showQuizForRecentContent,
+    nextQuizAt,
+    feedLocked
+  );
+
+  // Load initial content when feed manager is ready
+  useEffect(() => {
+    if (feedManager) {
+      loadInitialContent();
+    }
+  }, [feedManager, loadInitialContent]);
 
   // Memoized render functions
   const renderItem = useCallback(({ item, index }: { item: FeedItem; index: number }) => {
@@ -352,6 +497,18 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
   // Empty state
   if (feedItems.length === 0) {
+    console.error('📱 MainFeed: SHOWING "No content available" screen');
+    console.error('📱 MainFeed: Debug info:', {
+      feedManagerExists: !!feedManager,
+      userIndustries: industries.map(i => i.id),
+      allIndustriesCount: allIndustries.length,
+      hasUser: !!user
+    });
+    
+    if (feedManager) {
+      console.error('📱 MainFeed: FeedManager debug info:', feedManager.getDebugInfo());
+    }
+    
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
         <Text style={[styles.emptyText, { color: colors.text }]}>
@@ -405,10 +562,10 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         }
       />
 
-      {/* Quiz Modal - Simplified */}
+      {/* Quiz Modal - With full functionality */}
       <QuizCard 
         visible={quizVisible} 
-        onClose={() => setQuizVisible(false)} 
+        onClose={handleQuizClose} 
         question={quizQuestion} 
       />
     </>

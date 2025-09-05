@@ -28,13 +28,13 @@ export const profileImageService = {
 
   /**
    * Upload profile image to Supabase storage.
-   * Returns the public URL of the uploaded image.
+   * Returns the public URL and path of the uploaded image.
    */
   async uploadProfileImage(
     userId: string, 
     imageUri: string, 
     fileName?: string
-  ): Promise<{ path: string | null; error: Error | null }> {
+  ): Promise<{ url: string | null; path: string | null; error: Error | null }> {
     try {
       const finalFileName = fileName || `${userId}-${Date.now()}.jpg`;
       
@@ -50,13 +50,30 @@ export const profileImageService = {
 
       if (error) {
         console.error('Error uploading profile image:', error);
-        return { path: null, error };
+        return { url: null, path: null, error };
       }
 
-      return { path: data.path, error: null };
+      // Update user's avatar_url in the profiles table
+      const updateSuccess = await this.updateUserAvatarUrl(userId, data.path);
+      if (!updateSuccess) {
+        return { 
+          url: null, 
+          path: null, 
+          error: new Error('Failed to update user avatar URL in database') 
+        };
+      }
+
+      // Generate public URL
+      const publicUrl = this.getProfileImageUrl(data.path);
+      
+      return { 
+        url: publicUrl, 
+        path: data.path, 
+        error: null 
+      };
     } catch (error) {
       console.error('Exception uploading profile image:', error);
-      return { path: null, error: error as Error };
+      return { url: null, path: null, error: error as Error };
     }
   },
 
