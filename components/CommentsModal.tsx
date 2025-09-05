@@ -187,7 +187,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
           .from(tableCfg.commentTable)
           .select(`id, user_id, ${tableCfg.idField}, content, created_at`)
           .eq(tableCfg.idField, vid)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: true }); // Oldest first (first comment at top)
         
         if (error) {
           setComments([]);
@@ -328,7 +328,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
             reply_count: 0,
             hasLiked: false
           };
-          setComments((prev) => [newComment, ...prev]);
+          setComments((prev) => [...prev, newComment]); // Add new comments at the bottom
           setInput('');
           // Dismiss keyboard only after successful submission
           Keyboard.dismiss();

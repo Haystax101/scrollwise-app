@@ -136,7 +136,6 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
   }, [user, book.id, onUserInteraction, hasLiked, hasSaved, likes, saves]);
 
   const handleCommentsPress = () => onOpenComments?.(book.id);
-  const handleReadMorePress = () => { if (book.link) Linking.openURL(book.link); };
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     if (viewableItems.length > 0 && viewableItems[0].index !== null) {
@@ -214,8 +213,6 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
     actionGroup: { flexDirection: 'row', alignItems: 'center' },
     actionButton: { padding: 8 },
     actionText: { color: colors.textSecondary, fontSize: 12, marginLeft: 4, fontWeight: '500' },
-    readMoreButton: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 16 },
-    readMoreButtonText: { color: colors.readButtonText, fontSize: 14, fontWeight: '600' },
   });
 
   return (
@@ -278,11 +275,6 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
             </TouchableOpacity>
             <Text style={dynamicStyles.actionText}>{saves}</Text>
           </View>
-          {book.link && (
-            <TouchableOpacity style={dynamicStyles.readMoreButton} onPress={handleReadMorePress}>
-              <Text style={dynamicStyles.readMoreButtonText}>Read More</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
     </View>

@@ -270,6 +270,8 @@ export class FeedManager {
    */
   async fetchSpecificContent(contentId: string | number, contentType: 'article' | 'paper' | 'book' | 'insight'): Promise<FeedItem | null> {
     try {
+      console.log(`🔍 FeedManager: Fetching specific ${contentType} with ID: ${contentId} (type: ${typeof contentId})`);
+      
       const tableName = contentType === 'paper' ? 'papers' : 
                        contentType === 'book' ? 'books' : 
                        contentType === 'insight' ? 'insights' : 'articles';
@@ -296,16 +298,23 @@ export class FeedManager {
           .single();
       }
 
+      console.log(`🔍 FeedManager: Querying ${tableName} table for ID: ${contentId}`);
       const { data, error } = await query;
 
-      if (error || !data) {
-        console.log(`📡 FeedManager: Content not found: ${contentType} ${contentId}`);
+      if (error) {
+        console.error(`📡 FeedManager: Query error for ${contentType} ${contentId}:`, error);
         return null;
       }
 
+      if (!data) {
+        console.log(`📡 FeedManager: No data found for ${contentType} ${contentId}`);
+        return null;
+      }
+
+      console.log(`✅ FeedManager: Successfully found ${contentType} ${contentId}`);
       return this.convertToFeedItem(data, contentType);
     } catch (error) {
-      console.error(`📡 FeedManager: Error fetching specific ${contentType}:`, error);
+      console.error(`📡 FeedManager: Exception fetching specific ${contentType} ${contentId}:`, error);
       return null;
     }
   }

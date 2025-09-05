@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import SettingsModal from '../SettingsModal';
 import { AchievementService, UserAchievement } from '../../services/achievementService';
@@ -92,6 +92,12 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [userLevel, setUserLevel] = useState<number>(1);
   const [spendableVoltz, setSpendableVoltz] = useState<number>(0);
   const [levelProgress, setLevelProgress] = useState<number>(0);
+
+  // Refs to track subscription state and component lifecycle
+  const achievementsSubscriptionRef = useRef<any>(null);
+  const profileChannelRef = useRef<any>(null);
+  const isMountedRef = useRef(true);
+
   
   // Component data states
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
@@ -112,20 +118,32 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
   const [showCareerGoalModal, setShowCareerGoalModal] = useState(false);
 
+  // Component lifecycle management
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Get current user
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
-      setCurrentUser(data?.user || null);
+      if (isMountedRef.current) {
+        setCurrentUser(data?.user || null);
+      }
     };
     getUser();
   }, []);
 
   // Fetch all profile data
   const fetchProfileData = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUser || !isMountedRef.current) return;
     
-    setLoading(true);
+    if (isMountedRef.current) {
+      setLoading(true);
+    }
     try {
       // Fetch basic profile info
       const { data: profileData, error: profileError } = await supabase
@@ -136,7 +154,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
       if (profileError) {
         console.error('Error fetching profile:', profileError);
-      } else if (profileData) {
+      } else if (profileData && isMountedRef.current) {
         setFullName(profileData.full_name || '');
         // Use profile image service to get proper URL with default fallback
         setAvatarUrl(profileImageService.getProfileImageUrl(profileData.avatar_url));
@@ -144,10 +162,12 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
       // Fetch comprehensive voltz stats using voltzService
       const voltzStats = await voltzService.getVoltzStats(currentUser.id);
-      setTotalVoltzEarned(voltzStats.totalVoltzEarned);
-      setUserLevel(voltzStats.level);
-      setSpendableVoltz(voltzStats.spendableVoltz);
-      setLevelProgress(voltzStats.levelProgress);
+      if (isMountedRef.current) {
+        setTotalVoltzEarned(voltzStats.totalVoltzEarned);
+        setUserLevel(voltzStats.level);
+        setSpendableVoltz(voltzStats.spendableVoltz);
+        setLevelProgress(voltzStats.levelProgress);
+      }
 
       // CRITICAL: Proper update sequence for real-time changes
       try {
@@ -164,18 +184,24 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           // Step 2: If achievements were awarded, immediately refresh voltz stats to get updated level
           console.log('Refreshing voltz stats after achievement awards...');
           const updatedVoltzStats = await voltzService.getVoltzStats(currentUser.id);
-          setTotalVoltzEarned(updatedVoltzStats.totalVoltzEarned);
-          setUserLevel(updatedVoltzStats.level);
-          setSpendableVoltz(updatedVoltzStats.spendableVoltz);
-          setLevelProgress(updatedVoltzStats.levelProgress);
+          if (isMountedRef.current) {
+            setTotalVoltzEarned(updatedVoltzStats.totalVoltzEarned);
+            setUserLevel(updatedVoltzStats.level);
+            setSpendableVoltz(updatedVoltzStats.spendableVoltz);
+            setLevelProgress(updatedVoltzStats.levelProgress);
+          }
         }
         
         // Step 3: Fetch all user achievements (including any newly awarded ones)
         const achievementsData = await AchievementService.getUserAchievements(currentUser.id);
-        setAchievements(achievementsData);
+        if (isMountedRef.current) {
+          setAchievements(achievementsData);
+        }
       } catch (achievementsError) {
         console.error('Error fetching achievements:', achievementsError);
-        setAchievements([]);
+        if (isMountedRef.current) {
+          setAchievements([]);
+        }
       }
 
       // Step 4: Check onboarding progress based on achievements
@@ -187,15 +213,19 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         await onboardingService.checkAndAwardCompletion(currentUser.id);
         
         // Show onboarding card for users who haven't completed all steps
-        if (!onboardingProgress || !onboardingProgress.is_completed) {
-          setShowOnboardingProgress(true);
-        } else {
-          setShowOnboardingProgress(false);
+        if (isMountedRef.current) {
+          if (!onboardingProgress || !onboardingProgress.is_completed) {
+            setShowOnboardingProgress(true);
+          } else {
+            setShowOnboardingProgress(false);
+          }
         }
       } catch (onboardingError) {
         console.error('Error handling onboarding progress:', onboardingError);
         // Default to showing onboarding for new users
-        setShowOnboardingProgress(true);
+        if (isMountedRef.current) {
+          setShowOnboardingProgress(true);
+        }
       }
 
       // Fetch career goals using the enhanced schema
@@ -204,7 +234,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
       if (careerGoalsError) {
         console.error('Error fetching career goals:', careerGoalsError);
-      } else if (careerGoalsData && careerGoalsData.length > 0) {
+      } else if (careerGoalsData && careerGoalsData.length > 0 && isMountedRef.current) {
         const goalData = careerGoalsData[0]; // Get primary career goal
         setCareerGoal({
           goal: goalData.goal,
@@ -221,7 +251,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
       if (industriesError) {
         console.error('Error fetching industries:', industriesError);
-      } else {
+      } else if (isMountedRef.current) {
         const formattedIndustries = (industriesData || []).map((ui: any) => ({
           id: ui.industries.id,
           name: ui.industries.name,
@@ -297,11 +327,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         console.error('Error fetching streak data:', streakError);
       }
 
-      setLearningStats({
-        currentStreak: streakData?.current_streak || 1, // Default to 1 if no streak data
-        totalInteractions,
-        achievementsCount: achievementsCountData?.length || 0
-      });
+      if (isMountedRef.current) {
+        setLearningStats({
+          currentStreak: streakData?.current_streak || 1, // Default to 1 if no streak data
+          totalInteractions,
+          achievementsCount: achievementsCountData?.length || 0
+        });
+      }
 
       // Fetch enhanced profile data from new schema
       const [sectionsRes, skillsRes, experiencesRes, educationRes, projectsRes] = await Promise.all([
@@ -421,12 +453,16 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         }));
       }
       
-      setProfileData(sectionMap);
+      if (isMountedRef.current) {
+        setProfileData(sectionMap);
+      }
 
     } catch (error) {
       console.error('Error fetching profile data:', error);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [currentUser]);
 
@@ -447,114 +483,168 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     }
   }, [fetchProfileData, currentUser?.id]);
 
-  // Set up real-time subscription for achievements
-  useEffect(() => {
-    if (!currentUser?.id) return;
+  // Set up real-time subscription for achievements using useFocusEffect
+  useFocusEffect(
+    useCallback(() => {
+      if (!currentUser?.id || !isMountedRef.current) return;
 
-    const subscription = AchievementService.subscribeToUserAchievements(
-      currentUser.id,
-      (newAchievement) => {
-        console.log('🏆 New achievement earned:', newAchievement.title);
-        
-        // Track achievement earned event
-        analytics.track(ANALYTICS_EVENTS.ACHIEVEMENT_EARNED, {
-          user_id: currentUser.id,
-          achievement_id: newAchievement.achievement_id,
-          achievement_title: newAchievement.title,
-          achievement_type: newAchievement.achievement_type,
-          timestamp: new Date().toISOString()
-        });
-        
-        // Add new achievement to the list
-        setAchievements(prev => [newAchievement, ...prev]);
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [currentUser?.id]);
-
-  // Set up real-time subscription for profile changes (voltz and level updates)
-  useEffect(() => {
-    if (!currentUser?.id) return;
-    
-    const profileChannel = supabase
-      .channel('profile-updates')
-      .on('postgres_changes', 
-        { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'profiles', 
-          filter: `id=eq.${currentUser.id}` 
-        },
-        async (payload) => {
-          console.log('⚡ Profile updated:', payload.new);
-          
-          // Track level up if level increased
-          if (payload.new.level !== undefined && payload.new.level > userLevel) {
-            analytics.track(ANALYTICS_EVENTS.LEVEL_UP, {
-              user_id: currentUser.id,
-              previous_level: userLevel,
-              new_level: payload.new.level,
-              total_voltz_earned: payload.new.total_voltz_earned,
-              timestamp: new Date().toISOString()
-            });
-          }
-          
-          // Update immediate state values
-          if (payload.new.total_voltz_earned !== undefined) {
-            setTotalVoltzEarned(payload.new.total_voltz_earned);
-          }
-          if (payload.new.level !== undefined) {
-            setUserLevel(payload.new.level);
-          }
-          if (payload.new.spendable_voltz !== undefined) {
-            setSpendableVoltz(payload.new.spendable_voltz);
-          }
-          
-          // Refresh comprehensive voltz stats to get updated progress calculations
-          try {
-            const voltzStats = await voltzService.getVoltzStats(currentUser.id);
-            setLevelProgress(voltzStats.levelProgress);
-          } catch (error) {
-            console.error('Error refreshing voltz stats after profile update:', error);
-          }
+      // Clean up existing subscription first
+      if (achievementsSubscriptionRef.current) {
+        try {
+          achievementsSubscriptionRef.current.unsubscribe();
+        } catch (error) {
+          console.warn('Error unsubscribing from achievements:', error);
         }
-      )
-      .subscribe();
+        achievementsSubscriptionRef.current = null;
+      }
 
-    return () => {
-      supabase.removeChannel(profileChannel);
-    };
-  }, [currentUser?.id]);
+      const subscription = AchievementService.subscribeToUserAchievements(
+        currentUser.id,
+        (newAchievement) => {
+          // Only update state if component is still mounted
+          if (!isMountedRef.current) return;
+          
+          console.log('🏆 New achievement earned:', newAchievement.title);
+          
+          // Track achievement earned event
+          analytics.track(ANALYTICS_EVENTS.ACHIEVEMENT_EARNED, {
+            user_id: currentUser.id,
+            achievement_id: newAchievement.achievement_id,
+            achievement_title: newAchievement.title,
+            achievement_type: newAchievement.achievement_type,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Add new achievement to the list
+          setAchievements(prev => [newAchievement, ...prev]);
+        }
+      );
+
+      achievementsSubscriptionRef.current = subscription;
+
+      return () => {
+        if (achievementsSubscriptionRef.current) {
+          try {
+            achievementsSubscriptionRef.current.unsubscribe();
+          } catch (error) {
+            console.warn('Error unsubscribing from achievements:', error);
+          }
+          achievementsSubscriptionRef.current = null;
+        }
+      };
+    }, [currentUser?.id])
+  );
+
+  // Set up real-time subscription for profile changes (voltz and level updates) using useFocusEffect
+  useFocusEffect(
+    useCallback(() => {
+      if (!currentUser?.id || !isMountedRef.current) return;
+      
+      // Clean up existing channel first
+      if (profileChannelRef.current) {
+        try {
+          supabase.removeChannel(profileChannelRef.current);
+        } catch (error) {
+          console.warn('Error removing profile channel:', error);
+        }
+        profileChannelRef.current = null;
+      }
+      
+      const profileChannel = supabase
+        .channel(`profile-updates-${currentUser.id}-${Date.now()}`) // Unique channel name with timestamp
+        .on('postgres_changes', 
+          { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'profiles', 
+            filter: `id=eq.${currentUser.id}` 
+          },
+          async (payload) => {
+            // Only update state if component is still mounted
+            if (!isMountedRef.current) return;
+            
+            console.log('⚡ Profile updated:', payload.new);
+            
+            // Track level up if level increased
+            if (payload.new.level !== undefined && payload.new.level > userLevel) {
+              analytics.track(ANALYTICS_EVENTS.LEVEL_UP, {
+                user_id: currentUser.id,
+                previous_level: userLevel,
+                new_level: payload.new.level,
+                total_voltz_earned: payload.new.total_voltz_earned,
+                timestamp: new Date().toISOString()
+              });
+            }
+            
+            // Update immediate state values
+            if (payload.new.total_voltz_earned !== undefined) {
+              setTotalVoltzEarned(payload.new.total_voltz_earned);
+            }
+            if (payload.new.level !== undefined) {
+              setUserLevel(payload.new.level);
+            }
+            if (payload.new.spendable_voltz !== undefined) {
+              setSpendableVoltz(payload.new.spendable_voltz);
+            }
+            
+            // Refresh comprehensive voltz stats to get updated progress calculations
+            try {
+              const voltzStats = await voltzService.getVoltzStats(currentUser.id);
+              if (isMountedRef.current) {
+                setLevelProgress(voltzStats.levelProgress);
+              }
+            } catch (error) {
+              console.error('Error refreshing voltz stats after profile update:', error);
+            }
+          }
+        )
+        .subscribe();
+
+      profileChannelRef.current = profileChannel;
+
+      return () => {
+        if (profileChannelRef.current) {
+          try {
+            supabase.removeChannel(profileChannelRef.current);
+          } catch (error) {
+            console.warn('Error removing profile channel:', error);
+          }
+          profileChannelRef.current = null;
+        }
+      };
+    }, [currentUser?.id, userLevel])
+  );
 
   // Event handlers
-  const handleAvatarPress = () => {
-    setShowPhotoUpload(true);
-  };
-
   const handlePhotoUploaded = (imageUrl: string) => {
-    setAvatarUrl(imageUrl);
+    if (isMountedRef.current) {
+      setAvatarUrl(imageUrl);
+    }
   };
-
-
 
   const handleEditCareerGoal = () => {
-    setShowCareerGoalModal(true);
+    if (isMountedRef.current) {
+      setShowCareerGoalModal(true);
+    }
   };
 
   const handleCareerGoalSave = (goalData: CareerGoal) => {
-    setCareerGoal(goalData);
-    // Refresh profile data to ensure consistency
-    fetchProfileData();
+    if (isMountedRef.current) {
+      setCareerGoal(goalData);
+      // Refresh profile data to ensure consistency
+      fetchProfileData();
+    }
   };
 
   const handleEditIndustries = () => {
-    setShowIndustrySelection(true);
+    if (isMountedRef.current) {
+      setShowIndustrySelection(true);
+    }
   };
 
   const handleIndustrySave = async (selectedIndustries: any[]) => {
+    if (!isMountedRef.current) return;
+    
     // Update local state
     const formattedIndustries = selectedIndustries.map(industry => ({
       name: industry.name,

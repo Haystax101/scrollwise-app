@@ -430,8 +430,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           )
         `)
         .eq('insight_id', insight.id)
-        .order('likes_count', { ascending: false })
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: true }) // Always show the first comment (chronologically)
         .limit(1)
         .maybeSingle();
 

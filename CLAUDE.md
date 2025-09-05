@@ -31,5 +31,5 @@
 
 ## Testing Commands
 
-- Run lint: Check README or search codebase for correct command
-- Run typecheck: Check README or search codebase for correct command
+- Run lint: Check README or search codebase for correct command  
+- Run typecheck: `npx tsc --noEmit`

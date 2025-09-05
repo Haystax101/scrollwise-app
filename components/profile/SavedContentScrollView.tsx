@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
 import { Feather, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
@@ -56,14 +56,21 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
   const [savedContent, setSavedContent] = useState<SavedContent[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Add refs for component lifecycle management
+  const isMountedRef = useRef(true);
+
   const fetchSavedContent = useCallback(async () => {
     if (!user) {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
       return;
     }
 
     try {
-      setLoading(true);
+      if (isMountedRef.current) {
+        setLoading(true);
+      }
       
       // Fetch saved articles, papers, and books in parallel
       const [articlesRes, papersRes, booksRes] = await Promise.all([
@@ -162,17 +169,27 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
 
       // Sort by saved date and limit to 8 most recent items
       allSavedContent.sort((a, b) => new Date(b.saved_at).getTime() - new Date(a.saved_at).getTime());
-      setSavedContent(allSavedContent.slice(0, 8));
+      
+      if (isMountedRef.current) {
+        setSavedContent(allSavedContent.slice(0, 8));
+      }
 
     } catch (error) {
       console.error('Error fetching saved content:', error);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [user]);
 
   useEffect(() => {
     fetchSavedContent();
+    
+    // Cleanup function for component unmount
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [fetchSavedContent]);
 
   const getTypeIcon = (type: string) => {
@@ -189,6 +206,11 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
   };
 
   const handleContentPress = (content: SavedContent) => {
+    // Only navigate if component is still mounted
+    if (!isMountedRef.current) {
+      return;
+    }
+    
     // Navigate to the appropriate content view in the feed
     router.push({
       pathname: '/feed',
@@ -199,7 +221,7 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
     });
   };
 
-  const renderSavedContentItem = (content: SavedContent, index: number) => {
+  const renderSavedContentItem = (content: SavedContent) => {
     const industryName = allIndustries.find(ind => ind.id === content.industry_id)?.name;
     const optimizedIndustryName = industryName ? optimizeIndustryName(industryName) : undefined;
     const industryColor = getIndustryColor(content.industry_id);
@@ -303,7 +325,7 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {savedContent.map((content, index) => renderSavedContentItem(content, index))}
+        {savedContent.map((content) => renderSavedContentItem(content))}
       </ScrollView>
     </View>
   );

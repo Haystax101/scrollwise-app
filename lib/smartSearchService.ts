@@ -51,6 +51,17 @@ export interface SearchFilters {
 /**
  * Immediate keyword search for typing (free for all users)
  */
+/**
+ * Process search results from Edge Function
+ * The RPC functions already return correct content_type, so we just ensure type field matches
+ */
+function processSearchResults(results: SearchResult[]): SearchResult[] {
+  return results.map(result => ({
+    ...result,
+    type: (result.content_type || result.type) as 'article' | 'paper' | 'book'
+  }));
+}
+
 export async function immediateKeywordSearch(
   query: string,
   industryId?: string,
@@ -77,7 +88,16 @@ export async function immediateKeywordSearch(
       };
     }
 
-    return data;
+    // Fix content types before returning
+    const processedData = {
+      ...data,
+      results: processSearchResults(data.results || [])
+    };
+
+    console.log(`🔍 Search: Fixed ${processedData.results.length} results with correct types:`, 
+      processedData.results.map((r: SearchResult) => `${r.type}:${r.id}`).join(', '));
+
+    return processedData;
   } catch (error) {
     console.error('Immediate keyword search exception:', error);
     return { 
@@ -122,7 +142,16 @@ export async function progressiveSearch(
       };
     }
 
-    return data;
+    // Fix content types before returning
+    const processedData = {
+      ...data,
+      results: processSearchResults(data.results || [])
+    };
+
+    console.log(`🔍 Progressive Search: Fixed ${processedData.results.length} results with correct types:`, 
+      processedData.results.map((r: SearchResult) => `${r.type}:${r.id}`).join(', '));
+
+    return processedData;
   } catch (error) {
     console.error('Progressive search exception:', error);
     return { 
@@ -158,7 +187,16 @@ export async function getRecentContent(): Promise<SearchResponse> {
       };
     }
 
-    return data;
+    // Fix content types before returning
+    const processedData = {
+      ...data,
+      results: processSearchResults(data.results || [])
+    };
+
+    console.log(`🔍 Recent Content: Fixed ${processedData.results.length} results with correct types:`, 
+      processedData.results.map((r: SearchResult) => `${r.type}:${r.id}`).join(', '));
+
+    return processedData;
   } catch (error) {
     console.error('Recent content exception:', error);
     return { 

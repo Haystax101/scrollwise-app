@@ -57,12 +57,16 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
 
       // If we have an initial content ID, fetch it first
       if (initialContentId && initialContentType) {
+        console.log(`🎯 MainFeed: Loading initial content - ID: ${initialContentId} (type: ${typeof initialContentId}), Type: ${initialContentType}`);
         const specificContent = await feedManager.fetchSpecificContent(
           initialContentId, 
           initialContentType as 'article' | 'paper' | 'book' | 'insight'
         );
         if (specificContent) {
+          console.log(`✅ MainFeed: Successfully loaded initial content: ${specificContent.type} ${specificContent.id}`);
           initialContent = [specificContent];
+        } else {
+          console.error(`❌ MainFeed: Failed to load initial content: ${initialContentType} ${initialContentId}`);
         }
       }
 
