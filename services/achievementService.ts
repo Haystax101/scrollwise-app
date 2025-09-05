@@ -31,6 +31,27 @@ export interface UserAchievement {
   unlock_context?: Record<string, any>;
 }
 
+export interface EnhancedAchievement {
+  id: string;
+  name: string;
+  description: string;
+  icon_name: string;
+  category: 'learning' | 'engagement' | 'streak' | 'milestone' | 'social' | 'skill' | 'completion';
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  criteria: Record<string, any>;
+  voltz_reward: number;
+  is_secret: boolean;
+  unlock_order: number;
+  isEarned: boolean;
+  earnedAt?: string;
+  userAchievementId?: string;
+  progress?: {
+    current: number;
+    target: number;
+    percentage: number;
+  };
+}
+
 export interface AchievementProgress {
   id: string;
   user_id: string;
@@ -141,7 +162,7 @@ export class AchievementService {
         .select('*')
         .eq('user_id', userId);
 
-      if (achievementId) {
+      if (achievementId && achievementId.trim() !== '') {
         query = query.eq('achievement_id', achievementId);
       }
 
@@ -320,6 +341,73 @@ export class AchievementService {
   ): number {
     if (availableAchievements.length === 0) return 0;
     return Math.round((userAchievements.length / availableAchievements.length) * 100);
+  }
+
+  // Get all achievements with user progress (earned + unearned)
+  static async getAllAchievementsWithProgress(userId: string): Promise<EnhancedAchievement[]> {
+    try {
+      // Fetch all available achievements
+      const availableAchievements = await this.getAvailableAchievements();
+      
+      // Fetch user's earned achievements
+      const userAchievements = await this.getUserAchievements(userId);
+      
+      // Fetch user's achievement progress
+      const achievementProgress = await this.getAchievementProgress(userId);
+      
+      // Create a map of earned achievements for quick lookup
+      const earnedAchievementMap = new Map<string, UserAchievement>();
+      userAchievements.forEach(userAch => {
+        if (userAch.achievement_id) {
+          earnedAchievementMap.set(userAch.achievement_id, userAch);
+        }
+      });
+      
+      // Create a map of progress for quick lookup
+      const progressMap = new Map<string, AchievementProgress>();
+      achievementProgress.forEach(progress => {
+        progressMap.set(progress.achievement_id, progress);
+      });
+      
+      // Merge data to create enhanced achievements
+      const enhancedAchievements: EnhancedAchievement[] = availableAchievements.map(achievement => {
+        const userAchievement = earnedAchievementMap.get(achievement.id);
+        const progress = progressMap.get(achievement.id);
+        
+        return {
+          id: achievement.id,
+          name: achievement.name,
+          description: achievement.description,
+          icon_name: achievement.icon_name,
+          category: achievement.category,
+          rarity: achievement.rarity,
+          criteria: achievement.criteria,
+          voltz_reward: achievement.voltz_reward,
+          is_secret: achievement.is_secret,
+          unlock_order: achievement.unlock_order,
+          isEarned: !!userAchievement,
+          earnedAt: userAchievement?.earned_at,
+          userAchievementId: userAchievement?.id,
+          progress: progress ? {
+            current: progress.current_value,
+            target: progress.target_value,
+            percentage: Math.round((progress.current_value / progress.target_value) * 100)
+          } : undefined
+        };
+      });
+      
+      // Sort: earned first, then by unlock_order
+      return enhancedAchievements.sort((a, b) => {
+        if (a.isEarned === b.isEarned) {
+          return a.unlock_order - b.unlock_order;
+        }
+        return a.isEarned ? -1 : 1;
+      });
+      
+    } catch (error) {
+      console.error('Exception fetching all achievements with progress:', error);
+      return [];
+    }
   }
 
   // Get achievement statistics

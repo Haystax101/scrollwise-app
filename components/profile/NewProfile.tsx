@@ -820,7 +820,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         />
 
         <AchievementsBelt
-          achievements={achievements}
+          userId={currentUser?.id || ''}
           loading={loading}
         />
 

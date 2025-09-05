@@ -10,9 +10,27 @@ export const profileImageService = {
    */
   getProfileImageUrl(avatarUrl: string | null | undefined): string | null {
     if (avatarUrl && avatarUrl.trim() !== '') {
-      // Assuming avatarUrl is a path in Supabase storage
-      const { data } = supabase.storage.from('avatars').getPublicUrl(avatarUrl);
-      return data?.publicUrl || null;
+      try {
+        // Check if it's already a full URL (skip processing)
+        if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
+          return avatarUrl;
+        }
+        
+        // Assuming avatarUrl is a path in Supabase storage
+        const { data } = supabase.storage.from('avatars').getPublicUrl(avatarUrl);
+        const url = data?.publicUrl;
+        
+        if (url) {
+          console.log('Generated profile image URL:', url);
+          return url;
+        } else {
+          console.warn('Failed to generate public URL for avatar path:', avatarUrl);
+          return null;
+        }
+      } catch (error) {
+        console.error('Error generating profile image URL:', error);
+        return null;
+      }
     }
     return null;
   },
@@ -36,26 +54,52 @@ export const profileImageService = {
     fileName?: string
   ): Promise<{ url: string | null; path: string | null; error: Error | null }> {
     try {
-      const finalFileName = fileName || `${userId}-${Date.now()}.jpg`;
+      console.log('Starting profile image upload for user:', userId);
+      console.log('Image URI:', imageUri);
       
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
+      // Get file extension from URI
+      const fileExt = imageUri?.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const finalFileName = fileName || `${userId}-${Date.now()}.${fileExt}`;
       
+      console.log('Generated filename:', finalFileName);
+      
+      // Convert image URI to ArrayBuffer (proper React Native approach)
+      console.log('Converting image URI to ArrayBuffer...');
+      const arrayBuffer = await fetch(imageUri).then((res) => res.arrayBuffer());
+      
+      console.log('ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
+      
+      if (arrayBuffer.byteLength === 0) {
+        throw new Error('Image file is empty or could not be read');
+      }
+      
+      // Upload to Supabase Storage using ArrayBuffer
+      console.log('Uploading to Supabase storage bucket: avatars');
       const { data, error } = await supabase.storage
         .from('avatars')
-        .upload(finalFileName, blob, {
+        .upload(finalFileName, arrayBuffer, {
           cacheControl: '3600',
-          upsert: true
+          upsert: true,
+          contentType: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`
         });
 
       if (error) {
-        console.error('Error uploading profile image:', error);
+        console.error('Supabase storage upload error:', error);
         return { url: null, path: null, error };
       }
 
+      if (!data || !data.path) {
+        console.error('Upload succeeded but no path returned:', data);
+        return { url: null, path: null, error: new Error('Upload succeeded but no file path returned') };
+      }
+
+      console.log('File uploaded successfully to path:', data.path);
+
       // Update user's avatar_url in the profiles table
+      console.log('Updating user avatar_url in profiles table...');
       const updateSuccess = await this.updateUserAvatarUrl(userId, data.path);
       if (!updateSuccess) {
+        console.error('Failed to update user avatar URL in database');
         return { 
           url: null, 
           path: null, 
@@ -64,7 +108,14 @@ export const profileImageService = {
       }
 
       // Generate public URL
+      console.log('Generating public URL for uploaded image...');
       const publicUrl = this.getProfileImageUrl(data.path);
+      
+      console.log('Profile image upload completed successfully:', {
+        path: data.path,
+        publicUrl: publicUrl,
+        fileSize: arrayBuffer.byteLength
+      });
       
       return { 
         url: publicUrl, 
@@ -72,7 +123,12 @@ export const profileImageService = {
         error: null 
       };
     } catch (error) {
-      console.error('Exception uploading profile image:', error);
+      console.error('Exception during profile image upload:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        imageUri
+      });
       return { url: null, path: null, error: error as Error };
     }
   },
@@ -82,16 +138,23 @@ export const profileImageService = {
    */
   async updateUserAvatarUrl(userId: string, avatarPath: string): Promise<boolean> {
     try {
-      const { error } = await supabase
+      console.log('Updating profiles table with avatar_url:', {
+        userId,
+        avatarPath
+      });
+
+      const { data, error } = await supabase
         .from('profiles')
         .update({ avatar_url: avatarPath })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select();
 
       if (error) {
-        console.error('Error updating user avatar URL:', error);
+        console.error('Database error updating user avatar URL:', error);
         return false;
       }
 
+      console.log('Successfully updated user avatar URL in database:', data);
       return true;
     } catch (error) {
       console.error('Exception updating user avatar URL:', error);

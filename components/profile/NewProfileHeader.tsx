@@ -87,10 +87,15 @@ export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
     <View style={styles.container}>
       <TouchableOpacity style={styles.avatarContainer} onPress={onAvatarPress}>
         <Image
-          source={avatarUrl ? { uri: profileImageService.getProfileImageUrl(avatarUrl) } : require('../../assets/profileIconDefault.png')}
+          source={
+            avatarUrl 
+              ? { uri: profileImageService.getProfileImageUrl(avatarUrl) || undefined }
+              : require('../../assets/profileIconDefault.png')
+          }
           style={styles.avatar}
-          onError={() => {
-            console.log('Profile image failed to load, using default');
+          defaultSource={require('../../assets/profileIconDefault.png')}
+          onError={(error) => {
+            console.log('Profile image failed to load, using default:', error.nativeEvent.error);
           }}
         />
         <View style={styles.avatarEditOverlay}>
