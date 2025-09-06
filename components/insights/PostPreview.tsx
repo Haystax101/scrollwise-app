@@ -186,9 +186,9 @@ export const PostPreview: React.FC<Props> = ({
           {/* Post Header */}
           <View style={styles.postHeader}>
             <View style={styles.avatar}>
-              {userProfile?.avatar_url || user?.user_metadata?.profile_picture || user?.profile_picture ? (
+              {userProfile?.avatar_url || user?.user_metadata?.profile_picture ? (
                 <Image 
-                  source={{ uri: userProfile?.avatar_url || user?.user_metadata?.profile_picture || user?.profile_picture }} 
+                  source={{ uri: userProfile?.avatar_url || user?.user_metadata?.profile_picture }} 
                   style={styles.avatarImage}
                 />
               ) : (

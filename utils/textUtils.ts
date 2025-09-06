@@ -23,7 +23,7 @@ export const calculateDynamicTextLines = (options: DynamicTextOptions): number =
   const {
     hasAuthor = false,
     hasMultipleMetadataRows = false,
-    fontSize = 16,
+    fontSize = 16, // Keep this even if unused to avoid TS error
     lineHeight = 22,
     containerHeight = screenHeight * 0.55, // Content section height
     titleLines = 2,
@@ -32,6 +32,8 @@ export const calculateDynamicTextLines = (options: DynamicTextOptions): number =
     actionsHeight = 60, // Height for actions row
     padding = 32 // Total padding (top + bottom)
   } = options;
+
+  // fontSize parameter kept for interface compatibility, may be used in future calculations
 
   // Calculate space used by fixed elements
   const titleHeight = titleLines * 26; // Title line height is typically 26
