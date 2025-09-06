@@ -232,7 +232,7 @@ const Insights = () => {
       flex: 1,
     },
     contentContainer: {
-      paddingBottom: 100,
+      paddingBottom: 160,
     },
     sectionHeader: {
       flexDirection: 'row',

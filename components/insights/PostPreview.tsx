@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useInsightsTheme } from '../../lib/insightsTheme';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 interface MediaType {
   type: 'photo' | 'reel';
@@ -24,6 +25,29 @@ export const PostPreview: React.FC<Props> = ({
 }) => {
   const { colors, spacing, borderRadius } = useInsightsTheme();
   const { user } = useAuth();
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user?.id) {
+        try {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('id', user.id)
+            .single();
+
+          if (!error && profile) {
+            setUserProfile(profile);
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [user?.id]);
 
   const styles = StyleSheet.create({
     container: {
@@ -97,14 +121,6 @@ export const PostPreview: React.FC<Props> = ({
       fontSize: 12,
       color: colors.insightsTextSecondary,
     },
-    zapBadge: {
-      width: 24,
-      height: 24,
-      backgroundColor: colors.yellow[400],
-      borderRadius: borderRadius.full,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
     postContent: {
       padding: spacing.sm,
     },
@@ -170,9 +186,9 @@ export const PostPreview: React.FC<Props> = ({
           {/* Post Header */}
           <View style={styles.postHeader}>
             <View style={styles.avatar}>
-              {user?.user_metadata?.profile_picture || user?.profile_picture ? (
+              {userProfile?.avatar_url || user?.user_metadata?.profile_picture || user?.profile_picture ? (
                 <Image 
-                  source={{ uri: user?.user_metadata?.profile_picture || user?.profile_picture }} 
+                  source={{ uri: userProfile?.avatar_url || user?.user_metadata?.profile_picture || user?.profile_picture }} 
                   style={styles.avatarImage}
                 />
               ) : (
@@ -180,11 +196,7 @@ export const PostPreview: React.FC<Props> = ({
               )}
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{user?.user_metadata?.full_name || user?.full_name || 'Your Name'}</Text>
-              <Text style={styles.userTitle}>{user?.user_metadata?.title || user?.title || 'Professional'} • Just now</Text>
-            </View>
-            <View style={styles.zapBadge}>
-              <Feather name="zap" size={16} color={colors.black} />
+              <Text style={styles.userName}>{userProfile?.full_name || user?.user_metadata?.full_name || user?.full_name || user?.name || 'You'}</Text>
             </View>
           </View>
 

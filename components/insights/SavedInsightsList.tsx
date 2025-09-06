@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatNumber } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
 import { InsightOptionsModal } from './InsightOptionsModal';
 import { EditInsightModal } from './EditInsightModal';
+const defaultProfileImage = require('../../assets/profileIconDefault.png');
 
 interface SavedInsight {
   id: string;
@@ -46,28 +47,18 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
 
   
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatTimestamp = (timestamp: string): string => {
+    const date = new Date(timestamp);
     const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
     
-    if (diffDays === 1) return '1 day ago';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
-    return date.toLocaleDateString();
-  };
-
-  const getReadTime = (content: string): string => {
-    const wordsPerMinute = 200;
-    const words = content.split(' ').length;
-    const minutes = Math.ceil(words / wordsPerMinute);
-    return `${minutes} min read`;
-  };
-
-  const getTruncatedContent = (content: string, maxLength: number = 120): string => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes}m`;
+    } else if (diffInMinutes < 1440) {
+      return `${Math.floor(diffInMinutes / 60)}h`;
+    } else {
+      return `${Math.floor(diffInMinutes / 1440)}d`;
+    }
   };
 
 
@@ -146,106 +137,100 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
       textAlign: 'center',
     },
     insightCard: {
-      backgroundColor: isDark ? colors.surface : colors.card,
-      borderRadius: 16,
-      marginRight: 12,
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      marginRight: 16,
       overflow: 'hidden',
-      width: 280,
-      borderWidth: isDark ? 1 : 0,
-      borderColor: isDark ? colors.border : 'transparent',
+      width: 320,
+      height: 250,
+      borderWidth: 0,
+      borderColor: 'transparent',
       shadowColor: '#000',
       shadowOffset: {
         width: 0,
         height: 2,
       },
       shadowOpacity: 0.1,
-      shadowRadius: 3.84,
-      elevation: 5,
+      shadowRadius: 8,
+      elevation: 4,
+      flexDirection: 'column',
     },
-    cardHeader: {
-      position: 'relative',
-      height: 120,
-      backgroundColor: isDark ? colors.border : colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    placeholderIcon: {
-      opacity: 0.3,
-    },
-    saveButton: {
-      position: 'absolute',
-      top: 12,
-      right: 12,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      borderRadius: 20,
-      padding: 6,
-    },
-    cardBody: {
+    userHeader: {
+      flexDirection: 'row',
       padding: 16,
+      alignItems: 'flex-start',
     },
-    cardMeta: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    publishedDate: {
-      fontSize: 12,
-      color: colors.textTertiary,
-    },
-    readTime: {
-      fontSize: 12,
-      color: colors.textTertiary,
-    },
-    cardContent: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: colors.text,
-      lineHeight: 22,
-      marginBottom: 12,
-    },
-    authorInfo: {
-      fontSize: 12,
-      color: colors.primary,
-      marginBottom: 8,
-      fontWeight: '500',
-    },
-    cardFooter: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingTop: 12,
-      borderTopWidth: 1,
-      borderTopColor: isDark ? colors.border : colors.surface,
-    },
-    metricsContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    metric: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    avatar: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
       marginRight: 12,
     },
-    metricText: {
+    userInfo: {
+      flex: 1,
+    },
+    name: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 2,
+    },
+    timestampContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    timestamp: {
       fontSize: 12,
       color: colors.textSecondary,
       marginLeft: 4,
     },
-    unsaveButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-      backgroundColor: colors.error,
+    contentSection: {
+      flex: 1,
+      paddingHorizontal: 16,
+      paddingTop: 0,
+      paddingBottom: 12,
+      justifyContent: 'flex-start',
     },
-    unsaveButtonText: {
-      fontSize: 12,
-      color: 'white',
-      fontWeight: '500',
+    contentText: {
+      fontSize: 16,
+      lineHeight: 24,
+      color: colors.text,
     },
-    optionsButton: {
+    viewsSection: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
+    viewsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    viewsText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginLeft: 6,
+    },
+    engagementSection: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    actionRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      paddingTop: 4,
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
       paddingHorizontal: 8,
       paddingVertical: 4,
+    },
+    actionText: {
+      marginLeft: 4,
+      fontSize: 16,
+      color: colors.text,
     },
   });
 
@@ -289,69 +274,66 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
           style={styles.insightCard}
           onPress={() => onInsightPress?.(insight)}
         >
-          <View style={styles.cardHeader}>
-            <Feather 
-              name="bookmark" 
-              size={32} 
-              color={colors.primary}
-              style={styles.placeholderIcon}
-            />
-            <TouchableOpacity 
-              style={styles.saveButton}
-              onPress={() => onUnsavePress?.(insight)}
-            >
-              <Feather name="bookmark" size={16} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
           
-          <View style={styles.cardBody}>
-            <View style={styles.cardMeta}>
-              <Text style={styles.publishedDate}>
-                {formatDate(insight.created_at)}
-              </Text>
-              <Text style={styles.readTime}>
-                {getReadTime(insight.content)}
-              </Text>
+          {/* User Header */}
+          <View style={styles.userHeader}>
+            <Image source={defaultProfileImage} style={styles.avatar} />
+            <View style={styles.userInfo}>
+              <Text style={styles.name}>{insight.author?.full_name || 'User'}</Text>
+              {insight.created_at && (
+                <View style={styles.timestampContainer}>
+                  <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+                  <Text style={styles.timestamp}>{formatTimestamp(insight.created_at)}</Text>
+                </View>
+              )}
             </View>
-            
-            {insight.author && (
-              <Text style={styles.authorInfo}>
-                By {insight.author.full_name}
-              </Text>
-            )}
-            
-            <Text style={styles.cardContent}>
-              {getTruncatedContent(insight.content)}
-            </Text>
-            
-            <View style={styles.cardFooter}>
-              <View style={styles.metricsContainer}>
-                <View style={styles.metric}>
-                  <Feather name="eye" size={12} color={colors.textTertiary} />
-                  <Text style={styles.metricText}>
-                    {formatNumber(insight.views_count)}
-                  </Text>
-                </View>
-                <View style={styles.metric}>
-                  <Feather name="heart" size={12} color={colors.textTertiary} />
-                  <Text style={styles.metricText}>
-                    {formatNumber(insight.likes_count)}
-                  </Text>
-                </View>
-                <View style={styles.metric}>
-                  <Feather name="message-circle" size={12} color={colors.textTertiary} />
-                  <Text style={styles.metricText}>
-                    {formatNumber(insight.comments_count)}
-                  </Text>
-                </View>
+          </View>
+
+          {/* Content */}
+          <View style={styles.contentSection}>
+            <Text style={styles.contentText} numberOfLines={4} ellipsizeMode="tail">{insight.content}</Text>
+          </View>
+
+          {/* Bottom Section - Views and Engagement */}
+          <View>
+            {/* Views Section */}
+            <View style={styles.viewsSection}>
+              <View style={styles.viewsContainer}>
+                <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.viewsText}>{formatNumber(insight.views_count || 0)} views</Text>
               </View>
-              
-              <TouchableOpacity 
-                style={styles.optionsButton}
-                onPress={() => handleOptionsPress(insight)}
-              >
-                <Feather name="more-horizontal" size={16} color={colors.text} />
-              </TouchableOpacity>
+            </View>
+
+            {/* Engagement Bar */}
+            <View style={styles.engagementSection}>
+              <View style={styles.actionRow}>
+                <TouchableOpacity style={styles.actionButton}>
+                  <Ionicons name="heart-outline" size={20} color={colors.text} />
+                  <Text style={styles.actionText}>{formatNumber(insight.likes_count || 0)}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.actionButton}>
+                  <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
+                  <Text style={styles.actionText}>{formatNumber(insight.comments_count || 0)}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.actionButton} onPress={() => {
+                  Alert.alert(
+                    'Unsave Insight',
+                    'Are you sure you want to unsave this insight?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { 
+                        text: 'Unsave', 
+                        style: 'destructive',
+                        onPress: () => onUnsavePress?.(insight)
+                      }
+                    ]
+                  );
+                }}>
+                  <Ionicons name="bookmark" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </TouchableOpacity>

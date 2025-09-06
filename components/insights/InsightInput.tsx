@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { MediaSelector } from './MediaSelector';
 import { useInsightsTheme } from '../../lib/insightsTheme';
@@ -57,14 +57,6 @@ export const InsightInput: React.FC<Props> = ({
       fontSize: 24,
       fontWeight: 'bold',
       color: colors.insightsTextPrimary,
-    },
-    zapContainer: {
-      width: 40,
-      height: 40,
-      backgroundColor: colors.yellow[400],
-      borderRadius: borderRadius.full,
-      justifyContent: 'center',
-      alignItems: 'center',
     },
     textInput: {
       backgroundColor: colors.insightsCard,
@@ -141,9 +133,7 @@ export const InsightInput: React.FC<Props> = ({
           <View style={{ width: 40 }} />
         )}
         <Text style={styles.title}>Publish Insight</Text>
-        <View style={styles.zapContainer}>
-          <Feather name="zap" size={24} color={colors.black} />
-        </View>
+        <Image source={require('../../assets/icon.png')} style={{ width: 32, height: 32 }} />
       </View>
 
       {/* Text Input */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, FlatList, Image } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
@@ -428,22 +428,6 @@ export const Discover: React.FC = () => {
       right: 12,
       zIndex: 1,
     },
-    lightningContainer: {
-      width: 48,
-      height: 48,
-      backgroundColor: '#EAB308',
-      borderRadius: 24,
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: '#EAB308',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
-      elevation: 5, // Android shadow
-    },
     filtersContainer: {
       paddingHorizontal: 16,
       height: 50,
@@ -646,7 +630,6 @@ export const Discover: React.FC = () => {
           )}
         </View>
         <TouchableOpacity 
-          style={dynamicStyles.lightningContainer} 
           activeOpacity={0.8}
           onPress={() => {
             // Easter egg: clear cache when logo is tapped
@@ -654,7 +637,7 @@ export const Discover: React.FC = () => {
             loadInitialContent();
           }}
         >
-          <Feather name="zap" size={24} color="#000000" />
+          <Image source={require('../assets/icon.png')} style={{ width: 32, height: 32 }} />
         </TouchableOpacity>
       </View>
 
