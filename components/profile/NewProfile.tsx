@@ -24,7 +24,6 @@ import { ExperienceCard } from './ExperienceCard';
 import { EducationCard } from './EducationCard';
 import { SkillsCard } from './SkillsCard';
 import { IndustrySelectionPage } from './IndustrySelectionPage';
-import { PhotoUploadModal } from './PhotoUploadModal';
 import { CareerGoalEditModal } from './CareerGoalEditModal';
 import { SavedContentScrollView } from './SavedContentScrollView';
 import { OnboardingProgressCard } from '../onboarding/OnboardingProgressCard';
@@ -142,7 +141,6 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [loading, setLoading] = useState(true);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [showIndustrySelection, setShowIndustrySelection] = useState(false);
-  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
   const [showCareerGoalModal, setShowCareerGoalModal] = useState(false);
 
   // Component lifecycle management
@@ -667,12 +665,6 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   );
 
   // Event handlers
-  const handlePhotoUploaded = (imageUrl: string) => {
-    if (isMountedRef.current) {
-      setAvatarUrl(imageUrl);
-    }
-  };
-
   const handleEditCareerGoal = () => {
     if (isMountedRef.current) {
       setShowCareerGoalModal(true);
@@ -787,11 +779,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             fullName={fullName}
             avatarUrl={avatarUrl}
             userLevel={userLevel}
-            onAvatarPress={() => {
-              if (isMountedRef.current) {
-                setShowPhotoUpload(true);
-              }
-            }}
+            onAvatarPress={() => {}}
           />
         </View>
         {showOnboardingProgress && currentUser && (
@@ -881,13 +869,6 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         onClose={() => setIsSettingsModalVisible(false)}
         navigateTo={router.push}
         signOut={signOut || (async () => {})}
-      />
-
-      <PhotoUploadModal
-        visible={showPhotoUpload}
-        onClose={() => setShowPhotoUpload(false)}
-        onImageUploaded={handlePhotoUploaded}
-        userId={currentUser?.id || ''}
       />
 
       <CareerGoalEditModal
