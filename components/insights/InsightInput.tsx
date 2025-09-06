@@ -17,6 +17,7 @@ interface Props {
   showMediaSelector: boolean;
   setShowMediaSelector: (show: boolean) => void;
   onNext: () => void;
+  onBack?: () => void;
 }
 
 export const InsightInput: React.FC<Props> = ({
@@ -27,6 +28,7 @@ export const InsightInput: React.FC<Props> = ({
   showMediaSelector,
   setShowMediaSelector,
   onNext,
+  onBack,
 }) => {
   const { colors, spacing, borderRadius, isDark } = useInsightsTheme();
 
@@ -40,6 +42,16 @@ export const InsightInput: React.FC<Props> = ({
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: spacing.md,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.insightsCard,
+      borderWidth: 1,
+      borderColor: colors.insightsBorder,
     },
     title: {
       fontSize: 24,
@@ -121,6 +133,13 @@ export const InsightInput: React.FC<Props> = ({
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        {onBack ? (
+          <TouchableOpacity style={styles.backButton} onPress={onBack}>
+            <Feather name="arrow-left" size={20} color={colors.insightsTextPrimary} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
         <Text style={styles.title}>Publish Insight</Text>
         <View style={styles.zapContainer}>
           <Feather name="zap" size={24} color={colors.black} />

@@ -121,6 +121,7 @@ export const InsightsPublisher: React.FC<InsightsPublisherProps> = ({ onComplete
             showMediaSelector={showMediaSelector}
             setShowMediaSelector={setShowMediaSelector}
             onNext={() => setStep(6)}
+            onBack={onComplete}
           />
         );
       case 2:

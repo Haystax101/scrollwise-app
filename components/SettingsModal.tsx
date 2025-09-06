@@ -18,10 +18,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
     const { height: screenHeight } = Dimensions.get('window');
     const snapPoints = useMemo(() => [screenHeight], [screenHeight]);
 
-    const handleContentPreferences = () => {
-      onClose();
-      setTimeout(() => navigateTo('onboarding'), 100);
-    };
 
     const handleSignOut = () => {
       Alert.alert(
@@ -236,29 +232,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
               </View>
             </View>
 
-            {/* Content Settings */}
-            <View style={dynamicStyles.section}>
-              <Text style={dynamicStyles.sectionTitle}>Content</Text>
-              <View style={dynamicStyles.settingCard}>
-                <TouchableOpacity
-                  style={[dynamicStyles.settingItem, dynamicStyles.settingItemLast]}
-                  onPress={handleContentPreferences}
-                  accessibilityRole="button"
-                  accessibilityLabel="Edit content preferences"
-                >
-                  <View style={dynamicStyles.settingIcon}>
-                    <Feather name="sliders" size={20} color={colors.textSecondary} />
-                  </View>
-                  <View style={dynamicStyles.settingContent}>
-                    <Text style={dynamicStyles.settingTitle}>Content Preferences</Text>
-                    <Text style={dynamicStyles.settingDescription}>Update your academic interests</Text>
-                  </View>
-                  <View style={dynamicStyles.settingAction}>
-                    <Feather name="chevron-right" size={20} color={colors.textTertiary} />
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </View>
 
             {/* Account Settings */}
             <View style={dynamicStyles.section}>

@@ -28,16 +28,29 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    loadAchievements();
+    // Only load achievements if we have a valid userId
+    if (userId && userId.trim() !== '') {
+      loadAchievements();
+    } else {
+      console.warn('⚠️ AchievementsBelt: Skipping achievement load - no valid userId provided');
+    }
   }, [userId]);
 
   const loadAchievements = async () => {
+    // Validate userId before making API calls
+    if (!userId || userId.trim() === '') {
+      console.error('❌ AchievementsBelt: Cannot load achievements - invalid userId:', userId);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
+      console.log('🏆 AchievementsBelt: Loading achievements for user:', userId);
       const enhancedAchievements = await AchievementService.getAllAchievementsWithProgress(userId);
       setAchievements(enhancedAchievements);
     } catch (error) {
-      console.error('Error loading achievements:', error);
+      console.error('❌ AchievementsBelt: Error loading achievements:', error);
     } finally {
       setIsLoading(false);
     }

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { TouchableOpacity, StyleSheet, Animated, View } from 'react-native';
+import { TouchableOpacity, StyleSheet, Animated, View, Dimensions, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ export const FloatingCreateButton: React.FC<FloatingCreateButtonProps> = ({ onPr
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const { width: screenWidth } = Dimensions.get('window');
 
   const handlePressIn = () => {
     Animated.timing(scaleAnim, {
@@ -33,14 +34,15 @@ export const FloatingCreateButton: React.FC<FloatingCreateButtonProps> = ({ onPr
     container: {
       position: 'absolute',
       bottom: insets.bottom + 50, // Above navbar (typical tab bar height ~50-60px + margin)
-      right: 20,
+      left: 20, // Center horizontally (56 is button width)
       zIndex: 1000,
     },
     button: {
-      width: 56,
+      width: screenWidth - 40, // Full width with margin
       height: 56,
       borderRadius: 28,
       backgroundColor: '#EAB308', // Golden yellow
+      flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
       shadowColor: '#000',
@@ -51,6 +53,12 @@ export const FloatingCreateButton: React.FC<FloatingCreateButtonProps> = ({ onPr
       shadowOpacity: 0.3,
       shadowRadius: 8,
       elevation: 8,
+    },
+    buttonText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '600',
+      marginLeft: 8,
     },
   });
 
@@ -67,8 +75,9 @@ export const FloatingCreateButton: React.FC<FloatingCreateButtonProps> = ({ onPr
         accessibilityRole="button"
         accessibilityHint="Opens the insight creation screen"
       >
-        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <Animated.View style={{ transform: [{ scale: scaleAnim }], flexDirection: 'row', alignItems: 'center' }}>
           <Feather name="plus" size={24} color="white" />
+          <Text style={styles.buttonText}>Create Insight</Text>
         </Animated.View>
       </TouchableOpacity>
     </View>
