@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { profileImageService } from '../../services/profileImageService';
 
 interface NewProfileHeaderProps {
   fullName: string;
@@ -89,7 +88,7 @@ export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
         <Image
           source={
             avatarUrl 
-              ? { uri: profileImageService.getProfileImageUrl(avatarUrl) || undefined }
+              ? { uri: avatarUrl }
               : require('../../assets/profileIconDefault.png')
           }
           style={styles.avatar}
