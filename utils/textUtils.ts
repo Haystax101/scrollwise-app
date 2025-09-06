@@ -43,15 +43,8 @@ export const calculateDynamicTextLines = (options: DynamicTextOptions): number =
   // Calculate maximum lines that fit
   const maxLines = Math.floor(availableHeight / lineHeight);
   
-  // Apply constraints based on author presence and reduce by 1 to prevent overflow
-  let optimalLines: number;
-  if (hasAuthor) {
-    // When author is present, limit to 6 lines maximum but use available space (was 7, now 6)
-    optimalLines = Math.min(maxLines - 1, 6);
-  } else {
-    // When no author, limit to 7 lines maximum but use available space (was 8, now 7)
-    optimalLines = Math.min(maxLines - 1, 7);
-  }
+  // Use all available space with small buffer to prevent overflow
+  const optimalLines = Math.max(maxLines - 1, 3); // Just subtract 1 for safety buffer, no artificial caps
   
   // Ensure minimum of 3 lines for readability
   return Math.max(optimalLines, 3);
