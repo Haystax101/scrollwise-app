@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIndustries } from '../context/IndustriesContext';
 import { ExpandedTextModal } from './ExpandedTextModal';
 import { FlagButton } from './common/FlagButton';
-import { calculateDynamicTextLines, optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
+import { optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -69,14 +69,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     return rawName ? optimizeIndustryName(rawName) : undefined;
   }, [allIndustries, paper.industry_id]);
 
-  const dynamicTextLines = useMemo(() => {
-    return calculateDynamicTextLines({
-      hasAuthor: !!(paper.authors && paper.authors.length > 0),
-      hasMultipleMetadataRows: true, // PaperCard has two metadata rows
-      containerHeight: screenHeight * 0.55, // Content section height
-      authorHeight: (paper.authors && paper.authors.length > 0) ? 32 : 0, // Slightly more height for author scroll
-    });
-  }, [paper.authors, screenHeight]);
+  const dynamicTextLines = (paper.authors && paper.authors.length > 0) ? 7 : 8;
 
   useEffect(() => {
     const fetchStatus = async () => {

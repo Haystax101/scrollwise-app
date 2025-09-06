@@ -82,9 +82,21 @@ const formatDatePeriod = (startDate: string | null, endDate: string | null, isCu
 };
 
 export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigateTo, signOut }) => {
-  const { colors, isDark } = useTheme();
-  const router = useRouter();
-  const { refreshIndustries } = useIndustries();
+  console.log('🔍 NewProfile: Component initializing', { 
+    hasUser: !!userProp, 
+    userId: userProp?.id,
+    userEmail: userProp?.email 
+  });
+  
+  try {
+    const { colors, isDark } = useTheme();
+    console.log('🔍 NewProfile: Theme loaded', { isDark });
+    
+    const router = useRouter();
+    console.log('🔍 NewProfile: Router loaded');
+    
+    const { refreshIndustries } = useIndustries();
+    console.log('🔍 NewProfile: Industries context loaded');
   
   // Core profile data
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -507,7 +519,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         timestamp: new Date().toISOString()
       });
     }
-  }, [fetchProfileData, currentUser?.id]);
+  }, [currentUser?.id]);
 
   // Set up real-time subscription for achievements using useFocusEffect
   useFocusEffect(
@@ -881,4 +893,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       />
     </View>
   );
+  
+  } catch (error) {
+    console.error('🚨 NewProfile: CRITICAL ERROR:', error);
+    console.error('🚨 NewProfile: Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    return null;
+  }
 };

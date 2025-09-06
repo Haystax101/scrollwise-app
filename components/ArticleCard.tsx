@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useIndustries } from '../context/IndustriesContext';
 import { ExpandedTextModal } from './ExpandedTextModal';
 import { FlagButton } from './common/FlagButton';
-import { calculateDynamicTextLines, optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
+import { optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -68,13 +68,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
     return rawName ? optimizeIndustryName(rawName) : undefined;
   }, [allIndustries, article.industry_id]);
 
-  const dynamicTextLines = useMemo(() => {
-    return calculateDynamicTextLines({
-      hasAuthor: !!article.author,
-      hasMultipleMetadataRows: true, // ArticleCard has two metadata rows
-      containerHeight: screenHeight * 0.55, // Content section height
-    });
-  }, [article.author, screenHeight]);
+  const dynamicTextLines = article.author ? 7 : 8;
 
   useEffect(() => {
     const fetchStatus = async () => {
