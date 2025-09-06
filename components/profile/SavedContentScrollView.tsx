@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions } from 'react-native';
 import { Feather, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -221,7 +221,7 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
     });
   };
 
-  const renderSavedContentItem = (content: SavedContent) => {
+  const renderSavedContentItem = ({ item: content }: { item: SavedContent }) => {
     const industryName = allIndustries.find(ind => ind.id === content.industry_id)?.name;
     const optimizedIndustryName = industryName ? optimizeIndustryName(industryName) : undefined;
     const industryColor = getIndustryColor(content.industry_id);
@@ -229,7 +229,6 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
 
     return (
       <TouchableOpacity
-        key={`${content.type}-${content.id}`}
         style={[styles.savedItemCard, { borderColor: colors.border, backgroundColor: colors.card }]}
         onPress={() => handleContentPress(content)}
       >
@@ -320,13 +319,14 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
         </TouchableOpacity>
       </View>
       
-      <ScrollView
+      <FlatList
         horizontal
+        data={savedContent}
+        renderItem={renderSavedContentItem}
+        keyExtractor={(item) => `${item.type}-${item.id}`}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-      >
-        {savedContent.map((content) => renderSavedContentItem(content))}
-      </ScrollView>
+      />
     </View>
   );
 };
