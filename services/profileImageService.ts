@@ -1,8 +1,35 @@
 import { supabase } from '../lib/supabase';
+// NOTE: Install with: npm install expo-image-manipulator
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 /**
  * Service for handling profile images.
  */
+/**
+ * Compress image to save bucket space and improve performance
+ */
+const compressImage = async (uri: string): Promise<string> => {
+  try {
+    console.log('Compressing image:', uri);
+    const result = await manipulateAsync(
+      uri,
+      [{ resize: { width: 400 } }], // Max width 400px
+      { compress: 0.7, format: SaveFormat.JPEG } // 70% quality
+    );
+    console.log('Image compressed successfully:', {
+      originalUri: uri,
+      compressedUri: result.uri,
+      width: result.width,
+      height: result.height
+    });
+    return result.uri;
+  } catch (error) {
+    console.error('Error compressing image:', error);
+    // If compression fails, return original URI as fallback
+    return uri;
+  }
+};
+
 export const profileImageService = {
   /**
    * Get the appropriate profile image URL for a user.
@@ -55,17 +82,22 @@ export const profileImageService = {
   ): Promise<{ url: string | null; path: string | null; error: Error | null }> {
     try {
       console.log('Starting profile image upload for user:', userId);
-      console.log('Image URI:', imageUri);
+      console.log('Original image URI:', imageUri);
       
-      // Get file extension from URI
-      const fileExt = imageUri?.split('.').pop()?.toLowerCase() ?? 'jpg';
+      // Compress image before upload to save bucket space
+      console.log('Compressing profile image...');
+      const compressedUri = await compressImage(imageUri);
+      console.log('Using compressed image URI:', compressedUri);
+      
+      // Get file extension from URI (always use jpg after compression)
+      const fileExt = 'jpg'; // JPEG format after compression
       const finalFileName = fileName || `${userId}-${Date.now()}.${fileExt}`;
       
       console.log('Generated filename:', finalFileName);
       
-      // Convert image URI to ArrayBuffer (proper React Native approach)
-      console.log('Converting image URI to ArrayBuffer...');
-      const arrayBuffer = await fetch(imageUri).then((res) => res.arrayBuffer());
+      // Convert compressed image URI to ArrayBuffer
+      console.log('Converting compressed image URI to ArrayBuffer...');
+      const arrayBuffer = await fetch(compressedUri).then((res) => res.arrayBuffer());
       
       console.log('ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
       
@@ -80,7 +112,7 @@ export const profileImageService = {
         .upload(finalFileName, arrayBuffer, {
           cacheControl: '3600',
           upsert: true,
-          contentType: `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`
+          contentType: 'image/jpeg' // Always JPEG after compression
         });
 
       if (error) {

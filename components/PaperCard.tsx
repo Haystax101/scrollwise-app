@@ -194,9 +194,12 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
             style={[
               { 
                 marginTop: 20, 
-                padding: 12, 
-                backgroundColor: colors.primary, 
-                borderRadius: 8, 
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                backgroundColor: 'transparent',
+                borderColor: colors.primary,
+                borderWidth: 1,
+                borderRadius: 16, 
                 alignItems: 'center',
                 flexDirection: 'row',
                 justifyContent: 'center'
@@ -205,12 +208,12 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
             onPress={handleDelveDeeper}
           >
             {showComplexContent ? (
-              <Text style={[{ fontSize: 16, fontWeight: '600' }, { color: colors.primaryText }]}>
+              <Text style={[{ fontSize: 14, fontWeight: '600' }, { color: colors.primary }]}>
                 Simplify
               </Text>
             ) : (
               <>
-                <Text style={[{ fontSize: 16, fontWeight: '600' }, { color: colors.primaryText }]}>
+                <Text style={[{ fontSize: 14, fontWeight: '600' }, { color: colors.primary }]}>
                   Delve Deeper
                 </Text>
               </>
@@ -331,12 +334,14 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     actionButton: { padding: 8 },
     actionText: { color: colors.textSecondary, fontSize: 12, marginLeft: 4, fontWeight: '500' },
     readMoreButton: {
-      backgroundColor: colors.primary,
+      backgroundColor: 'transparent',
+      borderColor: colors.primary,
+      borderWidth: 1,
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 16,
     },
-    readMoreButtonText: { color: colors.readButtonText, fontSize: 14, fontWeight: '600' },
+    readMoreButtonText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
   });
 
   return (
@@ -416,7 +421,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
             <View style={dynamicStyles.actionsRow}>
               <View style={dynamicStyles.actionGroup}>
                 <TouchableOpacity style={dynamicStyles.actionButton} onPress={handleLikePress}>
-                  <FontAwesome name={hasLiked ? "heart" : "heart-o"} size={20} color={hasLiked ? colors.accent : colors.text} />
+                  <FontAwesome name={hasLiked ? "heart" : "heart-o"} size={20} color={hasLiked ? colors.likeColor : colors.text} />
                 </TouchableOpacity>
                 <Text style={dynamicStyles.actionText}>{likes}</Text>
               </View>

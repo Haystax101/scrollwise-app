@@ -790,15 +790,18 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
       onRequestClose={onClose}
     >
       <GestureHandlerRootView style={dynamicStyles.modalContainer}>
-        <Pressable style={{ flex: 1 }} onPress={() => {
-          if (isTextInputFocused) {
-            // Only dismiss keyboard when text input is focused
-            Keyboard.dismiss();
-          } else {
-            // Close modal when text input is not focused
-            onClose();
-          }
-        }} />
+        <Pressable 
+          style={{ flex: 1 }} 
+          onPress={() => {
+            // Dismiss keyboard when tapping outside the modal (in the overlay area)
+            if (isTextInputFocused) {
+              Keyboard.dismiss();
+            } else {
+              // If keyboard is not focused, close the modal
+              onClose();
+            }
+          }} 
+        />
         <Animated.View 
           style={[
             dynamicStyles.modalContent,

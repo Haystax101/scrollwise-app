@@ -46,8 +46,12 @@ export const ExpandedTextModal: React.FC<ExpandedTextModalProps> = ({ visible, o
         </ScrollView>
         {externalLink && (
           <View style={styles.footer}>
-            <TouchableOpacity style={[styles.readFullButton, { backgroundColor: colors.primary }]} onPress={handleReadFull}>
-              <Text style={styles.readFullButtonText}>
+            <TouchableOpacity style={[styles.readFullButton, { 
+              backgroundColor: 'transparent',
+              borderColor: colors.primary,
+              borderWidth: 1
+            }]} onPress={handleReadFull}>
+              <Text style={[styles.readFullButtonText, { color: colors.primary }]}>
                 Read full {contentType}
               </Text>
             </TouchableOpacity>
@@ -93,13 +97,14 @@ const styles = StyleSheet.create({
     borderTopColor: '#333',
   },
   readFullButton: {
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   readFullButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
 }); 

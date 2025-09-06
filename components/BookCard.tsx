@@ -176,7 +176,7 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
           </View>
           <View style={styles.insightTextContainer}>
             {processedText.map((part, index) => (
-              <Text key={index} style={[styles.insightText, { color: industryColor }, part.style]}>
+              <Text key={index} style={[styles.insightText, { color: '#FFFFFF' }, part.style]}>
                 {part.text}
               </Text>
             ))}
@@ -259,7 +259,7 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
         <View style={dynamicStyles.actionsRow}>
           <View style={dynamicStyles.actionGroup}>
             <TouchableOpacity style={dynamicStyles.actionButton} onPress={() => toggleInteraction(hasLiked ? 'unlike' : 'like')}>
-              <FontAwesome name={hasLiked ? "heart" : "heart-o"} size={20} color={hasLiked ? colors.accent : colors.text} />
+              <FontAwesome name={hasLiked ? "heart" : "heart-o"} size={20} color={hasLiked ? colors.likeColor : colors.text} />
             </TouchableOpacity>
             <Text style={dynamicStyles.actionText}>{likes}</Text>
           </View>
@@ -381,12 +381,12 @@ const styles = StyleSheet.create({
   insightTextContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   insightText: {
-    fontSize: 22,
+    fontSize: 20,
     lineHeight: 32,
-    textAlign: 'center',
-    fontWeight: '700',
+    textAlign: 'left',
+    fontWeight: '500',
   },
 }); 

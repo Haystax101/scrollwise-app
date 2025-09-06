@@ -4,13 +4,13 @@ import { ArticleCard } from './ArticleCard';
 import { PaperCard } from './PaperCard';
 import { BookCard } from './BookCard';
 import InsightCard from './InsightCard';
-import type { Article, Insight, FeedItem, Industry, Paper, Book } from '../types';
+import type { Article, Insight, FeedItem, Industry, Paper, Book, QuizQuestion } from '../types';
 import { FeedManager } from '../lib/FeedManager';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useIndustries } from '../context/IndustriesContext';
 import { CommentsModal } from './CommentsModal';
-import QuizCard, { QuizQuestion } from './QuizCard';
+import QuizCard from './QuizCard';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -133,6 +133,15 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
     }
   }, [feedManager]);
 
+  // Update specific feed item
+  const updateFeedItem = useCallback((contentId: number, updates: { comments_count?: number }) => {
+    setFeedItems(prev => 
+      prev.map(item => 
+        item.id === contentId ? { ...item, ...updates } as FeedItem : item
+      )
+    );
+  }, []);
+
   return {
     feedItems,
     isLoading,
@@ -141,7 +150,8 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
     hasMore,
     loadInitialContent,
     loadMoreContent,
-    refreshContent
+    refreshContent,
+    updateFeedItem
   };
 }
 
@@ -154,8 +164,7 @@ function useContentTracking(
   trackInteraction?: (interactionType: string, data?: Record<string, any>) => void,
   trackContentEngagement?: (contentType: string, contentId: string, engagementType: string, data?: Record<string, any>) => void,
   recordContentView?: (contentId: string | number, contentType: string) => Promise<void>,
-  showQuizForRecentContent?: () => Promise<void>,
-  nextQuizAt?: number,
+  showQuizForRecentContent?: (currentIndex: number) => Promise<void>,
   feedLocked?: boolean
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -172,7 +181,8 @@ function useContentTracking(
 
       // Track viewed content
       if (feedManager && currentItem) {
-        feedManager.markAsViewed(currentItem.id, currentItem.type);
+        // Updated to pass the content item for quiz tracking
+        feedManager.markAsViewed(currentItem.id, currentItem.type, currentItem);
         
         // Track engagement
         trackContentEngagement?.(
@@ -201,18 +211,19 @@ function useContentTracking(
           content_type: currentItem?.type
         });
 
-        // Check if it's time to show a quiz - MUST have at least required scrolls AND viewed content
-        if (!feedLocked && 
-            nextQuizAt && 
-            newScrollCount >= nextQuizAt && 
-            newScrollCount % 8 === 0 && 
-            showQuizForRecentContent) {
-          console.log(`🎯 Quiz trigger: scrollCount=${newScrollCount}, nextQuizAt=${nextQuizAt}`);
-          showQuizForRecentContent();
+        // Check if it's time to show a quiz using new QuizSessionManager
+        if (!feedLocked && feedManager && showQuizForRecentContent) {
+          const quizCheck = feedManager.shouldShowQuiz();
+          if (quizCheck.show) {
+            console.log(`🧠 Quiz trigger: ${quizCheck.reason}`);
+            showQuizForRecentContent(newIndex);
+          } else {
+            console.log(`🧠 Quiz check: ${quizCheck.reason}`);
+          }
         }
       }
     }
-  }, [currentIndex, scrollCount, feedManager, trackScroll, trackInteraction, trackContentEngagement, recordContentView, showQuizForRecentContent, nextQuizAt, feedLocked]);
+  }, [currentIndex, scrollCount, feedManager, trackScroll, trackInteraction, trackContentEngagement, recordContentView, showQuizForRecentContent, feedLocked]);
 
   const handleUserInteraction = useCallback((contentId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => {
     trackInteraction?.(action, {
@@ -250,7 +261,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   const [quizVisible, setQuizVisible] = useState(false);
   const [quizQuestion, setQuizQuestion] = useState<QuizQuestion | null>(null);
   const [feedLocked, setFeedLocked] = useState(false);
-  const [nextQuizAt, setNextQuizAt] = useState(8);
 
   // Create feed manager
   const feedManager = useMemo(() => {
@@ -271,11 +281,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     setCommentsArticleId(null);
   }, []);
 
-  const handleCommentsCountChange = useCallback((_count: number) => {
-    // Update comment count in feed items - simple approach
-    // In a production app, you might want to use a state management solution here
-  }, []);
-
   // Record content view in database for quiz system
   const recordContentView = useCallback(async (contentId: string | number, contentType: string) => {
     if (!user) return;
@@ -292,107 +297,27 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     }
   }, [user]);
 
-  // Get quiz question for a specific piece of content
-  const getQuizForContent = useCallback(async (contentItem: FeedItem): Promise<QuizQuestion | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('quiz_questions')
-        .select('*')
-        .eq('content_type', contentItem.type)
-        .eq('content_id', contentItem.id)
-        .maybeSingle();
 
-      if (error || !data) {
-        console.log('No quiz found for content:', contentItem.type, contentItem.id);
-        return null;
-      }
 
-      // Validate that all options are present and non-empty
-      const options = [data.option_a, data.option_b, data.option_c, data.option_d];
-      const hasValidOptions = options.every(option => option && option.trim().length > 0);
-      
-      if (!hasValidOptions) {
-        console.log('Quiz has blank options, skipping:', data.id);
-        return null;
-      }
-
-      // Validate that the question text exists and correct_option_index is valid
-      if (!data.question || data.question.trim().length === 0) {
-        console.log('Quiz has blank question, skipping:', data.id);
-        return null;
-      }
-
-      if (data.correct_option_index < 0 || data.correct_option_index > 3) {
-        console.log('Quiz has invalid correct_option_index, skipping:', data.id);
-        return null;
-      }
-
-      return {
-        id: data.id,
-        question: data.question,
-        option_a: data.option_a,
-        option_b: data.option_b, 
-        option_c: data.option_c,
-        option_d: data.option_d,
-        correct_option_index: data.correct_option_index,
-        content_type: data.content_type,
-        content_id: data.content_id,
-        content_title: 'title' in contentItem ? contentItem.title : 'Content'
-      };
-    } catch (error) {
-      console.error('Error fetching quiz question:', error);
-      return null;
-    }
-  }, []);
-
-  // Show quiz for recently viewed content
-  const showQuizForRecentContent = useCallback(async () => {
-    if (!user) return;
+  // Handle quiz answer
+  const handleQuizAnswer = useCallback(async (answerIndex: number) => {
+    if (!quizQuestion || !feedManager) return;
     
     try {
-      // Get recently viewed content from database
-      const { data: recentlyViewed, error } = await supabase.rpc('get_recently_viewed_content', {
-        p_user_id: user.id,
-        p_limit: nextQuizAt
-      });
-      
-      if (error || !recentlyViewed || recentlyViewed.length === 0) return;
-      
-      // Filter to only content types that have quizzes (articles, papers, books - not insights)
-      const quizEligibleContent = recentlyViewed.filter((content: any) => 
-        ['article', 'paper', 'book'].includes(content.content_type)
-      );
-      
-      if (quizEligibleContent.length === 0) return;
-      
-      // Randomly select one piece of recently viewed content to quiz on
-      const randomViewedContent = quizEligibleContent[Math.floor(Math.random() * Math.min(5, quizEligibleContent.length))];
-      
-      // Get quiz question for this content
-      const quiz = await getQuizForContent({
-        id: randomViewedContent.content_id,
-        type: randomViewedContent.content_type,
-        title: randomViewedContent.content_title || 'Recently viewed content'
-      } as FeedItem);
-      
-      if (quiz) {
-        setQuizQuestion(quiz);
-        setQuizVisible(true);
-        setFeedLocked(true);
-      }
+      await feedManager.handleQuizAttempt(quizQuestion, answerIndex);
+      console.log('🧠 Quiz attempt recorded');
     } catch (error) {
-      console.error('Error showing quiz for recent content:', error);
+      console.error('Error handling quiz attempt:', error);
     }
-  }, [user, nextQuizAt, getQuizForContent]);
+  }, [quizQuestion, feedManager]);
 
   // Handle quiz close
   const handleQuizClose = useCallback(() => {
     setQuizVisible(false);
     setFeedLocked(false);
     setQuizQuestion(null);
-    // Reset quiz timing - next quiz after another 8+ scrolls
-    setNextQuizAt(nextQuizAt + 8);
-  }, [nextQuizAt]);
+    console.log('🧠 Quiz closed');
+  }, []);
 
   // Use custom hooks for data and tracking
   const {
@@ -402,8 +327,43 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     isRefreshing,
     loadInitialContent,
     loadMoreContent,
-    refreshContent
+    refreshContent,
+    updateFeedItem
   } = useFeedData(feedManager, initialArticleId, initialContentType);
+
+  // Handle comments count change after getting updateFeedItem from hook
+  const handleCommentsCountChange = useCallback((newCount: number) => {
+    // Update comment count in feed items for the currently open comment modal
+    if (commentsArticleId) {
+      updateFeedItem(commentsArticleId, { comments_count: newCount });
+    }
+  }, [commentsArticleId, updateFeedItem]);
+
+  // Show quiz for recently viewed content using QuizSessionManager
+  const showQuizForRecentContent = useCallback(async (currentIndexParam: number) => {
+    if (!user || !feedManager) return;
+    
+    try {
+      // Get the content that was viewed in THIS session (before current item)
+      const currentSessionContent = feedItems.slice(0, currentIndexParam);
+      
+      console.log(`🧠 Generating quiz from ${currentSessionContent.length} pieces of current session content (items 0-${currentIndexParam-1})`);
+      
+      // Generate quiz question from current session content only
+      const quiz = await feedManager.generateQuizQuestionFromContent(currentSessionContent);
+      
+      if (quiz) {
+        setQuizQuestion(quiz);
+        setQuizVisible(true);
+        setFeedLocked(true);
+        console.log('🧠 Quiz shown for content:', quiz.sourceTitle);
+      } else {
+        console.log('🧠 No quiz question generated from current session content');
+      }
+    } catch (error) {
+      console.error('Error showing quiz for recent content:', error);
+    }
+  }, [user, feedManager, feedItems]);
 
   const {
     currentIndex,
@@ -416,7 +376,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     trackContentEngagement,
     recordContentView,
     showQuizForRecentContent,
-    nextQuizAt,
     feedLocked
   );
 
@@ -557,7 +516,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         onCommentsCountChange={handleCommentsCountChange}
         contentType={
           commentsArticleId 
-            ? (feedItems.find(item => item.id === commentsArticleId)?.type as 'article' | 'paper' | 'book') || 'article'
+            ? (feedItems.find(item => item.id === commentsArticleId)?.type as 'article' | 'paper' | 'book' | 'insight') || 'article'
             : undefined
         }
       />
@@ -566,7 +525,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
       <QuizCard 
         visible={quizVisible} 
         onClose={handleQuizClose} 
-        question={quizQuestion} 
+        question={quizQuestion}
+        onAnswer={handleQuizAnswer}
       />
     </>
   );

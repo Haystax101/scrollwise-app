@@ -160,3 +160,47 @@ export interface MainFeedProps {
   industries: Industry[];
   initialReelId?: number;
 }
+
+// Quiz system interfaces
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number; // Index of correct option
+  explanation?: string;
+  sourceContentId: number | string;
+  sourceContentType: ContentType;
+  sourceTitle: string;
+}
+
+export interface QuizSession {
+  userId: string;
+  sessionId: string;
+  contentViewed: Array<{
+    contentId: number | string;
+    contentType: ContentType;
+    title: string;
+    viewedAt: Date;
+  }>;
+  quizAttempts: Set<string>; // Content IDs that have been quizzed
+  totalContentViewed: number;
+  contentSinceLastQuiz: number; // Track content viewed since last quiz
+  currentProbability: number;
+  lastQuizAt?: Date;
+}
+
+export interface QuizAttempt {
+  sessionId: string;
+  questionId: string;
+  userAnswer: number;
+  isCorrect: boolean;
+  timeSpent: number; // in seconds
+  attemptedAt: Date;
+}
+
+export interface QuizOverlay {
+  visible: boolean;
+  question: QuizQuestion;
+  onAnswer: (answerIndex: number) => void;
+  onClose: () => void;
+}

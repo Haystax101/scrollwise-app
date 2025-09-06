@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import type { FeedItem, Article, Paper, Book, Industry, Insight } from '../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QuizSessionManager } from './QuizSessionManager';
 
 /**
  * Simple, reliable FeedManager - replaces complex feedAlgorithm.ts
@@ -15,11 +16,15 @@ export class FeedManager {
   private userIndustries: string[];
   private allIndustries: Industry[];
   private viewedContentIds: Set<string> = new Set();
+  private quizManager: QuizSessionManager;
   
   constructor(userId: string, userIndustries: string[], allIndustries: Industry[]) {
     this.userId = userId;
     this.userIndustries = userIndustries;
     this.allIndustries = allIndustries;
+    
+    // Initialize quiz session manager
+    this.quizManager = new QuizSessionManager(userId);
     
     // Load viewed content from AsyncStorage (simple persistence)
     this.loadViewedContent();
@@ -125,12 +130,18 @@ export class FeedManager {
       
       console.log(`📡 FeedManager: Using efficient database-level filtering for ${contentType}`);
 
-      // Use RPC function to get unviewed content directly from database
-      // This excludes viewed content at the SQL level, much more efficient
+      // For insights, always use the original method to ensure proper profile joins
+      // The RPC function may not properly join with profiles table
+      if (contentType === 'insight') {
+        console.log(`📡 FeedManager: Using original method for insights to ensure profile data`);
+        return this.fetchContentByTypeOriginal(contentType, count);
+      }
+
+      // Use RPC function for other content types
       const { data, error } = await supabase.rpc('get_unviewed_content_by_type', {
         p_user_id: this.userId,
         p_content_type: contentType,
-        p_industry_ids: contentType === 'insight' ? null : this.userIndustries,
+        p_industry_ids: this.userIndustries,
         p_limit: count * 3 // Get extra in case some fail conversion
       });
 
@@ -174,6 +185,7 @@ export class FeedManager {
       
       // Handle insights separately (no industry filtering)
       if (contentType === 'insight') {
+        console.log(`📡 FeedManager: Executing insights query with profile join for user ${this.userId}`);
         query = supabase
           .from('insights')
           .select(`
@@ -203,6 +215,19 @@ export class FeedManager {
       if (error || !data) {
         console.error(`📡 FeedManager: Fallback query error for ${contentType}:`, error);
         return [];
+      }
+
+      // Debug logging for insights profile data
+      if (contentType === 'insight') {
+        console.log(`📡 FeedManager: Insights query returned ${data.length} items`);
+        if (data.length > 0) {
+          console.log(`📡 FeedManager: First insight data sample:`, {
+            id: data[0].id,
+            author_id: data[0].author_id,
+            profiles: data[0].profiles,
+            content_preview: data[0].content?.substring(0, 50)
+          });
+        }
       }
 
       // Filter out viewed content client-side
@@ -275,14 +300,27 @@ export class FeedManager {
 
       case 'insight':
         const profile = data.profiles;
+        
+        // Debug log to see what profile data we're getting
+        console.log(`🧠 FeedManager: Processing insight ${data.id}, profile data:`, profile);
+        
+        // Improved fallback logic - try to get name from different sources
+        let authorName = 'User'; // Better fallback than 'Anonymous'
+        if (profile?.full_name) {
+          authorName = profile.full_name;
+        } else {
+          // Log when we have missing profile data
+          console.log(`⚠️ FeedManager: Missing profile data for insight ${data.id}, author_id: ${data.author_id}`);
+        }
+        
         return {
           id: String(data.id),
           type: 'insight',
           content: data.content || '',
           title: data.content ? data.content.substring(0, 50) + '...' : '',
           author: {
-            name: profile?.full_name || 'Anonymous',
-            handle: `@${(profile?.full_name || 'anonymous').toLowerCase().replace(/\s+/g, '')}`,
+            name: authorName,
+            handle: `@${authorName.toLowerCase().replace(/\s+/g, '')}`,
             avatar: profile?.avatar_url || '',
             role: '',
             company: '',
@@ -305,14 +343,23 @@ export class FeedManager {
   }
 
   /**
-   * Mark content as viewed - simple tracking
+   * Mark content as viewed - simple tracking with quiz integration
    */
-  async markAsViewed(contentId: string | number, contentType: string): Promise<void> {
+  async markAsViewed(contentId: string | number, contentType: string, contentItem?: FeedItem): Promise<void> {
     const viewKey = `${contentType}-${contentId}`;
     
     if (!this.viewedContentIds.has(viewKey)) {
       this.viewedContentIds.add(viewKey);
       console.log(`👁️ FeedManager: Marked as viewed: ${viewKey} (total: ${this.viewedContentIds.size})`);
+      
+      // Track in quiz session if content item provided
+      if (contentItem) {
+        try {
+          await this.quizManager.trackContentView(contentItem);
+        } catch (error) {
+          console.error('👁️ FeedManager: Error tracking content in quiz session:', error);
+        }
+      }
       
       // Save to AsyncStorage
       await this.saveViewedContent();
@@ -400,6 +447,18 @@ export class FeedManager {
   }
 
   /**
+   * Clear quiz session data (for debugging)
+   */
+  async clearQuizData(): Promise<void> {
+    try {
+      await this.quizManager.clearAllData();
+      console.log('🧹 FeedManager: Cleared quiz session data');
+    } catch (error) {
+      console.error('📡 FeedManager: Error clearing quiz data:', error);
+    }
+  }
+
+  /**
    * Simple array shuffle - Fisher-Yates algorithm
    */
   private shuffleArray<T>(array: T[]): T[] {
@@ -412,12 +471,59 @@ export class FeedManager {
   }
 
   /**
-   * Get debug info
+   * Check if quiz should be shown for current session
    */
-  getDebugInfo(): { viewedCount: number; userIndustries: string[] } {
+  shouldShowQuiz(): { show: boolean; reason: string } {
+    return this.quizManager.shouldShowQuiz();
+  }
+
+  /**
+   * Generate a quiz question from viewed content
+   */
+  async generateQuizQuestion() {
+    return await this.quizManager.generateQuizQuestion();
+  }
+
+  /**
+   * Generate a quiz question from specific content array (current session only)
+   */
+  async generateQuizQuestionFromContent(contentArray: FeedItem[]) {
+    return await this.quizManager.generateQuizQuestionFromContent(contentArray);
+  }
+
+  /**
+   * Handle quiz attempt
+   */
+  async handleQuizAttempt(question: any, userAnswer: number): Promise<void> {
+    await this.quizManager.handleQuizAttempt(question, userAnswer);
+  }
+
+  /**
+   * Get quiz session statistics
+   */
+  getQuizStats() {
+    return this.quizManager.getSessionStats();
+  }
+
+  /**
+   * Reset quiz session
+   */
+  async resetQuizSession(): Promise<void> {
+    await this.quizManager.resetSession();
+  }
+
+  /**
+   * Get debug info - enhanced with quiz stats
+   */
+  getDebugInfo(): { 
+    viewedCount: number; 
+    userIndustries: string[];
+    quizStats: ReturnType<QuizSessionManager['getSessionStats']>;
+  } {
     return {
       viewedCount: this.viewedContentIds.size,
-      userIndustries: this.userIndustries
+      userIndustries: this.userIndustries,
+      quizStats: this.quizManager.getSessionStats()
     };
   }
 }

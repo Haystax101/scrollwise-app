@@ -86,13 +86,13 @@ export const removeHtmlTags = (text: string): string => {
 /**
  * Processes insight text to make first sentence bold and colored, with remaining text as one block
  */
-export const processInsightText = (text: string, accentColor: string): Array<{ text: string; style: any }> => {
+export const processInsightText = (text: string, _accentColor: string): Array<{ text: string; style: any }> => {
   // Remove line breaks and normalize whitespace
   const cleanText = text.replace(/\s+/g, ' ').trim();
   
-  // Return entire text as one block with consistent bold styling
+  // Return entire text as one block with consistent white styling for book cards
   return [{
     text: cleanText,
-    style: { color: accentColor, fontWeight: '700' }
+    style: { color: '#FFFFFF', fontWeight: '700' }
   }];
 };

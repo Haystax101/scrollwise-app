@@ -26,6 +26,7 @@ export interface ThemeColors {
   primaryText: string;
   readButtonText: string;
   accent: string;
+  likeColor: string;
   error: string;
   
   // Book cover text colors
@@ -68,6 +69,7 @@ const lightTheme: ThemeColors = {
   primaryText: '#000000',
   readButtonText: '#000000',
   accent: '#EAB308',
+  likeColor: '#EF4444',
   error: '#EF4444',
   
   bookTitle: '#FFFFFF',
@@ -106,6 +108,7 @@ const darkTheme: ThemeColors = {
   primaryText: '#000000',
   readButtonText: '#000000',
   accent: '#EAB308',
+  likeColor: '#EF4444',
   error: '#EF4444',
   
   bookTitle: '#FFFFFF',

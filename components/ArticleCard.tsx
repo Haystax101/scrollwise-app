@@ -384,7 +384,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
             <View style={dynamicStyles.actionsRow}>
               <View style={dynamicStyles.actionGroup}>
                 <TouchableOpacity style={dynamicStyles.actionButton} onPress={handleLikePress}>
-                  <FontAwesome name={hasLiked ? "heart" : "heart-o"} size={20} color={hasLiked ? colors.accent : colors.text} />
+                  <FontAwesome name={hasLiked ? "heart" : "heart-o"} size={20} color={hasLiked ? colors.likeColor : colors.text} />
                 </TouchableOpacity>
                 <Text style={dynamicStyles.actionText}>{likes}</Text>
               </View>

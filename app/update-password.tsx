@@ -264,9 +264,18 @@ export default function UpdatePassword() {
     };
   }, []);
 
+  // Enhanced password validation (same as onboarding)
+  const hasMinLength = password.length >= 8;
+  const hasCapitalLetter = /[A-Z]/.test(password);
+  const hasPunctuation = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const isValidPassword = hasMinLength && hasCapitalLetter && hasPunctuation;
+
   const handleUpdatePassword = async () => {
-    if (!password || password.length < 6) {
-      Alert.alert('Invalid Password', 'Password must be at least 6 characters long.');
+    if (!isValidPassword) {
+      Alert.alert(
+        'Invalid Password', 
+        'Password must be at least 8 characters and include at least one capital letter and one punctuation mark.'
+      );
       return;
     }
 
@@ -457,7 +466,7 @@ export default function UpdatePassword() {
       hideProgressDots={true}
       showBackButton={true}
       buttonText={isLoading ? "Updating..." : "Update Password"}
-      buttonDisabled={isLoading || !password || !confirmPassword}
+      buttonDisabled={isLoading || !isValidPassword || !confirmPassword || password !== confirmPassword}
       customContent={
         <View style={{ width: '100%', paddingHorizontal: 24 }}>
           <InputField
@@ -466,6 +475,21 @@ export default function UpdatePassword() {
             onChangeText={setPassword}
             secureTextEntry
           />
+          
+          {password.length > 0 && (
+            <View style={styles.validationContainer}>
+              {!hasMinLength && (
+                <Text style={styles.validationText}>• Password must be at least 8 characters</Text>
+              )}
+              {!hasCapitalLetter && (
+                <Text style={styles.validationText}>• Password must include at least one capital letter</Text>
+              )}
+              {!hasPunctuation && (
+                <Text style={styles.validationText}>• Password must include at least one punctuation mark</Text>
+              )}
+            </View>
+          )}
+
           <View style={{ marginTop: 16 }} />
           <InputField
             label="Confirm New Password"
@@ -473,11 +497,12 @@ export default function UpdatePassword() {
             onChangeText={setConfirmPassword}
             secureTextEntry
           />
-          <View style={styles.passwordRequirements}>
-            <Text style={[styles.requirementText, { color: colors.textSecondary }]}>
-              Password must be at least 6 characters long
-            </Text>
-          </View>
+          
+          {confirmPassword.length > 0 && password !== confirmPassword && (
+            <View style={styles.validationContainer}>
+              <Text style={styles.validationText}>• Passwords must match</Text>
+            </View>
+          )}
         </View>
       }
     />
@@ -509,11 +534,14 @@ const styles = StyleSheet.create({
   successIconText: {
     fontSize: 32,
   },
-  passwordRequirements: {
-    marginTop: 8,
+  validationContainer: {
+    marginTop: 12,
+    marginBottom: 8,
   },
-  requirementText: {
+  validationText: {
+    color: '#EF4444',
     fontSize: 14,
-    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 20,
   },
 });

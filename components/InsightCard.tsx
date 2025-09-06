@@ -387,7 +387,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       .eq('user_id', user.id)
       .eq('insight_id', insight.id)
       .maybeSingle();
-    if (likeRow) setHasLiked(true);
+    setHasLiked(!!likeRow);
     
     const { data: saveRow } = await supabase
       .from('insight_saves')
@@ -395,7 +395,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       .eq('user_id', user.id)
       .eq('insight_id', insight.id)
       .maybeSingle();
-    if (saveRow) setHasSaved(true);
+    setHasSaved(!!saveRow);
     
     // Check if this insight is supercharged
     try {
@@ -404,7 +404,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         .select('supercharged')
         .eq('id', insight.id)
         .maybeSingle();
-        if (superchargeRow?.supercharged) setIsSupercharged(true);
+        setIsSupercharged(!!superchargeRow?.supercharged);
     }
     catch (error) {
       console.error('Error checking supercharged status:', error);
@@ -442,7 +442,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           created_at: data.created_at,
           likes_count: data.likes_count || 0,
           user: {
-            name: (data.profiles as any)?.full_name || 'Anonymous',
+            name: (data.profiles as any)?.full_name || 'User',
             photo: (data.profiles as any)?.avatar_url || undefined,
           }
         };
@@ -491,6 +491,14 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     };
     fetchAuthorId();
   }, [insight.id, initializeFlags, fetchTopComment, trackView]); // Added insight.id as dependency
+
+  // Sync local counts with prop changes (important for feed updates)
+  useEffect(() => {
+    setLikes(insight.likes_count || 0);
+    setSaves(insight.saves_count || 0);
+    setComments(insight.comments_count || 0);
+    setViews(insight.views_count || 0);
+  }, [insight.likes_count, insight.saves_count, insight.comments_count, insight.views_count]);
 
   const toggleLike = useCallback(async () => {
     if (!user) return;
@@ -788,9 +796,6 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
                   </View>
                 )}
               </View>
-              <TouchableOpacity onPress={() => authorId && fetchUserProfile(authorId)} style={dynamicStyles.moreButton}>
-                <Ionicons name="ellipsis-horizontal" size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
             </View>
           </View>
         </TouchableOpacity>
@@ -861,7 +866,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
                 />
                 <View style={dynamicStyles.commentContent}>
                   <View style={dynamicStyles.commentUserRow}>
-                    <Text style={dynamicStyles.commentUserName}>{topComment.user?.name || 'Anonymous'}</Text>
+                    <Text style={dynamicStyles.commentUserName}>{topComment.user?.name || 'User'}</Text>
                     <Text style={dynamicStyles.commentTimestamp}>{formatTimestamp(topComment.created_at)}</Text>
                   </View>
                   {topComment.user?.tagline && (

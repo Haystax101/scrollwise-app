@@ -4,27 +4,16 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-
-export interface QuizQuestion {
-  id: string;
-  question: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  correct_option_index: number;
-  content_type: 'article' | 'paper' | 'book';
-  content_id: number;
-  content_title?: string;
-}
+import type { QuizQuestion } from '../types';
 
 interface QuizCardProps {
   visible: boolean;
   onClose: () => void;
   question: QuizQuestion | null;
+  onAnswer?: (answerIndex: number) => void;
 }
 
-export const QuizCard: React.FC<QuizCardProps> = ({ visible, onClose, question }) => {
+export const QuizCard: React.FC<QuizCardProps> = ({ visible, onClose, question, onAnswer }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
@@ -32,22 +21,10 @@ export const QuizCard: React.FC<QuizCardProps> = ({ visible, onClose, question }
   const [result, setResult] = useState<null | { correct: boolean; correctAnswer: string }>(null);
   const [options, setOptions] = useState<string[]>([]);
 
-  // Randomize options when question changes
+  // Setup options when question changes (no shuffling to maintain correctAnswer index)
   React.useEffect(() => {
-    if (question) {
-      const questionOptions = [question.option_a, question.option_b, question.option_c, question.option_d];
-      const correctAnswer = questionOptions[question.correct_option_index];
-      
-      // Create array with indices to track original positions
-      const optionsWithIndex = questionOptions.map((option, index) => ({ option, originalIndex: index }));
-      
-      // Shuffle the options
-      for (let i = optionsWithIndex.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [optionsWithIndex[i], optionsWithIndex[j]] = [optionsWithIndex[j], optionsWithIndex[i]];
-      }
-      
-      setOptions(optionsWithIndex.map(item => item.option));
+    if (question && question.options) {
+      setOptions(question.options);
       setSelectedOption(null);
       setResult(null);
     }
@@ -65,30 +42,19 @@ export const QuizCard: React.FC<QuizCardProps> = ({ visible, onClose, question }
         return;
       }
 
-      // Find the original index of the selected option
-      const selectedText = options[selectedOption];
-      const originalOptionIndex = [question.option_a, question.option_b, question.option_c, question.option_d].indexOf(selectedText);
-      const isCorrect = originalOptionIndex === question.correct_option_index;
-      
-      // Record the attempt in the database
-      const { error } = await supabase
-        .from('quiz_attempts')
-        .insert({
-          user_id: user.id,
-          question_id: question.id,
-          selected_option_index: originalOptionIndex,
-          is_correct: isCorrect
-        });
+      const isCorrect = selectedOption === question.correctAnswer;
+      const correctAnswerText = question.options[question.correctAnswer];
 
-      if (error) {
-        console.error('Error recording quiz attempt:', error);
+      // Call the onAnswer callback if provided (for integration with QuizSessionManager)
+      // The QuizSessionManager will handle database insertion to avoid duplicates
+      if (onAnswer) {
+        onAnswer(selectedOption);
       }
 
       // XP is automatically awarded by the database trigger when quiz_attempt is inserted
       // The trigger awards 5 XP for correct answers and updates user totals
 
-      const correctAnswer = [question.option_a, question.option_b, question.option_c, question.option_d][question.correct_option_index];
-      setResult({ correct: isCorrect, correctAnswer });
+      setResult({ correct: isCorrect, correctAnswer: correctAnswerText });
       
     } catch (error) {
       console.error('Error submitting quiz:', error);
@@ -112,9 +78,9 @@ export const QuizCard: React.FC<QuizCardProps> = ({ visible, onClose, question }
               </TouchableOpacity>
             )}
           </View>
-          {question?.content_title && (
+          {question?.sourceTitle && (
             <Text style={[styles.contentTitle, { color: colors.textSecondary }]}>
-              From: {question.content_title}
+              From: {question.sourceTitle}
             </Text>
           )}
           <Text style={[styles.question, { color: colors.text }]}>{question?.question}</Text>

@@ -80,6 +80,11 @@ export const PostPreview: React.FC<Props> = ({
       justifyContent: 'center',
       alignItems: 'center',
     },
+    avatarImage: {
+      width: 40,
+      height: 40,
+      borderRadius: borderRadius.full,
+    },
     userInfo: {
       flex: 1,
     },
@@ -165,11 +170,18 @@ export const PostPreview: React.FC<Props> = ({
           {/* Post Header */}
           <View style={styles.postHeader}>
             <View style={styles.avatar}>
-              <Feather name="user" size={20} color={colors.insightsTextSecondary} />
+              {user?.user_metadata?.profile_picture || user?.profile_picture ? (
+                <Image 
+                  source={{ uri: user?.user_metadata?.profile_picture || user?.profile_picture }} 
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Feather name="user" size={20} color={colors.insightsTextSecondary} />
+              )}
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{user?.user_metadata?.full_name || 'Your Name'}</Text>
-              <Text style={styles.userTitle}>Your Title • Just now</Text>
+              <Text style={styles.userName}>{user?.user_metadata?.full_name || user?.full_name || 'Your Name'}</Text>
+              <Text style={styles.userTitle}>{user?.user_metadata?.title || user?.title || 'Professional'} • Just now</Text>
             </View>
             <View style={styles.zapBadge}>
               <Feather name="zap" size={16} color={colors.black} />
