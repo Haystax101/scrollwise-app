@@ -119,6 +119,12 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const profileChannelRef = useRef<any>(null);
   const isMountedRef = useRef(true);
 
+  // Ref to safely access userLevel in subscription callbacks without dependency loops
+  const userLevelRef = useRef(userLevel);
+  useEffect(() => {
+    userLevelRef.current = userLevel;
+  }, [userLevel]);
+
   
   // Component data states
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
@@ -604,10 +610,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             console.log('⚡ Profile updated:', payload.new);
             
             // Track level up for analytics if level increased
-            if (payload.new.level !== undefined && payload.new.level > userLevel) {
+            if (payload.new.level !== undefined && payload.new.level > userLevelRef.current) {
               analytics.track(ANALYTICS_EVENTS.LEVEL_UP, {
                 user_id: currentUser.id,
-                previous_level: userLevel,
+                previous_level: userLevelRef.current,
                 new_level: payload.new.level,
                 total_voltz_earned: payload.new.total_voltz_earned,
                 timestamp: new Date().toISOString()
@@ -657,7 +663,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           profileChannelRef.current = null;
         }
       };
-    }, [currentUser?.id, userLevel])
+    }, [currentUser?.id])
   );
 
   // Event handlers
