@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { immediateKeywordSearch, SearchResult } from '../lib/smartSearchService';
+import { immediateKeywordSearch, SearchResult, SearchResponse } from '../lib/smartSearchService';
+import { supabase } from '../lib/supabase';
 
 /**
  * InstantContentLoader Service
@@ -69,8 +70,16 @@ export class InstantContentLoader {
     try {
       console.log(`🔄 InstantLoader: Pre-loading content for ${cacheKey}`);
       
-      // Fetch fresh content
-      const response = await immediateKeywordSearch(query, industryId || undefined, undefined);
+      let response;
+      
+      // If this is initial content loading (not an actual search), fetch recent content directly
+      if (query === 'discover_initial' || query === '') {
+        console.log(`🏠 InstantLoader: Fetching recent content for industry ${cacheKey}`);
+        response = await this.fetchRecentContentByIndustry(industryId);
+      } else {
+        // Use search for actual queries
+        response = await immediateKeywordSearch(query, industryId || undefined, undefined);
+      }
       
       if (response.error) {
         console.error(`❌ InstantLoader: Error pre-loading ${cacheKey}:`, response.error);
@@ -260,6 +269,91 @@ export class InstantContentLoader {
       console.log('✅ InstantLoader: Cache cleared');
     } catch (error) {
       console.error('❌ InstantLoader: Error clearing cache:', error);
+    }
+  }
+
+  /**
+   * Fetch recent content directly from database by industry (for initial content loading)
+   */
+  private async fetchRecentContentByIndustry(industryId: string | null): Promise<SearchResponse> {
+    try {
+      const limit = this.MAX_CACHED_ITEMS_PER_INDUSTRY;
+      let allResults: SearchResult[] = [];
+      
+      console.log(`📊 InstantLoader: Fetching recent content for industry ${industryId || 'all'}`);
+      
+      // Define content types and their distribution
+      const contentTypes = [
+        { table: 'articles', type: 'article' as const, count: Math.ceil(limit * 0.4) },
+        { table: 'papers', type: 'paper' as const, count: Math.ceil(limit * 0.3) },
+        { table: 'books', type: 'book' as const, count: Math.ceil(limit * 0.3) }
+      ];
+      
+      // Fetch content from each type
+      for (const { table, type, count } of contentTypes) {
+        let query = supabase
+          .from(table)
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(count);
+        
+        // Apply industry filter if specified
+        if (industryId) {
+          query = query.eq('industry_id', industryId);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error(`❌ InstantLoader: Error fetching ${type} from ${table}:`, error);
+          continue;
+        }
+        
+        if (data && data.length > 0) {
+          const results: SearchResult[] = data.map(item => ({
+            id: item.id,
+            title: item.title || '',
+            summary: item.summary || item.content_simple || item.short_summary || '',
+            content_simple: item.content_simple,
+            short_summary: item.short_summary,
+            authors: item.authors || item.author,
+            link: item.link || '#',
+            type,
+            site_name: item.site_name,
+            date: item.date,
+            industry_id: item.industry_id,
+            likes_count: item.likes_count || 0,
+            saves_count: item.saves_count || 0,
+            comments_count: item.comments_count || 0,
+            views_count: item.views_count || 0,
+            created_at: item.created_at
+          }));
+          
+          allResults.push(...results);
+          console.log(`✅ InstantLoader: Fetched ${results.length} ${type} items`);
+        }
+      }
+      
+      // Shuffle results for variety
+      const shuffledResults = allResults.sort(() => Math.random() - 0.5);
+      
+      console.log(`📊 InstantLoader: Total fetched: ${shuffledResults.length} items for industry ${industryId || 'all'}`);
+      
+      return {
+        results: shuffledResults.slice(0, limit),
+        searchType: 'recent',
+        hasMore: false,
+        isProFeature: false
+      };
+    } catch (error) {
+      console.error(`❌ InstantLoader: Exception in fetchRecentContentByIndustry:`, error);
+      return {
+        results: [],
+        searchType: 'recent',
+        hasMore: false,
+        isProFeature: false,
+        error: 'Failed to fetch content'
+      };
     }
   }
 

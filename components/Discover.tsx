@@ -94,8 +94,8 @@ export const Discover: React.FC = () => {
     setShowingCachedContent(false);
     
     try {
-      // Get instant content (cached first, then fresh)
-      const { cachedContent, freshContent } = await instantContentLoader.getInstantContent(selectedIndustry, '');
+      // For initial content (no search query), use a different approach that gets recent content by industry
+      const { cachedContent, freshContent } = await instantContentLoader.getInstantContent(selectedIndustry, 'discover_initial');
       
       // Show cached content immediately if available
       if (cachedContent && cachedContent.length > 0) {
