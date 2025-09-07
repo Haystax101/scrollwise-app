@@ -208,31 +208,32 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       try {
         // Step 1: Check and award any new achievements the user has earned
         console.log('Checking for new achievements...');
-        const { data: newAchievements, error: checkError } = await supabase
-          .rpc('check_all_user_achievements', { target_user_id: currentUser.id });
+        // TODO: Re-enable when check_all_user_achievements RPC function is created in database
+        // const { data: newAchievements, error: checkError } = await supabase
+        //   .rpc('check_all_user_achievements', { target_user_id: currentUser.id });
         
-        if (checkError) {
-          console.error('Error checking new achievements:', checkError);
-        } else if (newAchievements && newAchievements[0]?.newly_awarded_count > 0) {
-          console.log(`Awarded ${newAchievements[0].newly_awarded_count} new achievements!`);
-          
-          // Step 2: If achievements were awarded, refresh voltz stats 
-          // The database trigger will automatically set is_levelled=true if user leveled up
-          console.log('Refreshing voltz stats after achievement awards...');
-          const updatedVoltzStats = await voltzService.getVoltzStats(currentUser.id);
-          if (isMountedRef.current) {
-            // Update all voltz and level data
-            setTotalVoltzEarned(updatedVoltzStats.totalVoltzEarned);
-            setUserLevel(updatedVoltzStats.level);
-            setSpendableVoltz(updatedVoltzStats.spendableVoltz);
-            setLevelProgress(updatedVoltzStats.levelProgress);
-            setVoltzForCurrentLevel(updatedVoltzStats.voltzForCurrentLevel);
-            setVoltzForNextLevel(updatedVoltzStats.voltzForNextLevel);
-            setIsLevelled(updatedVoltzStats.isLevelled);
-            
-            console.log('🏆 After achievements - isLevelled:', updatedVoltzStats.isLevelled);
-          }
-        }
+        // if (checkError) {
+        //   console.error('Error checking new achievements:', checkError);
+        // } else if (newAchievements && newAchievements[0]?.newly_awarded_count > 0) {
+        //   console.log(`Awarded ${newAchievements[0].newly_awarded_count} new achievements!`);
+        //   
+        //   // Step 2: If achievements were awarded, refresh voltz stats 
+        //   // The database trigger will automatically set is_levelled=true if user leveled up
+        //   console.log('Refreshing voltz stats after achievement awards...');
+        //   const updatedVoltzStats = await voltzService.getVoltzStats(currentUser.id);
+        //   if (isMountedRef.current) {
+        //     // Update all voltz and level data
+        //     setTotalVoltzEarned(updatedVoltzStats.totalVoltzEarned);
+        //     setUserLevel(updatedVoltzStats.level);
+        //     setSpendableVoltz(updatedVoltzStats.spendableVoltz);
+        //     setLevelProgress(updatedVoltzStats.levelProgress);
+        //     setVoltzForCurrentLevel(updatedVoltzStats.voltzForCurrentLevel);
+        //     setVoltzForNextLevel(updatedVoltzStats.voltzForNextLevel);
+        //     setIsLevelled(updatedVoltzStats.isLevelled);
+        //     
+        //     console.log('🏆 After achievements - isLevelled:', updatedVoltzStats.isLevelled);
+        //   }
+        // }
         
         // Step 3: Fetch all user achievements (including any newly awarded ones)
         const achievementsData = await AchievementService.getUserAchievements(currentUser.id);
