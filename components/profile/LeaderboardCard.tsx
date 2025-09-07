@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { profileImageService } from '../../services/profileImageService';
+// import { profileImageService } from '../../services/profileImageService'; // Disabled due to crash
 
 interface LeaderboardUser {
   user_id: string;
@@ -29,25 +29,58 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
 
       setLoading(true);
       try {
-        const { data, error } = await supabase.rpc('get_leaderboard_for_user', {
-          p_user_id: user.id,
-        });
+        // Fetch leaderboard data using direct table queries (more robust than potentially dysfunctional RPC)
+        console.log('📊 Fetching leaderboard data for user:', user.id);
+        
+        // Get top users from leaderboard table, ordered by voltz (rank is computed client-side)
+        const { data: leaderboardData, error: leaderboardError } = await supabase
+          .from('leaderboard')
+          .select(`
+            user_id,
+            total_voltz_earned,
+            profiles!inner(full_name, avatar_url)
+          `)
+          .order('total_voltz_earned', { ascending: false })
+          .limit(10);
 
-        if (error) {
-          console.error('Error fetching leaderboard:', error);
+        if (leaderboardError) {
+          console.error('Error fetching leaderboard data:', leaderboardError);
+          setDisplayUsers([]);
           return;
         }
 
-        if (data) {
-          const currentUser = data.find((u) => u.user_id === user.id);
-          const top3 = data.filter((u) => u.rank <= 3);
+        if (!leaderboardData || leaderboardData.length === 0) {
+          console.log('📊 No leaderboard data found');
+          setDisplayUsers([]);
+          return;
+        }
+
+        // Transform data to match expected interface with safe null checks
+        // Rank is computed client-side based on voltz order
+        const transformedData: LeaderboardUser[] = leaderboardData
+          .filter(item => item && item.user_id && item.profiles) // Filter out invalid entries
+          .map((item: any, index: number) => ({
+            user_id: item.user_id,
+            full_name: item.profiles?.full_name || 'Anonymous',
+            avatar_url: item.profiles?.avatar_url || null,
+            total_voltz_earned: item.total_voltz_earned || 0,
+            rank: index + 1 // Rank based on position in sorted array
+          }));
+
+        console.log('📊 Transformed leaderboard data:', transformedData.length, 'users');
+
+        if (transformedData && transformedData.length > 0) {
+          const currentUser = transformedData.find((u) => u.user_id === user.id);
+          const top3 = transformedData.filter((u) => u.rank <= 3);
           
           let finalUsers: LeaderboardUser[] = [];
 
           if (!currentUser || currentUser.rank <= 3) {
+            // If current user is in top 3 or not found, show top 3
             finalUsers = top3.slice(0, 3);
           } else {
-            const top2 = data.filter((u) => u.rank <= 2);
+            // Show top 2 + current user
+            const top2 = transformedData.filter((u) => u.rank <= 2);
             finalUsers = [...top2, currentUser];
           }
           
@@ -110,7 +143,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
       backgroundColor: isDark ? colors.background : '#F8F8F8',
     },
     currentUserRow: {
-      backgroundColor: colors.primaryMuted,
+      backgroundColor: colors.primary + '20', // 20% opacity fallback since primaryMuted doesn't exist
       borderWidth: 1,
       borderColor: colors.primary,
     },
@@ -188,7 +221,8 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
       
       {displayUsers.map((u) => {
         const isCurrentUser = u.user_id === user?.id;
-        const imageUrl = profileImageService.getProfileImageUrl(u.avatar_url);
+        // const imageUrl = profileImageService.getProfileImageUrl(u.avatar_url); // Temporarily disabled due to crash
+        const imageUrl = null; // Always use default avatar for now
         return (
           <View key={u.user_id} style={[styles.userRow, isCurrentUser && styles.currentUserRow]}>
             <View style={styles.rankContainer}>
