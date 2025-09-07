@@ -53,6 +53,10 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
 
     setIsLoading(true);
     try {
+      // IMPORTANT: Reset quiz session when feed initially loads to enforce 5-content rule
+      await feedManager.resetQuizSession();
+      console.log('🧠 MainFeed: Quiz session reset on initial load - fresh start');
+      
       let initialContent: FeedItem[] = [];
 
       // If we have an initial content ID, fetch it first
@@ -80,7 +84,8 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
       );
 
       setFeedItems(uniqueContent);
-      setHasMore(uniqueContent.length >= 8); // Assume more content exists if we got a good amount
+      // Always assume more content exists initially - let loadMoreContent determine if we're actually at the end
+      setHasMore(true);
     } catch (error) {
       console.error('📱 MainFeed: Error loading initial content:', error);
     } finally {
@@ -89,20 +94,36 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
   }, [feedManager, initialContentId, initialContentType]);
 
   const loadMoreContent = useCallback(async () => {
-    if (!feedManager || isLoadingMore || !hasMore) return;
+    console.log(`📱 MainFeed: loadMoreContent called - feedManager: ${!!feedManager}, isLoadingMore: ${isLoadingMore}, hasMore: ${hasMore}`);
+    if (!feedManager || isLoadingMore || !hasMore) {
+      console.log(`📱 MainFeed: loadMoreContent early return - not loading`);
+      return;
+    }
 
+    console.log(`📱 MainFeed: Starting to load more content - current feed size: ${feedItems.length}`);
     setIsLoadingMore(true);
     try {
       const moreContent = await feedManager.fetchContent(10);
+      console.log(`📱 MainFeed: Fetched ${moreContent.length} more items from FeedManager`);
       
       // Filter out already displayed content
       const newContent = moreContent.filter(item => !displayedIds.has(String(item.id)));
+      console.log(`📱 MainFeed: After deduplication: ${newContent.length} new items (filtered ${moreContent.length - newContent.length} duplicates)`);
       
       if (newContent.length > 0) {
-        setFeedItems(prev => [...prev, ...newContent]);
-        setHasMore(newContent.length >= 5); // Continue if we got a reasonable amount
+        setFeedItems(prev => {
+          const updated = [...prev, ...newContent];
+          console.log(`📱 MainFeed: Feed updated - from ${prev.length} to ${updated.length} items`);
+          return updated;
+        });
+        // Continue loading if we got any content from database, even if some was filtered
+        setHasMore(true); 
+        console.log(`📱 MainFeed: hasMore remains true (added ${newContent.length} new items from ${moreContent.length} fetched)`);
       } else {
-        setHasMore(false);
+        // Only stop if database returned nothing OR returned very little (suggesting we're near the end)
+        const shouldContinue = moreContent.length >= 3; // Be more conservative
+        setHasMore(shouldContinue);
+        console.log(`📱 MainFeed: No new content after deduplication - hasMore set to ${shouldContinue} (database returned ${moreContent.length} items)`);
       }
     } catch (error) {
       console.error('📱 MainFeed: Error loading more content:', error);
@@ -118,6 +139,10 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
     try {
       // Clear current content and reload
       setFeedItems([]);
+      
+      // IMPORTANT: Reset quiz session when feed refreshes to enforce 5-content rule
+      await feedManager.resetQuizSession();
+      console.log('🧠 MainFeed: Quiz session reset on refresh - user must view 5 content pieces before quiz');
       
       const freshContent = await feedManager.fetchContent(10);
       const uniqueContent = freshContent.filter((item, index, self) => 
@@ -165,7 +190,11 @@ function useContentTracking(
   trackContentEngagement?: (contentType: string, contentId: string, engagementType: string, data?: Record<string, any>) => void,
   recordContentView?: (contentId: string | number, contentType: string) => Promise<void>,
   showQuizForRecentContent?: (currentIndex: number) => Promise<void>,
-  feedLocked?: boolean
+  feedLocked?: boolean,
+  feedItems?: FeedItem[],
+  loadMoreContent?: () => Promise<void>,
+  isLoadingMore?: boolean,
+  hasMore?: boolean
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [scrollCount, setScrollCount] = useState(0);
@@ -221,9 +250,20 @@ function useContentTracking(
             console.log(`🧠 Quiz check: ${quizCheck.reason}`);
           }
         }
+
+        // Preemptive loading: start loading more content when we're close to the end
+        if (feedItems && loadMoreContent && hasMore && !isLoadingMore && !feedLocked) {
+          const remainingItems = feedItems.length - newIndex;
+          const threshold = 3; // Start loading when 3 items remaining
+          
+          if (remainingItems <= threshold) {
+            console.log(`🚀 Preemptive loading triggered - ${remainingItems} items remaining, threshold: ${threshold}`);
+            loadMoreContent();
+          }
+        }
       }
     }
-  }, [currentIndex, scrollCount, feedManager, trackScroll, trackInteraction, trackContentEngagement, recordContentView, showQuizForRecentContent, feedLocked]);
+  }, [currentIndex, scrollCount, feedManager, trackScroll, trackInteraction, trackContentEngagement, recordContentView, showQuizForRecentContent, feedLocked, feedItems, loadMoreContent, hasMore, isLoadingMore]);
 
   const handleUserInteraction = useCallback((contentId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => {
     trackInteraction?.(action, {
@@ -325,6 +365,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     isLoading,
     isLoadingMore,
     isRefreshing,
+    hasMore,
     loadInitialContent,
     loadMoreContent,
     refreshContent,
@@ -376,7 +417,11 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     trackContentEngagement,
     recordContentView,
     showQuizForRecentContent,
-    feedLocked
+    feedLocked,
+    feedItems,
+    loadMoreContent,
+    isLoadingMore,
+    hasMore
   );
 
   // Load initial content when feed manager is ready
@@ -498,8 +543,23 @@ export const MainFeed: React.FC<MainFeedProps> = ({
           />
         }
         ListFooterComponent={renderFooter}
-        onEndReached={loadMoreContent}
-        onEndReachedThreshold={0.5}
+        onEndReached={() => {
+          console.log(`🚀 FlatList onEndReached triggered - feedItems.length: ${feedItems.length}, hasMore: ${hasMore}, isLoadingMore: ${isLoadingMore}`);
+          loadMoreContent();
+        }}
+        onEndReachedThreshold={0.8}
+        onScrollBeginDrag={() => {
+          console.log(`📱 FlatList onScrollBeginDrag - feedItems.length: ${feedItems.length}`);
+        }}
+        onScrollEndDrag={() => {
+          console.log(`📱 FlatList onScrollEndDrag - feedItems.length: ${feedItems.length}`);
+        }}
+        onMomentumScrollBegin={() => {
+          console.log(`📱 FlatList onMomentumScrollBegin - feedItems.length: ${feedItems.length}`);
+        }}
+        onMomentumScrollEnd={() => {
+          console.log(`📱 FlatList onMomentumScrollEnd - feedItems.length: ${feedItems.length}`);
+        }}
         // Performance optimizations
         removeClippedSubviews={true}
         maxToRenderPerBatch={3}

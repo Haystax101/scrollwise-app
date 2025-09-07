@@ -96,12 +96,20 @@ export class FeedManager {
         { type: 'book' as const, count: Math.ceil(targetCount * 0.25) },
         { type: 'insight' as const, count: Math.ceil(targetCount * 0.15) }
       ];
+      
+      console.log(`📡 FeedManager: Content distribution for ${targetCount} items:`, distribution);
 
       // Fetch each content type
       for (const { type, count } of distribution) {
+        console.log(`📡 FeedManager: Fetching ${count} items of type ${type}`);
         const items = await this.fetchContentByType(type, count);
+        console.log(`📡 FeedManager: Received ${items.length} items of type ${type} (requested ${count})`);
         allContent.push(...items);
       }
+      
+      console.log(`📡 FeedManager: Total items collected before shuffle: ${allContent.length}`);
+      console.log(`📡 FeedManager: Breakdown before shuffle: ${allContent.filter(i => i.type === 'article').length} articles, ${allContent.filter(i => i.type === 'paper').length} papers, ${allContent.filter(i => i.type === 'book').length} books, ${allContent.filter(i => i.type === 'insight').length} insights`);
+      
 
       // Shuffle for variety and return requested count
       const shuffled = this.shuffleArray(allContent);
@@ -124,8 +132,6 @@ export class FeedManager {
     count: number
   ): Promise<FeedItem[]> {
     try {
-      let query: any;
-      
       console.log(`📡 FeedManager: Starting fetchContentByType for ${contentType}, target count: ${count}`);
       
       console.log(`📡 FeedManager: Using efficient database-level filtering for ${contentType}`);
@@ -134,7 +140,9 @@ export class FeedManager {
       // The RPC function may not properly join with profiles table
       if (contentType === 'insight') {
         console.log(`📡 FeedManager: Using original method for insights to ensure profile data`);
-        return this.fetchContentByTypeOriginal(contentType, count);
+        const insightsResult = await this.fetchContentByTypeOriginal(contentType, count);
+        console.log(`📡 FeedManager: Original method returned ${insightsResult.length} insights for target count ${count}`);
+        return insightsResult;
       }
 
       // Use RPC function for other content types
@@ -232,14 +240,20 @@ export class FeedManager {
 
       // Filter out viewed content client-side
       const viewedKeys = Array.from(this.viewedContentIds);
+      console.log(`📡 FeedManager: Filtering ${contentType} - ${data.length} raw items, ${viewedKeys.length} viewed keys`);
+      
       const unviewedData = data.filter((item: any) => {
         const itemKey = `${contentType}-${item.id}`;
         return !viewedKeys.includes(itemKey);
       });
+      
+      console.log(`📡 FeedManager: After filtering ${contentType} - ${unviewedData.length} unviewed items (filtered out ${data.length - unviewedData.length} viewed items)`);
 
       const feedItems = unviewedData.slice(0, count).map((item: any) => 
         this.convertToFeedItem(item, contentType)
       );
+      
+      console.log(`📡 FeedManager: Final ${contentType} result after conversion - ${feedItems.length} items (requested ${count})`);
 
       return feedItems;
     } catch (error) {
@@ -478,6 +492,14 @@ export class FeedManager {
   }
 
   /**
+   * Reset quiz session to enforce 5-content viewing rule
+   */
+  async resetQuizSession(): Promise<void> {
+    console.log('🧠 FeedManager: Resetting quiz session to enforce 5-content rule');
+    await this.quizManager.resetSession();
+  }
+
+  /**
    * Generate a quiz question from viewed content
    */
   async generateQuizQuestion() {
@@ -505,12 +527,6 @@ export class FeedManager {
     return this.quizManager.getSessionStats();
   }
 
-  /**
-   * Reset quiz session
-   */
-  async resetQuizSession(): Promise<void> {
-    await this.quizManager.resetSession();
-  }
 
   /**
    * Get debug info - enhanced with quiz stats
