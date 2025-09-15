@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Dimensions, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Feather, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import type { Paper } from '../types';
 import { StaticVisual } from './StaticVisual';
@@ -11,8 +11,7 @@ import { useIndustries } from '../context/IndustriesContext';
 import { ExpandedTextModal } from './ExpandedTextModal';
 import { FlagButton } from './common/FlagButton';
 import { optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
-
-const { height: screenHeight } = Dimensions.get('window');
+import { useResponsiveLayout } from '../utils/screenUtils';
 
 interface PaperCardProps {
   paper: Paper;
@@ -54,6 +53,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { allIndustries } = useIndustries();
+  const { visualHeight, totalHeight, fontSizes } = useResponsiveLayout();
 
   const [likes, setLikes] = useState(paper.likes_count || 0);
   const [hasLiked, setHasLiked] = useState(false);
@@ -201,12 +201,12 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
             onPress={handleDelveDeeper}
           >
             {showComplexContent ? (
-              <Text style={[{ fontSize: 14, fontWeight: '600' }, { color: colors.primary }]}>
+              <Text style={[{ fontSize: fontSizes.action, fontWeight: '600' }, { color: colors.primary }]}>
                 Simplify
               </Text>
             ) : (
               <>
-                <Text style={[{ fontSize: 14, fontWeight: '600' }, { color: colors.primary }]}>
+                <Text style={[{ fontSize: fontSizes.action, fontWeight: '600' }, { color: colors.primary }]}>
                   Delve Deeper
                 </Text>
               </>
@@ -221,11 +221,11 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     container: {
       flex: 1,
       backgroundColor: colors.background,
-      height: screenHeight,
+      height: totalHeight,
       width: '100%',
     },
     visualSection: {
-      height: screenHeight * 0.45,
+      height: visualHeight,
       width: '100%',
       position: 'relative',
     },
@@ -270,18 +270,18 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     },
     contentScrollView: { flex: 1 },
     contentContainer: { flexGrow: 1, paddingBottom: 16 },
-    metadataText: { color: colors.textSecondary, fontSize: 12 },
-    metadataDot: { color: colors.textSecondary, fontSize: 12, marginHorizontal: 4 },
+    metadataText: { color: colors.textSecondary, fontSize: fontSizes.metadata },
+    metadataDot: { color: colors.textSecondary, fontSize: fontSizes.metadata, marginHorizontal: 4 },
     typeContainer: { flexDirection: 'row', alignItems: 'center' },
     typeText: {
       color: colors.textSecondary,
-      fontSize: 12,
+      fontSize: fontSizes.metadata,
       fontWeight: '500',
       textTransform: 'capitalize',
     },
     title: {
       color: colors.text,
-      fontSize: 20,
+      fontSize: fontSizes.title,
       fontWeight: '700',
       marginBottom: 12,
       lineHeight: 26,
@@ -301,13 +301,13 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     },
     authorText: {
       color: colors.accent,
-      fontSize: 12,
+      fontSize: fontSizes.author,
       fontWeight: '500',
     },
     contentText: {
       color: colors.text,
-      fontSize: 16,
-      lineHeight: 22,
+      fontSize: fontSizes.content,
+      lineHeight: fontSizes.content * 1.4,
       marginBottom: 12,
     },
     readMoreText: {
@@ -325,7 +325,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     },
     actionGroup: { flexDirection: 'row', alignItems: 'center' },
     actionButton: { padding: 8 },
-    actionText: { color: colors.textSecondary, fontSize: 12, marginLeft: 4, fontWeight: '500' },
+    actionText: { color: colors.textSecondary, fontSize: fontSizes.action, marginLeft: 4, fontWeight: '500' },
     readMoreButton: {
       backgroundColor: 'transparent',
       borderColor: colors.primary,
@@ -334,7 +334,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       paddingVertical: 8,
       borderRadius: 16,
     },
-    readMoreButtonText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+    readMoreButtonText: { color: colors.primary, fontSize: fontSizes.action, fontWeight: '600' },
   });
 
   return (

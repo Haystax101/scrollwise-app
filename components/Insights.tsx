@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { feedContentPreloader } from '../services/FeedContentPreloader';
 import { InsightsPublisher } from './insights/InsightsPublisher';
+import { InsightsEditor } from './insights/InsightsEditor';
 import { InsightsStatsOverview } from './insights/InsightsStatsOverview';
 import { InsightsCardsList } from './insights/InsightsCardsList';
 import { SavedInsightsList } from './insights/SavedInsightsList';
@@ -48,6 +49,8 @@ const Insights = () => {
   const [loading, setLoading] = useState(true);
   const [showPublisher, setShowPublisher] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [editingInsight, setEditingInsight] = useState<Insight | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -185,8 +188,8 @@ const Insights = () => {
   };
 
   const handleEditInsight = (insight: Insight) => {
-    // Open edit modal or navigate to edit screen
-    console.log('Edit insight:', insight.id);
+    setEditingInsight(insight);
+    setShowEditor(true);
   };
 
   const handleDeleteInsight = async (insight: Insight) => {
@@ -219,6 +222,12 @@ const Insights = () => {
 
   const handlePublisherComplete = () => {
     setShowPublisher(false);
+    fetchData(); // Refresh the insights list
+  };
+
+  const handleEditorComplete = () => {
+    setShowEditor(false);
+    setEditingInsight(null);
     fetchData(); // Refresh the insights list
   };
 
@@ -258,6 +267,10 @@ const Insights = () => {
     return <InsightsPublisher onComplete={handlePublisherComplete} />;
   }
 
+  if (showEditor && editingInsight) {
+    return <InsightsEditor insight={editingInsight} onComplete={handleEditorComplete} />;
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView 
@@ -283,6 +296,7 @@ const Insights = () => {
           loading={loading}
           onInsightPress={handleInsightPress}
           onDeletePress={handleDeleteInsight}
+          onEditPress={handleEditInsight}
         />
 
         {/* Saved Insights Section */}

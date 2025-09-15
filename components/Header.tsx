@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useDirectionalNavigation } from '../context/NavigationContext';
 import { feedNavigationService } from '../services/FeedNavigationService';
 
-type ScreenName = 'home' | 'discover' | 'profile' | 'chats' | 'saved-feed';
+type ScreenName = 'home' | 'discover' | 'people' | 'profile' | 'chats' | 'saved-feed';
 
 type HeaderProps = {
   currentScreen: ScreenName;
@@ -15,6 +15,7 @@ type HeaderProps = {
 const NAV_ITEMS = [
   { name: 'Home', screenName: 'home' as ScreenName, path: '/feed', icon: (props: any) => <Feather name="home" {...props} />, accessibilityLabel: "Navigate to Home screen" },
   { name: 'Discover', screenName: 'discover' as ScreenName, path: '/discover', icon: (props: any) => <Feather name="search" {...props} />, accessibilityLabel: "Navigate to Discover screen" },
+  { name: 'People', screenName: 'people' as ScreenName, path: '/people', icon: (props: any) => <Feather name="users" {...props} />, accessibilityLabel: "Navigate to People screen" },
   { name: 'Insights', screenName: 'chats' as ScreenName, path: '/chats', icon: (props: any) => <Feather name="message-square" {...props} />, accessibilityLabel: "Navigate to Insights screen" },
   { name: 'Profile', screenName: 'profile' as ScreenName, path: '/profile', icon: (props: any) => <Feather name="user" {...props} />, accessibilityLabel: "Navigate to Profile screen" },
 ];

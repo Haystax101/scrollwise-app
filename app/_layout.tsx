@@ -38,15 +38,23 @@ export default function RootLayout() {
                         : 'slide_from_right',
                     })}
                   />
-                  <Stack.Screen 
+                  <Stack.Screen
                     name="discover"
                     options={({ route }) => ({
-                      animation: (route.params as any)?.animationDirection === 'left' 
-                        ? 'slide_from_left' 
+                      animation: (route.params as any)?.animationDirection === 'left'
+                        ? 'slide_from_left'
                         : 'slide_from_right',
                     })}
                   />
-                  <Stack.Screen 
+                  <Stack.Screen
+                    name="people"
+                    options={({ route }) => ({
+                      animation: (route.params as any)?.animationDirection === 'left'
+                        ? 'slide_from_left'
+                        : 'slide_from_right',
+                    })}
+                  />
+                  <Stack.Screen
                     name="chats"
                     options={({ route }) => ({
                       animation: (route.params as any)?.animationDirection === 'left' 

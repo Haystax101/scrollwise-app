@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import { TouchableOpacity, StyleSheet, Animated, View, Dimensions, Text } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -33,7 +32,7 @@ export const FloatingCreateButton: React.FC<FloatingCreateButtonProps> = ({ onPr
   const styles = StyleSheet.create({
     container: {
       position: 'absolute',
-      bottom: insets.bottom + 50, // Above navbar (typical tab bar height ~50-60px + margin)
+      bottom: insets.bottom + 50, 
       left: 20, // Center horizontally (56 is button width)
       zIndex: 1000,
     },
@@ -41,11 +40,11 @@ export const FloatingCreateButton: React.FC<FloatingCreateButtonProps> = ({ onPr
       width: screenWidth - 40, // Full width with margin
       height: 56,
       borderRadius: 28,
-      backgroundColor: '#EAB308', // Golden yellow
+      backgroundColor: colors.primary, // Golden yellow
       flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: '#000',
+      shadowColor: colors.text,
       shadowOffset: {
         width: 0,
         height: 4,
@@ -55,7 +54,7 @@ export const FloatingCreateButton: React.FC<FloatingCreateButtonProps> = ({ onPr
       elevation: 8,
     },
     buttonText: {
-      color: 'white',
+      color: colors.primaryText,
       fontSize: 16,
       fontWeight: '600',
       marginLeft: 8,
@@ -76,7 +75,6 @@ export const FloatingCreateButton: React.FC<FloatingCreateButtonProps> = ({ onPr
         accessibilityHint="Opens the insight creation screen"
       >
         <Animated.View style={{ transform: [{ scale: scaleAnim }], flexDirection: 'row', alignItems: 'center' }}>
-          <Feather name="plus" size={24} color="white" />
           <Text style={styles.buttonText}>Create Insight</Text>
         </Animated.View>
       </TouchableOpacity>

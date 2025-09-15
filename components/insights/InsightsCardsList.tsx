@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActionSheetIOS, Platform } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { formatNumber } from '../../lib/utils';
@@ -11,17 +11,33 @@ interface InsightsCardsListProps {
   loading?: boolean;
   onInsightPress?: (insight: Insight) => void;
   onDeletePress?: (insight: Insight) => void;
+  onEditPress?: (insight: Insight) => void;
 }
 
 export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
   insights,
   loading = false,
   onInsightPress,
-  onDeletePress
+  onDeletePress,
+  onEditPress
 }) => {
   const { colors } = useTheme();
 
-
+  const showActionSheet = (insight: Insight) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions({
+        options: ['Edit', 'Delete'],
+        destructiveButtonIndex: 1,
+      }, (buttonIndex) => {
+        if (buttonIndex === 0) onEditPress?.(insight);
+        if (buttonIndex === 1) onDeletePress?.(insight);
+      });
+    } else {
+      // For Android, you could use a custom modal or third-party library
+      // For now, just show edit/delete directly
+      onEditPress?.(insight);
+    }
+  };
 
   const formatTimestamp = (timestamp: string): string => {
     const date = new Date(timestamp);
@@ -115,7 +131,15 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
       marginLeft: 4,
     },
     moreButton: {
-      padding: 4,
+      position: 'absolute',
+      top: 12,
+      right: 12,
+      backgroundColor: colors.background,
+      borderRadius: 16,
+      paddingHorizontal: 8,
+      paddingVertical: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     contentSection: {
       flex: 1,
@@ -164,20 +188,6 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
       fontSize: 16,
       color: colors.text,
     },
-    deleteButton: {
-      position: 'absolute',
-      top: 12,
-      right: 12,
-      backgroundColor: colors.error || '#EF4444',
-      borderRadius: 16,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-    },
-    deleteButtonText: {
-      fontSize: 12,
-      color: 'white',
-      fontWeight: '500',
-    },
   });
 
   if (loading) {
@@ -220,10 +230,10 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
           onPress={() => onInsightPress?.(insight)}
         >
           <TouchableOpacity 
-            style={styles.deleteButton}
-            onPress={() => onDeletePress?.(insight)}
+            style={styles.moreButton}
+            onPress={() => showActionSheet(insight)}
           >
-            <Text style={styles.deleteButtonText}>Delete</Text>
+            <Feather name="more-horizontal" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           
           {/* User Header */}

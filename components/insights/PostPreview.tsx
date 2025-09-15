@@ -15,6 +15,7 @@ interface Props {
   selectedMedia: MediaType | null;
   onBack: () => void;
   onContinue: () => void;
+  buttonText?: string;
 }
 
 export const PostPreview: React.FC<Props> = ({
@@ -22,6 +23,7 @@ export const PostPreview: React.FC<Props> = ({
   selectedMedia,
   onBack,
   onContinue,
+  buttonText = 'Continue'
 }) => {
   const { colors, spacing, borderRadius } = useInsightsTheme();
   const { user } = useAuth();
@@ -230,7 +232,7 @@ export const PostPreview: React.FC<Props> = ({
 
       {/* Continue Button */}
       <TouchableOpacity style={styles.continueButton} onPress={onContinue}>
-        <Text style={styles.continueButtonText}>Continue</Text>
+        <Text style={styles.continueButtonText}>{buttonText}</Text>
       </TouchableOpacity>
     </View>
   );

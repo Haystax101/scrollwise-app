@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Dimensions, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, RefreshControl } from 'react-native';
 import { ArticleCard } from './ArticleCard';
 import { PaperCard } from './PaperCard';
 import { BookCard } from './BookCard';
@@ -10,8 +10,9 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useIndustries } from '../context/IndustriesContext';
 import { CommentsModal } from './CommentsModal';
-import QuizCard from './QuizCard';
 import { supabase } from '../lib/supabase';
+import { QuizCard } from './QuizCard';
+import { useResponsiveLayout } from '../utils/screenUtils';
 
 /**
  * MainFeed Component - Completely Rewritten
@@ -33,7 +34,6 @@ interface MainFeedProps {
   trackContentEngagement?: (contentType: string, contentId: string, engagementType: string, data?: Record<string, any>) => void;
 }
 
-const { height: screenHeight } = Dimensions.get('window');
 
 /**
  * Custom hook for feed data management
@@ -293,6 +293,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   const { user } = useAuth();
   const { colors } = useTheme();
   const { allIndustries } = useIndustries();
+  const { totalHeight } = useResponsiveLayout();
 
   // Comments modal state
   const [commentsArticleId, setCommentsArticleId] = useState<number | null>(null);
@@ -472,10 +473,10 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   const keyExtractor = useCallback((item: FeedItem) => String(item.id), []);
 
   const getItemLayout = useCallback((_data: any, index: number) => ({
-    length: screenHeight,
-    offset: screenHeight * index,
+    length: totalHeight,
+    offset: totalHeight * index,
     index
-  }), []);
+  }), [totalHeight]);
 
   const renderFooter = useCallback(() => {
     if (!isLoadingMore) return null;

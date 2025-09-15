@@ -11,9 +11,10 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 // Define tab order for directional animations
 const TAB_ORDER: Record<string, number> = {
   '/feed': 0,        // Home
-  '/discover': 1,    // Discover  
-  '/chats': 2,       // Insights/Chats
-  '/profile': 3,     // Profile
+  '/discover': 1,    // Discover
+  '/people': 2,      // People
+  '/chats': 3,       // Insights/Chats
+  '/profile': 4,     // Profile
   '/saved-feed': 1,  // Saved feed (treat as discover for animation)
 };
 

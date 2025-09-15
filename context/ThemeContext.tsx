@@ -189,8 +189,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           return;
         }
 
-        if (data?.theme_preference) {
+        if (data?.theme_preference && (data.theme_preference === 'light' || data.theme_preference === 'dark')) {
           setThemeModeState(data.theme_preference as ThemeMode);
+        } else {
+          // If no theme preference or invalid value (like 'system'), default to dark and save it
+          setThemeModeState('dark');
+          await supabase
+            .from('profiles')
+            .update({ theme_preference: 'dark' })
+            .eq('id', user.id);
         }
       } catch (error) {
         console.error('Exception loading theme preference:', error);

@@ -176,7 +176,7 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
           </View>
           <View style={styles.insightTextContainer}>
             {processedText.map((part, index) => (
-              <Text key={index} style={[styles.insightText, { color: '#FFFFFF' }, part.style]}>
+              <Text key={index} style={[styles.insightText, { color: colors.text }, part.style]}>
                 {part.text}
               </Text>
             ))}

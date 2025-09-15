@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import type { Article } from '../types';
 import { StaticVisual } from './StaticVisual';
@@ -11,8 +11,8 @@ import { useIndustries } from '../context/IndustriesContext';
 import { ExpandedTextModal } from './ExpandedTextModal';
 import { FlagButton } from './common/FlagButton';
 import { optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
-
-const { height: screenHeight } = Dimensions.get('window');
+import { useResponsiveLayout } from '../utils/screenUtils';
+import { ShareService } from '../lib/shareService';
 
 interface ArticleCardProps {
   article: Article;
@@ -54,6 +54,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { allIndustries } = useIndustries();
+  const { visualHeight, totalHeight, fontSizes } = useResponsiveLayout();
   
   const [likes, setLikes] = useState(article.likes_count || 0);
   const [hasLiked, setHasLiked] = useState(false);
@@ -176,6 +177,19 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
   const handleSavePress = () => toggleSave(!hasSaved);
   const handleCommentsPress = () => onOpenComments?.(article.id);
 
+  const handleSharePress = useCallback(async () => {
+    try {
+      await ShareService.shareContent({
+        type: 'article',
+        id: String(article.id),
+        title: article.title,
+        summary: article.summary
+      });
+    } catch (error) {
+      console.error('Error sharing article:', error);
+    }
+  }, [article.id, article.title, article.summary]);
+
   // When modal updates comment count, also persist to articles table so future loads are correct
   useEffect(() => {
     // We do not have direct hook into modal here; MainFeed already updates item state when count changes.
@@ -198,11 +212,11 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
     container: {
       flex: 1,
       backgroundColor: colors.background,
-      height: screenHeight,
+      height: totalHeight,
       width: '100%',
     },
     visualSection: {
-      height: screenHeight * 0.45,
+      height: visualHeight,
       width: '100%',
       position: 'relative',
     },
@@ -247,18 +261,18 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
     },
     contentScrollView: { flex: 1 },
     contentContainer: { flexGrow: 1, paddingBottom: 16 },
-    metadataText: { color: colors.textSecondary, fontSize: 12 },
-    metadataDot: { color: colors.textSecondary, fontSize: 12, marginHorizontal: 4 },
+    metadataText: { color: colors.textSecondary, fontSize: fontSizes.metadata },
+    metadataDot: { color: colors.textSecondary, fontSize: fontSizes.metadata, marginHorizontal: 4 },
     typeContainer: { flexDirection: 'row', alignItems: 'center' },
     typeText: {
       color: colors.textSecondary,
-      fontSize: 12,
+      fontSize: fontSizes.metadata,
       fontWeight: '500',
       textTransform: 'capitalize',
     },
     title: {
       color: colors.text,
-      fontSize: 20,
+      fontSize: fontSizes.title,
       fontWeight: '700',
       marginBottom: 12,
       lineHeight: 26,
@@ -278,13 +292,13 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
     },
     authorText: {
       color: colors.accent,
-      fontSize: 12,
+      fontSize: fontSizes.author,
       fontWeight: '500',
     },
     contentText: {
       color: colors.text,
-      fontSize: 16,
-      lineHeight: 22,
+      fontSize: fontSizes.content,
+      lineHeight: fontSizes.content * 1.4,
       marginBottom: 12,
     },
     readMoreText: {
@@ -302,14 +316,14 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
     },
     actionGroup: { flexDirection: 'row', alignItems: 'center' },
     actionButton: { padding: 8 },
-    actionText: { color: colors.textSecondary, fontSize: 12, marginLeft: 4, fontWeight: '500' },
+    actionText: { color: colors.textSecondary, fontSize: fontSizes.action, marginLeft: 4, fontWeight: '500' },
     readMoreButton: {
       backgroundColor: colors.primary,
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 16,
     },
-    readMoreButtonText: { color: colors.readButtonText, fontSize: 14, fontWeight: '600' },
+    readMoreButtonText: { color: colors.readButtonText, fontSize: fontSizes.action, fontWeight: '600' },
   });
 
   return (
@@ -393,6 +407,11 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
                   <Feather name="bookmark" size={20} color={hasSaved ? colors.accent : colors.text} />
                 </TouchableOpacity>
                 <Text style={dynamicStyles.actionText}>{saves}</Text>
+              </View>
+              <View style={dynamicStyles.actionGroup}>
+                <TouchableOpacity style={dynamicStyles.actionButton} onPress={handleSharePress}>
+                  <Feather name="share" size={20} color={colors.text} />
+                </TouchableOpacity>
               </View>
               <TouchableOpacity style={dynamicStyles.readMoreButton} onPress={handleToggleExpand}>
                 <Text style={dynamicStyles.readMoreButtonText}>Read More</Text>
