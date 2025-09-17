@@ -470,6 +470,12 @@ export default function PeoplePage() {
           <View style={dynamicStyles.leaderboardCompact}>
             {leaderboard.map((entry, index) => {
               const isCurrentUser = entry.user_id === user?.id;
+              console.log('🏆 Leaderboard entry:', {
+                user_id: entry.user_id,
+                full_name: entry.full_name,
+                avatar_url: entry.avatar_url,
+                isCurrentUser
+              });
               return (
                 <View
                   key={entry.user_id}
@@ -484,7 +490,10 @@ export default function PeoplePage() {
                   ]}>
                     {index + 1}
                   </Text>
-                  <View style={dynamicStyles.leaderboardAvatar} />
+                  <Image
+                    source={(entry.avatar_url && entry.avatar_url.trim()) ? { uri: entry.avatar_url } : require('../assets/profileIconDefault.png')}
+                    style={dynamicStyles.leaderboardAvatar}
+                  />
                   <View style={dynamicStyles.leaderboardInfo}>
                     <Text style={[
                       dynamicStyles.leaderboardName,
