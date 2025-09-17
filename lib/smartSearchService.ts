@@ -4,11 +4,13 @@ export interface SearchResult {
   id: number;
   title: string;
   summary?: string;
+  longer_summary?: string; // For articles expanded view
   content_simple?: string;
   short_summary?: string;
   authors?: string[] | string;
   link: string;
   type: 'article' | 'paper' | 'book';
+  content_type?: 'article' | 'paper' | 'book'; // Legacy field for edge function compatibility
   site_name?: string;
   date?: string;
   industry_id?: string;

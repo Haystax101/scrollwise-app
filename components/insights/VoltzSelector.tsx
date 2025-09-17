@@ -247,12 +247,9 @@ export const VoltzSelector: React.FC<Props> = ({
         {/* Balance Info */}
         <View style={styles.balanceContainer}>
           <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>Your voltz balance:</Text>
-            <Text style={styles.balanceValue}>{totalVoltz} VOLTZ</Text>
-          </View>
-          <View style={styles.balanceRow}>
-            <Text style={styles.balanceLabel}>After spending:</Text>
-            <Text style={styles.balanceValue}>{remainingVoltz} VOLTZ remaining</Text>
+            <Text style={styles.balanceLabel}>
+              Balance: {totalVoltz} VOLTZ → {remainingVoltz} VOLTZ remaining
+            </Text>
           </View>
         </View>
 

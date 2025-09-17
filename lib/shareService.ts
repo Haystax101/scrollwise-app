@@ -78,30 +78,37 @@ export class ShareService {
     // Get or create referral code
     const referralCode = await FriendsService.getReferralCode();
 
-    // Create referral record for tracking
+    // Create or update referral record for tracking
     const referralData = {
       referrer_id: currentUser.user.id,
       referral_code: referralCode,
       shared_content_type: contentType || null,
       shared_content_id: contentId || null,
       referral_source: Platform.OS === 'ios' ? 'ios_share' : 'android_share',
-      status: 'pending' as const
+      status: 'pending' as const,
+      shared_at: new Date().toISOString()
     };
 
+    // Use upsert to handle duplicate referral codes
     const { error } = await supabase
       .from('user_referrals')
-      .insert(referralData);
+      .upsert(referralData, {
+        onConflict: 'referral_code'
+      });
 
     if (error) {
-      console.error('Error creating referral record:', error);
+      console.error('Error creating/updating referral record:', error);
       // Don't throw here - we still want to share even if tracking fails
     }
 
-    // Return deep link URL
-    const baseUrl = 'https://supercharged.app/invite'; // Replace with your actual domain
-    const contentParam = contentType && contentId ? `?content=${contentType}:${contentId}` : '';
-
-    return `${baseUrl}/${referralCode}${contentParam}`;
+    // Return web URL that handles app detection and download
+    if (contentType && contentId) {
+      // Content-specific sharing link
+      return `https://learningsupercharged.com/shared?content=${contentType}:${contentId}&ref=${referralCode}`;
+    } else {
+      // General app invitation
+      return `https://learningsupercharged.com/shared?ref=${referralCode}`;
+    }
   }
 
   /**
@@ -153,14 +160,6 @@ export class ShareService {
 
     let message = `Check out this interesting ${contentTypeDisplayName.toLowerCase()} I found on Supercharged:\n\n`;
     message += `"${content.title}"\n\n`;
-
-    if (content.summary) {
-      // Truncate summary if too long
-      const truncatedSummary = content.summary.length > 150
-        ? content.summary.substring(0, 150) + '...'
-        : content.summary;
-      message += `${truncatedSummary}\n\n`;
-    }
 
     message += `Join me on Supercharged to discover more personalized content for your industry! 🚀\n\n${link}`;
 

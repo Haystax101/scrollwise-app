@@ -46,9 +46,10 @@ interface SavedContent {
 
 interface SavedContentScrollViewProps {
   loading?: boolean;
+  onSeeAll?: () => void;
 }
 
-export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ loading: parentLoading = false }) => {
+export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ loading: parentLoading = false, onSeeAll }) => {
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
   const router = useRouter();
@@ -314,7 +315,7 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
     }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Saved Content</Text>
-        <TouchableOpacity onPress={() => router.push('/saved-feed')}>
+        <TouchableOpacity onPress={onSeeAll || (() => router.push('/saved-feed'))}>
           <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
         </TouchableOpacity>
       </View>

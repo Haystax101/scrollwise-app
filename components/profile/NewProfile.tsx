@@ -15,6 +15,8 @@ import { ExperienceCard } from './ExperienceCard';
 import { EducationCard } from './EducationCard';
 import { SkillsCard } from './SkillsCard';
 import { IndustrySelectionPage } from './IndustrySelectionPage';
+import { AllAchievementsPage } from './AllAchievementsPage';
+import { AllSavedContentPage } from './AllSavedContentPage';
 import { CareerGoalEditModal } from './CareerGoalEditModal';
 import { OnboardingProgressCard } from '../onboarding/OnboardingProgressCard';
 import SettingsModal from '../SettingsModal';
@@ -109,6 +111,8 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [loading, setLoading] = useState(true);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [showIndustrySelection, setShowIndustrySelection] = useState(false);
+  const [showAllAchievements, setShowAllAchievements] = useState(false);
+  const [showAllSavedContent, setShowAllSavedContent] = useState(false);
   const [showCareerGoalModal, setShowCareerGoalModal] = useState(false);
   
   // Component lifecycle management
@@ -398,6 +402,18 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     }
   };
 
+  const handleShowAllAchievements = () => {
+    if (isMountedRef.current) {
+      setShowAllAchievements(true);
+    }
+  };
+
+  const handleShowAllSavedContent = () => {
+    if (isMountedRef.current) {
+      setShowAllSavedContent(true);
+    }
+  };
+
   const handleIndustrySave = async (selectedIndustries: any[]) => {
     if (!isMountedRef.current) return;
     
@@ -469,6 +485,25 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     );
   }
 
+  // Show all achievements page if active
+  if (showAllAchievements) {
+    return (
+      <AllAchievementsPage
+        onBack={() => setShowAllAchievements(false)}
+        userId={currentUser?.id || ''}
+      />
+    );
+  }
+
+  // Show all saved content page if active
+  if (showAllSavedContent) {
+    return (
+      <AllSavedContentPage
+        onBack={() => setShowAllSavedContent(false)}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -533,11 +568,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
         <SavedContentScrollView
           loading={loading}
+          onSeeAll={handleShowAllSavedContent}
         />
 
         <AchievementsBelt
           userId={currentUser?.id || ''}
           loading={loading}
+          onSeeAll={handleShowAllAchievements}
         />
 
         <CareerGoalCard

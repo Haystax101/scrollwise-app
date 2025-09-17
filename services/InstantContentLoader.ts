@@ -295,6 +295,8 @@ export class InstantContentLoader {
           .from(table)
           .select('*')
           .order('created_at', { ascending: false })
+          .order('likes_count', { ascending: false })
+          .order('views_count', { ascending: false })
           .limit(count);
         
         // Apply industry filter if specified
@@ -314,6 +316,7 @@ export class InstantContentLoader {
             id: item.id,
             title: item.title || '',
             summary: item.summary || item.content_simple || item.short_summary || '',
+            longer_summary: item.longer_summary, // Include longer_summary for articles
             content_simple: item.content_simple,
             short_summary: item.short_summary,
             authors: item.authors || item.author,

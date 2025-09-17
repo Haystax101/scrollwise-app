@@ -168,8 +168,20 @@ export class FeedManager {
 
       console.log(`📡 FeedManager: RPC returned ${data.length} unviewed ${contentType} items`);
 
+      // Debug logging for RPC response data
+      if (data.length > 0 && (contentType === 'article' || contentType === 'paper')) {
+        console.log(`📡 FeedManager: First ${contentType} RPC data sample:`, {
+          id: data[0].id,
+          title: data[0].title?.substring(0, 30),
+          date: data[0].date,
+          created_at: data[0].created_at,
+          hasDate: !!data[0].date,
+          dateType: typeof data[0].date
+        });
+      }
+
       // Convert to FeedItem format - no client-side filtering needed since DB already filtered
-      const feedItems = data.slice(0, count).map((item: any) => 
+      const feedItems = data.slice(0, count).map((item: any) =>
         this.convertToFeedItem(item, contentType)
       );
 
@@ -223,6 +235,18 @@ export class FeedManager {
       if (error || !data) {
         console.error(`📡 FeedManager: Fallback query error for ${contentType}:`, error);
         return [];
+      }
+
+      // Debug logging for articles specifically to check longer_summary
+      if (contentType === 'article' && data.length > 0) {
+        console.log(`📡 FeedManager: Articles query returned ${data.length} items`);
+        console.log(`📡 FeedManager: First article raw data sample:`, {
+          id: data[0].id,
+          title: data[0].title?.substring(0, 50),
+          summary: data[0].summary?.substring(0, 50),
+          longer_summary: data[0].longer_summary ? `${data[0].longer_summary.substring(0, 50)}...` : 'NOT PRESENT',
+          hasLongerSummary: !!data[0].longer_summary
+        });
       }
 
       // Debug logging for insights profile data
@@ -280,17 +304,34 @@ export class FeedManager {
 
     switch (type) {
       case 'article':
-        return {
+        const articleItem = {
           ...baseItem,
           title: data.title || '',
           summary: data.summary || '',
+          longer_summary: data.longer_summary,
           author: data.author || '',
           date: data.date,
           site_name: data.site_name
         } as Article;
 
+        // Debug logging for article conversion
+        console.log(`📡 FeedManager: Converting article ${data.id}:`, {
+          id: data.id,
+          title: data.title?.substring(0, 30),
+          summary_length: data.summary?.length || 0,
+          longer_summary_length: data.longer_summary?.length || 0,
+          hasLongerSummary: !!data.longer_summary,
+          longer_summary_preview: data.longer_summary ? `${data.longer_summary.substring(0, 50)}...` : 'NOT PRESENT',
+          raw_date: data.date,
+          raw_created_at: data.created_at,
+          hasDate: !!data.date,
+          dateType: typeof data.date
+        });
+
+        return articleItem;
+
       case 'paper':
-        return {
+        const paperItem = {
           ...baseItem,
           title: data.title || '',
           content_simple: data.content_simple || '',
@@ -299,6 +340,18 @@ export class FeedManager {
           date: data.date,
           site_name: data.site_name
         } as Paper;
+
+        // Debug logging for paper conversion
+        console.log(`📡 FeedManager: Converting paper ${data.id}:`, {
+          id: data.id,
+          title: data.title?.substring(0, 30),
+          raw_date: data.date,
+          raw_created_at: data.created_at,
+          hasDate: !!data.date,
+          dateType: typeof data.date
+        });
+
+        return paperItem;
 
       case 'book':
         return {

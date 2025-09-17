@@ -12,6 +12,7 @@ import { ExpandedTextModal } from './ExpandedTextModal';
 import { FlagButton } from './common/FlagButton';
 import { optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
 import { useResponsiveLayout } from '../utils/screenUtils';
+import { ShareService } from '../lib/shareService';
 
 interface PaperCardProps {
   paper: Paper;
@@ -176,6 +177,19 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
   const handleLikePress = () => toggleLike(!hasLiked);
   const handleSavePress = () => toggleSave(!hasSaved);
   const handleCommentsPress = () => onOpenComments?.(paper.id);
+
+  const handleSharePress = useCallback(async () => {
+    try {
+      await ShareService.shareContent({
+        type: 'paper',
+        id: String(paper.id),
+        title: paper.title,
+        summary: paper.content_simple
+      });
+    } catch (error) {
+      console.error(`Error sharing paper ${paper.id}:`, error);
+    }
+  }, [paper.id, paper.title, paper.content_simple]);
 
   const expandedContent = useMemo(() => {
     const content = showComplexContent ? paper.content_complex : paper.content_simple;
@@ -373,11 +387,11 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
                     <MaterialCommunityIcons name="file-document-outline" size={16} color={colors.textSecondary} style={{ marginRight: 4 }} />
                     <Text style={dynamicStyles.typeText}>{paper.type}</Text>
                   </View>
-                  {paper.created_at && <Text style={dynamicStyles.metadataDot}>•</Text>}
-                  {paper.created_at && (
+                  {(paper.date || paper.created_at) && <Text style={dynamicStyles.metadataDot}>•</Text>}
+                  {(paper.date || paper.created_at) && (
                     <View style={dynamicStyles.typeContainer}>
                        <Feather name="calendar" size={12} color={colors.textSecondary} style={{marginRight: 4}}/>
-                       <Text style={dynamicStyles.metadataText}>{formatDate(paper.created_at)}</Text>
+                       <Text style={dynamicStyles.metadataText}>{formatDate(paper.date || paper.created_at)}</Text>
                     </View>
                   )}
                 </View>
@@ -429,6 +443,11 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
                   <Feather name="bookmark" size={20} color={hasSaved ? colors.accent : colors.text} />
                 </TouchableOpacity>
                 <Text style={dynamicStyles.actionText}>{saves}</Text>
+              </View>
+              <View style={dynamicStyles.actionGroup}>
+                <TouchableOpacity style={dynamicStyles.actionButton} onPress={handleSharePress}>
+                  <Feather name="share" size={20} color={colors.text} />
+                </TouchableOpacity>
               </View>
               <TouchableOpacity style={dynamicStyles.readMoreButton} onPress={handleToggleExpand}>
                 <Text style={dynamicStyles.readMoreButtonText}>Read More</Text>

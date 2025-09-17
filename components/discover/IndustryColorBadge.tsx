@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { getIndustryColorScheme, GOLDEN_PRIMARY, needsDarkText } from '../../styles/industryColors';
+import { getIndustryColor } from '../../utils/industryIcons';
 
 export interface IndustryColorBadgeProps {
   industryId?: string;
@@ -12,6 +12,8 @@ export interface IndustryColorBadgeProps {
   showName?: boolean;
 }
 
+const GOLDEN_PRIMARY = '#F59E0B'; // Golden color for selected state
+
 export const IndustryColorBadge: React.FC<IndustryColorBadgeProps> = ({
   industryId,
   industryName,
@@ -21,24 +23,24 @@ export const IndustryColorBadge: React.FC<IndustryColorBadgeProps> = ({
   variant = 'pill',
   showName = true
 }) => {
-  // Get industry colors based on ID or name
-  const industryColors = getIndustryColorScheme(industryId || industryName);
-  
+  // Get industry color based on name (prioritize name over UUID)
+  const industryColor = getIndustryColor(industryName, false);
+
   // Determine background and text colors based on state
   const getColors = () => {
     if (selected) {
       // Selected state uses golden theme
       return {
         backgroundColor: GOLDEN_PRIMARY,
-        textColor: needsDarkText(GOLDEN_PRIMARY) ? '#000000' : '#FFFFFF',
+        textColor: '#000000',
         borderColor: GOLDEN_PRIMARY
       };
     } else {
       // Unselected state uses industry colors with transparency
       return {
-        backgroundColor: industryColors.background,
-        textColor: industryColors.primary,
-        borderColor: industryColors.hover
+        backgroundColor: industryColor + '20', // 20% opacity
+        textColor: industryColor,
+        borderColor: industryColor + '60' // 60% opacity
       };
     }
   };

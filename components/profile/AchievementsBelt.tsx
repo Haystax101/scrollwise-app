@@ -9,6 +9,7 @@ import { AchievementModal } from './AchievementModal';
 interface AchievementsBeltProps {
   userId: string;
   loading?: boolean;
+  onSeeAll?: () => void;
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -19,7 +20,8 @@ const CARD_WIDTH = (AVAILABLE_WIDTH - CARD_MARGIN) / 2; // 2 cards per row with 
 
 export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
   userId,
-  loading = false
+  loading = false,
+  onSeeAll
 }) => {
   const { colors, isDark } = useTheme();
   const [achievements, setAchievements] = useState<EnhancedAchievement[]>([]);
@@ -66,6 +68,11 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
     setSelectedAchievement(null);
   };
 
+  const handleSeeAll = () => {
+    console.log('📱 AchievementsBelt: See All button pressed - navigate to dedicated achievements page');
+    onSeeAll?.();
+  };
+
   const getIconName = (iconName: string): keyof typeof Feather.glyphMap => {
     const iconMap: Record<string, keyof typeof Feather.glyphMap> = {
       'lightbulb': 'zap',
@@ -101,7 +108,25 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
     header: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
       marginBottom: 16,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    seeAllButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    seeAllText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.primary,
     },
     headerIcon: {
       marginRight: 8,
@@ -178,10 +203,15 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <View style={styles.headerIcon}>
-            <Feather name="award" size={20} color={colors.primary} />
+          <View style={styles.headerLeft}>
+            <View style={styles.headerIcon}>
+              <Feather name="award" size={20} color={colors.primary} />
+            </View>
+            <Text style={styles.title}>Achievements</Text>
           </View>
-          <Text style={styles.title}>Achievements</Text>
+          <TouchableOpacity style={styles.seeAllButton} onPress={handleSeeAll}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>Loading achievements...</Text>
@@ -194,10 +224,15 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <View style={styles.headerIcon}>
-            <Feather name="award" size={20} color={colors.primary} />
+          <View style={styles.headerLeft}>
+            <View style={styles.headerIcon}>
+              <Feather name="award" size={20} color={colors.primary} />
+            </View>
+            <Text style={styles.title}>Achievements</Text>
           </View>
-          <Text style={styles.title}>Achievements</Text>
+          <TouchableOpacity style={styles.seeAllButton} onPress={handleSeeAll}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
@@ -216,10 +251,15 @@ export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
     <>
       <View style={styles.container}>
         <View style={styles.header}>
-          <View style={styles.headerIcon}>
-            <Feather name="award" size={20} color={colors.primary} />
+          <View style={styles.headerLeft}>
+            <View style={styles.headerIcon}>
+              <Feather name="award" size={20} color={colors.primary} />
+            </View>
+            <Text style={styles.title}>Achievements</Text>
           </View>
-          <Text style={styles.title}>Achievements</Text>
+          <TouchableOpacity style={styles.seeAllButton} onPress={handleSeeAll}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
         </View>
         <ScrollView 
           horizontal 

@@ -131,7 +131,7 @@ export const AchievementModal: React.FC<AchievementModalProps> = ({
       alignItems: 'center',
       borderWidth: 2,
       borderColor: isEarned ? colorScheme.border : colors.border,
-      opacity: isEarned ? 1 : 0.8,
+      // Removed opacity for unearned achievements - grey styling is clear enough
     },
     closeButton: {
       position: 'absolute',
@@ -162,7 +162,7 @@ export const AchievementModal: React.FC<AchievementModalProps> = ({
       justifyContent: 'center',
       alignItems: 'center',
       marginBottom: 24,
-      opacity: isEarned ? 1 : 0.5,
+      // Removed opacity for unearned achievements - grey styling is clear enough
     },
     achievementTitle: {
       fontSize: 24,

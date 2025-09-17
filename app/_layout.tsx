@@ -10,6 +10,7 @@ import { PostHogProvider } from 'posthog-react-native';
 import { posthog } from '../lib/posthog';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Text, TextInput } from 'react-native';
+import { useDeepLinkHandler } from '../lib/deepLinkHandler';
 
 // Disable text scaling to maintain consistent UI layout
 Text.defaultProps = Text.defaultProps || {};
@@ -17,6 +18,12 @@ Text.defaultProps.maxFontSizeMultiplier = 1.0;
 
 TextInput.defaultProps = TextInput.defaultProps || {};
 TextInput.defaultProps.maxFontSizeMultiplier = 1.0;
+
+// Component to handle deep links
+function DeepLinkWrapper({ children }: { children: React.ReactNode }) {
+  useDeepLinkHandler(); // This sets up the deep link listeners
+  return <>{children}</>;
+}
 
 // This is the main layout for the entire app.
 export default function RootLayout() {
@@ -29,6 +36,7 @@ export default function RootLayout() {
               <NavigationProvider>
                 <BottomSheetModalProvider>
                   <IndustriesProvider>
+                    <DeepLinkWrapper>
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen
                     name="feed" 
@@ -99,6 +107,7 @@ export default function RootLayout() {
                   />
                 </Stack>
                     <AppHeader />
+                    </DeepLinkWrapper>
                   </IndustriesProvider>
                 </BottomSheetModalProvider>
               </NavigationProvider>

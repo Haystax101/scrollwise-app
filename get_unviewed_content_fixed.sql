@@ -17,6 +17,7 @@ RETURNS TABLE (
     author text,
     authors text[],
     summary text,
+    longer_summary text,
     content_simple text,
     content_complex text,
     short_summary text,
@@ -41,13 +42,14 @@ BEGIN
     -- Handle insights separately (no industry filtering, includes profile data)
     IF p_content_type = 'insight' THEN
         RETURN QUERY
-        SELECT 
+        SELECT
             i.id::text,
             i.content as title,
             i.content,
             '' as author,
             NULL::text[] as authors,
             '' as summary,
+            '' as longer_summary,
             '' as content_simple,
             '' as content_complex,
             '' as short_summary,
@@ -80,19 +82,20 @@ BEGIN
     -- Handle articles (id=integer, has date field)
     ELSIF p_content_type = 'article' THEN
         RETURN QUERY
-        SELECT 
+        SELECT
             a.id::text,
             a.title,
             '' as content,
             COALESCE(a.author, '') as author,
             NULL::text[] as authors,
             a.summary,
+            a.longer_summary,
             '' as content_simple,
             '' as content_complex,
             '' as short_summary,
             NULL::text[] as key_insights,
             NULL::int as year,
-            COALESCE(a.date::timestamp with time zone, a.created_at) as date,
+            a.date::timestamp with time zone as date,
             a.created_at,
             a.link,
             COALESCE(a.site_name, '') as site_name,
@@ -118,19 +121,20 @@ BEGIN
     -- Handle papers (id=bigint, has date field)
     ELSIF p_content_type = 'paper' THEN
         RETURN QUERY
-        SELECT 
+        SELECT
             p.id::text,
             p.title,
             '' as content,
             '' as author,
             p.authors,
             '' as summary,
+            '' as longer_summary,
             p.content_simple,
             p.content_complex,
             '' as short_summary,
             NULL::text[] as key_insights,
             NULL::int as year,
-            COALESCE(p.date::timestamp with time zone, p.created_at) as date,
+            p.date::timestamp with time zone as date,
             p.created_at,
             p.link,
             COALESCE(p.site_name, '') as site_name,
@@ -156,13 +160,14 @@ BEGIN
     -- Handle books (id=bigint, no date/link/site_name fields)
     ELSIF p_content_type = 'book' THEN
         RETURN QUERY
-        SELECT 
+        SELECT
             b.id::text,
             b.title,
             '' as content,
             b.author,
             NULL::text[] as authors,
             '' as summary,
+            '' as longer_summary,
             '' as content_simple,
             '' as content_complex,
             b.short_summary,

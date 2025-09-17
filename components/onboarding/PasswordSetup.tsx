@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   },
   validationContainer: {
     marginTop: 16, // More space after input field
-    marginBottom: 12,
+    marginBottom: 24, // Increased bottom margin to prevent overlap with continue button
   },
   errorText: {
     color: '#EF4444',

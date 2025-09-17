@@ -55,6 +55,16 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
   const insets = useSafeAreaInsets();
   const { allIndustries } = useIndustries();
   const { visualHeight, totalHeight, fontSizes } = useResponsiveLayout();
+
+  // Debug logging for article received by ArticleCard
+  console.log(`🎯 ArticleCard: Received article ${article.id}:`, {
+    id: article.id,
+    title: article.title?.substring(0, 30),
+    summary_length: article.summary?.length || 0,
+    longer_summary_length: article.longer_summary?.length || 0,
+    hasLongerSummary: !!article.longer_summary,
+    longer_summary_preview: article.longer_summary ? `${article.longer_summary.substring(0, 50)}...` : 'NOT PRESENT'
+  });
   
   const [likes, setLikes] = useState(article.likes_count || 0);
   const [hasLiked, setHasLiked] = useState(false);
@@ -363,10 +373,10 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
                       <Text style={dynamicStyles.typeText}>{article.type}</Text>
                     </View>
                     {article.created_at && <Text style={dynamicStyles.metadataDot}>•</Text>}
-                    {article.created_at && (
+                    {(article.date || article.created_at) && (
                       <View style={dynamicStyles.typeContainer}>
                          <Feather name="calendar" size={12} color={colors.textSecondary} style={{marginRight: 4}}/>
-                         <Text style={dynamicStyles.metadataText}>{formatDate(article.created_at)}</Text>
+                         <Text style={dynamicStyles.metadataText}>{formatDate(article.date || article.created_at)}</Text>
                       </View>
                     )}
                 </View>
@@ -424,7 +434,17 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
         visible={isExpanded}
         onClose={handleToggleExpand}
         title={article.title}
-        content={article.longer_summary || article.summary}
+        content={(() => {
+          const content = article.longer_summary || article.summary;
+          console.log(`🔍 ArticleCard: ExpandedTextModal content for article ${article.id}:`, {
+            longer_summary_available: !!article.longer_summary,
+            longer_summary_length: article.longer_summary?.length || 0,
+            summary_length: article.summary?.length || 0,
+            using_longer_summary: !!article.longer_summary,
+            content_preview: content?.substring(0, 100) + '...'
+          });
+          return content;
+        })()}
         externalLink={article.link}
         contentType="article"
       />

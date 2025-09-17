@@ -1,8 +1,8 @@
 import { useAuth } from '../context/AuthContext';
 import { MainFeed } from '../components/MainFeed';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useSearchParams } from 'expo-router/build/hooks';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useIndustries } from '../context/IndustriesContext';
 import { useScreenTime } from '../hooks/useScreenTime';
 import { screenTracker } from '../lib/screenTracking';
@@ -48,14 +48,14 @@ export default function FeedScreen() {
     }
   }, [user, loading]);
 
-  // Force refresh when navigating to feed tab
-  useFocusEffect(
-    useCallback(() => {
-      if (user && industries.length > 0) {
-        setRefreshKey(prev => prev + 1);
-      }
-    }, [user, industries.length])
-  );
+  // Force refresh when navigating to feed tab - COMMENTED OUT FOR FEED PERSISTENCE
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     if (user && industries.length > 0) {
+  //       setRefreshKey(prev => prev + 1);
+  //     }
+  //   }, [user, industries.length])
+  // );
   if (loading || !user) return null;
   return (
     <MainFeed 

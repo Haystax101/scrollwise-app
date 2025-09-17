@@ -90,9 +90,13 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
       borderColor: isDark ? 'transparent' : colors.border,
     },
     header: {
-      flexDirection: 'row',
       alignItems: 'center',
       marginBottom: 16,
+    },
+    headerTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
     },
     headerIcon: {
       marginRight: 8,
@@ -101,7 +105,6 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
       fontSize: 18,
       fontWeight: 'bold',
       color: colors.text,
-      flex: 1,
     },
     completionBadge: {
       backgroundColor: colors.primary,
@@ -192,6 +195,20 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
       fontSize: 14,
       color: colors.textSecondary,
       textAlign: 'center',
+      marginBottom: 20,
+    },
+    collectVoltzButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 20,
+      marginTop: 8,
+    },
+    collectVoltzText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: 'white',
+      textAlign: 'center',
     },
   });
 
@@ -199,10 +216,12 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <View style={styles.headerIcon}>
-            <Feather name="compass" size={18} color={colors.primary} />
+          <View style={styles.headerTop}>
+            <View style={styles.headerIcon}>
+              <Feather name="compass" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.title}>Getting Started</Text>
           </View>
-          <Text style={styles.title}>Getting Started</Text>
         </View>
         <Text style={[styles.stepDescription, { textAlign: 'center' }]}>Loading progress...</Text>
       </View>
@@ -214,10 +233,12 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <View style={styles.headerIcon}>
-            <Feather name="compass" size={18} color={colors.primary} />
+          <View style={styles.headerTop}>
+            <View style={styles.headerIcon}>
+              <Feather name="compass" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.title}>Getting Started</Text>
           </View>
-          <Text style={styles.title}>Getting Started</Text>
           <View style={styles.completionBadge}>
             <Text style={styles.completionText}>0/4</Text>
           </View>
@@ -275,6 +296,12 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
           <Text style={styles.completedSubtitle}>
             You've completed all the getting started steps. Welcome to the community!
           </Text>
+          <TouchableOpacity style={styles.collectVoltzButton} onPress={() => {
+            console.log('🪙 Collect Voltz button pressed - award completion bonus');
+            // TODO: Award voltz bonus for completing onboarding
+          }}>
+            <Text style={styles.collectVoltzText}>Collect Voltz 🪙</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -293,10 +320,12 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerIcon}>
-          <Feather name="compass" size={18} color={colors.primary} />
+        <View style={styles.headerTop}>
+          <View style={styles.headerIcon}>
+            <Feather name="compass" size={18} color={colors.primary} />
+          </View>
+          <Text style={styles.title}>Getting Started</Text>
         </View>
-        <Text style={styles.title}>Getting Started</Text>
         <View style={styles.completionBadge}>
           <Text style={styles.completionText}>
             {progress.completed_steps}/{progress.total_steps}

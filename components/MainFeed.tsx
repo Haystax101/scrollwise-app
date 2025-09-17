@@ -4,14 +4,14 @@ import { ArticleCard } from './ArticleCard';
 import { PaperCard } from './PaperCard';
 import { BookCard } from './BookCard';
 import InsightCard from './InsightCard';
-import type { Article, Insight, FeedItem, Industry, Paper, Book, QuizQuestion } from '../types';
+import type { Article, Insight, FeedItem, Industry, Paper, Book } from '../types'; // QuizQuestion commented out
 import { FeedManager } from '../lib/FeedManager';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useIndustries } from '../context/IndustriesContext';
 import { CommentsModal } from './CommentsModal';
 import { supabase } from '../lib/supabase';
-import { QuizCard } from './QuizCard';
+// import { QuizCard } from './QuizCard'; // Commented out - quiz functionality preserved for future use
 import { useResponsiveLayout } from '../utils/screenUtils';
 
 /**
@@ -53,9 +53,9 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
 
     setIsLoading(true);
     try {
-      // IMPORTANT: Reset quiz session when feed initially loads to enforce 5-content rule
-      await feedManager.resetQuizSession();
-      console.log('🧠 MainFeed: Quiz session reset on initial load - fresh start');
+      // IMPORTANT: Reset quiz session when feed initially loads to enforce 5-content rule - COMMENTED OUT
+      // await feedManager.resetQuizSession();
+      // console.log('🧠 MainFeed: Quiz session reset on initial load - fresh start');
       
       let initialContent: FeedItem[] = [];
 
@@ -140,9 +140,9 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
       // Clear current content and reload
       setFeedItems([]);
       
-      // IMPORTANT: Reset quiz session when feed refreshes to enforce 5-content rule
-      await feedManager.resetQuizSession();
-      console.log('🧠 MainFeed: Quiz session reset on refresh - user must view 5 content pieces before quiz');
+      // IMPORTANT: Reset quiz session when feed refreshes to enforce 5-content rule - COMMENTED OUT
+      // await feedManager.resetQuizSession();
+      // console.log('🧠 MainFeed: Quiz session reset on refresh - user must view 5 content pieces before quiz');
       
       const freshContent = await feedManager.fetchContent(10);
       const uniqueContent = freshContent.filter((item, index, self) => 
@@ -189,8 +189,8 @@ function useContentTracking(
   trackInteraction?: (interactionType: string, data?: Record<string, any>) => void,
   trackContentEngagement?: (contentType: string, contentId: string, engagementType: string, data?: Record<string, any>) => void,
   recordContentView?: (contentId: string | number, contentType: string) => Promise<void>,
-  showQuizForRecentContent?: (currentIndex: number) => Promise<void>,
-  feedLocked?: boolean,
+  // showQuizForRecentContent?: (currentIndex: number) => Promise<void>, // COMMENTED OUT
+  // feedLocked?: boolean, // COMMENTED OUT
   feedItems?: FeedItem[],
   loadMoreContent?: () => Promise<void>,
   isLoadingMore?: boolean,
@@ -240,19 +240,19 @@ function useContentTracking(
           content_type: currentItem?.type
         });
 
-        // Check if it's time to show a quiz using new QuizSessionManager
-        if (!feedLocked && feedManager && showQuizForRecentContent) {
-          const quizCheck = feedManager.shouldShowQuiz();
-          if (quizCheck.show) {
-            console.log(`🧠 Quiz trigger: ${quizCheck.reason}`);
-            showQuizForRecentContent(newIndex);
-          } else {
-            console.log(`🧠 Quiz check: ${quizCheck.reason}`);
-          }
-        }
+        // Check if it's time to show a quiz using new QuizSessionManager - COMMENTED OUT
+        // if (!feedLocked && feedManager && showQuizForRecentContent) {
+        //   const quizCheck = feedManager.shouldShowQuiz();
+        //   if (quizCheck.show) {
+        //     console.log(`🧠 Quiz trigger: ${quizCheck.reason}`);
+        //     showQuizForRecentContent(newIndex);
+        //   } else {
+        //     console.log(`🧠 Quiz check: ${quizCheck.reason}`);
+        //   }
+        // }
 
         // Preemptive loading: start loading more content when we're close to the end
-        if (feedItems && loadMoreContent && hasMore && !isLoadingMore && !feedLocked) {
+        if (feedItems && loadMoreContent && hasMore && !isLoadingMore) { // Removed feedLocked check
           const remainingItems = feedItems.length - newIndex;
           const threshold = 3; // Start loading when 3 items remaining
           
@@ -263,7 +263,7 @@ function useContentTracking(
         }
       }
     }
-  }, [currentIndex, scrollCount, feedManager, trackScroll, trackInteraction, trackContentEngagement, recordContentView, showQuizForRecentContent, feedLocked, feedItems, loadMoreContent, hasMore, isLoadingMore]);
+  }, [currentIndex, scrollCount, feedManager, trackScroll, trackInteraction, trackContentEngagement, recordContentView, feedItems, loadMoreContent, hasMore, isLoadingMore]);
 
   const handleUserInteraction = useCallback((contentId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => {
     trackInteraction?.(action, {
@@ -298,10 +298,10 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   // Comments modal state
   const [commentsArticleId, setCommentsArticleId] = useState<number | null>(null);
 
-  // Quiz state with full functionality
-  const [quizVisible, setQuizVisible] = useState(false);
-  const [quizQuestion, setQuizQuestion] = useState<QuizQuestion | null>(null);
-  const [feedLocked, setFeedLocked] = useState(false);
+  // Quiz state with full functionality - COMMENTED OUT
+  // const [quizVisible, setQuizVisible] = useState(false);
+  // const [quizQuestion, setQuizQuestion] = useState<QuizQuestion | null>(null);
+  // const [feedLocked, setFeedLocked] = useState(false);
 
   // Create feed manager
   const feedManager = useMemo(() => {
@@ -340,25 +340,25 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
 
 
-  // Handle quiz answer
-  const handleQuizAnswer = useCallback(async (answerIndex: number) => {
-    if (!quizQuestion || !feedManager) return;
-    
-    try {
-      await feedManager.handleQuizAttempt(quizQuestion, answerIndex);
-      console.log('🧠 Quiz attempt recorded');
-    } catch (error) {
-      console.error('Error handling quiz attempt:', error);
-    }
-  }, [quizQuestion, feedManager]);
+  // Handle quiz answer - COMMENTED OUT
+  // const handleQuizAnswer = useCallback(async (answerIndex: number) => {
+  //   if (!quizQuestion || !feedManager) return;
+  //
+  //   try {
+  //     await feedManager.handleQuizAttempt(quizQuestion, answerIndex);
+  //     console.log('🧠 Quiz attempt recorded');
+  //   } catch (error) {
+  //     console.error('Error handling quiz attempt:', error);
+  //   }
+  // }, [quizQuestion, feedManager]);
 
-  // Handle quiz close
-  const handleQuizClose = useCallback(() => {
-    setQuizVisible(false);
-    setFeedLocked(false);
-    setQuizQuestion(null);
-    console.log('🧠 Quiz closed');
-  }, []);
+  // Handle quiz close - COMMENTED OUT
+  // const handleQuizClose = useCallback(() => {
+  //   setQuizVisible(false);
+  //   setFeedLocked(false);
+  //   setQuizQuestion(null);
+  //   console.log('🧠 Quiz closed');
+  // }, []);
 
   // Use custom hooks for data and tracking
   const {
@@ -381,31 +381,31 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     }
   }, [commentsArticleId, updateFeedItem]);
 
-  // Show quiz for recently viewed content using QuizSessionManager
-  const showQuizForRecentContent = useCallback(async (currentIndexParam: number) => {
-    if (!user || !feedManager) return;
-    
-    try {
-      // Get the content that was viewed in THIS session (before current item)
-      const currentSessionContent = feedItems.slice(0, currentIndexParam);
-      
-      console.log(`🧠 Generating quiz from ${currentSessionContent.length} pieces of current session content (items 0-${currentIndexParam-1})`);
-      
-      // Generate quiz question from current session content only
-      const quiz = await feedManager.generateQuizQuestionFromContent(currentSessionContent);
-      
-      if (quiz) {
-        setQuizQuestion(quiz);
-        setQuizVisible(true);
-        setFeedLocked(true);
-        console.log('🧠 Quiz shown for content:', quiz.sourceTitle);
-      } else {
-        console.log('🧠 No quiz question generated from current session content');
-      }
-    } catch (error) {
-      console.error('Error showing quiz for recent content:', error);
-    }
-  }, [user, feedManager, feedItems]);
+  // Show quiz for recently viewed content using QuizSessionManager - COMMENTED OUT
+  // const showQuizForRecentContent = useCallback(async (currentIndexParam: number) => {
+  //   if (!user || !feedManager) return;
+  //
+  //   try {
+  //     // Get the content that was viewed in THIS session (before current item)
+  //     const currentSessionContent = feedItems.slice(0, currentIndexParam);
+  //
+  //     console.log(`🧠 Generating quiz from ${currentSessionContent.length} pieces of current session content (items 0-${currentIndexParam-1})`);
+  //
+  //     // Generate quiz question from current session content only
+  //     const quiz = await feedManager.generateQuizQuestionFromContent(currentSessionContent);
+  //
+  //     if (quiz) {
+  //       setQuizQuestion(quiz);
+  //       setQuizVisible(true);
+  //       setFeedLocked(true);
+  //       console.log('🧠 Quiz shown for content:', quiz.sourceTitle);
+  //     } else {
+  //       console.log('🧠 No quiz question generated from current session content');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error showing quiz for recent content:', error);
+  //   }
+  // }, [user, feedManager, feedItems]);
 
   const {
     currentIndex,
@@ -417,8 +417,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     trackInteraction, 
     trackContentEngagement,
     recordContentView,
-    showQuizForRecentContent,
-    feedLocked,
+    // showQuizForRecentContent, // COMMENTED OUT
+    // feedLocked, // COMMENTED OUT
     feedItems,
     loadMoreContent,
     isLoadingMore,
@@ -438,9 +438,20 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
     switch (item.type) {
       case 'article':
+        const article = item as Article;
+        // Debug logging for article passed to ArticleCard
+        console.log(`📱 MainFeed: Rendering ArticleCard for article ${article.id}:`, {
+          id: article.id,
+          title: article.title?.substring(0, 30),
+          summary_length: article.summary?.length || 0,
+          longer_summary_length: article.longer_summary?.length || 0,
+          hasLongerSummary: !!article.longer_summary,
+          longer_summary_preview: article.longer_summary ? `${article.longer_summary.substring(0, 50)}...` : 'NOT PRESENT'
+        });
+
         return (
           <ArticleCard
-            article={item as Article}
+            article={article}
             isActive={isActive}
             onOpenComments={handleOpenComments}
             onUserInteraction={handleUserInteraction}
@@ -582,13 +593,15 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         }
       />
 
-      {/* Quiz Modal - With full functionality */}
-      <QuizCard 
-        visible={quizVisible} 
-        onClose={handleQuizClose} 
+      {/* Quiz Modal - With full functionality - COMMENTED OUT FOR NOW */}
+      {/*
+      <QuizCard
+        visible={quizVisible}
+        onClose={handleQuizClose}
         question={quizQuestion}
         onAnswer={handleQuizAnswer}
       />
+      */}
     </>
   );
 };

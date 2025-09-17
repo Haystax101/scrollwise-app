@@ -12,106 +12,80 @@ export interface IndustryColor {
   text: string; // For text on colored backgrounds
 }
 
-// Primary industry color definitions based on discoverPlan.md
+// Primary industry color definitions - simplified to match the 9 core industries
 export const INDUSTRY_COLORS: Record<string, Omit<IndustryColor, 'id' | 'name'>> = {
-  // Technology stack
-  technology: {
-    primary: '#2563EB',
-    background: '#2563EB33', // 20% opacity
-    hover: '#2563EB99', // 60% opacity
-    text: '#FFFFFF'
-  },
-  tech: { // Alternative name
-    primary: '#2563EB',
-    background: '#2563EB33',
-    hover: '#2563EB99',
-    text: '#FFFFFF'
-  },
-  
-  // Finance stack
+  // Finance and Economics
   finance: {
-    primary: '#059669',
-    background: '#05966933',
-    hover: '#05966999',
+    primary: '#9C27B0', // Purple
+    background: '#9C27B033',
+    hover: '#9C27B099',
     text: '#FFFFFF'
   },
-  financial: { // Alternative name
-    primary: '#059669',
-    background: '#05966933',
-    hover: '#05966999',
+
+  // Politics and International Relations
+  politics: {
+    primary: '#B71C1C', // Red
+    background: '#B71C1C33',
+    hover: '#B71C1C99',
     text: '#FFFFFF'
   },
-  
-  // Healthcare stack
-  healthcare: {
-    primary: '#DC2626',
-    background: '#DC262633',
-    hover: '#DC262699',
+
+  // Entrepreneurship and Startups
+  entrepreneurship: {
+    primary: '#1565C0', // Blue
+    background: '#1565C033',
+    hover: '#1565C099',
     text: '#FFFFFF'
   },
-  health: { // Alternative name
-    primary: '#DC2626',
-    background: '#DC262633',
-    hover: '#DC262699',
+
+  // Technology and AI
+  technology: {
+    primary: '#1B5E20', // Green
+    background: '#1B5E2033',
+    hover: '#1B5E2099',
     text: '#FFFFFF'
   },
-  
-  // Education stack
-  education: {
-    primary: '#7C3AED',
-    background: '#7C3AED33',
-    hover: '#7C3AED99',
+
+  // Energy, Sustainability and Climate Innovation
+  energy: {
+    primary: '#5E35B1', // Purple
+    background: '#5E35B133',
+    hover: '#5E35B199',
     text: '#FFFFFF'
   },
-  
-  // Marketing stack
-  marketing: {
-    primary: '#EA580C',
-    background: '#EA580C33',
-    hover: '#EA580C99',
+
+  // Creative Industries and the Arts
+  creative: {
+    primary: '#880E4F', // Pink
+    background: '#880E4F33',
+    hover: '#880E4F99',
     text: '#FFFFFF'
   },
-  
-  // Consulting stack
-  consulting: {
-    primary: '#0F766E',
-    background: '#0F766E33',
-    hover: '#0F766E99',
-    text: '#FFFFFF'
-  },
-  
-  // Engineering stack
+
+  // Engineering and Automotive
   engineering: {
-    primary: '#4338CA',
-    background: '#4338CA33',
-    hover: '#4338CA99',
+    primary: '#C51162', // Pink
+    background: '#C5116233',
+    hover: '#C5116299',
     text: '#FFFFFF'
   },
-  
-  // Design stack
-  design: {
-    primary: '#BE185D',
-    background: '#BE185D33',
-    hover: '#BE185D99',
+
+  // Medicine and Healthcare
+  healthcare: {
+    primary: '#311B92', // Purple
+    background: '#311B9233',
+    hover: '#311B9299',
     text: '#FFFFFF'
   },
-  
-  // Sales stack
-  sales: {
-    primary: '#B91C1C',
-    background: '#B91C1C33',
-    hover: '#B91C1C99',
+
+  // Education
+  education: {
+    primary: '#004D40', // Teal
+    background: '#004D4033',
+    hover: '#004D4099',
     text: '#FFFFFF'
   },
-  
-  // Operations stack
-  operations: {
-    primary: '#374151',
-    background: '#37415133',
-    hover: '#37415199',
-    text: '#FFFFFF'
-  },
-  
+
   // Default/fallback colors
   default: {
     primary: '#6B7280', // Gray
@@ -140,67 +114,67 @@ export const getIndustryColors = (industryIdentifier: string): Omit<IndustryColo
   
   // Fuzzy matching for common variations
   const fuzzyMatches: Record<string, string> = {
-    // Technology variations
-    'it': 'technology',
-    'informationtechnology': 'technology',
-    'software': 'technology',
-    'computing': 'technology',
-    
     // Finance variations
     'banking': 'finance',
     'fintech': 'finance',
     'investment': 'finance',
     'accounting': 'finance',
     'economics': 'finance',
-    
+    'financial': 'finance',
+
+    // Politics variations
+    'political': 'politics',
+    'government': 'politics',
+    'international': 'politics',
+    'relations': 'politics',
+    'policy': 'politics',
+
+    // Entrepreneurship variations
+    'startup': 'entrepreneurship',
+    'startups': 'entrepreneurship',
+    'business': 'entrepreneurship',
+    'ventures': 'entrepreneurship',
+    'innovation': 'entrepreneurship',
+
+    // Technology variations
+    'tech': 'technology',
+    'ai': 'technology',
+    'software': 'technology',
+    'computing': 'technology',
+    'digital': 'technology',
+
+    // Energy variations
+    'sustainability': 'energy',
+    'climate': 'energy',
+    'renewable': 'energy',
+    'environment': 'energy',
+    'green': 'energy',
+
+    // Creative variations
+    'art': 'creative',
+    'arts': 'creative',
+    'design': 'creative',
+    'media': 'creative',
+    'entertainment': 'creative',
+
+    // Engineering variations
+    'automotive': 'engineering',
+    'mechanical': 'engineering',
+    'electrical': 'engineering',
+    'civil': 'engineering',
+
     // Healthcare variations
-    'medical': 'healthcare',
     'medicine': 'healthcare',
+    'medical': 'healthcare',
+    'health': 'healthcare',
     'pharma': 'healthcare',
-    'pharmaceutical': 'healthcare',
     'biotech': 'healthcare',
-    'biotechnology': 'healthcare',
-    
+
     // Education variations
     'teaching': 'education',
     'academic': 'education',
     'university': 'education',
-    'school': 'education',
-    
-    // Marketing variations
-    'advertising': 'marketing',
-    'promotion': 'marketing',
-    'brand': 'marketing',
-    'digital': 'marketing',
-    
-    // Consulting variations
-    'advisory': 'consulting',
-    'strategy': 'consulting',
-    'management': 'consulting',
-    
-    // Engineering variations
-    'mechanical': 'engineering',
-    'electrical': 'engineering',
-    'civil': 'engineering',
-    'chemical': 'engineering',
-    
-    // Design variations
-    'creative': 'design',
-    'art': 'design',
-    'graphics': 'design',
-    'ux': 'design',
-    'ui': 'design',
-    
-    // Sales variations
-    'business': 'sales',
-    'commerce': 'sales',
-    'retail': 'sales',
-    
-    // Operations variations
-    'logistics': 'operations',
-    'supply': 'operations',
-    'manufacturing': 'operations',
-    'production': 'operations'
+    'school': 'education'
   };
   
   // Check fuzzy matches
