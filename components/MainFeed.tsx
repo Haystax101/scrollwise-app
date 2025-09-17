@@ -48,8 +48,13 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
   const displayedIds = useMemo(() => new Set(feedItems.map(item => String(item.id))), [feedItems]);
 
   const loadInitialContent = useCallback(async () => {
-    if (!feedManager) return;
+    console.log('📱 MainFeed: loadInitialContent called', { feedManager: !!feedManager });
+    if (!feedManager) {
+      console.log('📱 MainFeed: No feedManager, returning early');
+      return;
+    }
 
+    console.log('📱 MainFeed: Setting isLoading to true');
     setIsLoading(true);
     try {
       let initialContent: FeedItem[] = [];
@@ -84,20 +89,23 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
       );
       console.log(`📱 MainFeed: After deduplication: ${uniqueContent.length} unique items`);
 
-      setFeedItems(uniqueContent);
-
       if (uniqueContent.length === 0) {
         console.error(`📱 MainFeed: ❌ No content loaded! This will trigger empty state.`);
         console.error(`📱 MainFeed: Initial content: ${initialContent.length}, Additional: ${additionalContent.length}`);
+        setFeedItems([]);
       } else {
         console.log(`📱 MainFeed: ✅ Successfully loaded ${uniqueContent.length} feed items`);
+        setFeedItems(uniqueContent);
       }
 
       // Always assume more content exists initially - let loadMoreContent determine if we're actually at the end
       setHasMore(true);
+
+      // Only set loading to false after we've set the feed items
+      console.log('📱 MainFeed: Setting isLoading to false after content is set');
+      setIsLoading(false);
     } catch (error) {
       console.error('📱 MainFeed: Error loading initial content:', error);
-    } finally {
       setIsLoading(false);
     }
   }, [feedManager, initialContentId, initialContentType]);
@@ -144,25 +152,26 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
   const refreshContent = useCallback(async () => {
     if (!feedManager) return;
 
+    console.log('📱 MainFeed: refreshContent called, setting isRefreshing to true');
     setIsRefreshing(true);
     try {
-      // Clear current content and reload
-      setFeedItems([]);
-      
-      // IMPORTANT: Reset quiz session when feed refreshes to enforce 5-content rule - COMMENTED OUT
-      // await feedManager.resetQuizSession();
-      // console.log('🧠 MainFeed: Quiz session reset on refresh - user must view 5 content pieces before quiz');
-      
+      console.log('📱 MainFeed: Fetching fresh content for refresh...');
       const freshContent = await feedManager.fetchContent(10);
-      const uniqueContent = freshContent.filter((item, index, self) => 
+      console.log(`📱 MainFeed: Refresh fetchContent returned ${freshContent.length} items`);
+
+      const uniqueContent = freshContent.filter((item, index, self) =>
         self.findIndex(i => String(i.id) === String(item.id)) === index
       );
+      console.log(`📱 MainFeed: After refresh deduplication: ${uniqueContent.length} unique items`);
 
+      // Set content and refresh state together to avoid race condition
       setFeedItems(uniqueContent);
       setHasMore(true);
+
+      console.log('📱 MainFeed: Setting isRefreshing to false after content is set');
+      setIsRefreshing(false);
     } catch (error) {
       console.error('📱 MainFeed: Error refreshing content:', error);
-    } finally {
       setIsRefreshing(false);
     }
   }, [feedManager]);
@@ -436,7 +445,9 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
   // Load initial content when feed manager is ready
   useEffect(() => {
+    console.log('📱 MainFeed: useEffect triggered', { feedManager: !!feedManager });
     if (feedManager) {
+      console.log('📱 MainFeed: Calling loadInitialContent from useEffect');
       loadInitialContent();
     }
   }, [feedManager, loadInitialContent]);
@@ -510,6 +521,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
   // Loading state
   if (isLoading) {
+    console.log('📱 MainFeed: Rendering loading state');
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -520,9 +532,10 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     );
   }
 
-  // Empty state
-  if (feedItems.length === 0) {
+  // Empty state - but don't show if we're refreshing
+  if (feedItems.length === 0 && !isRefreshing) {
     console.error('📱 MainFeed: SHOWING "No content available" screen');
+    console.error('📱 MainFeed: Current state - isLoading:', isLoading, 'isRefreshing:', isRefreshing, 'feedItems.length:', feedItems.length);
     console.error('📱 MainFeed: Debug info:', {
       feedManagerExists: !!feedManager,
       userIndustries: industries.map(i => i.id),
