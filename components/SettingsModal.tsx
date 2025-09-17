@@ -212,7 +212,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
                       index === themeOptions.length - 1 && dynamicStyles.themeOptionLast,
                       themeMode === option.mode && dynamicStyles.themeOptionSelected,
                     ]}
-                    onPress={() => setThemeMode(option.mode)}
+                    onPress={() => {
+                      console.log('🎨 SettingsModal: User tapped theme option:', option.mode);
+                      console.log('🎨 SettingsModal: Current theme mode:', themeMode);
+                      setThemeMode(option.mode);
+                    }}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: themeMode === option.mode }}
                     accessibilityLabel={`${option.label} theme`}

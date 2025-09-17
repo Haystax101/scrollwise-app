@@ -4,14 +4,13 @@ import { ArticleCard } from './ArticleCard';
 import { PaperCard } from './PaperCard';
 import { BookCard } from './BookCard';
 import InsightCard from './InsightCard';
-import type { Article, Insight, FeedItem, Industry, Paper, Book } from '../types'; // QuizQuestion commented out
+import type { Article, Insight, FeedItem, Industry, Paper, Book } from '../types';
 import { FeedManager } from '../lib/FeedManager';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useIndustries } from '../context/IndustriesContext';
 import { CommentsModal } from './CommentsModal';
 import { supabase } from '../lib/supabase';
-// import { QuizCard } from './QuizCard'; // Commented out - quiz functionality preserved for future use
 import { useResponsiveLayout } from '../utils/screenUtils';
 
 /**
@@ -53,10 +52,6 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
 
     setIsLoading(true);
     try {
-      // IMPORTANT: Reset quiz session when feed initially loads to enforce 5-content rule - COMMENTED OUT
-      // await feedManager.resetQuizSession();
-      // console.log('🧠 MainFeed: Quiz session reset on initial load - fresh start');
-      
       let initialContent: FeedItem[] = [];
 
       // If we have an initial content ID, fetch it first
@@ -75,15 +70,29 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
       }
 
       // Fetch additional content for the feed
-      const additionalContent = await feedManager.fetchContent(initialContent.length > 0 ? 9 : 10);
-      
+      const targetCount = initialContent.length > 0 ? 9 : 10;
+      console.log(`📱 MainFeed: Fetching ${targetCount} additional content items...`);
+      const additionalContent = await feedManager.fetchContent(targetCount);
+      console.log(`📱 MainFeed: fetchContent returned ${additionalContent.length} items`);
+
       // Combine and deduplicate
       const allContent = [...initialContent, ...additionalContent];
-      const uniqueContent = allContent.filter((item, index, self) => 
+      console.log(`📱 MainFeed: Combined content: ${allContent.length} items total`);
+
+      const uniqueContent = allContent.filter((item, index, self) =>
         self.findIndex(i => String(i.id) === String(item.id)) === index
       );
+      console.log(`📱 MainFeed: After deduplication: ${uniqueContent.length} unique items`);
 
       setFeedItems(uniqueContent);
+
+      if (uniqueContent.length === 0) {
+        console.error(`📱 MainFeed: ❌ No content loaded! This will trigger empty state.`);
+        console.error(`📱 MainFeed: Initial content: ${initialContent.length}, Additional: ${additionalContent.length}`);
+      } else {
+        console.log(`📱 MainFeed: ✅ Successfully loaded ${uniqueContent.length} feed items`);
+      }
+
       // Always assume more content exists initially - let loadMoreContent determine if we're actually at the end
       setHasMore(true);
     } catch (error) {

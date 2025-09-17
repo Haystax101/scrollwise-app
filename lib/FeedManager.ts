@@ -1,7 +1,6 @@
 import { supabase } from './supabase';
 import type { FeedItem, Article, Paper, Book, Industry, Insight } from '../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { QuizSessionManager } from './QuizSessionManager';
 
 /**
  * Simple, reliable FeedManager - replaces complex feedAlgorithm.ts
@@ -16,16 +15,12 @@ export class FeedManager {
   private userIndustries: string[];
   private allIndustries: Industry[];
   private viewedContentIds: Set<string> = new Set();
-  private quizManager: QuizSessionManager;
-  
+
   constructor(userId: string, userIndustries: string[], allIndustries: Industry[]) {
     this.userId = userId;
     this.userIndustries = userIndustries;
     this.allIndustries = allIndustries;
-    
-    // Initialize quiz session manager
-    this.quizManager = new QuizSessionManager(userId);
-    
+
     // Load viewed content from AsyncStorage (simple persistence)
     this.loadViewedContent();
   }
@@ -410,27 +405,18 @@ export class FeedManager {
   }
 
   /**
-   * Mark content as viewed - simple tracking with quiz integration
+   * Mark content as viewed - simple tracking
    */
   async markAsViewed(contentId: string | number, contentType: string, contentItem?: FeedItem): Promise<void> {
     const viewKey = `${contentType}-${contentId}`;
-    
+
     if (!this.viewedContentIds.has(viewKey)) {
       this.viewedContentIds.add(viewKey);
       console.log(`👁️ FeedManager: Marked as viewed: ${viewKey} (total: ${this.viewedContentIds.size})`);
-      
-      // Track in quiz session if content item provided
-      if (contentItem) {
-        try {
-          await this.quizManager.trackContentView(contentItem);
-        } catch (error) {
-          console.error('👁️ FeedManager: Error tracking content in quiz session:', error);
-        }
-      }
-      
+
       // Save to AsyncStorage
       await this.saveViewedContent();
-      
+
       // Record view in database
       try {
         await supabase.rpc('record_content_view', {
@@ -446,18 +432,18 @@ export class FeedManager {
   }
 
   /**
-   * Fetch specific content by ID and type
+   * Fetch specific content by ID and type with fresh interaction counts
    */
   async fetchSpecificContent(contentId: string | number, contentType: 'article' | 'paper' | 'book' | 'insight'): Promise<FeedItem | null> {
     try {
       console.log(`🔍 FeedManager: Fetching specific ${contentType} with ID: ${contentId} (type: ${typeof contentId})`);
-      
-      const tableName = contentType === 'paper' ? 'papers' : 
-                       contentType === 'book' ? 'books' : 
+
+      const tableName = contentType === 'paper' ? 'papers' :
+                       contentType === 'book' ? 'books' :
                        contentType === 'insight' ? 'insights' : 'articles';
 
       let query: any;
-      
+
       if (contentType === 'insight') {
         query = supabase
           .from('insights')
@@ -491,8 +477,39 @@ export class FeedManager {
         return null;
       }
 
-      console.log(`✅ FeedManager: Successfully found ${contentType} ${contentId}`);
-      return this.convertToFeedItem(data, contentType);
+      console.log(`✅ FeedManager: Successfully found ${contentType} ${contentId}, now fetching fresh interaction counts...`);
+
+      // Fetch fresh interaction counts from interaction tables
+      const likesTable = contentType === 'insight' ? 'user_insights_likes' : `user_${contentType}_likes`;
+      const savesTable = contentType === 'insight' ? 'user_insights_saves' : `user_${contentType}_saves`;
+      const commentsTable = contentType === 'insight' ? 'user_insights_comments' : `user_${contentType}_comments`;
+      const idField = contentType === 'paper' ? 'paper_id' :
+                     contentType === 'book' ? 'book_id' :
+                     contentType === 'insight' ? 'insight_id' : 'article_id';
+
+      const [likesCountRes, savesCountRes, commentsCountRes] = await Promise.all([
+        supabase.from(likesTable).select('*', { count: 'exact', head: true }).eq(idField, contentId),
+        contentType === 'insight'
+          ? Promise.resolve({ count: 0 }) // Insights don't have saves yet
+          : supabase.from(savesTable).select('*', { count: 'exact', head: true }).eq(idField, contentId),
+        supabase.from(commentsTable).select('*', { count: 'exact', head: true }).eq(idField, contentId),
+      ]);
+
+      const freshLikes = (likesCountRes.count as number | null) ?? data.likes_count ?? 0;
+      const freshSaves = contentType === 'insight' ? 0 : ((savesCountRes.count as number | null) ?? data.saves_count ?? 0);
+      const freshComments = (commentsCountRes.count as number | null) ?? data.comments_count ?? 0;
+
+      console.log(`📊 FeedManager: Fresh counts for ${contentType} ${contentId}: likes=${freshLikes}, saves=${freshSaves}, comments=${freshComments}`);
+
+      // Update data with fresh counts
+      const dataWithFreshCounts = {
+        ...data,
+        likes_count: freshLikes,
+        saves_count: freshSaves,
+        comments_count: freshComments,
+      };
+
+      return this.convertToFeedItem(dataWithFreshCounts, contentType);
     } catch (error) {
       console.error(`📡 FeedManager: Exception fetching specific ${contentType} ${contentId}:`, error);
       return null;
@@ -514,18 +531,6 @@ export class FeedManager {
   }
 
   /**
-   * Clear quiz session data (for debugging)
-   */
-  async clearQuizData(): Promise<void> {
-    try {
-      await this.quizManager.clearAllData();
-      console.log('🧹 FeedManager: Cleared quiz session data');
-    } catch (error) {
-      console.error('📡 FeedManager: Error clearing quiz data:', error);
-    }
-  }
-
-  /**
    * Simple array shuffle - Fisher-Yates algorithm
    */
   private shuffleArray<T>(array: T[]): T[] {
@@ -538,61 +543,15 @@ export class FeedManager {
   }
 
   /**
-   * Check if quiz should be shown for current session
+   * Get debug info
    */
-  shouldShowQuiz(): { show: boolean; reason: string } {
-    return this.quizManager.shouldShowQuiz();
-  }
-
-  /**
-   * Reset quiz session to enforce 5-content viewing rule
-   */
-  async resetQuizSession(): Promise<void> {
-    console.log('🧠 FeedManager: Resetting quiz session to enforce 5-content rule');
-    await this.quizManager.resetSession();
-  }
-
-  /**
-   * Generate a quiz question from viewed content
-   */
-  async generateQuizQuestion() {
-    return await this.quizManager.generateQuizQuestion();
-  }
-
-  /**
-   * Generate a quiz question from specific content array (current session only)
-   */
-  async generateQuizQuestionFromContent(contentArray: FeedItem[]) {
-    return await this.quizManager.generateQuizQuestionFromContent(contentArray);
-  }
-
-  /**
-   * Handle quiz attempt
-   */
-  async handleQuizAttempt(question: any, userAnswer: number): Promise<void> {
-    await this.quizManager.handleQuizAttempt(question, userAnswer);
-  }
-
-  /**
-   * Get quiz session statistics
-   */
-  getQuizStats() {
-    return this.quizManager.getSessionStats();
-  }
-
-
-  /**
-   * Get debug info - enhanced with quiz stats
-   */
-  getDebugInfo(): { 
-    viewedCount: number; 
+  getDebugInfo(): {
+    viewedCount: number;
     userIndustries: string[];
-    quizStats: ReturnType<QuizSessionManager['getSessionStats']>;
   } {
     return {
       viewedCount: this.viewedContentIds.size,
-      userIndustries: this.userIndustries,
-      quizStats: this.quizManager.getSessionStats()
+      userIndustries: this.userIndustries
     };
   }
 }

@@ -134,33 +134,8 @@ LANGUAGE plpgsql
 SECURITY DEFINER -- This allows the function to bypass RLS
 AS $$
 BEGIN
-    -- Check if user has existing suggestions that are still valid (not dismissed, created within last 7 days)
-    IF EXISTS (
-        SELECT 1 FROM friend_suggestions fs
-        WHERE fs.user_id = p_user_id
-        AND fs.dismissed_at IS NULL
-        AND fs.created_at > NOW() - INTERVAL '7 days'
-    ) THEN
-        -- Return existing suggestions
-        RETURN QUERY
-        SELECT
-            fs.id,
-            fs.suggested_user_id,
-            COALESCE(p.full_name, 'Unknown User') as full_name,
-            fs.suggestion_score,
-            fs.suggestion_reasons,
-            fs.mutual_friends_count,
-            fs.same_industry,
-            COALESCE(p.avatar_url, '') as avatar_url,
-            COALESCE(p.friends_count, 0) as friends_count
-        FROM friend_suggestions fs
-        JOIN profiles p ON fs.suggested_user_id = p.id
-        WHERE fs.user_id = p_user_id
-            AND fs.dismissed_at IS NULL
-            AND fs.created_at > NOW() - INTERVAL '7 days'
-        ORDER BY fs.suggestion_score DESC
-        LIMIT p_limit;
-    ELSE
+    -- Always generate fresh suggestions to ensure they exclude current friendships
+    -- (Don't use cache because friendship status may have changed)
         -- Generate new suggestions based on various criteria
         -- First, clean up old suggestions
         DELETE FROM friend_suggestions
@@ -263,7 +238,6 @@ BEGIN
             AND fs.dismissed_at IS NULL
         ORDER BY fs.suggestion_score DESC, COALESCE(p.friends_count, 0) DESC
         LIMIT p_limit;
-    END IF;
 END;
 $$;
 
