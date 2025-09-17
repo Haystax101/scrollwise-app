@@ -22,7 +22,7 @@ export default function AppHeader() {
   let currentScreen: 'home' | 'discover' | 'people' | 'profile' | 'chats' | 'saved-feed' = 'home';
   if (pathname === '/feed') currentScreen = 'home';
   if (pathname === '/discover') currentScreen = 'discover';
-  if (pathname === '/people') currentScreen = 'people';
+  if (pathname === '/people' || pathname === '/suggestions') currentScreen = 'people';
   if (pathname === '/profile') currentScreen = 'profile';
   if (pathname === '/chats') currentScreen = 'chats';
   if (pathname === '/saved-feed') currentScreen = 'saved-feed';

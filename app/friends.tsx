@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { FriendsService } from '../lib/friendsService';
+import { ShareService } from '../lib/shareService';
 import type { FriendsListItem, FriendSearchFilters } from '../types/friends';
 
 export default function FriendsPage() {
@@ -86,6 +87,14 @@ export default function FriendsPage() {
         }
       ]
     );
+  };
+
+  const handleInvite = async () => {
+    try {
+      await ShareService.shareAppInvitation();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to share invitation');
+    }
   };
 
   const dynamicStyles = StyleSheet.create({
@@ -243,6 +252,18 @@ export default function FriendsPage() {
       color: colors.textSecondary,
       textAlign: 'center',
       lineHeight: 22,
+      marginBottom: 24,
+    },
+    inviteButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    inviteButtonText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '600',
     },
   });
 
@@ -338,6 +359,14 @@ export default function FriendsPage() {
               : 'Start building your professional network by adding friends!'
             }
           </Text>
+          {!searchQuery && (
+            <TouchableOpacity
+              style={dynamicStyles.inviteButton}
+              onPress={handleInvite}
+            >
+              <Text style={dynamicStyles.inviteButtonText}>Invite Friends</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <ScrollView

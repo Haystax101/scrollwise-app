@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   TextInput,
   SafeAreaView,
-  Alert
+  Alert,
+  Image
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -44,8 +45,11 @@ export default function PeoplePage() {
       const leaderboardData = await FriendsService.getFriendsLeaderboard();
       setLeaderboard(leaderboardData.global_with_friends_highlighted.slice(0, 3));
 
-      // Load friend suggestions
-      const suggestionsData = await FriendsService.getFriendSuggestions(6);
+      // Load friend suggestions (show 3 by default)
+      console.log('🎯 People page: Loading friend suggestions...');
+      const suggestionsData = await FriendsService.getFriendSuggestions(3);
+      console.log('🎯 People page: Received suggestions:', suggestionsData.length);
+      console.log('🎯 People page: First suggestion:', suggestionsData[0]);
       setSuggestions(suggestionsData);
 
       // Load friends
@@ -57,7 +61,10 @@ export default function PeoplePage() {
       setRequestsCount(requests.incoming.length);
 
     } catch (error) {
-      console.error('Error loading people data:', error);
+      console.error('🚨 People page error loading data:', error);
+      if (error instanceof Error) {
+        console.error('🚨 Error details:', error.message, error.stack);
+      }
     } finally {
       setLoading(false);
     }
@@ -89,9 +96,9 @@ export default function PeoplePage() {
     try {
       await FriendsService.sendFriendRequest(userId);
       Alert.alert('Success', 'Friend request sent!');
-      // Refresh suggestions
-      const suggestionsData = await FriendsService.getFriendSuggestions(6);
-      setSuggestions(suggestionsData);
+
+      // Remove the suggestion from the list immediately
+      setSuggestions(prev => prev.filter(suggestion => suggestion.suggested_user_id !== userId));
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to send request');
     }
@@ -270,6 +277,23 @@ export default function PeoplePage() {
       fontWeight: '700',
       color: colors.primary,
     },
+    currentUserItem: {
+      backgroundColor: colors.primary + '10',
+      borderWidth: 1,
+      borderColor: colors.primary + '30',
+    },
+    currentUserRank: {
+      color: colors.primary,
+      fontWeight: '700',
+    },
+    currentUserName: {
+      color: colors.primary,
+      fontWeight: '700',
+    },
+    currentUserPoints: {
+      color: colors.primary,
+      fontWeight: '700',
+    },
     suggestionsScroll: {
       paddingLeft: 16,
     },
@@ -343,6 +367,36 @@ export default function PeoplePage() {
       color: colors.text,
       flex: 1,
     },
+    emptyState: {
+      width: '100%',
+      alignItems: 'center',
+      paddingVertical: 40,
+      paddingHorizontal: 20,
+    },
+    emptyStateTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    emptyStateSubtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    inviteButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    inviteButtonText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '600',
+    },
   });
 
   return (
@@ -361,12 +415,6 @@ export default function PeoplePage() {
                 <Text style={dynamicStyles.badgeText}>{requestsCount}</Text>
               </View>
             )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={dynamicStyles.iconButton}
-            onPress={handleInvite}
-          >
-            <Feather name="mail" size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
       </View>
@@ -420,16 +468,40 @@ export default function PeoplePage() {
             </TouchableOpacity>
           </View>
           <View style={dynamicStyles.leaderboardCompact}>
-            {leaderboard.map((entry, index) => (
-              <View key={entry.user_id} style={dynamicStyles.leaderboardItem}>
-                <Text style={dynamicStyles.rank}>{index + 1}</Text>
-                <View style={dynamicStyles.leaderboardAvatar} />
-                <View style={dynamicStyles.leaderboardInfo}>
-                  <Text style={dynamicStyles.leaderboardName}>{entry.full_name}</Text>
+            {leaderboard.map((entry, index) => {
+              const isCurrentUser = entry.user_id === user?.id;
+              return (
+                <View
+                  key={entry.user_id}
+                  style={[
+                    dynamicStyles.leaderboardItem,
+                    isCurrentUser && dynamicStyles.currentUserItem
+                  ]}
+                >
+                  <Text style={[
+                    dynamicStyles.rank,
+                    isCurrentUser && dynamicStyles.currentUserRank
+                  ]}>
+                    {index + 1}
+                  </Text>
+                  <View style={dynamicStyles.leaderboardAvatar} />
+                  <View style={dynamicStyles.leaderboardInfo}>
+                    <Text style={[
+                      dynamicStyles.leaderboardName,
+                      isCurrentUser && dynamicStyles.currentUserName
+                    ]}>
+                      {entry.full_name}{isCurrentUser ? ' (you)' : ''}
+                    </Text>
+                  </View>
+                  <Text style={[
+                    dynamicStyles.points,
+                    isCurrentUser && dynamicStyles.currentUserPoints
+                  ]}>
+                    {entry.total_voltz_earned}⚡
+                  </Text>
                 </View>
-                <Text style={dynamicStyles.points}>{entry.total_voltz_earned}⚡</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </View>
 
@@ -451,7 +523,10 @@ export default function PeoplePage() {
           >
             {suggestions.map((suggestion) => (
               <View key={suggestion.id} style={dynamicStyles.suggestionCard}>
-                <View style={dynamicStyles.suggestionAvatar} />
+                <Image
+                  source={suggestion.avatar_url ? { uri: suggestion.avatar_url } : require('../assets/profileIconDefault.png')}
+                  style={dynamicStyles.suggestionAvatar}
+                />
                 <Text style={dynamicStyles.suggestionName} numberOfLines={1}>
                   {suggestion.full_name}
                 </Text>
@@ -481,14 +556,29 @@ export default function PeoplePage() {
             </TouchableOpacity>
           </View>
           <View style={dynamicStyles.friendsGrid}>
-            {friends.map((friendItem) => (
-              <View key={friendItem.id} style={dynamicStyles.friendCard}>
-                <View style={dynamicStyles.friendAvatar} />
-                <Text style={dynamicStyles.friendName} numberOfLines={1}>
-                  {friendItem.friend.full_name}
+            {friends.length > 0 ? (
+              friends.map((friendItem) => (
+                <View key={friendItem.id} style={dynamicStyles.friendCard}>
+                  <View style={dynamicStyles.friendAvatar} />
+                  <Text style={dynamicStyles.friendName} numberOfLines={1}>
+                    {friendItem.friend.full_name}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <View style={dynamicStyles.emptyState}>
+                <Text style={dynamicStyles.emptyStateTitle}>No team members yet</Text>
+                <Text style={dynamicStyles.emptyStateSubtitle}>
+                  Invite friends to join your team and start learning together!
                 </Text>
+                <TouchableOpacity
+                  style={dynamicStyles.inviteButton}
+                  onPress={handleInvite}
+                >
+                  <Text style={dynamicStyles.inviteButtonText}>Invite Friends</Text>
+                </TouchableOpacity>
               </View>
-            ))}
+            )}
           </View>
         </View>
       </ScrollView>

@@ -6,7 +6,6 @@ import { Feather } from '@expo/vector-icons';
 import { NewProfileHeader } from './NewProfileHeader';
 import { AnimatedLevelProgressBar } from './AnimatedLevelProgressBar';
 import { LearningStatsGrid } from './LearningStatsGrid';
-import { LeaderboardCard } from './LeaderboardCard';
 import { SavedContentScrollView } from './SavedContentScrollView';
 import { AchievementsBelt } from './AchievementsBelt';
 import { CareerGoalCard } from './CareerGoalCard';
@@ -562,9 +561,6 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           loading={loading}
         />
 
-        <LeaderboardCard
-          loading={loading}
-        />
 
         <SavedContentScrollView
           loading={loading}

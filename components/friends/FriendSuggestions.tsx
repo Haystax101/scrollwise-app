@@ -95,9 +95,6 @@ export const FriendSuggestions: React.FC<FriendSuggestionsProps> = ({
                   ]}
                 />
               </View>
-              <Text style={[styles.scoreText, { color: colors.textSecondary }]}>
-                {Math.round(item.suggestion_score * 100)}% match
-              </Text>
             </View>
           </View>
         </View>

@@ -137,15 +137,24 @@ export class FriendsService {
       throw new FriendsError('Not authenticated', 'UNAUTHENTICATED');
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('friendships')
       .delete()
       .eq('id', friendshipId)
       .eq('requester_id', currentUser.user.id)
-      .eq('status', 'pending');
+      .eq('status', 'pending')
+      .select();
 
     if (error) {
+      console.error('Cancel friend request error:', error);
       throw new FriendsError('Failed to cancel friend request', 'CANCEL_FAILED', error);
+    }
+
+    if (!data || data.length === 0) {
+      console.warn('No friend request was deleted. Friendship may not exist or RLS policy issue.');
+      // Still don't throw an error since the UI should refresh anyway
+    } else {
+      console.log('Successfully canceled friend request:', data[0]);
     }
   }
 
@@ -350,8 +359,11 @@ export class FriendsService {
       .order('created_at', { ascending: false });
 
     if (error) {
+      console.error('Get friend requests error:', error);
       throw new FriendsError('Failed to fetch friend requests', 'FETCH_FAILED', error);
     }
+
+    console.log('Friend requests raw data:', data?.length || 0, 'requests found');
 
     const incoming: FriendRequest[] = [];
     const outgoing: FriendRequest[] = [];
@@ -373,6 +385,8 @@ export class FriendsService {
       }
     });
 
+    console.log(`Friend requests processed: ${incoming.length} incoming, ${outgoing.length} outgoing`);
+
     return { incoming, outgoing };
   }
 
@@ -380,40 +394,33 @@ export class FriendsService {
    * Get friend suggestions
    */
   static async getFriendSuggestions(limit: number = 10): Promise<FriendSuggestion[]> {
+    console.log('🔍 getFriendSuggestions called with limit:', limit);
+
     const { data: currentUser } = await supabase.auth.getUser();
     if (!currentUser.user) {
+      console.error('❌ getFriendSuggestions: User not authenticated');
       throw new FriendsError('Not authenticated', 'UNAUTHENTICATED');
     }
 
-    // First try to get cached suggestions
-    const { data: cachedSuggestions, error: cacheError } = await supabase
-      .from('friend_suggestions')
-      .select('*')
-      .eq('user_id', currentUser.user.id)
-      .is('dismissed_at', null)
-      .order('suggestion_score', { ascending: false })
-      .limit(limit);
+    console.log('✅ getFriendSuggestions: User authenticated:', currentUser.user.id);
 
-    if (!cacheError && cachedSuggestions && cachedSuggestions.length > 0) {
-      // Mark suggestions as shown
-      await supabase
-        .from('friend_suggestions')
-        .update({ shown_at: new Date().toISOString() })
-        .eq('user_id', currentUser.user.id)
-        .is('shown_at', null);
+    try {
+      // Always use the RPC function to get fresh data with profile information
+    console.log('🔄 Skipping cache, using RPC function for fresh profile data');
 
-      return cachedSuggestions;
-    }
-
-    // If no cached suggestions, generate new ones
+    // Use RPC function to get suggestions with profile data
     const { data, error } = await supabase.rpc('generate_friend_suggestions', {
-      target_user_id: currentUser.user.id,
-      limit_count: limit
+      p_user_id: currentUser.user.id,
+      p_limit: limit
     });
 
     if (error) {
+      console.error('RPC generate_friend_suggestions error:', error);
       throw new FriendsError('Failed to generate friend suggestions', 'SUGGESTIONS_FAILED', error);
     }
+
+    console.log('Friend suggestions RPC result:', data?.length || 0, 'suggestions returned');
+    console.log('First suggestion sample:', data?.[0]);
 
     // Cache the new suggestions
     if (data && data.length > 0) {
@@ -434,21 +441,40 @@ export class FriendsService {
         .insert(suggestionsToCache);
     }
 
-    return data?.map((suggestion: any) => ({
-      id: suggestion.suggested_user_id, // Using user ID as suggestion ID for generated suggestions
-      user_id: currentUser.user.id,
-      suggested_user_id: suggestion.suggested_user_id,
-      suggestion_score: suggestion.suggestion_score,
-      mutual_friends_count: suggestion.mutual_friends_count,
-      same_industry: suggestion.same_industry,
-      full_name: suggestion.full_name,
-      avatar_url: suggestion.avatar_url,
-      created_at: new Date().toISOString(),
-      suggestion_reasons: [
-        ...(suggestion.mutual_friends_count > 0 ? [`${suggestion.mutual_friends_count} mutual friends`] : []),
-        ...(suggestion.same_industry ? ['Same industry'] : [])
-      ]
-    })) || [];
+    const mappedSuggestions = data?.map((suggestion: any) => {
+      console.log('Mapping suggestion:', suggestion.suggested_user_id, 'name:', suggestion.full_name);
+      return {
+        id: suggestion.id || suggestion.suggested_user_id,
+        user_id: currentUser.user.id,
+        suggested_user_id: suggestion.suggested_user_id,
+        suggestion_score: suggestion.suggestion_score,
+        mutual_friends_count: suggestion.mutual_friends_count || 0,
+        same_industry: suggestion.same_industry || false,
+        full_name: suggestion.full_name || 'Unknown User',
+        avatar_url: suggestion.avatar_url || null,
+        friends_count: suggestion.friends_count || 0,
+        created_at: new Date().toISOString(),
+        suggestion_reasons: Array.isArray(suggestion.suggestion_reasons)
+          ? suggestion.suggestion_reasons
+          : suggestion.suggestion_reasons
+          ? [suggestion.suggestion_reasons]
+          : ['Suggested for you']
+      };
+    }) || [];
+
+    console.log('Final mapped suggestions:', mappedSuggestions.length, 'suggestions');
+    console.log('First mapped suggestion:', mappedSuggestions[0]);
+
+    return mappedSuggestions;
+
+    } catch (error) {
+      console.error('🚨 getFriendSuggestions: Unexpected error:', error);
+      if (error instanceof FriendsError) {
+        throw error;
+      } else {
+        throw new FriendsError('Unable to load friend suggestions', 'SUGGESTIONS_FAILED', error);
+      }
+    }
   }
 
   /**

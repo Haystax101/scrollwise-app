@@ -6,7 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Alert
+  Alert,
+  Image
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -33,7 +34,10 @@ export default function SuggestionsPage() {
   const loadSuggestions = async () => {
     try {
       setLoading(true);
+      console.log('📄 Suggestions page: Loading suggestions...');
       const suggestionsData = await FriendsService.getFriendSuggestions(50);
+      console.log('📄 Suggestions page: Received suggestions:', suggestionsData.length);
+      console.log('📄 Suggestions page: First suggestion:', suggestionsData[0]);
       setSuggestions(suggestionsData);
     } catch (error) {
       console.error('Error loading suggestions:', error);
@@ -281,15 +285,17 @@ export default function SuggestionsPage() {
 
             return (
               <View key={suggestion.id} style={dynamicStyles.suggestionCard}>
-                <View style={dynamicStyles.avatar} />
+                <Image
+                  source={suggestion.avatar_url ? { uri: suggestion.avatar_url } : require('../assets/profileIconDefault.png')}
+                  style={dynamicStyles.avatar}
+                />
                 <View style={dynamicStyles.suggestionInfo}>
                   <Text style={dynamicStyles.suggestionName}>
                     {suggestion.full_name}
                   </Text>
                   <Text style={dynamicStyles.suggestionScore}>
-                    {Math.round(suggestion.suggestion_score * 100)}% match
                     {suggestion.mutual_friends_count > 0 &&
-                      ` • ${suggestion.mutual_friends_count} mutual friend${suggestion.mutual_friends_count > 1 ? 's' : ''}`
+                      `${suggestion.mutual_friends_count} mutual friend${suggestion.mutual_friends_count > 1 ? 's' : ''}`
                     }
                   </Text>
                   <View style={dynamicStyles.reasonsContainer}>

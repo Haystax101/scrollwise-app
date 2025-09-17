@@ -85,8 +85,7 @@ export class ShareService {
       shared_content_type: contentType || null,
       shared_content_id: contentId || null,
       referral_source: Platform.OS === 'ios' ? 'ios_share' : 'android_share',
-      status: 'pending' as const,
-      shared_at: new Date().toISOString()
+      status: 'pending' as const
     };
 
     // Use upsert to handle duplicate referral codes

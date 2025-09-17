@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { FriendsService } from '../lib/friendsService';
+import { ShareService } from '../lib/shareService';
 import type { FriendRequest } from '../types/friends';
 
 export default function FriendRequestsPage() {
@@ -118,6 +119,14 @@ export default function FriendRequestsPage() {
         }
       ]
     );
+  };
+
+  const handleInvite = async () => {
+    try {
+      await ShareService.shareAppInvitation();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to share invitation');
+    }
   };
 
   const currentRequests = activeTab === 'incoming' ? incomingRequests : outgoingRequests;
@@ -297,6 +306,18 @@ export default function FriendRequestsPage() {
       color: colors.textSecondary,
       textAlign: 'center',
       lineHeight: 22,
+      marginBottom: 24,
+    },
+    inviteButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    inviteButtonText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '600',
     },
   });
 
@@ -395,9 +416,17 @@ export default function FriendRequestsPage() {
           <Text style={dynamicStyles.emptySubtitle}>
             {activeTab === 'incoming'
               ? "You don't have any pending friend requests at the moment."
-              : "You haven't sent any friend requests recently."
+              : "You haven't sent any friend requests recently. Invite friends to join Supercharged!"
             }
           </Text>
+          {activeTab === 'outgoing' && (
+            <TouchableOpacity
+              style={dynamicStyles.inviteButton}
+              onPress={handleInvite}
+            >
+              <Text style={dynamicStyles.inviteButtonText}>Invite Friends</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <ScrollView
