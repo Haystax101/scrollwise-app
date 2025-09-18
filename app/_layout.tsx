@@ -47,7 +47,7 @@ export default function RootLayout() {
                     })}
                   />
                   <Stack.Screen
-                    name="discover"
+                    name="vault"
                     options={({ route }) => ({
                       animation: (route.params as any)?.animationDirection === 'left'
                         ? 'slide_from_left'

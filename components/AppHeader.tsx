@@ -19,9 +19,9 @@ export default function AppHeader() {
     return null;
   }
 
-  let currentScreen: 'home' | 'discover' | 'people' | 'profile' | 'chats' | 'saved-feed' = 'home';
+  let currentScreen: 'home' | 'vault' | 'people' | 'profile' | 'chats' | 'saved-feed' = 'home';
   if (pathname === '/feed') currentScreen = 'home';
-  if (pathname === '/discover') currentScreen = 'discover';
+  if (pathname === '/vault') currentScreen = 'vault';
   if (pathname === '/people' || pathname === '/suggestions') currentScreen = 'people';
   if (pathname === '/profile') currentScreen = 'profile';
   if (pathname === '/chats') currentScreen = 'chats';

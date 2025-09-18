@@ -1,9 +1,9 @@
 import { useAuth } from '../context/AuthContext';
-import { Discover } from '../components/Discover';
+import { Vault } from '../components/Vault';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 
-export default function DiscoverScreen() {
+export default function VaultScreen() {
   const { user, loading } = useAuth();
   const router = useRouter();
   useEffect(() => {
@@ -12,5 +12,5 @@ export default function DiscoverScreen() {
     }
   }, [user, loading]);
   if (loading || !user) return null;
-  return <Discover />;
+  return <Vault />;
 }
