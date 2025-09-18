@@ -157,16 +157,30 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
         employment_type: formData.employmentType || 'full_time'
       };
 
-      const { error } = await supabase.from('user_experiences').insert(experienceData);
+      let error;
+      if (editingIndex >= 0) {
+        // Update existing experience
+        const expId = experiences[editingIndex].id;
+        const { error: updateError } = await supabase
+          .from('user_experiences')
+          .update(experienceData)
+          .eq('id', expId);
+        error = updateError;
+      } else {
+        // Insert new experience
+        const { error: insertError } = await supabase.from('user_experiences').insert(experienceData);
+        error = insertError;
+      }
 
       if (error) {
         throw error;
       }
 
-      Alert.alert('Success', 'Experience added successfully!');
+      Alert.alert('Success', editingIndex >= 0 ? 'Experience updated successfully!' : 'Experience added successfully!');
       setShowModal(false);
       setFormData({});
       setDateErrors({});
+      setEditingIndex(-1);
 
       if (onRefresh) {
         await onRefresh();
@@ -328,10 +342,17 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
       color: getCardTextColor(),
       flex: 1,
     },
+    headerRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
     period: {
       fontSize: 12,
       color: getCardSecondaryTextColor(),
-      marginLeft: 16,
+    },
+    deleteButton: {
+      padding: 2,
     },
     company: {
       flexDirection: 'row',
@@ -536,9 +557,18 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
               >
               <View style={styles.experienceHeader}>
                 <Text style={styles.positionTitle}>{exp.role || 'Position'}</Text>
-                <Text style={styles.period}>
-                  {exp.startDate ? formatPeriod(exp.startDate, exp.endDate, exp.isCurrent || false) : 'Period'}
-                </Text>
+                <View style={styles.headerRight}>
+                  <Text style={styles.period}>
+                    {exp.startDate ? formatPeriod(exp.startDate, exp.endDate, exp.isCurrent || false) : 'Period'}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteExperience(index)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Feather name="x" size={16} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
               </View>
               
               <View style={styles.company}>

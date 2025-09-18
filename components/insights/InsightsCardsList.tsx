@@ -26,16 +26,17 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
   const showActionSheet = (insight: Insight) => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions({
-        options: ['Edit', 'Delete'],
-        destructiveButtonIndex: 1,
+        options: ['View', 'Edit', 'Delete', 'Cancel'],
+        destructiveButtonIndex: 2,
+        cancelButtonIndex: 3,
       }, (buttonIndex) => {
-        if (buttonIndex === 0) onEditPress?.(insight);
-        if (buttonIndex === 1) onDeletePress?.(insight);
+        if (buttonIndex === 0) onInsightPress?.(insight);
+        if (buttonIndex === 1) onEditPress?.(insight);
+        if (buttonIndex === 2) onDeletePress?.(insight);
       });
     } else {
-      // For Android, you could use a custom modal or third-party library
-      // For now, just show edit/delete directly
-      onEditPress?.(insight);
+      // For Android, show a simple menu - you could implement a custom modal here
+      onInsightPress?.(insight);
     }
   };
 
@@ -227,11 +228,14 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
         <TouchableOpacity
           key={insight.id}
           style={styles.insightCard}
-          onPress={() => onInsightPress?.(insight)}
+          onPress={() => showActionSheet(insight)}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.moreButton}
-            onPress={() => showActionSheet(insight)}
+            onPress={(e) => {
+              e.stopPropagation();
+              showActionSheet(insight);
+            }}
           >
             <Feather name="more-horizontal" size={20} color={colors.textSecondary} />
           </TouchableOpacity>

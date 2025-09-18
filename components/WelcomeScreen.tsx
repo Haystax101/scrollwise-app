@@ -10,7 +10,7 @@ interface WelcomeScreenProps {
 
 // Preload all images at module level for immediate availability
 const WelcomeHeroImage = require('../assets/welcomehero.png');
-const HeroImage = require('../assets/hero.png');
+const HeroImage = require('../assets/hero3.png');
 const Hero2Image = require('../assets/hero2.png');
 
 // Create stable image components to prevent re-rendering
@@ -51,8 +51,8 @@ const welcomeSlides = [
   {
     key: '2',
     image: <HeroImageComponent />,
-    title: 'Take Control Of Your Scrolls',
-    description: 'With supercharged you have the power of all in the package of one',
+    title: 'Share Your Scrolls',
+    description: 'Immerse in a community of learners',
   },
   {
     key: '3',

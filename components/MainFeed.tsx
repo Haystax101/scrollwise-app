@@ -12,6 +12,7 @@ import { useIndustries } from '../context/IndustriesContext';
 import { CommentsModal } from './CommentsModal';
 import { supabase } from '../lib/supabase';
 import { useResponsiveLayout } from '../utils/screenUtils';
+import { getDeviceInfo, useDeviceOrientation } from '../utils/deviceDetection';
 
 /**
  * MainFeed Component - Completely Rewritten
@@ -312,6 +313,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   const { colors } = useTheme();
   const { allIndustries } = useIndustries();
   const { totalHeight } = useResponsiveLayout();
+  const { isTablet } = getDeviceInfo();
+  const { isLandscape } = useDeviceOrientation();
 
   // Comments modal state
   const [commentsArticleId, setCommentsArticleId] = useState<number | null>(null);
@@ -513,11 +516,18 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     if (!isLoadingMore) return null;
     return (
       <View style={[styles.footerLoader, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="small" color={colors.primary} />
-        <Text style={[styles.footerText, { color: colors.text }]}>Loading more content...</Text>
+        <ActivityIndicator size={isTablet ? "large" : "small"} color={colors.primary} />
+        <Text style={[
+          styles.footerText,
+          {
+            color: colors.text,
+            fontSize: isTablet ? 16 : 14,
+            marginTop: isTablet ? 12 : 8
+          }
+        ]}>Loading more content...</Text>
       </View>
     );
-  }, [isLoadingMore, colors]);
+  }, [isLoadingMore, colors, isTablet]);
 
   // Loading state
   if (isLoading) {
@@ -525,7 +535,14 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.text }]}>
+        <Text style={[
+          styles.loadingText,
+          {
+            color: colors.text,
+            fontSize: isTablet ? 18 : 16,
+            paddingHorizontal: isTablet ? 40 : 20
+          }
+        ]}>
           Loading your personalized feed...
         </Text>
       </View>
@@ -549,7 +566,15 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
-        <Text style={[styles.emptyText, { color: colors.text }]}>
+        <Text style={[
+          styles.emptyText,
+          {
+            color: colors.text,
+            fontSize: isTablet ? 20 : 18,
+            paddingHorizontal: isTablet ? 60 : 16,
+            lineHeight: isTablet ? 28 : 24
+          }
+        ]}>
           No content available. Try refreshing or updating your industry preferences.
         </Text>
       </View>
@@ -594,12 +619,12 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         onMomentumScrollEnd={() => {
           console.log(`📱 FlatList onMomentumScrollEnd - feedItems.length: ${feedItems.length}`);
         }}
-        // Performance optimizations
+        // Performance optimizations - responsive for tablets
         removeClippedSubviews={true}
-        maxToRenderPerBatch={3}
-        updateCellsBatchingPeriod={50}
-        initialNumToRender={2}
-        windowSize={5}
+        maxToRenderPerBatch={isTablet ? 4 : 3}
+        updateCellsBatchingPeriod={isTablet ? 40 : 50}
+        initialNumToRender={isTablet ? 3 : 2}
+        windowSize={isTablet ? 7 : 5}
       />
 
       {/* Comments Modal */}

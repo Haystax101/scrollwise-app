@@ -13,6 +13,7 @@ import { FlagButton } from './common/FlagButton';
 import { optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
 import { useResponsiveLayout } from '../utils/screenUtils';
 import { ShareService } from '../lib/shareService';
+import { useDeviceOrientation, getResponsiveFontSize } from '../utils/deviceDetection';
 
 interface ArticleCardProps {
   article: Article;
@@ -79,7 +80,16 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
     return rawName ? optimizeIndustryName(rawName) : undefined;
   }, [allIndustries, article.industry_id]);
 
-  const dynamicTextLines = article.author ? 7 : 8;
+  const { isTablet, isLandscape } = useDeviceOrientation();
+
+  const dynamicTextLines = useMemo(() => {
+    if (isTablet) {
+      // On tablets, show more lines to ensure summary is visible
+      return isLandscape ? 4 : 3;
+    }
+    // Original mobile behavior
+    return article.author ? 7 : 8;
+  }, [isTablet, isLandscape, article.author]);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -307,8 +317,8 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
     },
     contentText: {
       color: colors.text,
-      fontSize: fontSizes.content,
-      lineHeight: fontSizes.content * 1.4,
+      fontSize: isTablet ? getResponsiveFontSize(fontSizes.content) : fontSizes.content,
+      lineHeight: (isTablet ? getResponsiveFontSize(fontSizes.content) : fontSizes.content) * 1.4,
       marginBottom: 12,
     },
     readMoreText: {

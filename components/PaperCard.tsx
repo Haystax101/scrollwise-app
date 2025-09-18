@@ -13,6 +13,7 @@ import { FlagButton } from './common/FlagButton';
 import { optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
 import { useResponsiveLayout } from '../utils/screenUtils';
 import { ShareService } from '../lib/shareService';
+import { getDeviceInfo, useDeviceOrientation } from '../utils/deviceDetection';
 
 interface PaperCardProps {
   paper: Paper;
@@ -55,6 +56,8 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
   const insets = useSafeAreaInsets();
   const { allIndustries } = useIndustries();
   const { visualHeight, totalHeight, fontSizes } = useResponsiveLayout();
+  const { isTablet } = getDeviceInfo();
+  const { isLandscape } = useDeviceOrientation();
 
   const [likes, setLikes] = useState(paper.likes_count || 0);
   const [hasLiked, setHasLiked] = useState(false);
@@ -70,7 +73,12 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     return rawName ? optimizeIndustryName(rawName) : undefined;
   }, [allIndustries, paper.industry_id]);
 
-  const dynamicTextLines = (paper.authors && paper.authors.length > 0) ? 7 : 8;
+  const dynamicTextLines = useMemo(() => {
+    if (isTablet) {
+      return isLandscape ? 4 : 3; // More lines on tablet
+    }
+    return (paper.authors && paper.authors.length > 0) ? 7 : 8; // Original mobile behavior
+  }, [isTablet, isLandscape, paper.authors]);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -320,8 +328,8 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     },
     contentText: {
       color: colors.text,
-      fontSize: fontSizes.content,
-      lineHeight: fontSizes.content * 1.4,
+      fontSize: isTablet ? fontSizes.content * 1.1 : fontSizes.content,
+      lineHeight: isTablet ? fontSizes.content * 1.5 : fontSizes.content * 1.4,
       marginBottom: 12,
     },
     readMoreText: {

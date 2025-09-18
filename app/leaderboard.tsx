@@ -5,7 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView
+  SafeAreaView,
+  Image
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -303,7 +304,15 @@ export default function LeaderboardPage() {
                 ]}>
                   {entry.rank || index + 1}
                 </Text>
-                <View style={dynamicStyles.avatar} />
+                <Image
+                  source={
+                    (entry.avatar_url && entry.avatar_url.trim() && entry.avatar_url !== 'null' && entry.avatar_url !== 'undefined')
+                      ? { uri: entry.avatar_url }
+                      : require('../assets/profileIconDefault.png')
+                  }
+                  style={dynamicStyles.avatar}
+                  defaultSource={require('../assets/profileIconDefault.png')}
+                />
                 <View style={dynamicStyles.userInfo}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Text style={dynamicStyles.userName}>

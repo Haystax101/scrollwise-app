@@ -4,6 +4,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useDirectionalNavigation } from '../context/NavigationContext';
 import { feedNavigationService } from '../services/FeedNavigationService';
+import { getDeviceInfo, useDeviceOrientation } from '../utils/deviceDetection';
 
 type ScreenName = 'home' | 'vault' | 'people' | 'profile' | 'chats' | 'saved-feed';
 
@@ -23,6 +24,8 @@ const NAV_ITEMS = [
 export const Header: React.FC<HeaderProps> = ({ currentScreen, navigateTo }) => {
   const { colors } = useTheme();
   const { navigateWithDirection } = useDirectionalNavigation();
+  const { isTablet } = getDeviceInfo();
+  const { isLandscape } = useDeviceOrientation();
 
   const handleNavigation = (path: string, screenName: ScreenName) => {
     const isLeavingFeed = currentScreen === 'home' && screenName !== 'home';
@@ -48,15 +51,17 @@ export const Header: React.FC<HeaderProps> = ({ currentScreen, navigateTo }) => 
       borderTopColor: colors.navigationBorder,
       zIndex: 50,
       position: 'absolute',
-      left: 0,
-      right: 0,
+      left: isTablet && isLandscape ? '20%' : 0,
+      right: isTablet && isLandscape ? '20%' : 0,
       bottom: 0,
       paddingBottom: 0,
+      paddingHorizontal: isTablet ? 40 : 0,
     },
     navText: {
-      fontSize: 12,
-      marginTop: 4,
-      marginBottom: 15,
+      fontSize: isTablet ? 14 : 12,
+      marginTop: isTablet ? 6 : 4,
+      marginBottom: isTablet ? 20 : 15,
+      fontWeight: isTablet ? '500' : 'normal',
     },
     activeNavText: {
       color: colors.navigationActive,
@@ -66,9 +71,15 @@ export const Header: React.FC<HeaderProps> = ({ currentScreen, navigateTo }) => 
     },
   });
 
+  const responsiveNavRowStyles = {
+    ...styles.navRow,
+    height: isTablet ? 100 : 84,
+    paddingHorizontal: isTablet ? 20 : 0,
+  };
+
   return (
     <View style={dynamicStyles.header}>
-      <View style={styles.navRow}>
+      <View style={responsiveNavRowStyles}>
         {NAV_ITEMS.map((item) => {
           const isActive = currentScreen === item.screenName;
           const IconComponent = item.icon;
@@ -81,12 +92,12 @@ export const Header: React.FC<HeaderProps> = ({ currentScreen, navigateTo }) => 
               accessibilityRole="button"
               accessibilityState={{ selected: isActive }}
             >
-              <IconComponent 
-                size={24} 
-                color={isActive ? colors.navigationActive : colors.navigationInactive} 
+              <IconComponent
+                size={isTablet ? 28 : 24}
+                color={isActive ? colors.navigationActive : colors.navigationInactive}
               />
               <Text style={[
-                dynamicStyles.navText, 
+                dynamicStyles.navText,
                 isActive ? dynamicStyles.activeNavText : dynamicStyles.inactiveNavText
               ]}>
                 {item.name}

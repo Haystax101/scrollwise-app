@@ -88,13 +88,15 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
     console.log('📄 SavedContentSection: Fetching saved content for user:', user.id);
     setLoading(true);
     try {
-      // Fetch all saved content types (limit to 50 total, ~17 each)
+      console.log('📄 SavedContentSection: Starting to fetch saved content for user:', user.id);
+
+      // Fetch all saved content types with correct field names
       const [articlesRes, papersRes, booksRes] = await Promise.all([
         supabase
           .from('article_saves')
           .select(`
-            saved_at,
-            articles (
+            created_at,
+            articles!article_id (
               id,
               title,
               summary,
@@ -104,48 +106,59 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
             )
           `)
           .eq('user_id', user.id)
-          .order('saved_at', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(20),
 
         supabase
           .from('paper_saves')
           .select(`
-            saved_at,
-            papers (
+            created_at,
+            papers!paper_id (
               id,
               title,
-              summary,
+              content_simple,
               authors,
               created_at,
               industry_id
             )
           `)
           .eq('user_id', user.id)
-          .order('saved_at', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(20),
 
         supabase
           .from('book_saves')
           .select(`
-            saved_at,
-            books (
+            created_at,
+            books!book_id (
               id,
               title,
-              summary,
+              short_summary,
               author,
               created_at,
               industry_id
             )
           `)
           .eq('user_id', user.id)
-          .order('saved_at', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(20)
       ]);
 
-      console.log('📄 SavedContentSection: Raw responses - articles:', articlesRes.data?.length, 'papers:', papersRes.data?.length, 'books:', booksRes.data?.length);
+      console.log('📄 SavedContentSection: Query results - articles:', articlesRes.data?.length, 'papers:', papersRes.data?.length, 'books:', booksRes.data?.length);
       console.log('📄 SavedContentSection: Articles error:', articlesRes.error);
       console.log('📄 SavedContentSection: Papers error:', papersRes.error);
       console.log('📄 SavedContentSection: Books error:', booksRes.error);
+
+      // Log first few results for debugging
+      if (articlesRes.data?.length) {
+        console.log('📄 SavedContentSection: First article result:', articlesRes.data[0]);
+      }
+      if (papersRes.data?.length) {
+        console.log('📄 SavedContentSection: First paper result:', papersRes.data[0]);
+      }
+      if (booksRes.data?.length) {
+        console.log('📄 SavedContentSection: First book result:', booksRes.data[0]);
+      }
 
       // Process and combine all saved content
       const allSaved: SavedContent[] = [];
@@ -161,7 +174,7 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
             author: save.articles.author,
             created_at: save.articles.created_at,
             industry_id: save.articles.industry_id,
-            saved_at: save.saved_at
+            saved_at: save.created_at
           });
         }
       });
@@ -173,11 +186,11 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
             id: save.papers.id,
             title: save.papers.title,
             type: 'paper',
-            summary: save.papers.summary,
+            summary: save.papers.content_simple, // Use content_simple from papers table
             authors: save.papers.authors,
             created_at: save.papers.created_at,
             industry_id: save.papers.industry_id,
-            saved_at: save.saved_at
+            saved_at: save.created_at
           });
         }
       });
@@ -189,19 +202,30 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
             id: save.books.id,
             title: save.books.title,
             type: 'book',
-            summary: save.books.summary,
+            summary: save.books.short_summary, // Use short_summary from books table
             author: save.books.author,
             created_at: save.books.created_at,
             industry_id: save.books.industry_id,
-            saved_at: save.saved_at
+            saved_at: save.created_at
           });
         }
+      });
+
+      console.log('📄 SavedContentSection: Processed data - total saved items:', allSaved.length);
+      console.log('📄 SavedContentSection: Saved items breakdown:', {
+        articles: allSaved.filter(item => item.type === 'article').length,
+        papers: allSaved.filter(item => item.type === 'paper').length,
+        books: allSaved.filter(item => item.type === 'book').length
       });
 
       // Sort by saved_at date
       allSaved.sort((a, b) => new Date(b.saved_at).getTime() - new Date(a.saved_at).getTime());
 
-      console.log('📄 SavedContentSection: Fetched', allSaved.length, 'saved items');
+      console.log('📄 SavedContentSection: Final sorted saved items:', allSaved.length);
+      if (allSaved.length > 0) {
+        console.log('📄 SavedContentSection: First saved item:', allSaved[0]);
+      }
+
       setSavedContent(allSaved);
     } catch (error) {
       console.error('📄 SavedContentSection: Error fetching saved content:', error);
@@ -221,7 +245,9 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
       params: {
         contentType: item.type,
         contentId: item.id,
-        animationDirection: 'left'
+        animationDirection: 'left',
+        showBackButton: 'true',
+        backTo: 'vault'
       }
     });
   };
@@ -326,9 +352,9 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Saved Content</Text>
         {filteredContent.length > 0 && (
-          <Text style={[styles.countText, { color: colors.textSecondary }]}>
-            {filteredContent.length} item{filteredContent.length !== 1 ? 's' : ''}
-          </Text>
+          <TouchableOpacity onPress={() => {/* TODO: Navigate to full saved content */}}>
+            <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -363,6 +389,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
+  },
+  seeAllText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   countText: {
     fontSize: 14,

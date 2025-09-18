@@ -474,7 +474,10 @@ export default function PeoplePage() {
                 user_id: entry.user_id,
                 full_name: entry.full_name,
                 avatar_url: entry.avatar_url,
-                isCurrentUser
+                avatar_url_type: typeof entry.avatar_url,
+                avatar_url_length: entry.avatar_url?.length,
+                isCurrentUser,
+                shouldUseDefault: !(entry.avatar_url && entry.avatar_url.trim() && entry.avatar_url !== 'null' && entry.avatar_url !== 'undefined')
               });
               return (
                 <View
@@ -491,8 +494,14 @@ export default function PeoplePage() {
                     {index + 1}
                   </Text>
                   <Image
-                    source={(entry.avatar_url && entry.avatar_url.trim()) ? { uri: entry.avatar_url } : require('../assets/profileIconDefault.png')}
+                    source={
+                      (entry.avatar_url && entry.avatar_url.trim() && entry.avatar_url !== 'null' && entry.avatar_url !== 'undefined')
+                        ? { uri: entry.avatar_url }
+                        : require('../assets/profileIconDefault.png')
+                    }
                     style={dynamicStyles.leaderboardAvatar}
+                    defaultSource={require('../assets/profileIconDefault.png')}
+                    onError={() => console.log('🖼️ Avatar failed to load for:', entry.full_name)}
                   />
                   <View style={dynamicStyles.leaderboardInfo}>
                     <Text style={[

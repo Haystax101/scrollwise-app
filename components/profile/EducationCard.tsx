@@ -59,8 +59,15 @@ export const EducationCard: React.FC<EducationCardProps> = ({
   const handleEditEducation = (index: number) => {
     const edu = education[index];
     setEditingIndex(index);
+
+    // Extract degree name by removing the field of study suffix if present
+    let degreeName = edu.degree || '';
+    if (edu.stage && degreeName.includes(` in ${edu.stage}`)) {
+      degreeName = degreeName.replace(` in ${edu.stage}`, '');
+    }
+
     setFormData({
-      degreeName: edu.degree || '',
+      degreeName: degreeName,
       universityName: edu.university || '',
       fieldOfStudy: edu.stage || '',
       startDate: edu.startDate ? dbDateToDateInput(edu.startDate) : { month: '', year: '' },
@@ -131,16 +138,30 @@ export const EducationCard: React.FC<EducationCardProps> = ({
         is_current: formData.isCurrent || false
       };
 
-      const { error } = await supabase.from('user_education').insert(educationData);
+      let error;
+      if (editingIndex >= 0) {
+        // Update existing education
+        const eduId = education[editingIndex].id;
+        const { error: updateError } = await supabase
+          .from('user_education')
+          .update(educationData)
+          .eq('id', eduId);
+        error = updateError;
+      } else {
+        // Insert new education
+        const { error: insertError } = await supabase.from('user_education').insert(educationData);
+        error = insertError;
+      }
 
       if (error) {
         throw error;
       }
 
-      Alert.alert('Success', 'Education added successfully!');
+      Alert.alert('Success', editingIndex >= 0 ? 'Education updated successfully!' : 'Education added successfully!');
       setShowModal(false);
       setFormData({});
       setDateErrors({});
+      setEditingIndex(-1);
 
       if (onRefresh) {
         await onRefresh();
@@ -302,10 +323,17 @@ export const EducationCard: React.FC<EducationCardProps> = ({
       color: getCardTextColor(),
       flex: 1,
     },
+    headerRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
     period: {
       fontSize: 12,
       color: getCardSecondaryTextColor(),
-      marginLeft: 16,
+    },
+    deleteButton: {
+      padding: 2,
     },
     university: {
       flexDirection: 'row',
@@ -518,9 +546,18 @@ export const EducationCard: React.FC<EducationCardProps> = ({
               >
               <View style={styles.educationHeader}>
                 <Text style={styles.degreeTitle}>{edu.degree || 'Degree'}</Text>
-                <Text style={styles.period}>
-                  {edu.startDate ? formatPeriod(edu.startDate, edu.endDate, edu.isCurrent || false) : 'Period'}
-                </Text>
+                <View style={styles.headerRight}>
+                  <Text style={styles.period}>
+                    {edu.startDate ? formatPeriod(edu.startDate, edu.endDate, edu.isCurrent || false) : 'Period'}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteEducation(index)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Feather name="x" size={16} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
               </View>
               
               <View style={styles.university}>

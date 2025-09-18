@@ -8,6 +8,7 @@ import { instantContentLoader } from '../services/InstantContentLoader';
 import { VaultSearchHeader } from './vault/VaultSearchHeader';
 import { ContentSection } from './vault/ContentSection';
 import { SavedContentSection } from './vault/SavedContentSection';
+import { supabase } from '../lib/supabase';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -95,6 +96,145 @@ export const Vault: React.FC = () => {
     }
   }, [debouncedSearchQuery, selectedIndustry]);
 
+  const fetchContentByIndustry = useCallback(async (industryId: string): Promise<VaultData> => {
+    if (!user) {
+      return { articles: [], papers: [], books: [] };
+    }
+
+    try {
+      console.log(`🔍 Vault: Fetching prioritized content for industry ${industryId}`);
+
+      // Function to fetch prioritized content for a specific type
+      const fetchPrioritizedContent = async (
+        tableName: 'articles' | 'papers' | 'books',
+        viewTableName: 'article_views_enhanced' | 'paper_views' | 'book_views',
+        contentIdField: 'article_id' | 'paper_id' | 'book_id',
+        selectFields: string
+      ) => {
+        console.log(`🔍 Vault: Fetching unviewed ${tableName} for industry ${industryId}`);
+
+        // First, get the list of viewed content IDs for this user
+        const { data: viewedIds } = await supabase
+          .from(viewTableName)
+          .select(contentIdField)
+          .eq('user_id', user.id);
+
+        const viewedIdsArray = viewedIds?.map(item => item[contentIdField]) || [];
+
+        console.log(`🔍 Vault: User has viewed ${viewedIdsArray.length} ${tableName} items`);
+
+        // Get unviewed content (exclude viewed IDs)
+        let unviewedQuery = supabase
+          .from(tableName)
+          .select(selectFields)
+          .eq('industry_id', industryId)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        // Only add the NOT IN filter if there are viewed items
+        if (viewedIdsArray.length > 0) {
+          unviewedQuery = unviewedQuery.not('id', 'in', `(${viewedIdsArray.join(',')})`);
+        }
+
+        const { data: unviewedData, error: unviewedError } = await unviewedQuery;
+
+        if (unviewedError) {
+          console.warn(`🔍 Vault: Error fetching unviewed ${tableName}:`, unviewedError);
+          // Fallback to basic query without view filtering
+          const { data: fallbackData } = await supabase
+            .from(tableName)
+            .select(selectFields)
+            .eq('industry_id', industryId)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          return fallbackData || [];
+        }
+
+        const unviewedCount = unviewedData?.length || 0;
+        console.log(`🔍 Vault: Found ${unviewedCount} unviewed ${tableName} for industry ${industryId}`);
+
+        // If we have less than 5 unviewed items, fill the remainder with viewed content
+        if (unviewedCount < 5) {
+          const remainingNeeded = 5 - unviewedCount;
+          console.log(`🔍 Vault: Need ${remainingNeeded} more ${tableName}, fetching viewed content`);
+
+          // Get viewed content to fill remainder
+          let viewedQuery = supabase
+            .from(tableName)
+            .select(selectFields)
+            .eq('industry_id', industryId)
+            .order('created_at', { ascending: false })
+            .limit(remainingNeeded);
+
+          // Only add the IN filter if there are viewed items
+          if (viewedIdsArray.length > 0) {
+            viewedQuery = viewedQuery.in('id', viewedIdsArray);
+          } else {
+            // No viewed content available
+            return unviewedData || [];
+          }
+
+          const { data: viewedData } = await viewedQuery;
+
+          console.log(`🔍 Vault: Found ${viewedData?.length || 0} viewed ${tableName} to fill remainder`);
+
+          // Combine unviewed (first) + viewed (remainder)
+          return [...(unviewedData || []), ...(viewedData || [])];
+        }
+
+        return unviewedData || [];
+      };
+
+      // Fetch all content types with prioritization
+      const [articlesData, papersData, booksData] = await Promise.all([
+        fetchPrioritizedContent(
+          'articles',
+          'article_views_enhanced',
+          'article_id',
+          'id, title, summary, author, site_name, date, industry_id, likes_count, saves_count, comments_count, views_count, created_at'
+        ),
+        fetchPrioritizedContent(
+          'papers',
+          'paper_views',
+          'paper_id',
+          'id, title, content_simple, authors, created_at, industry_id, likes_count, saves_count, comments_count, views_count'
+        ),
+        fetchPrioritizedContent(
+          'books',
+          'book_views',
+          'book_id',
+          'id, title, short_summary, author, created_at, industry_id, likes_count, saves_count, comments_count, views_count'
+        )
+      ]);
+
+      const articles: SearchResult[] = articlesData.map((item: any) => ({
+        ...item,
+        type: 'article' as const,
+        link: '#'
+      }));
+
+      const papers: SearchResult[] = papersData.map((item: any) => ({
+        ...item,
+        type: 'paper' as const,
+        link: '#'
+      }));
+
+      const books: SearchResult[] = booksData.map((item: any) => ({
+        ...item,
+        type: 'book' as const,
+        link: '#'
+      }));
+
+      console.log(`🔍 Vault: Final prioritized results - articles: ${articles.length}, papers: ${papers.length}, books: ${books.length}`);
+
+      return { articles, papers, books };
+    } catch (error) {
+      console.error('🔍 Vault: Error fetching prioritized content by industry:', error);
+      return { articles: [], papers: [], books: [] };
+    }
+  }, [user]);
+
   const loadInitialContent = useCallback(async () => {
     if (!user) {
       console.log('🔍 Vault: No user available, skipping content load');
@@ -107,22 +247,30 @@ export const Vault: React.FC = () => {
     try {
       console.log('🔍 Vault: Loading initial content for user:', user.id, 'industry:', selectedIndustry);
 
-      // Make separate calls for each content type to ensure we get 10 of each
-      const [articlesResponse, papersResponse, booksResponse] = await Promise.all([
-        immediateKeywordSearch('', selectedIndustry, 'article'),
-        immediateKeywordSearch('', selectedIndustry, 'paper'),
-        immediateKeywordSearch('', selectedIndustry, 'book')
-      ]);
+      let vaultResults: VaultData;
 
-      console.log('🔍 Vault: Content responses - articles:', articlesResponse.results?.length, 'papers:', papersResponse.results?.length, 'books:', booksResponse.results?.length);
+      if (selectedIndustry) {
+        // If industry is selected, fetch content directly by industry with prioritization
+        console.log('🔍 Vault: Fetching prioritized content by industry:', selectedIndustry);
+        vaultResults = await fetchContentByIndustry(selectedIndustry);
+      } else {
+        // If no industry selected, use general search to get diverse content
+        const [articlesResponse, papersResponse, booksResponse] = await Promise.all([
+          immediateKeywordSearch('', undefined, 'article'),
+          immediateKeywordSearch('', undefined, 'paper'),
+          immediateKeywordSearch('', undefined, 'book')
+        ]);
 
-      const vaultResults: VaultData = {
-        articles: articlesResponse.results || [],
-        papers: papersResponse.results || [],
-        books: booksResponse.results || []
-      };
+        console.log('🔍 Vault: General content responses - articles:', articlesResponse.results?.length, 'papers:', papersResponse.results?.length, 'books:', booksResponse.results?.length);
 
-      console.log('🔍 Vault: Final categorized - articles:', vaultResults.articles.length, 'papers:', vaultResults.papers.length, 'books:', vaultResults.books.length);
+        vaultResults = {
+          articles: articlesResponse.results || [],
+          papers: papersResponse.results || [],
+          books: booksResponse.results || []
+        };
+      }
+
+      console.log('🔍 Vault: Final initial content - articles:', vaultResults.articles.length, 'papers:', vaultResults.papers.length, 'books:', vaultResults.books.length);
       setVaultData(vaultResults);
     } catch (error) {
       console.error('🔍 Vault: Error loading initial content:', error);
@@ -131,7 +279,7 @@ export const Vault: React.FC = () => {
     } finally {
       setLoading({ articles: false, papers: false, books: false });
     }
-  }, [selectedIndustry, user]);
+  }, [selectedIndustry, user, fetchContentByIndustry]);
 
   const performSearch = useCallback(async (query: string) => {
     if (!user) {
@@ -145,20 +293,28 @@ export const Vault: React.FC = () => {
     try {
       console.log('🔍 Vault: Performing search:', query, 'industry:', selectedIndustry);
 
-      // Make separate calls for each content type to ensure we get results for all
-      const [articlesResponse, papersResponse, booksResponse] = await Promise.all([
-        immediateKeywordSearch(query, selectedIndustry, 'article'),
-        immediateKeywordSearch(query, selectedIndustry, 'paper'),
-        immediateKeywordSearch(query, selectedIndustry, 'book')
-      ]);
+      let vaultResults: VaultData;
 
-      console.log('🔍 Vault: Search responses - articles:', articlesResponse.results?.length, 'papers:', papersResponse.results?.length, 'books:', booksResponse.results?.length);
+      if (selectedIndustry && !query.trim()) {
+        // If industry is selected but no search query, fetch content directly by industry
+        console.log('🔍 Vault: Fetching content by industry:', selectedIndustry);
+        vaultResults = await fetchContentByIndustry(selectedIndustry);
+      } else {
+        // Use regular search functionality
+        const [articlesResponse, papersResponse, booksResponse] = await Promise.all([
+          immediateKeywordSearch(query, selectedIndustry || undefined, 'article'),
+          immediateKeywordSearch(query, selectedIndustry || undefined, 'paper'),
+          immediateKeywordSearch(query, selectedIndustry || undefined, 'book')
+        ]);
 
-      const vaultResults: VaultData = {
-        articles: articlesResponse.results || [],
-        papers: papersResponse.results || [],
-        books: booksResponse.results || []
-      };
+        console.log('🔍 Vault: Search responses - articles:', articlesResponse.results?.length, 'papers:', papersResponse.results?.length, 'books:', booksResponse.results?.length);
+
+        vaultResults = {
+          articles: articlesResponse.results || [],
+          papers: papersResponse.results || [],
+          books: booksResponse.results || []
+        };
+      }
 
       console.log('🔍 Vault: Final search results - articles:', vaultResults.articles.length, 'papers:', vaultResults.papers.length, 'books:', vaultResults.books.length);
       setVaultData(vaultResults);
@@ -169,20 +325,8 @@ export const Vault: React.FC = () => {
     } finally {
       setLoading({ articles: false, papers: false, books: false });
     }
-  }, [selectedIndustry, user]);
+  }, [selectedIndustry, user, fetchContentByIndustry]);
 
-  const categorizeResults = (results: SearchResult[]): VaultData => {
-    return {
-      articles: results.filter(r => r.type === 'article'),
-      papers: results.filter(r => r.type === 'paper'),
-      books: results.filter(r => r.type === 'book')
-    };
-  };
-
-  const handleCreateArticle = () => {
-    // TODO: Navigate to create article page
-    console.log('Navigate to create article');
-  };
 
 
   return (

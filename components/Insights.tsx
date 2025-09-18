@@ -160,29 +160,21 @@ const Insights = () => {
 
   // Event handlers
   const handleInsightPress = async (insight: Insight) => {
-    // Preload the insight for instant display in MainFeed
-    await feedContentPreloader.preloadContent(insight.id, 'insight');
-    
-    // Navigate to feed with this insight at the top
+    // Navigate to insight detail page with back button
     router.push({
-      pathname: '/feed',
+      pathname: `/insight/${insight.id}`,
       params: {
-        contentId: insight.id,
-        contentType: 'insight'
+        showBackButton: 'true'
       }
     });
   };
 
   const handleSavedInsightPress = async (savedInsight: SavedInsight) => {
-    // Preload the insight for instant display in MainFeed
-    await feedContentPreloader.preloadContent(savedInsight.id, 'insight');
-    
-    // Navigate to feed with this insight at the top
+    // Navigate to insight detail page with back button
     router.push({
-      pathname: '/feed',
+      pathname: `/insight/${savedInsight.id}`,
       params: {
-        contentId: savedInsight.id,
-        contentType: 'insight'
+        showBackButton: 'true'
       }
     });
   };

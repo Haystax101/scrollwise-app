@@ -1,12 +1,34 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useRouter } from 'expo-router';
 import { SearchResult } from '../../lib/smartSearchService';
-import { IndustryColorBadge } from '../discover/IndustryColorBadge';
 import { removeHtmlTags } from '../../utils/textUtils';
 import { useIndustries } from '../../context/IndustriesContext';
+import { optimizeIndustryName } from '../../utils/textUtils';
+
+const getIndustryColor = (industryId: string): string => {
+  const colors = [
+    '#9C27B0', // Purple
+    '#B71C1C', // Red
+    '#1565C0', // Blue
+    '#1B5E20', // Green
+    '#5E35B1', // Purple
+    '#880E4F', // Pink
+    '#C51162', // Pink
+    '#311B92', // Purple
+    '#004D40', // Teal
+  ];
+
+  // Use industryId as seed for consistent color assignment
+  const hash = industryId.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+
+  return colors[Math.abs(hash) % colors.length];
+};
 
 interface ContentSectionProps {
   title: string;
@@ -14,6 +36,7 @@ interface ContentSectionProps {
   loading: boolean;
   emptyState?: 'create' | 'none';
   onCreatePress?: () => void;
+  showSeeAll?: boolean;
 }
 
 export const ContentSection: React.FC<ContentSectionProps> = ({
@@ -21,7 +44,8 @@ export const ContentSection: React.FC<ContentSectionProps> = ({
   data,
   loading,
   emptyState = 'none',
-  onCreatePress
+  onCreatePress,
+  showSeeAll = false
 }) => {
   const { colors } = useTheme();
   const router = useRouter();
@@ -30,7 +54,7 @@ export const ContentSection: React.FC<ContentSectionProps> = ({
   const getIndustryName = (industryId?: string): string => {
     if (!industryId) return 'General';
     const industry = allIndustries.find(ind => ind.id === industryId);
-    return industry ? industry.name : 'Unknown';
+    return industry ? optimizeIndustryName(industry.name) : 'Unknown';
   };
 
   const handleItemPress = (item: SearchResult) => {
@@ -39,7 +63,9 @@ export const ContentSection: React.FC<ContentSectionProps> = ({
       params: {
         contentType: item.type,
         contentId: item.id,
-        animationDirection: 'left'
+        animationDirection: 'left',
+        showBackButton: 'true',
+        backTo: 'vault'
       }
     });
   };
@@ -50,29 +76,45 @@ export const ContentSection: React.FC<ContentSectionProps> = ({
       onPress={() => handleItemPress(item)}
     >
       <View style={styles.cardHeader}>
-        <IndustryColorBadge
-          industryId={item.industry_id}
-          industryName={getIndustryName(item.industry_id)}
-        />
+        <View
+          style={[
+            styles.industryBadge,
+            { backgroundColor: getIndustryColor(item.industry_id) }
+          ]}
+        >
+          <Text style={styles.industryText}>
+            {getIndustryName(item.industry_id)}
+          </Text>
+        </View>
+        <View style={styles.typeContainer}>
+          {item.type === 'article' ? (
+            <Feather name="file-text" size={16} color={colors.textSecondary} />
+          ) : item.type === 'paper' ? (
+            <MaterialCommunityIcons name="file-document-outline" size={16} color={colors.textSecondary} />
+          ) : (
+            <Feather name="book" size={16} color={colors.textSecondary} />
+          )}
+          <Text style={[styles.typeText, { color: colors.textSecondary }]}>
+            {item.type}
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.cardContent}>
-        <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={2}>
-          {item.title}
+      <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={2}>
+        {item.title}
+      </Text>
+
+      {(item.author || item.authors) && (
+        <Text style={[styles.cardAuthor, { color: colors.textSecondary }]} numberOfLines={1}>
+          {item.author || (item.authors && Array.isArray(item.authors) ? item.authors.join(', ') : item.authors)}
         </Text>
+      )}
 
-        {item.author && (
-          <Text style={[styles.cardAuthor, { color: colors.textSecondary }]} numberOfLines={1}>
-            {item.author}
-          </Text>
-        )}
-
-        {item.summary && (
-          <Text style={[styles.cardSummary, { color: colors.textSecondary }]} numberOfLines={3}>
-            {removeHtmlTags(item.summary)}
-          </Text>
-        )}
-      </View>
+      {(item.summary || item.content_simple || item.short_summary) && (
+        <Text style={[styles.cardSummary, { color: colors.textSecondary }]} numberOfLines={3}>
+          {removeHtmlTags(item.summary || item.content_simple || item.short_summary || '')}
+        </Text>
+      )}
 
       <View style={styles.cardFooter}>
         <View style={styles.statsContainer}>
@@ -89,6 +131,11 @@ export const ContentSection: React.FC<ContentSectionProps> = ({
             </Text>
           </View>
         </View>
+        {item.date && (
+          <Text style={[styles.cardDate, { color: colors.textSecondary }]}>
+            {new Date(item.date).toLocaleDateString()}
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -134,7 +181,7 @@ export const ContentSection: React.FC<ContentSectionProps> = ({
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
-        {data.length > 0 && (
+        {data.length > 0 && showSeeAll && (
           <TouchableOpacity onPress={() => {/* TODO: Navigate to full section */}}>
             <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
           </TouchableOpacity>
@@ -185,14 +232,35 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     padding: 16,
-    marginRight: 12,
   },
   cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
   },
-  cardContent: {
+  industryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
     flex: 1,
-    marginBottom: 12,
+    marginRight: 8,
+  },
+  industryText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  typeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  typeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'capitalize',
   },
   cardTitle: {
     fontSize: 16,
@@ -207,20 +275,28 @@ const styles = StyleSheet.create({
   cardSummary: {
     fontSize: 14,
     lineHeight: 20,
+    marginBottom: 8,
   },
   cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 'auto',
   },
   statsContainer: {
     flexDirection: 'row',
-    gap: 16,
+    alignItems: 'center',
   },
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    marginRight: 16,
   },
   statText: {
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  cardDate: {
     fontSize: 12,
   },
   emptyContainer: {
