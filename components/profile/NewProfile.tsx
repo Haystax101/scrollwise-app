@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { NewProfileHeader } from './NewProfileHeader';
 import { AnimatedLevelProgressBar } from './AnimatedLevelProgressBar';
@@ -65,14 +65,15 @@ interface NewProfileProps {
 }
 
 export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigateTo, signOut }) => {
-  console.log('🔍 NewProfile: Component initializing', { 
-    hasUser: !!userProp, 
+  console.log('🔍 NewProfile: Component initializing', {
+    hasUser: !!userProp,
     userId: userProp?.id,
-    userEmail: userProp?.email 
+    userEmail: userProp?.email
   });
-  
+
   const { colors } = useTheme();
   const { refreshIndustries } = useIndustries();
+  const { openSettings } = useLocalSearchParams();
   
   // Core profile data
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -118,7 +119,14 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       isMountedRef.current = false;
     };
   }, []);
-  
+
+  // Handle opening settings modal from privacy policy navigation
+  useEffect(() => {
+    if (openSettings === 'true') {
+      setIsSettingsModalVisible(true);
+    }
+  }, [openSettings]);
+
   // Get current user
   useEffect(() => {
     // Use the prop user directly for now

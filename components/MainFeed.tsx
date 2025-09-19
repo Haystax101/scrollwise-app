@@ -29,6 +29,8 @@ interface MainFeedProps {
   industries: Industry[];
   initialArticleId?: number | string;
   initialContentType?: 'article' | 'paper' | 'book' | 'insight';
+  showBackButton?: boolean;
+  backTo?: string | null;
   trackScroll?: (scrollPercent: number) => void;
   trackInteraction?: (interactionType: string, data?: Record<string, any>) => void;
   trackContentEngagement?: (contentType: string, contentId: string, engagementType: string, data?: Record<string, any>) => void;
@@ -305,6 +307,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   industries,
   initialArticleId,
   initialContentType,
+  showBackButton,
+  backTo,
   trackScroll,
   trackInteraction,
   trackContentEngagement
@@ -476,6 +480,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
           <ArticleCard
             article={article}
             isActive={isActive}
+            showBackButton={showBackButton}
+            backTo={backTo}
             onOpenComments={handleOpenComments}
             onUserInteraction={handleUserInteraction}
           />
@@ -485,6 +491,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
           <PaperCard
             paper={item as Paper}
             isActive={isActive}
+            showBackButton={showBackButton}
+            backTo={backTo}
             onOpenComments={handleOpenComments}
             onUserInteraction={handleUserInteraction}
           />
@@ -493,16 +501,18 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         return (
           <BookCard
             book={item as Book}
+            showBackButton={showBackButton}
+            backTo={backTo}
             onOpenComments={handleOpenComments}
             onUserInteraction={handleUserInteraction}
           />
         );
       case 'insight':
-        return <InsightCard insight={item as Insight} />;
+        return <InsightCard insight={item as Insight} showBackButton={showBackButton} backTo={backTo} />;
       default:
         return null;
     }
-  }, [currentIndex, handleOpenComments, handleUserInteraction]);
+  }, [currentIndex, showBackButton, backTo, handleOpenComments, handleUserInteraction]);
 
   const keyExtractor = useCallback((item: FeedItem) => String(item.id), []);
 

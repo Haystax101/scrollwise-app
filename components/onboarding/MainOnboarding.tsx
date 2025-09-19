@@ -275,7 +275,9 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
       
       const { error } = await supabase
         .from('profiles')
-        .upsert(profilePayload);
+        .upsert(profilePayload, {
+          onConflict: 'id'
+        });
 
       if (error) {
         console.error('Profile update error:', error);
@@ -449,41 +451,57 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
   // Registration step handlers
   const handleEmailInput = async (data: { email: string }) => {
     const { email } = data;
-    // Check if user exists. Note: This relies on RLS allowing read access to 'profiles' table for unauthenticated users.
-    // A more robust solution would be a Supabase Edge Function with the service role key.
-    const { data: existingUser, error } = await supabase.from('profiles').select('id').eq('email', email).maybeSingle();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116: "exact one row expected, but 0 rows returned" (not an error for us)
-      Alert.alert('Error', 'Could not verify email. Please try again.');
-      return;
-    }
+    console.log('Checking if email exists using secure function:', email);
 
-    if (existingUser) {
-      setEmailExistsError(true);
-    } else {
-      setEmailExistsError(false);
-      updateOnboardingData(data);
-      
-      // Send OTP for email verification (not magic link)
-      console.log('Sending OTP for email verification:', email);
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true,
-          // Don't set emailRedirectTo to ensure OTP is sent instead of magic link
-        },
+    try {
+      // Use the secure database function to check if email exists
+      const { data: emailExists, error } = await supabase.rpc('check_email_exists', {
+        email_to_check: email.trim()
       });
 
-      if (otpError) {
-        console.error('Error sending OTP:', otpError);
-        console.error('OTP Error details:', JSON.stringify(otpError, null, 2));
-        Alert.alert('Error', 'Failed to send verification code. Please try again.');
+      if (error) {
+        console.error('Error checking email existence:', error);
+        Alert.alert('Error', 'Could not verify email. Please try again.');
         return;
       }
 
-      console.log('OTP sent successfully for email verification');
-      console.log('Expected: User should receive a 6-digit verification code, NOT a magic link');
-      nextStep(); // Move to OTP verification step
+      console.log('Email check result:', emailExists);
+
+      if (emailExists) {
+        console.log('Email already exists in profiles table');
+        setEmailExistsError(true);
+        // Don't proceed - stay on email input screen to show error
+        return;
+      } else {
+        console.log('Email not found in profiles table, proceeding with OTP');
+        setEmailExistsError(false);
+        updateOnboardingData(data);
+
+        // Send OTP for email verification (not magic link)
+        console.log('Sending OTP for email verification:', email);
+        const { error: otpError } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            shouldCreateUser: true,
+            // Don't set emailRedirectTo to ensure OTP is sent instead of magic link
+          },
+        });
+
+        if (otpError) {
+          console.error('Error sending OTP:', otpError);
+          console.error('OTP Error details:', JSON.stringify(otpError, null, 2));
+          Alert.alert('Error', 'Failed to send verification code. Please try again.');
+          return;
+        }
+
+        console.log('OTP sent successfully for email verification');
+        console.log('Expected: User should receive a 6-digit verification code, NOT a magic link');
+        nextStep(); // Move to OTP verification step
+      }
+    } catch (error) {
+      console.error('Unexpected error during email validation:', error);
+      Alert.alert('Error', 'Could not verify email. Please try again.');
     }
   };
 

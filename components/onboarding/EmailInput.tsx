@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Keyboard } from 'react-native';
 import { InputField } from './InputField';
 import { OnboardingPage } from './OnboardingPage';
 
@@ -12,6 +12,13 @@ interface EmailInputProps {
 
 export const EmailInput: React.FC<EmailInputProps> = ({ onNext, onBack, emailExistsError, onGoToLogin }) => {
   const [email, setEmail] = useState('');
+
+  // Dismiss keyboard when email error appears
+  useEffect(() => {
+    if (emailExistsError) {
+      Keyboard.dismiss();
+    }
+  }, [emailExistsError]);
 
   const handleNext = () => {
     if (email.trim()) {
@@ -54,7 +61,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-start',
-    paddingTop: 20, // Add some space from the title
+    paddingTop: 20,
   },
   errorContainer: {
     marginTop: 16,

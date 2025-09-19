@@ -4,8 +4,13 @@ import { ImageScroller } from './ImageScroller';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-// Preload the peekhero image
+// Preload the images
 const PeekHeroImage = require('../../assets/peekhero.png');
+const VaultImage = require('../../assets/vault.png');
+const PeopleImage = require('../../assets/people.png');
+const InsightsImage = require('../../assets/insights.png');
+const ProfileImage = require('../../assets/profile.png');
+const VoltzImage = require('../../assets/voltz.jpg');
 
 interface FinalOnboardingScreenProps {
   onNext: () => void;
@@ -14,10 +19,11 @@ interface FinalOnboardingScreenProps {
 const tutorialTexts = [
   "I'm Supercharged Simon. Let's show you around!",
   "This is your main feed, where your industry-specific articles, papers, books and insights will appear. You can like, comment, save and tap to read in-depth",
-  "This is your discover page. Search for anything, and upgrade to pro for advanced search capabilities",
+  "This is your knowledge vault. Search for anything, and find your saved content here",
+  "This is the people tab, where you can keep track of your network, and find new learners like you",
   "This is the insights tab, where you can create insights to appear in others' feeds",
-  "This is your profile. You can check the leaderboard, track your progress and strengthen your profile",
-  "These are your voltz, which you'll earn from quizzes, insights and achievements. We're getting you started with 100 Voltz to begin your learning journey! You can use them to boost your insights.",
+  "This is your profile. You can track your progress, adjust your settings and strengthen your profile",
+  "These are your voltz, which you'll earn from insights and achievements. We're getting you started with 100 Voltz to begin your learning journey! You can use them to boost your insights.",
   "You're all set! Ready to start learning?"
 ];
 
@@ -75,6 +81,21 @@ export const FinalOnboardingScreen: React.FC<FinalOnboardingScreenProps> = ({ on
   // Show scroller only for phase 1 (second text)
   const showScroller = currentPhase === 1;
 
+  // Get appropriate screenshot image for current phase
+  const getCurrentImage = () => {
+    switch (currentPhase) {
+      case 2: return VaultImage;     // "This is your knowledge vault"
+      case 3: return PeopleImage;    // "This is the people tab"
+      case 4: return InsightsImage;  // "This is the insights tab"
+      case 5: return ProfileImage;   // "This is your profile"
+      case 6: return VoltzImage;    // "These are your voltz"
+      default: return null;
+    }
+  };
+
+  const currentImage = getCurrentImage();
+  const showImage = currentImage !== null;
+
   return (
     <SafeAreaView style={styles.container}>
       <TouchableOpacity 
@@ -90,15 +111,25 @@ export const FinalOnboardingScreen: React.FC<FinalOnboardingScreenProps> = ({ on
             }
           ]}
         >
-          {/* Header with scroller and skip button */}
+          {/* Header with scroller, screenshots and skip button */}
           <View style={styles.header}>
             {showScroller && (
               <View style={styles.scrollerContainer}>
                 <ImageScroller />
               </View>
             )}
+            {showImage && (
+              <View style={styles.screenshotContainer}>
+                <Image
+                  source={currentImage}
+                  style={styles.screenshot}
+                  resizeMode="contain"
+                  fadeDuration={0}
+                />
+              </View>
+            )}
             {/* Skip Button */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.skipButton}
               onPress={onNext}
               activeOpacity={0.7}
@@ -153,6 +184,14 @@ const styles = StyleSheet.create({
   scrollerContainer: {
     alignItems: 'center',
     transform: [{ scale: 1.2 }], // Make scroller slightly larger
+  },
+  screenshotContainer: {
+    alignItems: 'center',
+    transform: [{ scale: 1.4 }], // 40% larger to match ImageScroller prominence
+  },
+  screenshot: {
+    width: screenWidth * 0.8,
+    height: screenHeight * 0.32,
   },
   skipButton: {
     position: 'absolute',

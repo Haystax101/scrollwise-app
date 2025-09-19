@@ -63,16 +63,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-start',
-    paddingTop: 20, // Add some space from the title
+    paddingTop: 20,
   },
   validationContainer: {
-    marginTop: 16, // More space after input field
-    marginBottom: 24, // Increased bottom margin to prevent overlap with continue button
+    marginTop: 16,
+    marginBottom: 32,
+    paddingBottom: 16,
   },
   errorText: {
     color: '#EF4444',
     fontSize: 14,
     marginTop: 4,
     lineHeight: 20,
+    fontWeight: '500',
   },
 });

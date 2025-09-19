@@ -419,7 +419,10 @@ export default function PeoplePage() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
         {/* Search */}
         <View style={dynamicStyles.searchContainer}>
           <View style={dynamicStyles.searchBox}>

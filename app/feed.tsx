@@ -14,6 +14,8 @@ export default function FeedScreen() {
   const params = useSearchParams();
   const contentId = params.get('contentId');
   const contentType = params.get('contentType') as 'article' | 'paper' | 'book' | 'insight' | null;
+  const showBackButton = params.get('showBackButton') === 'true';
+  const backTo = params.get('backTo');
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Initialize screen tracking for main feed
@@ -58,11 +60,13 @@ export default function FeedScreen() {
   // );
   if (loading || !user) return null;
   return (
-    <MainFeed 
+    <MainFeed
       key={refreshKey} // Force remount when refreshKey changes
-      industries={industries} 
+      industries={industries}
       initialArticleId={contentId ? (contentType === 'insight' ? contentId : Number(contentId)) : undefined}
       initialContentType={contentType ?? undefined}
+      showBackButton={showBackButton}
+      backTo={backTo}
       trackScroll={trackScroll}
       trackInteraction={trackInteraction}
       trackContentEngagement={trackContentEngagement}

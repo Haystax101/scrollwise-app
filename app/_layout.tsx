@@ -2,6 +2,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { IndustriesProvider } from '../context/IndustriesContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import { NavigationProvider } from '../context/NavigationContext';
+import { NotificationProvider } from '../context/NotificationContext';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -34,9 +35,10 @@ export default function RootLayout() {
           <AuthProvider>
             <ThemeProvider>
               <NavigationProvider>
-                <BottomSheetModalProvider>
-                  <IndustriesProvider>
-                    <DeepLinkWrapper>
+                <NotificationProvider>
+                  <BottomSheetModalProvider>
+                    <IndustriesProvider>
+                      <DeepLinkWrapper>
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen
                     name="feed" 
@@ -107,9 +109,10 @@ export default function RootLayout() {
                   />
                 </Stack>
                     <AppHeader />
-                    </DeepLinkWrapper>
-                  </IndustriesProvider>
-                </BottomSheetModalProvider>
+                      </DeepLinkWrapper>
+                    </IndustriesProvider>
+                  </BottomSheetModalProvider>
+                </NotificationProvider>
               </NavigationProvider>
             </ThemeProvider>
           </AuthProvider>

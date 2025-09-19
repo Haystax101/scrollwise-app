@@ -23,8 +23,8 @@ export default function AppHeader() {
   if (pathname === '/feed') currentScreen = 'home';
   if (pathname === '/vault') currentScreen = 'vault';
   if (pathname === '/people' || pathname === '/suggestions') currentScreen = 'people';
-  if (pathname === '/profile') currentScreen = 'profile';
-  if (pathname === '/chats') currentScreen = 'chats';
+  if (pathname === '/profile' || pathname === '/privacy-policy') currentScreen = 'profile';
+  if (pathname === '/chats' || pathname.startsWith('/insight/')) currentScreen = 'chats';
   if (pathname === '/saved-feed') currentScreen = 'saved-feed';
 
   const useSafeArea = !['/feed'].includes(pathname);

@@ -333,7 +333,7 @@ export default function FriendsPage() {
       <View style={dynamicStyles.friendsCount}>
         <Text style={dynamicStyles.friendsCountText}>
           {filteredFriends.length} friend{filteredFriends.length !== 1 ? 's' : ''}
-          {searchQuery && ` found for "${searchQuery}"`}
+          {searchQuery && <Text> found for "{searchQuery}"</Text>}
         </Text>
       </View>
 
@@ -383,7 +383,7 @@ export default function FriendsPage() {
                 <Text style={dynamicStyles.friendMeta}>
                   {friendItem.friend.friends_count || 0} friends
                   {friendItem.mutual_friends_count > 0 &&
-                    ` • ${friendItem.mutual_friends_count} mutual`
+                    <Text> • {friendItem.mutual_friends_count} mutual</Text>
                   }
                 </Text>
                 {friendItem.connection_strength && (
@@ -393,12 +393,6 @@ export default function FriendsPage() {
                 )}
               </View>
               <View style={dynamicStyles.actionsContainer}>
-                <TouchableOpacity
-                  style={dynamicStyles.actionButton}
-                  onPress={() => router.push(`/chat/friend-${friendItem.friend.id}`)}
-                >
-                  <Feather name="message-circle" size={18} color={colors.text} />
-                </TouchableOpacity>
                 <TouchableOpacity
                   style={[dynamicStyles.actionButton, dynamicStyles.removeButton]}
                   onPress={() => handleRemoveFriend(friendItem.friendship_id, friendItem.friend.full_name)}

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Dimensions, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, Dimensions, Modal, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTheme, ThemeMode } from '../context/ThemeContext';
@@ -25,9 +25,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
         'Are you sure you want to sign out?',
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Sign Out', 
-            style: 'destructive', 
+          {
+            text: 'Sign Out',
+            style: 'destructive',
             onPress: () => {
               onClose();
               setTimeout(() => signOut(), 100);
@@ -35,6 +35,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
           },
         ]
       );
+    };
+
+    const handleSupportPress = () => {
+      const email = 'admin@learningsupercharged.com';
+      const subject = 'Support Request';
+      const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
+
+      Linking.openURL(mailtoUrl).catch(err => {
+        console.error('Failed to open email client:', err);
+        Alert.alert('Error', 'Unable to open email client. Please email us at admin@learningsupercharged.com');
+      });
+    };
+
+    const handlePrivacyPolicyPress = () => {
+      onClose();
+      setTimeout(() => navigateTo('/privacy-policy?fromSettings=true'), 100);
     };
 
     const themeOptions: { mode: ThemeMode; label: string; description: string }[] = [
@@ -236,6 +252,47 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
               </View>
             </View>
 
+            {/* Support Settings */}
+            <View style={dynamicStyles.section}>
+              <Text style={dynamicStyles.sectionTitle}>Support</Text>
+              <View style={dynamicStyles.settingCard}>
+                <TouchableOpacity
+                  style={dynamicStyles.settingItem}
+                  onPress={handleSupportPress}
+                  accessibilityRole="button"
+                  accessibilityLabel="Contact support"
+                >
+                  <View style={dynamicStyles.settingIcon}>
+                    <Feather name="help-circle" size={20} color={colors.primary} />
+                  </View>
+                  <View style={dynamicStyles.settingContent}>
+                    <Text style={dynamicStyles.settingTitle}>Contact Support</Text>
+                    <Text style={dynamicStyles.settingDescription}>Get help with your account</Text>
+                  </View>
+                  <View style={dynamicStyles.settingAction}>
+                    <Feather name="external-link" size={16} color={colors.textSecondary} />
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[dynamicStyles.settingItem, dynamicStyles.settingItemLast]}
+                  onPress={handlePrivacyPolicyPress}
+                  accessibilityRole="button"
+                  accessibilityLabel="View privacy policy"
+                >
+                  <View style={dynamicStyles.settingIcon}>
+                    <Feather name="shield" size={20} color={colors.primary} />
+                  </View>
+                  <View style={dynamicStyles.settingContent}>
+                    <Text style={dynamicStyles.settingTitle}>Privacy Policy</Text>
+                    <Text style={dynamicStyles.settingDescription}>View our privacy policy</Text>
+                  </View>
+                  <View style={dynamicStyles.settingAction}>
+                    <Feather name="chevron-right" size={16} color={colors.textSecondary} />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
 
             {/* Account Settings */}
             <View style={dynamicStyles.section}>

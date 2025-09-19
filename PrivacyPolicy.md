@@ -1,317 +1,480 @@
-# Privacy Policy for Supercharged
+# Supercharged Privacy Policy
 
-**Effective Date:** [Insert Date]
-**Last Updated:** [Insert Date]
+**Effective:** September 18, 2025
+**Last Updated:** September 18, 2025
 
-## 1. Introduction
+## Your Privacy Matters
 
-Welcome to Supercharged ("we," "our," or "us"). This Privacy Policy explains how we collect, use, disclose, and safeguard your personal information when you use our mobile application ("App") and related services. By using our App, you consent to the data practices described in this policy.
+Supercharged's mission is to transform how professionals learn and connect by making industry knowledge accessible and actionable. Central to this mission is our commitment to be transparent about the data we collect about you, how it is used, and with whom it is shared.
 
-**App Details:**
+This Privacy Policy applies when you use our Services (described below). We offer our users choices about the data we collect, use, and share as described in this Privacy Policy, Settings, and our Help Center.
 
-- App Name: Supercharged
-- Bundle Identifier: com.gdwhastings.scrollwise
-- Developer: BCGH
-- Contact: admin@learningsupercharged.com
+## Introduction
 
-## 2. Information We Collect
+We are a social learning network and platform for professionals. People use our Services to discover industry insights, share knowledge, connect with like-minded professionals, and advance their careers. Our Privacy Policy applies to any Member or Visitor to our Services.
 
-### 2.1 Personal Information You Provide
+Our registered users ("Members") share their professional identities, publish insights, engage with their network, exchange knowledge, track their learning progress, and find collaboration opportunities. Content and data on our Services is viewable to other Members and, depending on settings, to non-Members ("Visitors").
 
-When you use our App, we may collect the following personal information that you voluntarily provide:
+## Services
 
-**Account Information:**
+This Privacy Policy applies to Supercharged mobile applications, websites, communications, and other related services offered by BCGH Limited ("Services"), including off-site Services such as our plugins and widgets, but excluding services that state they are offered under a different privacy policy.
 
-- Full name
-- Email address
-- Password (encrypted)
+## Data Controller and Contracting Party
 
-**Profile Data:**
+BCGH Limited will be the controller of your personal data provided to, or collected by or for, or processed in connection with our Services.
 
-- Educational background (universities, degrees, graduation status)
-- Professional experience (companies, positions, employment history)
-- Skills and certifications
-- Career goals and objectives
-- Industry interests and preferences
-- Languages and proficiency levels
-- Projects and publications
+As a Visitor or Member of our Services, the collection, use, and sharing of your personal data is subject to this Privacy Policy and other documents referenced in this Privacy Policy, as well as updates.
 
-**Content and Interactions:**
+## Change
 
-- Posts, insights, and comments you create
-- Content you like, save, or share
-- Quiz responses and learning session data
-- Search queries and preferences
-- Messages and chat communications
+BCGH Limited ("we" or "us") can modify this Privacy Policy, and if we make material changes to it, we will provide notice through our Services, App Store updates, or by other means, to provide you the opportunity to review the changes before they become effective. If you object to any changes, you may close your account.
 
-### 2.2 Information Automatically Collected
+You acknowledge that your continued use of our Services after we publish or send a notice about our changes to this Privacy Policy means that the collection, use, and sharing of your personal data is subject to the updated Privacy Policy, as of its effective date.
 
-We automatically collect certain information about your device and usage:
+## 1. Data We Collect
 
-**Device Information:**
+### 1.1 Data You Provide To Us
 
-- Device type and model
-- Operating system version
-- Unique device identifiers
-- IP address
-- Mobile network information
-- Timezone and locale settings
+#### Registration
+To create an account you need to provide data including your name, email address, and a password. If you register for premium Services, you will need to provide payment and billing information.
 
-**Usage Analytics:**
+#### Profile
+You have choices about the information on your profile, such as your current position, education, work experience, skills, projects, published insights, professional interests, industry focus, and career goals. You also provide links to your projects, portfolios, social media profiles, and other professional work. It's your choice whether to include sensitive information on your profile and to make that information public. Please do not post or add personal data to your profile that you would not want to be publicly available.
 
-- App interaction data (screens viewed, time spent)
-- Content engagement metrics (views, likes, saves)
-- Learning session analytics (duration, completion rates)
-- Feature usage patterns
-- Performance and crash data
+#### Projects and Work
+We collect detailed information about projects you're working on, including project descriptions, objectives, outcomes, challenges faced, lessons learned, and related links or documentation. This helps other Members understand your expertise and find potential collaborators.
 
-**Location Information:**
+#### Posting and Uploading
+We collect personal data from you when you provide, post, or upload it to our Services, such as when you publish insights, share articles, comment on content, participate in discussions, complete quizzes, or submit documents for transformation into insights.
 
-- General location data derived from IP address (country/region level)
-- We do NOT collect precise GPS location data
+#### Learning and Development
+We track your learning activities, including articles read, time spent on content, quiz responses, knowledge retention scores, and Voltz points earned. This data helps us personalize your learning experience and measure your professional development.
 
-### 2.3 Information from Third Parties
+### 1.2 Data From Others
 
-We may receive information about you from:
+#### Content and Interactions
+You and others may post content that includes information about you (as part of insights, posts, comments, or collaborative projects) on our Services. We also may collect public information about you, such as professional achievements and industry recognition, and make it available as part of our Services.
 
-- Social media platforms (if you choose to connect your accounts)
-- Educational institutions (if you verify your credentials)
-- Professional networks (if you import your profile data)
+#### Contact Information
+We receive personal data about you when others import their contacts, send invitations, or share content with you through our Services.
 
-## 3. How We Use Your Information
+#### Partners
+We may receive personal data about you from third-party services when you choose to connect your accounts or import information from other platforms.
 
-We use your personal information for the following purposes:
+### 1.3 Service Use
 
-### 3.1 Core App Functionality
+We log usage data when you visit or otherwise use our Services, including our sites, app, and platform technology, such as when you view or click on content, perform searches, install or update our mobile apps, share articles, or engage with other Members. We use device information, internet protocol ("IP") addresses, and in-app activity to identify you and log your use.
 
-- Creating and managing your account
-- Providing personalized content recommendations
-- Enabling social features (friend connections, chat)
-- Processing your interactions (likes, saves, comments)
-- Delivering learning analytics and progress tracking
+#### Detailed Usage Tracking
+- Pages and features you access
+- Time spent on different sections
+- Interaction patterns with content
+- Search queries and results clicked
+- Connection requests sent and accepted
+- Messages sent and received
+- Content creation and publishing patterns
 
-### 3.2 Personalization and Improvement
+### 1.4 Cookies and Similar Technologies
 
-- Customizing your feed based on interests and behavior
-- Recommending relevant content and connections
-- Improving our algorithms and user experience
-- Conducting research and analytics to enhance our services
+As further described in Section 8, we use cookies and similar technologies to collect data to recognize you and your device(s) on, off, and across different services and devices. We collect:
+- Session identifiers for authentication
+- Analytics data through PostHog
+- Device identifiers for personalization
+- Local storage data for app preferences
 
-### 3.3 Communication
+### 1.5 Your Device and Location
 
-- Sending important updates about your account
-- Providing customer support and responding to inquiries
-- Sending notifications about new features or content (with your consent)
+When you visit or leave our Services, we receive the URL of both the site you came from and the one you go to next, and the time of your visit. We also get information about your network and device (e.g., IP address, operating system, app version, device identifier and features, and mobile carrier). We may ask you to opt-in before we use GPS or other tools to identify your precise location.
 
-### 3.4 Legal and Security
+### 1.6 Messages and Communications
 
-- Protecting against fraud, abuse, and security threats
-- Complying with legal obligations and law enforcement requests
-- Enforcing our Terms of Service and community guidelines
+We collect information about you when you send, receive, or engage with messages, including our marketing communications. This includes:
+- Message content and metadata
+- Response rates and engagement
+- Communication preferences
+- Support ticket information
 
-## 4. Data Sharing and Disclosure
+### 1.7 Third-Party Integrations
 
-### 4.1 Information We Share
+When you connect third-party services or import data from other platforms, we receive:
+- Basic profile information from connected accounts
+- Professional history and achievements
+- Contact lists (with your permission)
+- Content you choose to import
 
-We may share your information in the following circumstances:
+## 2. How We Use Your Data
 
-**With Other Users:**
+We use your data to provide, support, personalize, and develop our Services. How we use your personal data depends on which Services you use, how you use them, and the choices you make in your settings.
 
-- Your public profile information (name, bio, avatar)
-- Your posts, comments, and insights (as per your privacy settings)
-- Your achievements and learning statistics (if you choose to share)
+### 2.1 Services
 
-**With Service Providers:**
+#### Stay Connected
+Our Services allow you to stay connected with professionals in your industry and build meaningful relationships based on shared interests and expertise. We use data about you (such as your profile, projects, interests, and interactions) to:
+- Suggest relevant connections
+- Enable others to find you through filters (experience, interests, skills, location, industry)
+- Facilitate collaboration opportunities
+- Build professional communities around specific topics
 
-- Supabase (database and backend services)
-- PostHog (analytics and user behavior tracking)
-- Expo (app development and deployment platform)
-- Cloud storage providers (for profile pictures and content)
+#### Stay Informed
+We use your data to deliver personalized industry insights and help you stay current with developments in your field:
+- Curate your daily feed based on interests and engagement
+- Recommend articles, research papers, and insights
+- Track trending topics in your industry
+- Suggest learning paths based on your goals
+- Notify you of relevant discussions and content
 
-**For Legal Reasons:**
+#### Professional Development
+Our Services help you track and showcase your professional growth:
+- Monitor your learning progress and knowledge retention
+- Generate skill assessments and competency reports
+- Award and track Voltz points for engagement
+- Create verified knowledge profiles
+- Provide performance analytics on your published content
 
-- To comply with legal obligations, court orders, or government requests
-- To protect our rights, property, or safety, or that of our users
-- In connection with legal proceedings or investigations
+#### Collaboration and Networking
+We facilitate meaningful professional relationships by:
+- Matching you with potential collaborators based on complementary skills
+- Enabling project-based connections
+- Creating industry-specific discussion groups
+- Facilitating knowledge exchange between Members
 
-### 4.2 Information We Do NOT Share
+### 2.2 Communications
 
-We do not sell, rent, or trade your personal information to third parties for marketing purposes. We do not share your private messages, detailed location data, or sensitive personal information without your explicit consent.
+We will contact you through email, push notifications, and in-app messages about:
+- Service updates and new features
+- Personalized content recommendations
+- Connection requests and messages
+- Performance insights for your content
+- Learning milestones and achievements
+- Security and account-related matters
+
+You may change your communication preferences at any time, except for essential service messages.
+
+### 2.3 Personalization and Recommendations
+
+We use machine learning and algorithms to:
+- Personalize your content feed
+- Recommend relevant connections
+- Suggest articles and insights
+- Match you with collaboration opportunities
+- Customize learning paths
+- Optimize content discovery
+
+### 2.4 Analytics and Insights
+
+We analyze data to:
+- Understand how Members use our Services
+- Identify trends in professional learning
+- Generate industry insights (aggregated and anonymized)
+- Measure content performance
+- Improve our algorithms and recommendations
+- Develop new features
+
+### 2.5 Advertising and Marketing
+
+While we don't currently serve third-party advertisements, we may:
+- Promote our own Services and features
+- Share success stories and case studies (with permission)
+- Send promotional communications (subject to your preferences)
+- Display sponsored content in the future (with clear labeling)
+
+### 2.6 Safety and Security
+
+We use your data to:
+- Verify user identities
+- Detect and prevent fraud, spam, and abuse
+- Investigate security incidents
+- Enforce our Terms of Service and Community Guidelines
+- Protect our Services and Members
+
+### 2.7 Legal Compliance
+
+We process data as necessary to:
+- Comply with legal obligations
+- Respond to lawful requests from authorities
+- Establish, exercise, or defend legal claims
+- Protect vital interests
+
+## 3. How We Share Information
+
+### 3.1 Our Services
+
+#### Profile Information
+Your profile is fully visible to all Members of our Services. This includes:
+- Name, headline, and professional summary
+- Projects, including descriptions and links
+- Published insights and content
+- Skills, interests, and expertise areas
+- Career goals and industry focus
+- Professional achievements
+- Social media and portfolio links
+
+Members can search for and filter users based on this information to find relevant connections and collaborators.
+
+#### Content and Activities
+- Posts and insights you publish are visible to all Members
+- Your interactions (comments, reactions, shares) are visible
+- Learning achievements may appear on leaderboards
+- Project collaborations are visible to team members
+- Your Voltz points and badges are displayed on your profile
+
+#### Visibility Controls
+While most profile information is public to Members, you can control:
+- Who can send you connection requests
+- Who can message you directly
+- Whether your profile appears in search results
+- Content sharing permissions
+
+### 3.2 Service Providers
+
+We share data with carefully selected third parties who help us provide our Services:
+
+#### Infrastructure and Storage
+- Supabase (database, authentication, and storage)
+- Cloud hosting providers
+- Content delivery networks
+
+#### Analytics and Performance
+- PostHog (product analytics)
+- Performance monitoring services
+- Error tracking tools
+
+#### Communications
+- Email service providers
+- Push notification services
+- Customer support platforms
+
+#### Payment Processing
+- Payment gateways (for premium features)
+- Subscription management services
+- Fraud detection services
+
+All service providers are contractually obligated to protect your data and use it only for providing their services to us.
+
+### 3.3 Legal Disclosures
+
+We may disclose your information when we believe it's required by law or necessary to:
+1. Comply with legal obligations, subpoenas, or court orders
+2. Investigate, prevent, or take action regarding illegal activities
+3. Enforce our agreements with you
+4. Investigate and defend against third-party claims
+5. Protect the security or integrity of our Services
+6. Exercise or protect the rights and safety of BCGH Limited, our Members, or others
+
+We attempt to notify Members about legal demands for their personal data when appropriate, unless prohibited by law or when the request is an emergency.
+
+### 3.4 Change in Control or Sale
+
+We may share your personal data as part of a sale, merger, change in control, or in preparation for any of these events. Any other entity that buys us or our business will have the right to continue using your data only in the manner set out in this Privacy Policy unless you agree otherwise.
+
+### 3.5 With Your Consent
+
+We will share your personal data with third parties when we have your explicit consent to do so.
+
+## 4. Your Choices & Obligations
+
+### 4.1 Data Retention
+
+We retain your personal data as long as you keep your account open or as needed to provide you Services. This includes:
+- Profile and account information
+- Content you've created or shared
+- Learning progress and achievements
+- Interaction history
+- Voltz points and rewards
+
+Even if you only use our Services occasionally, we will retain your information and keep your profile open unless you close your account.
+
+### 4.2 Rights to Access and Control Your Personal Data
+
+For personal data that we have about you, you can:
+
+- **Delete Data**: Request erasure of all or some of your personal data
+- **Change or Correct Data**: Edit your profile information or request corrections
+- **Object to Use**: Object to our use of your data for certain purposes
+- **Restrict Processing**: Limit how we use your data in certain circumstances
+- **Access Your Data**: Request a copy of your personal data
+- **Data Portability**: Receive your data in a machine-readable format
+
+To exercise these rights, contact us at hello@learningsupercharged.com.
+
+### 4.3 Account Closure
+
+When you close your account:
+- Your profile becomes invisible to others within 24 hours
+- We delete most personal data within 30 days
+- Some data may be retained for legal compliance
+- Content you've shared with others may remain visible
+- Aggregated or anonymized data may be retained
+
+We retain certain data after account closure to:
+- Comply with legal obligations
+- Resolve disputes
+- Prevent fraud and abuse
+- Enforce our agreements
+
+### 4.4 Communication Preferences
+
+You can control communications through:
+- Email notification settings
+- Push notification preferences
+- Marketing communication opt-outs
+- Digest frequency settings
+
+Note: You cannot opt out of essential service messages.
 
 ## 5. Data Storage and Security
 
-### 5.1 Data Storage
+### 5.1 Security Measures
 
-- Your data is securely stored in Supabase's PostgreSQL databases
-- Data centers are located in [Insert Region - EU/US based on Supabase configuration]
-- We implement industry-standard encryption for data in transit and at rest
+We implement security safeguards to protect your data:
+- HTTPS encryption for all data transmissions
+- Encryption at rest for sensitive data
+- Access controls and authentication systems
+- Regular security monitoring and updates
+- Incident response procedures
+- Employee training on data protection
 
-### 5.2 Security Measures
+While we strive to protect your data, no system is completely secure. We cannot guarantee absolute security of information transmitted to or through our Services.
 
-- Multi-factor authentication for admin access
-- Regular security audits and penetration testing
-- Encrypted data transmission (HTTPS/TLS)
-- Access controls and user permission systems
-- Regular data backups and disaster recovery procedures
+### 5.2 Data Storage
 
-### 5.3 Data Retention
+- Your data is stored in Supabase's PostgreSQL databases
+- Primary data centers are located in the EU
+- We use secure cloud storage for files and media
+- Backups are encrypted and stored separately
+- We implement disaster recovery procedures
 
-- Account data: Retained while your account is active and for 30 days after deletion
-- Analytics data: Retained for up to 24 months for service improvement
-- Legal compliance data: Retained as required by applicable laws
-- You can request deletion of your data at any time (subject to legal requirements)
+### 5.3 Data Retention Periods
 
-## 6. Your Privacy Rights
+- Active account data: Retained while account is active
+- Deleted account data: Removed within 30 days (except as noted)
+- Analytics data: Retained for up to 24 months
+- Financial records: Retained for 7 years
+- Legal compliance data: As required by applicable laws
 
-### 6.1 Access and Control
+## 6. International Data Transfers
 
-You have the right to:
-
-- Access your personal information we hold
-- Update or correct inaccurate information
-- Download a copy of your data
-- Delete your account and associated data
-- Opt-out of non-essential communications
-
-### 6.2 GDPR Rights (EU Users)
-
-If you are in the European Union, you have additional rights under GDPR:
-
-- Right to portability of your data
-- Right to restrict processing
-- Right to object to processing
-- Right to lodge a complaint with supervisory authorities
-
-### 6.3 CCPA Rights (California Users)
-
-If you are a California resident, you have rights under CCPA:
-
-- Right to know what personal information is collected
-- Right to delete personal information
-- Right to opt-out of sale (note: we do not sell personal information)
-- Right to non-discrimination for exercising your rights
-
-### 6.4 How to Exercise Your Rights
-
-To exercise your privacy rights, contact us at:
-
-- Email: bowen.cheung@athenalearn.co.uk
-- In-app: Use the "Privacy Settings" or "Contact Support" features
-- Response time: We will respond within 30 days (or as required by applicable law)
+We operate globally and may transfer your data internationally. When we do:
+- We ensure appropriate safeguards are in place
+- We use standard contractual clauses where required
+- We comply with applicable data protection laws
+- We maintain equivalent levels of protection
 
 ## 7. Children's Privacy
 
-Our App is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If we become aware that we have collected personal information from a child under 13, we will take steps to delete such information promptly.
+While we don't have a specific age restriction, our Services are designed for professionals and those pursuing professional development. Parents or guardians who believe their child has provided personal data should contact us at hello@learningsupercharged.com.
 
-## 8. International Data Transfers
+## 8. Cookies and Tracking Technologies
 
-Your information may be transferred to and stored in countries other than your own. We ensure appropriate safeguards are in place for international transfers, including:
+### 8.1 Types of Technologies
 
-- Standard Contractual Clauses (SCCs) for EU data transfers
-- Privacy Shield or adequacy decisions where applicable
-- Explicit consent for transfers where required
+#### Essential Cookies
+- Authentication and security
+- User preferences
+- Session management
 
-## 9. Third-Party Services
+#### Analytics Cookies
+- PostHog analytics
+- Performance monitoring
+- Usage patterns
 
-Our App integrates with third-party services that have their own privacy policies:
+#### Functional Cookies
+- Language preferences
+- Display settings
+- Feature preferences
 
-**PostHog Analytics:**
+### 8.2 Local Storage
 
-- Purpose: User behavior analytics and app improvement
-- Data shared: Usage patterns, feature interactions, anonymized user data
-- Privacy policy: https://posthog.com/privacy
+We use local storage for:
+- Offline functionality
+- App preferences
+- Content caching
+- Performance optimization
 
-**Supabase:**
+### 8.3 Your Choices
 
-- Purpose: Database and backend services
-- Data shared: All app data and user information
-- Privacy policy: https://supabase.com/privacy
+Control tracking through:
+- In-app analytics settings
+- Device-level controls
+- Browser cookie settings
+- Advertising ID controls
 
-**Expo:**
+## 9. Legal Basis for Processing
 
-- Purpose: App development and deployment platform
-- Data shared: App usage and crash data
-- Privacy policy: https://expo.dev/privacy
+We process your personal data based on:
 
-## 10. Marketing and Communications
+- **Contract**: To provide the Services you've requested
+- **Legitimate Interests**: Including to:
+  - Improve and develop our Services
+  - Ensure security and prevent fraud
+  - Send relevant communications
+  - Provide customer support
+- **Consent**: For optional features and communications
+- **Legal Obligations**: To comply with applicable laws
+- **Vital Interests**: In rare cases involving safety
 
-### 10.1 Communication Preferences
+You can withdraw consent or object to processing based on legitimate interests at any time through your settings or by contacting us.
 
-We may send you communications about:
+## 10. Regional Provisions
 
-- Important account and security updates (required)
-- New features and product announcements (optional)
-- Educational content and learning opportunities (optional)
-- Community highlights and achievements (optional)
+### 10.1 European Economic Area, UK, and Switzerland
 
-### 10.2 Opt-Out Options
+If you're located in these regions, you have additional rights under GDPR:
+- Right to lodge a complaint with supervisory authorities
+- Right to withdraw consent
+- Right to object to processing based on legitimate interests
+- Enhanced data portability rights
 
-You can opt-out of non-essential communications by:
+### 10.2 California Residents
 
-- Using the unsubscribe link in emails
-- Adjusting notification preferences in the app
-- Contacting our support team
-- Note: You cannot opt-out of essential security and legal communications
+California residents have additional rights under CCPA:
+- Right to know what personal information we collect
+- Right to delete personal information
+- Right to opt-out of sale (we don't sell personal data)
+- Right to non-discrimination
 
-## 11. Cookies and Tracking Technologies
+### 10.3 Other Jurisdictions
 
-### 11.1 Technologies We Use
+We comply with applicable data protection laws in all jurisdictions where we operate.
 
-- Session cookies for authentication and security
-- Analytics cookies for app improvement (PostHog)
-- Local storage for app preferences and caching
-- Device identifiers for analytics and personalization
+## 11. Contact Information
 
-### 11.2 Your Choices
+For questions, concerns, or requests regarding this Privacy Policy:
 
-You can control cookie preferences through:
+**Email**: hello@learningsupercharged.com
 
-- App settings for analytics tracking
-- Device settings for advertising identifiers
-- Browser settings (for web portions of our service)
+**Data Protection Officer**: For data protection specific inquiries, contact us at the same email with "Data Protection" in the subject line.
 
-## 12. Updates to This Privacy Policy
+**Response Time**: We aim to respond to all inquiries within 30 days.
 
-We may update this Privacy Policy from time to time. When we make material changes:
+**Complaints**: If you're not satisfied with our response, you have the right to lodge a complaint with your local data protection authority.
 
-- We will notify you through the app or via email
-- We will update the "Last Updated" date at the top of this policy
-- Continued use of the app after changes constitutes acceptance of the new policy
+## 12. Additional Information
 
-## 13. Contact Information
+### 12.1 Third-Party Links
 
-If you have questions, concerns, or requests regarding this Privacy Policy or your personal information, please contact us:
+Our Services may contain links to third-party websites. We're not responsible for their privacy practices.
 
-**Primary Contact:**
+### 12.2 Do Not Track
 
-- Email: bowen.cheung@athenalearn.co.uk
-- Address: 4 Longhope Close
-- Phone: +44 7729520591
+We currently don't respond to Do Not Track signals, but you can control tracking through our settings.
 
-**For EU Users:**
+### 12.3 Data Protection Measures
 
-- EU Representative: George Hastings, george.hastings@athenalearn.co.uk
+We implement appropriate technical and organizational measures to ensure a level of security appropriate to the risk, including:
+- Regular reviews of data collection and processing
+- Limited access to personal data
+- Training for personnel handling personal data
+- Regular assessment of security measures
 
-## 14. Legal Basis for Processing (GDPR)
+### 12.4 Privacy by Design
 
-For EU users, our legal basis for processing your personal information includes:
-
-- **Consent:** When you provide explicit consent for specific processing activities
-- **Contract:** When processing is necessary to perform our services
-- **Legitimate Interest:** For improving our services, security, and analytics
-- **Legal Obligation:** When required by law or legal process
-
-## 15. Data Processing Purposes Summary
-
-| Data Type           | Purpose              | Legal Basis         | Retention Period           |
-| ------------------- | -------------------- | ------------------- | -------------------------- |
-| Account Information | Service provision    | Contract            | Account lifetime + 30 days |
-| Profile Data        | Personalization      | Consent/Contract    | Account lifetime + 30 days |
-| Usage Analytics     | Service improvement  | Legitimate Interest | 24 months                  |
-| Communications      | Support & Updates    | Contract/Consent    | 3 years                    |
-| Device Information  | Security & Analytics | Legitimate Interest | 12 months                  |
+We incorporate privacy considerations into our development process for new features and services.
 
 ---
 
-_Last reviewed: [18/09/25]_
-_Version: 1.0_
+© 2025 BCGH Limited. All rights reserved.
+
+**Supercharged**
+Email: hello@learningsupercharged.com
+Website: www.learningsupercharged.com

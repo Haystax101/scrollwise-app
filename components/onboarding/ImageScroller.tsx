@@ -3,9 +3,9 @@ import { View, Image, StyleSheet, Animated } from 'react-native';
 
 // Preload images at module level for immediate availability
 const images = [
-  require('../../assets/IMG_2106.jpg'),
-  require('../../assets/IMG_2107.jpg'),
-  require('../../assets/IMG_2108.jpg'),
+  require('../../assets/feed1.jpg'),
+  require('../../assets/feed2.jpg'),
+  require('../../assets/feed3.jpg'),
 ];
 
 export const ImageScroller: React.FC = () => {
@@ -35,7 +35,8 @@ export const ImageScroller: React.FC = () => {
           }).start();
         }
         
-        setCurrentIndex(nextIndex);
+        // Use setTimeout to schedule state update outside of render cycle
+        setTimeout(() => setCurrentIndex(nextIndex), 0);
         
         // Always zoom back in after changing image
         Animated.timing(scale, {

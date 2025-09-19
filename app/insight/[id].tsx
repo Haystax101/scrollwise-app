@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
-import { InsightCard } from '../../components/InsightCard';
+import InsightCard from '../../components/InsightCard';
 import { Insight } from '../../types';
 
 export default function InsightDetail() {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import type { Article } from '../types';
 import { StaticVisual } from './StaticVisual';
 import { supabase } from '../lib/supabase';
@@ -18,6 +19,8 @@ import { useDeviceOrientation, getResponsiveFontSize } from '../utils/deviceDete
 interface ArticleCardProps {
   article: Article;
   isActive: boolean; // Kept for potential future use (e.g., animations)
+  showBackButton?: boolean;
+  backTo?: string | null;
   onOpenComments?: (articleId: number) => void;
   onUserInteraction?: (articleId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => void;
 }
@@ -50,11 +53,12 @@ const formatDate = (dateString: string): string => {
   }
 };
 
-export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, onOpenComments, onUserInteraction }) => {
+export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, showBackButton, backTo, onOpenComments, onUserInteraction }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { allIndustries } = useIndustries();
+  const router = useRouter();
   const { visualHeight, totalHeight, fontSizes } = useResponsiveLayout();
 
   // Debug logging for article received by ArticleCard
@@ -196,6 +200,13 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
   const handleLikePress = () => toggleLike(!hasLiked);
   const handleSavePress = () => toggleSave(!hasSaved);
   const handleCommentsPress = () => onOpenComments?.(article.id);
+  const handleBackPress = () => {
+    if (backTo === 'vault') {
+      router.push('/vault');
+    } else {
+      router.back();
+    }
+  };
 
   const handleSharePress = useCallback(async () => {
     try {
@@ -245,6 +256,18 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
       top: 52, // Increased to avoid iPhone status bar/notch
       right: 12,
       zIndex: 10,
+    },
+    backButton: {
+      position: 'absolute',
+      top: 52, // Same as flag button
+      left: 12, // Left side instead of right
+      zIndex: 10,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      borderRadius: 20,
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     contentSection: {
       flex: 1,
@@ -351,6 +374,15 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, on
       <View style={dynamicStyles.container}>
         <View style={dynamicStyles.visualSection}>
           <StaticVisual industry={article.industry_id} postId={article.id} />
+          {showBackButton && (
+            <TouchableOpacity
+              style={dynamicStyles.backButton}
+              onPress={handleBackPress}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Feather name="arrow-left" size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
           <FlagButton
             contentId={article.id}
             contentType="article"

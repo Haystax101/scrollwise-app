@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { DatabaseAutocompleteInput } from '../onboarding/DatabaseAutocompleteInput';
 import { supabase } from '../../lib/supabase';
 
 interface CareerGoal {
@@ -49,8 +48,7 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
   const { colors, isDark, getCardTextColor } = useTheme();
   const [goal, setGoal] = useState('');
   const [timeframe, setTimeframe] = useState('');
-  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
-  const [companySearchValue, setCompanySearchValue] = useState('');
+  const [companiesText, setCompaniesText] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Initialize form with current goal data
@@ -58,25 +56,14 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
     if (currentGoal) {
       setGoal(currentGoal.goal || '');
       setTimeframe(currentGoal.timeframe || '');
-      setSelectedCompanies(currentGoal.companies || []);
+      setCompaniesText(currentGoal.companies?.join(', ') || '');
     } else {
       setGoal('');
       setTimeframe('');
-      setSelectedCompanies([]);
+      setCompaniesText('');
     }
-    setCompanySearchValue(''); // Always clear the search input when modal opens
   }, [currentGoal, visible]);
 
-  const handleAddCompany = (companyName: string) => {
-    if (companyName && !selectedCompanies.includes(companyName)) {
-      setSelectedCompanies([...selectedCompanies, companyName]);
-      setCompanySearchValue(''); // Clear the search input after adding
-    }
-  };
-
-  const handleRemoveCompany = (companyName: string) => {
-    setSelectedCompanies(selectedCompanies.filter(c => c !== companyName));
-  };
 
   const handleSave = async () => {
     if (!goal.trim()) {
@@ -96,16 +83,16 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
         user_id: userId,
         goal: goal.trim(),
         timeframe,
-        target_level: 'Professional', // Default value
-        is_active: true
+        goal_type: 'career',
+        status: 'active' // Use status column instead of is_active
       };
 
-      // Delete existing goal
+      // Delete existing career goals (keep other goal types)
       await supabase
         .from('user_goals')
         .delete()
         .eq('user_id', userId)
-        .neq('goal', 'maintain_learning_streak'); // Don't delete streak goals
+        .eq('goal_type', 'career'); // Only delete career goals
 
       // Insert new goal
       const { error: goalError } = await supabase
@@ -116,10 +103,17 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
         throw goalError;
       }
 
+      // Clear existing goal companies first
+      await supabase
+        .from('user_goal_companies')
+        .delete()
+        .eq('user_id', userId);
+
       // Save companies if any
-      if (selectedCompanies.length > 0) {
-        // First, get or create company records
-        for (const companyName of selectedCompanies) {
+      if (companiesText.trim()) {
+        const companyNames = companiesText.split(',').map(name => name.trim()).filter(name => name);
+
+        for (const companyName of companyNames) {
           // Check if company exists
           const { data: existingCompany } = await supabase
             .from('companies')
@@ -134,7 +128,7 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
             // Create new company
             const { data: newCompany, error: companyError } = await supabase
               .from('companies')
-              .insert({ 
+              .insert({
                 name: companyName,
                 industry_sector: 'Technology' // Default
               })
@@ -163,10 +157,11 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
       }
 
       // Call parent callback
+      const companyNames = companiesText.trim() ? companiesText.split(',').map(name => name.trim()).filter(name => name) : [];
       onSave({
         goal: goal.trim(),
         timeframe,
-        companies: selectedCompanies
+        companies: companyNames
       });
 
       onClose();
@@ -254,31 +249,10 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
     timeframeTextSelected: {
       color: '#FFFFFF', // Always white for selected text on colored background
     },
-    companiesContainer: {
-      marginTop: 12,
-    },
-    companyTags: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginTop: 8,
-    },
-    companyTag: {
-      backgroundColor: colors.primary,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 16,
-      marginRight: 8,
-      marginBottom: 8,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    companyTagText: {
-      color: '#FFFFFF', // Always white for text on colored background
-      fontSize: 14,
-      marginRight: 4,
-    },
-    removeButton: {
-      padding: 2,
+    helperText: {
+      fontSize: 12,
+      color: colors.textTertiary,
+      marginTop: 6,
     },
     buttonContainer: {
       flexDirection: 'row',
@@ -370,32 +344,17 @@ export const CareerGoalEditModal: React.FC<CareerGoalEditModalProps> = ({
 
             <View style={styles.section}>
               <Text style={styles.label}>Target Companies (Optional)</Text>
-              <DatabaseAutocompleteInput
-                label="Add companies you're interested in"
-                value={companySearchValue}
-                onChangeText={setCompanySearchValue}
-                onSelect={(item) => handleAddCompany(item.title)}
-                searchType="companies"
-                placeholder="Search for companies..."
+              <TextInput
+                style={styles.textInput}
+                value={companiesText}
+                onChangeText={setCompaniesText}
+                placeholder="e.g., Google, Microsoft, Apple"
+                placeholderTextColor={colors.textTertiary}
+                multiline
               />
-              
-              {selectedCompanies.length > 0 && (
-                <View style={styles.companiesContainer}>
-                  <View style={styles.companyTags}>
-                    {selectedCompanies.map((company, index) => (
-                      <View key={index} style={styles.companyTag}>
-                        <Text style={styles.companyTagText}>{company}</Text>
-                        <TouchableOpacity
-                          style={styles.removeButton}
-                          onPress={() => handleRemoveCompany(company)}
-                        >
-                          <Feather name="x" size={16} color="#FFFFFF" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
+              <Text style={styles.helperText}>
+                Separate multiple companies with commas
+              </Text>
             </View>
           </ScrollView>
 
