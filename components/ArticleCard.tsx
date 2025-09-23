@@ -291,6 +291,9 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
     },
     mainContent: {
       flexShrink: 1,
+      flex: isTablet ? 1 : undefined, // Take up available space on iPad
+      justifyContent: isTablet ? 'center' : undefined, // Center content vertically on iPad
+      paddingVertical: isTablet ? 20 : 0, // Add vertical padding on iPad for better spacing
     },
     metadata: {
       flexDirection: 'column',
