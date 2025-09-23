@@ -277,7 +277,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
       paddingBottom: insets.bottom + 60,
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
-      marginTop: -20,
+      marginTop: isTablet ? 0 : -20, // Remove negative margin on iPad to push content down
       // Remove shadow and border to keep a clean aesthetic
       shadowColor: 'transparent',
       shadowOffset: { width: 0, height: 0 },
