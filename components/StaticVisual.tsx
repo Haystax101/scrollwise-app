@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Animated, StyleSheet, Dimensions, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useDeviceOrientation, getResponsiveAnimationHeight } from '../utils/deviceDetection';
+import { useDeviceOrientation } from '../utils/deviceDetection';
 
 const { width } = Dimensions.get('window');
 
@@ -4631,8 +4631,7 @@ const INDUSTRY_ANIMATIONS: Record<string, (() => React.ReactNode | null)[]> = {
 };
 
 export const StaticVisual = ({ industry = 'Default', postId }: { industry?: string, postId?: string | number }) => {
-  const { screenHeight, isTablet } = useDeviceOrientation();
-  const responsiveHeight = getResponsiveAnimationHeight(screenHeight);
+  const { isTablet } = useDeviceOrientation();
 
   // Get variations for the industry, with smart fallbacks
   let variations = INDUSTRY_ANIMATIONS[industry];
@@ -4667,11 +4666,11 @@ export const StaticVisual = ({ industry = 'Default', postId }: { industry?: stri
   
   const VariationComponent = variations[variationIndex];
   
-  // Create responsive container styles
+  // Create responsive container styles - inherit height from parent container
   const responsiveContainerStyles = {
     ...styles.visualContainer,
-    height: responsiveHeight,
-    aspectRatio: undefined, // Remove aspect ratio to use explicit height
+    flex: 1, // Fill parent container height
+    aspectRatio: undefined, // Remove aspect ratio to use parent's height
   };
 
   try {
