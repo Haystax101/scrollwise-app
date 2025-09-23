@@ -8,7 +8,7 @@ export default function ProfileScreen() {
   console.log('🔍 ProfileScreen: Component mounting');
   
   try {
-    const { user, loading, signOut } = useAuth();
+    const { user, loading, signOut, deleteAccount } = useAuth();
     console.log('🔍 ProfileScreen: Auth state:', { 
       hasUser: !!user, 
       userId: user?.id, 
@@ -45,7 +45,7 @@ export default function ProfileScreen() {
     }
 
     console.log('🔍 ProfileScreen: About to render NewProfile component');
-    return <NewProfile user={user} navigateTo={router.replace} signOut={signOut} />;
+    return <NewProfile user={user} navigateTo={router.replace} signOut={signOut} deleteAccount={deleteAccount} />;
     
   } catch (error) {
     console.error('🚨 ProfileScreen: CRITICAL ERROR:', error);

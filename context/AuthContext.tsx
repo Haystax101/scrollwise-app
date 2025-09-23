@@ -15,6 +15,7 @@ interface AuthContextData {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   signInWithOtp: (email: string) => Promise<boolean>;
   verifyOtp: (email: string, token: string) => Promise<boolean>;
 }
@@ -132,20 +133,64 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Define the signOut function
   const signOut = async () => {
     console.log('AuthContext: Signing out user...');
-    
+
     // Track sign out initiation
     analytics.track(ANALYTICS_EVENTS.USER_SIGNED_OUT, {
       timestamp: new Date().toISOString(),
       initiated_by: 'user_action'
     });
-    
+
     await supabase.auth.signOut();
     console.log('AuthContext: Sign out completed, user should be redirected to onboarding');
-    
+
     // Reset PostHog user data
     analytics.reset();
-    
+
     // The onAuthStateChange listener will handle setting user and session to null
+  };
+
+  // Define the deleteAccount function
+  const deleteAccount = async () => {
+    console.log('AuthContext: Deleting user account...');
+
+    if (!user) {
+      throw new Error('No user to delete');
+    }
+
+    // Track account deletion
+    analytics.track('account_deleted', {
+      user_id: user.id,
+      timestamp: new Date().toISOString()
+    });
+
+    // Call the delete account edge function
+    const { error } = await supabase.functions.invoke('delete-account', {
+      headers: {
+        Authorization: `Bearer ${session?.access_token}`,
+      },
+    });
+
+    if (error) {
+      console.error('Error deleting account:', error);
+      throw error;
+    }
+
+    console.log('AuthContext: Account deletion completed');
+
+    // Reset PostHog user data
+    analytics.reset();
+
+    // Explicitly sign out to ensure user is logged out and redirected to onboarding
+    // This is necessary because the user account has been deleted from auth,
+    // so the normal auth state change might not trigger properly
+    console.log('AuthContext: Signing out after account deletion...');
+    await supabase.auth.signOut();
+
+    // Clear local state immediately to prevent any race conditions
+    setSession(null);
+    setUser(null);
+
+    console.log('AuthContext: User signed out after account deletion, should redirect to onboarding');
   };
 
   const signInWithOtp = async (email: string): Promise<boolean> => {
@@ -187,6 +232,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     loading,
     signOut,
+    deleteAccount,
     signInWithOtp,
     verifyOtp,
   };

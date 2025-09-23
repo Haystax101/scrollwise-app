@@ -62,9 +62,10 @@ interface NewProfileProps {
   user: any; // Supabase user
   navigateTo?: (screen: string) => void;
   signOut?: () => Promise<void>;
+  deleteAccount?: () => Promise<void>;
 }
 
-export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigateTo, signOut }) => {
+export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigateTo, signOut, deleteAccount }) => {
   console.log('🔍 NewProfile: Component initializing', {
     hasUser: !!userProp,
     userId: userProp?.id,
@@ -600,6 +601,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         onClose={() => setIsSettingsModalVisible(false)}
         navigateTo={navigateTo || (() => {})}
         signOut={signOut || (async () => {})}
+        deleteAccount={deleteAccount || (async () => {})}
       />
 
       <CareerGoalEditModal

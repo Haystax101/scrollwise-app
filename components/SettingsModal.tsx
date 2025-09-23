@@ -9,9 +9,10 @@ interface SettingsModalProps {
   onClose: () => void;
   navigateTo: (screen: string) => void;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigateTo, signOut }) => {
+const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigateTo, signOut, deleteAccount }) => {
     const { colors, themeMode, setThemeMode } = useTheme();
     const insets = useSafeAreaInsets();
     
@@ -31,6 +32,31 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
             onPress: () => {
               onClose();
               setTimeout(() => signOut(), 100);
+            }
+          },
+        ]
+      );
+    };
+
+    const handleDeleteAccount = () => {
+      Alert.alert(
+        'Delete Account',
+        'Are you sure you want to permanently delete your account? This action cannot be undone and will delete all your data.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete Account',
+            style: 'destructive',
+            onPress: () => {
+              onClose();
+              setTimeout(async () => {
+                try {
+                  await deleteAccount();
+                } catch (error) {
+                  console.error('Error deleting account:', error);
+                  Alert.alert('Error', 'Failed to delete account. Please try again or contact support.');
+                }
+              }, 100);
             }
           },
         ]
@@ -188,6 +214,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
       signOutTitle: {
         color: '#dc2626',
       },
+      deleteAccountItem: {
+        backgroundColor: '#fef2f2',
+        borderColor: '#fecaca',
+      },
+      deleteAccountTitle: {
+        color: '#dc2626',
+      },
     });
 
     return (
@@ -310,6 +343,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
                   <View style={dynamicStyles.settingContent}>
                     <Text style={[dynamicStyles.settingTitle, dynamicStyles.signOutTitle]}>Sign Out</Text>
                     <Text style={dynamicStyles.settingDescription}>Sign out of your account</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              <View style={[dynamicStyles.settingCard, dynamicStyles.deleteAccountItem]}>
+                <TouchableOpacity
+                  style={[dynamicStyles.settingItem, dynamicStyles.settingItemLast]}
+                  onPress={handleDeleteAccount}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete your account"
+                >
+                  <View style={dynamicStyles.settingIcon}>
+                    <Feather name="trash-2" size={20} color="#dc2626" />
+                  </View>
+                  <View style={dynamicStyles.settingContent}>
+                    <Text style={[dynamicStyles.settingTitle, dynamicStyles.deleteAccountTitle]}>Delete Account</Text>
+                    <Text style={dynamicStyles.settingDescription}>Permanently delete your account and data</Text>
                   </View>
                 </TouchableOpacity>
               </View>
