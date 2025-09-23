@@ -1,4 +1,4 @@
-import { Dimensions } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 import { useMemo } from 'react';
 
 const { width, height } = Dimensions.get('window');
@@ -59,7 +59,12 @@ export const getBottomSectionHeight = (): number => {
  * Get visual section height - only reduce on small screens, keep existing layout otherwise
  */
 export const getVisualHeight = (): number => {
-  const screenHeight = Dimensions.get('window').height;
+  const { width, height: screenHeight } = Dimensions.get('window');
+
+  // iPad detection (iOS tablets typically 768px+ width AND iOS platform)
+  const isTablet = Platform.OS === 'ios' && Math.min(width, screenHeight) >= 768;
+
+  if (isTablet) return screenHeight * 0.55; // 55% for iPad
   if (isSmallScreen) return screenHeight * 0.38; // Reduced from 0.45 to 0.38 for small screens
   return screenHeight * 0.45; // Keep original 45% for medium/large screens
 };

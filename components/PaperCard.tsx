@@ -342,6 +342,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingTop: 16,
+      paddingBottom: isTablet ? 24 : 0, // Extra bottom padding on iPad for taller bottom navbar
       borderTopWidth: 1,
       borderTopColor: colors.border,
     },

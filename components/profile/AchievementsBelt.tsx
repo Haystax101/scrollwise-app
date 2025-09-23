@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { AchievementService, EnhancedAchievement } from '../../services/achievementService';
@@ -12,11 +12,19 @@ interface AchievementsBeltProps {
   onSeeAll?: () => void;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// iPad detection using the same logic as other components
+const isTablet = Platform.OS === 'ios' && Math.min(screenWidth, screenHeight) >= 768;
+
 const CARD_MARGIN = 12;
 const CONTAINER_PADDING = 40; // 20px on each side
 const AVAILABLE_WIDTH = screenWidth - CONTAINER_PADDING;
-const CARD_WIDTH = (AVAILABLE_WIDTH - CARD_MARGIN) / 2; // 2 cards per row with margin
+
+// Show 4 cards on iPad, 2 on phone
+const CARDS_PER_ROW = isTablet ? 4 : 2;
+const TOTAL_MARGINS = CARD_MARGIN * (CARDS_PER_ROW - 1);
+const CARD_WIDTH = (AVAILABLE_WIDTH - TOTAL_MARGINS) / CARDS_PER_ROW;
 
 export const AchievementsBelt: React.FC<AchievementsBeltProps> = ({
   userId,

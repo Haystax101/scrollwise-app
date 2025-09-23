@@ -354,6 +354,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingTop: 16,
+      paddingBottom: isTablet ? 24 : 0, // Extra bottom padding on iPad for taller bottom navbar
       borderTopWidth: 1,
       borderTopColor: colors.border,
     },
