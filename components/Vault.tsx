@@ -208,7 +208,7 @@ export const Vault: React.FC = () => {
           'books',
           'book_views',
           'book_id',
-          'id, title, short_summary, author, created_at, industry_id, likes_count, saves_count, comments_count, views_count'
+          'id, title, short_summary, author, created_at, industry_id, likes_count, saves_count, comments_count, views_count, key_insights'
         )
       ]);
 
@@ -284,6 +284,7 @@ export const Vault: React.FC = () => {
       setLoading({ articles: false, papers: false, books: false });
     }
   }, [selectedIndustry, user, fetchContentByIndustry]);
+
 
   const performSearch = useCallback(async (query: string) => {
     if (!user) {

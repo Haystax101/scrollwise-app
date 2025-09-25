@@ -7,6 +7,7 @@ export interface SearchResult {
   longer_summary?: string; // For articles expanded view
   content_simple?: string;
   short_summary?: string;
+  key_insights?: string[]; // For books slideshow
   authors?: string[] | string;
   link: string;
   type: 'article' | 'paper' | 'book';

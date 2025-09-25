@@ -20,6 +20,7 @@ interface PaperCardProps {
   isActive: boolean;
   onOpenComments?: (paperId: number) => void;
   onUserInteraction?: (paperId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => void;
+  isInVault?: boolean; // When true, reduces bottom padding for vault context
 }
 
 const getTableNames = () => ({
@@ -50,7 +51,7 @@ const formatDate = (dateString: string): string => {
   }
 };
 
-export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenComments, onUserInteraction }) => {
+export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenComments, onUserInteraction, isInVault = false }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -262,7 +263,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       backgroundColor: colors.background,
       paddingHorizontal: 16,
       paddingTop: 0,
-      paddingBottom: insets.bottom + 60,
+      paddingBottom: isInVault ? 60 : insets.bottom + 60,
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       marginTop: isTablet ? 0 : -20, // Remove negative margin on iPad to push content down

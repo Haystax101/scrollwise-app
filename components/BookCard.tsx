@@ -39,11 +39,12 @@ interface BookCardProps {
   book: Book;
   onOpenComments?: (bookId: number) => void;
   onUserInteraction?: (bookId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => void;
+  isInVault?: boolean; // When true, reduces bottom padding for vault context
 }
 
 type SlideItem = { type: 'cover' } | { type: 'insight'; insight: string; index: number };
 
-export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComments, onUserInteraction }) => {
+export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComments, onUserInteraction, isInVault = false }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -194,7 +195,7 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
       right: 12,
       zIndex: 10,
     },
-    contentSection: { flex: 1, backgroundColor: colors.background, paddingTop: 0, paddingBottom: insets.bottom + 60 },
+    contentSection: { flex: 1, backgroundColor: colors.background, paddingTop: 0, paddingBottom: isInVault ? 60 : insets.bottom + 60 },
     slidesContainer: { flex: 1, position: 'relative' },
     slideIndicators: { 
       flexDirection: 'row', 

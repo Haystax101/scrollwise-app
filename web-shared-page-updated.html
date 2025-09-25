@@ -236,7 +236,7 @@
             };
         }
 
-        // Try to open the app with Universal Links first, then fallback to custom scheme
+        // Try to open the app with custom scheme (Universal Links are handled automatically by iOS)
         function tryOpenApp() {
             const params = getURLParams();
             const status = document.getElementById('status');
@@ -247,48 +247,38 @@
 
             status.style.display = 'block';
 
-            // For iOS devices, try Universal Links first
+            // For iOS devices, try custom scheme as fallback
             if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                // Build Universal Link (current page URL)
-                const universalLink = window.location.href;
-
-                // Build custom scheme fallback
+                // Build custom scheme URL
                 const customScheme = params.content
                     ? `supercharged://content/${params.content.replace(':', '/')}${params.ref ? '?ref=' + params.ref : ''}`
                     : `supercharged://invite?ref=${params.ref}`;
 
-                console.log('Trying Universal Link:', universalLink);
-                console.log('Fallback custom scheme:', customScheme);
+                console.log('Trying custom scheme:', customScheme);
 
                 const startTime = Date.now();
 
-                // Try Universal Link first by redirecting to self (iOS will intercept if app is installed)
-                window.location.href = universalLink;
-
-                // Fallback to custom scheme after a short delay
-                const fallbackTimer = setTimeout(() => {
-                    console.log('Falling back to custom scheme');
+                // Try custom scheme after a small delay (Universal Links should have been tried first by iOS)
+                setTimeout(() => {
                     window.location.href = customScheme;
-                }, 1500);
+                }, 250);
 
                 // Check if app opened by detecting if browser becomes hidden
                 const checkAppOpened = () => {
                     const timeElapsed = Date.now() - startTime;
-                    if (document.hidden || timeElapsed > 3000) {
+                    if (document.hidden || timeElapsed > 2500) {
                         // App likely opened or we've waited long enough
-                        clearTimeout(fallbackTimer);
                         status.style.display = 'none';
-                    } else if (timeElapsed < 4000) {
+                    } else if (timeElapsed < 3000) {
                         // Keep checking for a bit longer
                         setTimeout(checkAppOpened, 100);
                     } else {
                         // App didn't open, hide status
-                        clearTimeout(fallbackTimer);
                         status.style.display = 'none';
                     }
                 };
 
-                setTimeout(checkAppOpened, 100);
+                setTimeout(checkAppOpened, 300);
             } else {
                 // Not iOS, hide status immediately
                 status.style.display = 'none';
