@@ -1,9 +1,9 @@
 import { useAuth } from '../context/AuthContext';
-import { People } from '../components/friends/People';
+import { Inbox } from '../components/friends/Inbox';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 
-export default function PeoplePage() {
+export default function InboxPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -15,5 +15,5 @@ export default function PeoplePage() {
 
   if (loading || !user) return null;
 
-  return <People />;
+  return <Inbox />;
 }

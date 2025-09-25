@@ -4,7 +4,7 @@ import { MaterialIcons, Ionicons, FontAwesome } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 
 interface LearningStats {
-  currentStreak: number;
+  connectionsCount: number;
   totalInteractions: number;
   achievementsCount: number;
 }
@@ -22,11 +22,11 @@ export const LearningStatsGrid: React.FC<LearningStatsGridProps> = ({
 
   const statItems = [
     {
-      iconFamily: 'MaterialIcons',
-      icon: 'local-fire-department',
-      label: 'Day Streak',
-      value: loading ? '...' : stats.currentStreak.toString(),
-      color: '#F97316', // Orange/Fire color
+      iconFamily: 'Ionicons',
+      icon: 'people-outline',
+      label: 'Connections',
+      value: loading ? '...' : stats.connectionsCount.toString(),
+      color: '#10B981', // Green color for connections
     },
     {
       iconFamily: 'FontAwesome',

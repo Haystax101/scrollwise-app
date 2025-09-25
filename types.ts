@@ -27,6 +27,7 @@ export interface InsightAuthor {
   name: string;
   handle: string;
   avatar: string;
+  tagline?: string;
   // Expanded details
   role: string;
   company: string;

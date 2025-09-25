@@ -2,6 +2,19 @@
 
 export type FriendshipStatus = 'pending' | 'accepted' | 'blocked' | 'declined';
 export type ReferralStatus = 'pending' | 'registered' | 'completed' | 'expired';
+export type NotificationType = 'like' | 'comment' | 'friend_request';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  source_user_id: string;
+  content_type?: 'insight' | 'article' | 'paper' | 'book';
+  content_id?: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
 
 export interface Friendship {
   id: string;
@@ -19,6 +32,7 @@ export interface FriendProfile {
   id: string;
   full_name: string;
   avatar_url?: string;
+  tagline?: string;
   industry_id?: string;
   friends_count: number;
   public_profile: boolean;
@@ -137,6 +151,7 @@ export interface LeaderboardEntry {
   user_id: string;
   full_name: string;
   avatar_url?: string;
+  tagline?: string;
   total_voltz_earned: number;
   rank: number;
   is_friend: boolean;

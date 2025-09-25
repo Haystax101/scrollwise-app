@@ -46,9 +46,10 @@ interface SavedContent {
 
 interface SavedContentSectionProps {
   searchQuery?: string;
+  onItemPress?: (item: any) => void;
 }
 
-export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ searchQuery = '' }) => {
+export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ searchQuery = '', onItemPress }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
@@ -240,16 +241,27 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
   };
 
   const handleContentPress = (item: SavedContent) => {
-    router.push({
-      pathname: '/feed',
-      params: {
-        contentType: item.type,
-        contentId: item.id,
-        animationDirection: 'left',
-        showBackButton: 'true',
-        backTo: 'vault'
-      }
-    });
+    if (onItemPress) {
+      // Use vault internal viewer - convert SavedContent to SearchResult format
+      const searchResultItem = {
+        ...item,
+        type: item.type,
+        link: '#'
+      };
+      onItemPress(searchResultItem);
+    } else {
+      // Fallback to feed navigation
+      router.push({
+        pathname: '/feed',
+        params: {
+          contentType: item.type,
+          contentId: item.id,
+          animationDirection: 'left',
+          showBackButton: 'true',
+          backTo: 'vault'
+        }
+      });
+    }
   };
 
   const getTypeIcon = (type: string) => {

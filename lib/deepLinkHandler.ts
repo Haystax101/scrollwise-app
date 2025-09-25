@@ -21,7 +21,13 @@ export class DeepLinkHandler {
 
       const parsed = Linking.parse(url);
 
-      // Handle different URL patterns
+      // Handle Universal Links (https://learningsupercharged.com/shared/...)
+      if (url.includes('learningsupercharged.com')) {
+        console.log('🔗 DeepLink: Processing Universal Link');
+        return this.parseUniversalLink(url);
+      }
+
+      // Handle custom scheme (supercharged://...)
       if (parsed.path) {
         // Pattern: supercharged://content/article/123?ref=abc
         if (parsed.path.startsWith('content/')) {
@@ -54,6 +60,44 @@ export class DeepLinkHandler {
 
     } catch (error) {
       console.error('🔗 DeepLink: Error parsing URL:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Parse Universal Link URLs
+   */
+  private static parseUniversalLink(url: string): DeepLinkData | null {
+    try {
+      const urlObj = new URL(url);
+      const searchParams = urlObj.searchParams;
+
+      // Extract content parameter (format: "article:123" or "paper:456")
+      const content = searchParams.get('content');
+      const referralCode = searchParams.get('ref');
+
+      if (content) {
+        const [contentType, contentId] = content.split(':');
+        if (contentType && contentId) {
+          return {
+            contentType: contentType as 'article' | 'paper' | 'book' | 'insight',
+            contentId,
+            referralCode: referralCode || undefined
+          };
+        }
+      }
+
+      // If no content parameter, check if it's just a referral invite
+      if (referralCode) {
+        return {
+          referralCode,
+          screen: 'invite'
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('🔗 DeepLink: Error parsing Universal Link:', error);
       return null;
     }
   }
@@ -123,7 +167,7 @@ export class DeepLinkHandler {
   /**
    * Navigate to specific content using router
    */
-  private static async navigateToContent(
+  static async navigateToContent(
     router: any,
     contentType: string,
     contentId: string

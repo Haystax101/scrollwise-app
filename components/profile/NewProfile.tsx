@@ -26,7 +26,7 @@ import type { Industry } from '../../types';
 
 // Define types locally to avoid import issues
 interface LearningStats {
-  currentStreak: number;
+  connectionsCount: number;
   totalInteractions: number;
   achievementsCount: number;
 }
@@ -100,7 +100,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [showOnboardingProgress, setShowOnboardingProgress] = useState<boolean>(false);
   const [learningStats, setLearningStats] = useState<LearningStats>({
-    currentStreak: 0,
+    connectionsCount: 0,
     totalInteractions: 0,
     achievementsCount: 0
   });
@@ -261,13 +261,12 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         setIndustries(formattedIndustries);
       }
 
-      // Fetch learning stats
-      const { data: streakData } = await supabase
-        .from('user_streaks')
-        .select('current_streak')
-        .eq('user_id', currentUser.id)
-        .eq('streak_type', 'daily_learning')
-        .single();
+      // Fetch connections count
+      const { count: connectionsCount } = await supabase
+        .from('friendships')
+        .select('*', { count: 'exact', head: true })
+        .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`)
+        .eq('status', 'accepted');
 
       // Calculate engagement stats
       const [articleLikesRes, articleSavesRes, articleCommentsRes,
@@ -303,7 +302,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
       if (isMountedRef.current) {
         setLearningStats({
-          currentStreak: streakData?.current_streak || 1,
+          connectionsCount: connectionsCount || 0,
           totalInteractions,
           achievementsCount: achievementsCountData?.length || 0
         });

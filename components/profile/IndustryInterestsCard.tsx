@@ -218,7 +218,6 @@ export const IndustryInterestsCard: React.FC<IndustryInterestsCardProps> = ({
               <View style={[styles.industryIcon, { backgroundColor }]}>
                 <IconComponent name={iconConfig.name as any} size={24} color="white" />
               </View>
-              <Text style={styles.industryName}>{industry.name}</Text>
             </TouchableOpacity>
           );
         })}

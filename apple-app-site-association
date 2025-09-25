@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "YOUR_TEAM_ID.com.gdwhastings.scrollwise",
+        "paths": [
+          "/shared/*",
+          "/content/*",
+          "/invite/*"
+        ]
+      }
+    ]
+  }
+}

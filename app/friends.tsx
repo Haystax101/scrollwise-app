@@ -300,11 +300,11 @@ export default function FriendsPage() {
             autoCapitalize="words"
             autoCorrect={false}
           />
-          {searchQuery.length > 0 && (
+          {searchQuery.length > 0 ? (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
               <Feather name="x" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
 
         {/* Sort */}
@@ -314,13 +314,13 @@ export default function FriendsPage() {
               key={option.key}
               style={[
                 dynamicStyles.sortButton,
-                sortBy === option.key && dynamicStyles.activeSortButton
+                sortBy === option.key ? dynamicStyles.activeSortButton : null
               ]}
               onPress={() => setSortBy(option.key as any)}
             >
               <Text style={[
                 dynamicStyles.sortButtonText,
-                sortBy === option.key && dynamicStyles.activeSortButtonText
+                sortBy === option.key ? dynamicStyles.activeSortButtonText : null
               ]}>
                 {option.label}
               </Text>
@@ -333,7 +333,7 @@ export default function FriendsPage() {
       <View style={dynamicStyles.friendsCount}>
         <Text style={dynamicStyles.friendsCountText}>
           {filteredFriends.length} friend{filteredFriends.length !== 1 ? 's' : ''}
-          {searchQuery && <Text> found for "{searchQuery}"</Text>}
+          {searchQuery ? <Text> found for "{searchQuery}"</Text> : null}
         </Text>
       </View>
 
@@ -359,14 +359,14 @@ export default function FriendsPage() {
               : 'Start building your professional network by adding friends!'
             }
           </Text>
-          {!searchQuery && (
+          {!searchQuery ? (
             <TouchableOpacity
               style={dynamicStyles.inviteButton}
               onPress={handleInvite}
             >
               <Text style={dynamicStyles.inviteButtonText}>Invite Friends</Text>
             </TouchableOpacity>
-          )}
+          ) : null}
         </View>
       ) : (
         <ScrollView
@@ -382,15 +382,15 @@ export default function FriendsPage() {
                 </Text>
                 <Text style={dynamicStyles.friendMeta}>
                   {friendItem.friend.friends_count || 0} friends
-                  {friendItem.mutual_friends_count > 0 &&
+                  {friendItem.mutual_friends_count > 0 ? (
                     <Text> • {friendItem.mutual_friends_count} mutual</Text>
-                  }
+                  ) : null}
                 </Text>
-                {friendItem.connection_strength && (
+                {friendItem.connection_strength ? (
                   <Text style={dynamicStyles.connectionStrength}>
                     Connection: {Math.round(friendItem.connection_strength * 100)}% strength
                   </Text>
-                )}
+                ) : null}
               </View>
               <View style={dynamicStyles.actionsContainer}>
                 <TouchableOpacity

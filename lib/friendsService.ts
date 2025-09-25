@@ -599,10 +599,13 @@ export class FriendsService {
     const friends = await this.getFriends();
     const friendIds = friends.map(f => f.friend.id);
 
-    // Get global leaderboard
+    // Get global leaderboard with taglines
     const { data: globalLeaderboard, error: globalError } = await supabase
       .from('leaderboard')
-      .select('*')
+      .select(`
+        *,
+        profiles!inner(tagline)
+      `)
       .order('total_voltz_earned', { ascending: false })
       .limit(100);
 
@@ -610,9 +613,13 @@ export class FriendsService {
       throw new FriendsError('Failed to fetch leaderboard', 'LEADERBOARD_FAILED', globalError);
     }
 
-    // Enhance with friend information
+    // Enhance with friend information and taglines
     const enhancedGlobal: LeaderboardEntry[] = globalLeaderboard?.map((entry, index) => ({
-      ...entry,
+      user_id: entry.user_id,
+      full_name: entry.full_name,
+      avatar_url: entry.avatar_url,
+      tagline: entry.profiles?.tagline,
+      total_voltz_earned: entry.total_voltz_earned,
       rank: index + 1,
       is_friend: friendIds.includes(entry.user_id),
       friends_count: 0 // This would need to be added to the leaderboard view

@@ -8,6 +8,7 @@ import { instantContentLoader } from '../services/InstantContentLoader';
 import { VaultSearchHeader } from './vault/VaultSearchHeader';
 import { ContentSection } from './vault/ContentSection';
 import { SavedContentSection } from './vault/SavedContentSection';
+import { VaultContentViewer } from './vault/VaultContentViewer';
 import { supabase } from '../lib/supabase';
 
 // Debounce hook
@@ -56,6 +57,9 @@ export const Vault: React.FC = () => {
     books: false
   });
   const [error, setError] = useState<string | null>(null);
+
+  // Content viewer state
+  const [selectedContent, setSelectedContent] = useState<SearchResult | null>(null);
 
   // Debounce search query for better performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -327,7 +331,23 @@ export const Vault: React.FC = () => {
     }
   }, [selectedIndustry, user, fetchContentByIndustry]);
 
+  const handleContentPress = (content: SearchResult) => {
+    setSelectedContent(content);
+  };
 
+  const handleCloseViewer = () => {
+    setSelectedContent(null);
+  };
+
+  // Show content viewer when content is selected
+  if (selectedContent) {
+    return (
+      <VaultContentViewer
+        content={selectedContent}
+        onClose={handleCloseViewer}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -351,6 +371,7 @@ export const Vault: React.FC = () => {
           data={vaultData.articles}
           loading={loading.articles}
           emptyState="none"
+          onItemPress={handleContentPress}
         />
 
         <ContentSection
@@ -358,6 +379,7 @@ export const Vault: React.FC = () => {
           data={vaultData.papers}
           loading={loading.papers}
           emptyState="none"
+          onItemPress={handleContentPress}
         />
 
         <ContentSection
@@ -365,9 +387,10 @@ export const Vault: React.FC = () => {
           data={vaultData.books}
           loading={loading.books}
           emptyState="none"
+          onItemPress={handleContentPress}
         />
 
-        <SavedContentSection searchQuery={searchQuery} />
+        <SavedContentSection searchQuery={searchQuery} onItemPress={handleContentPress} />
       </ScrollView>
     </SafeAreaView>
   );

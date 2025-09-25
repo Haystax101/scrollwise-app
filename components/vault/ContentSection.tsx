@@ -37,6 +37,7 @@ interface ContentSectionProps {
   emptyState?: 'create' | 'none';
   onCreatePress?: () => void;
   showSeeAll?: boolean;
+  onItemPress?: (item: SearchResult) => void;
 }
 
 export const ContentSection: React.FC<ContentSectionProps> = ({
@@ -45,7 +46,8 @@ export const ContentSection: React.FC<ContentSectionProps> = ({
   loading,
   emptyState = 'none',
   onCreatePress,
-  showSeeAll = false
+  showSeeAll = false,
+  onItemPress
 }) => {
   const { colors } = useTheme();
   const router = useRouter();
@@ -58,16 +60,22 @@ export const ContentSection: React.FC<ContentSectionProps> = ({
   };
 
   const handleItemPress = (item: SearchResult) => {
-    router.push({
-      pathname: '/feed',
-      params: {
-        contentType: item.type,
-        contentId: item.id,
-        animationDirection: 'left',
-        showBackButton: 'true',
-        backTo: 'vault'
-      }
-    });
+    if (onItemPress) {
+      // Use vault internal viewer
+      onItemPress(item);
+    } else {
+      // Fallback to feed navigation (for other uses of this component)
+      router.push({
+        pathname: '/feed',
+        params: {
+          contentType: item.type,
+          contentId: item.id,
+          animationDirection: 'left',
+          showBackButton: 'true',
+          backTo: 'vault'
+        }
+      });
+    }
   };
 
   const renderContentCard = ({ item }: { item: SearchResult }) => (

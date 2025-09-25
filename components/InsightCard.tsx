@@ -122,6 +122,12 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       color: colors.text,
       marginBottom: 2,
     },
+    tagline: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontStyle: 'italic',
+      marginBottom: 2,
+    },
     role: {
       fontSize: 16,
       color: colors.textSecondary,
@@ -789,6 +795,9 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
             <View style={dynamicStyles.headerRow}>
               <View style={dynamicStyles.textContainer}>
                 <Text style={dynamicStyles.name}>{insight.author.name}</Text>
+                {insight.author.tagline && (
+                  <Text style={dynamicStyles.tagline}>{insight.author.tagline}</Text>
+                )}
                 {insight.created_at && (
                   <View style={dynamicStyles.timestampContainer}>
                     <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
