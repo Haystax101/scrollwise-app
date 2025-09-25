@@ -9,9 +9,9 @@ import { LearningStatsGrid } from './LearningStatsGrid';
 import { AchievementsBelt } from './AchievementsBelt';
 import { CareerGoalCard } from './CareerGoalCard';
 import { IndustryInterestsCard } from './IndustryInterestsCard';
-import { ExperienceCard } from './ExperienceCard';
-import { EducationCard } from './EducationCard';
-import { SkillsCard } from './SkillsCard';
+import { ProfilePassionsCard } from './ProfilePassionsCard';
+import { ProfileWorkingOnCard } from './ProfileWorkingOnCard';
+import { TaglineEditModal } from './TaglineEditModal';
 import { IndustrySelectionPage } from './IndustrySelectionPage';
 import { AllAchievementsPage } from './AllAchievementsPage';
 import { CareerGoalEditModal } from './CareerGoalEditModal';
@@ -32,11 +32,12 @@ interface LearningStats {
 }
 
 interface ProfileData {
-  experience?: any[];
-  education?: any[];
-  skills?: string[];
-  projects?: any[];
   summary?: string;
+}
+
+interface ProfilePassion {
+  passionate_about: string | null;
+  working_on: string | null;
 }
 
 interface CareerGoal {
@@ -45,18 +46,6 @@ interface CareerGoal {
   companies?: string[];
 }
 
-const formatDatePeriod = (startDate: string | null, endDate: string | null, isCurrent: boolean): string => {
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  };
-
-  const start = formatDate(startDate);
-  const end = isCurrent ? 'Present' : formatDate(endDate);
-  
-  return `${start} - ${end}`;
-};
 
 interface NewProfileProps {
   user: any; // Supabase user
@@ -105,6 +94,8 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     achievementsCount: 0
   });
   const [profileData, setProfileData] = useState<ProfileData>({});
+  const [profilePassions, setProfilePassions] = useState<ProfilePassion | null>(null);
+  const [userTagline, setUserTagline] = useState<string | null>(null);
   
   // UI states
   const [loading, setLoading] = useState(true);
@@ -112,6 +103,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [showIndustrySelection, setShowIndustrySelection] = useState(false);
   const [showAllAchievements, setShowAllAchievements] = useState(false);
   const [showCareerGoalModal, setShowCareerGoalModal] = useState(false);
+  const [showTaglineModal, setShowTaglineModal] = useState(false);
   
   // Component lifecycle management
   useEffect(() => {
@@ -144,10 +136,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       setLoading(true);
     }
     try {
-      // Fetch basic profile info
+      // Fetch basic profile info including tagline
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('full_name, email, created_at, avatar_url')
+        .select('full_name, email, created_at, avatar_url, tagline')
         .eq('id', currentUser.id)
         .single();
 
@@ -155,6 +147,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         console.error('Error fetching profile:', profileError);
       } else if (profileData && isMountedRef.current) {
         setFullName(profileData.full_name || '');
+        setUserTagline(profileData.tagline);
         // TODO: ProfileImageService disabled due to crash - needs fixing
         // setAvatarUrl(profileImageService.getProfileImageUrl(profileData.avatar_url));
         setAvatarUrl(null);
@@ -308,62 +301,34 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         });
       }
 
-      // Fetch enhanced profile data
-      const [sectionsRes, skillsRes, experiencesRes, educationRes, projectsRes] = await Promise.all([
-        supabase.from('profile_sections').select('section_type, content').eq('user_id', currentUser.id),
-        supabase.from('user_skills').select('skill_name, proficiency_level').eq('user_id', currentUser.id).eq('is_featured', true).order('endorsement_count', { ascending: false }),
-        supabase.from('user_experiences').select('id, position_title, description, start_date, end_date, is_current, employment_type, companies (name)').eq('user_id', currentUser.id).order('start_date', { ascending: false }),
-        supabase.from('user_education').select('id, degree_name, university_name, field_of_study, start_date, end_date, is_current').eq('user_id', currentUser.id).order('start_date', { ascending: false }),
-        supabase.from('user_projects').select('title, description, start_date, end_date, status').eq('user_id', currentUser.id).order('start_date', { ascending: false })
-      ]);
+      // Fetch profile passions data
+      const { data: passionsData, error: passionsError } = await supabase
+        .from('profile_passions')
+        .select('passionate_about, working_on')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
 
-      // Process all the data
+      if (passionsError && passionsError.code !== 'PGRST116') {
+        console.error('Error fetching profile passions:', passionsError);
+      } else if (isMountedRef.current) {
+        setProfilePassions(passionsData);
+      }
+
+      // Fetch basic profile sections (summary only)
+      const { data: sectionsData } = await supabase
+        .from('profile_sections')
+        .select('section_type, content')
+        .eq('user_id', currentUser.id);
+
+      // Process basic sections data
       const sectionMap: any = {};
-      
-      if (sectionsRes.data) {
-        sectionsRes.data.forEach((section: any) => {
+
+      if (sectionsData) {
+        sectionsData.forEach((section: any) => {
           sectionMap[section.section_type] = section.content;
         });
       }
-      
-      if (skillsRes.data) {
-        sectionMap.skills = skillsRes.data.map((skill: any) => skill.skill_name);
-      }
-      
-      if (experiencesRes.data) {
-        sectionMap.experience = experiencesRes.data.map((exp: any) => ({
-          id: exp.id,
-          role: exp.position_title,
-          company: exp.companies?.name || 'Unknown Company',
-          description: exp.description,
-          period: formatDatePeriod(exp.start_date, exp.end_date, exp.is_current),
-          startDate: exp.start_date,
-          endDate: exp.end_date,
-          isCurrent: exp.is_current,
-          employmentType: exp.employment_type
-        }));
-      }
-      
-      if (educationRes.data) {
-        sectionMap.education = educationRes.data.map((edu: any) => ({
-          id: edu.id,
-          degree: `${edu.degree_name}${edu.field_of_study ? ` in ${edu.field_of_study}` : ''}`,
-          university: edu.university_name || 'Unknown Institution',
-          stage: edu.field_of_study,
-          period: formatDatePeriod(edu.start_date, edu.end_date, edu.is_current),
-          startDate: edu.start_date,
-          endDate: edu.end_date,
-          isCurrent: edu.is_current
-        }));
-      }
-      
-      if (projectsRes.data) {
-        sectionMap.projects = projectsRes.data.map((project: any) => ({
-          title: project.title,
-          description: project.description
-        }));
-      }
-      
+
       if (isMountedRef.current) {
         setProfileData(sectionMap);
       }
@@ -397,6 +362,19 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     if (isMountedRef.current) {
       setCareerGoal(goalData);
       fetchProfileData();
+    }
+  };
+
+  const handleTaglinePress = () => {
+    if (isMountedRef.current) {
+      setShowTaglineModal(true);
+    }
+  };
+
+  const handleTaglineSave = (newTagline: string | null) => {
+    if (isMountedRef.current) {
+      setUserTagline(newTagline);
+      setShowTaglineModal(false);
     }
   };
 
@@ -516,7 +494,9 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             fullName={fullName}
             avatarUrl={avatarUrl}
             userLevel={userLevel}
+            tagline={userTagline}
             onAvatarPress={() => {}}
+            onTaglinePress={handleTaglinePress}
           />
         </View>
         
@@ -573,22 +553,15 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           loading={loading}
         />
 
-        <ExperienceCard
-          experiences={profileData.experience || []}
+        <ProfilePassionsCard
+          passions={profilePassions}
           userId={currentUser?.id || ''}
           loading={loading}
           onRefresh={fetchProfileData}
         />
 
-        <EducationCard
-          education={profileData.education || []}
-          userId={currentUser?.id || ''}
-          loading={loading}
-          onRefresh={fetchProfileData}
-        />
-
-        <SkillsCard
-          skills={profileData.skills || []}
+        <ProfileWorkingOnCard
+          passions={profilePassions}
           userId={currentUser?.id || ''}
           loading={loading}
           onRefresh={fetchProfileData}
@@ -609,6 +582,14 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         onSave={handleCareerGoalSave}
         currentGoal={careerGoal}
         userId={currentUser?.id || ''}
+      />
+
+      <TaglineEditModal
+        visible={showTaglineModal}
+        onClose={() => setShowTaglineModal(false)}
+        onSave={handleTaglineSave}
+        userId={currentUser?.id || ''}
+        currentTagline={userTagline}
       />
     </View>
   );

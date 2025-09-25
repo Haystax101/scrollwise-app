@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { CommentsModal } from './CommentsModal';
 import { FlagButton } from './common/FlagButton';
+import { UserDetailModal } from './profile/UserDetailModal';
 import { formatNumber } from '../lib/utils';
 import { profileImageService } from '../services/profileImageService';
 const defaultProfileImage = require('../assets/profileIconDefault.png');
@@ -27,19 +28,6 @@ interface Comment {
   };
 }
 
-interface UserProfile {
-  id: string;
-  full_name: string;
-  avatar_url: string | null;
-  total_voltz_earned: number;
-  level: number;
-  email: string;
-  created_at: string;
-  industries: string[];
-  education: string;
-  experience: string;
-  goals: string;
-}
 
 interface InsightCardProps {
   insight: Insight;
@@ -60,7 +48,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   const [authorId, setAuthorId] = useState<string | null>(null);
   const [topComment, setTopComment] = useState<Comment | null>(null);
   const [isSupercharged, setIsSupercharged] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userModalVisible, setUserModalVisible] = useState(false);
   const [commentLiked, setCommentLiked] = useState(false);
   const [commentLikes, setCommentLikes] = useState(0);
@@ -712,71 +700,14 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     }
   }, [user, topComment, commentLiked]);
 
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      // Fetch basic profile data
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url, total_voltz_earned, level, email, created_at')
-        .eq('id', userId)
-        .single();
+  const handleUserPress = (userId: string) => {
+    setSelectedUserId(userId);
+    setUserModalVisible(true);
+  };
 
-      if (profileError || !profileData) {
-        console.error('Error fetching user profile:', profileError);
-        return;
-      }
-
-      // Fetch user industries
-      const { data: industriesData } = await supabase
-        .from('user_industries')
-        .select('industries (name)')
-        .eq('user_id', userId);
-
-      // Fetch education data
-      const { data: educationData } = await supabase
-        .from('user_education')
-        .select('universities (name), degrees (name), stage')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      // Fetch experience data
-      const { data: experienceData } = await supabase
-        .from('user_experiences')
-        .select('companies (name), experience_level, description')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      // Fetch goals data
-      const { data: goalsData } = await supabase
-        .from('user_goals')
-        .select('goal, timeframe')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      const industries = industriesData?.map((i: any) => i.industries?.name).filter(Boolean) || [];
-      const education = educationData 
-        ? `${(educationData as any).universities?.name || ''} - ${(educationData as any).degrees?.name || ''} (${educationData.stage || ''})`.replace(/^- |  - $/, '').trim()
-        : '';
-      const experience = experienceData
-        ? `${(experienceData as any).companies?.name || ''} (${experienceData.experience_level || ''})${experienceData.description ? ` - ${experienceData.description}` : ''}`.replace(/^- |  - $/, '').trim()
-        : '';
-      const goals = goalsData
-        ? `${goalsData.goal || ''} (${goalsData.timeframe || ''})`.replace(/^- |  - $/, '').trim()
-        : '';
-
-      const userProfile: UserProfile = {
-        ...profileData,
-        industries,
-        education,
-        experience,
-        goals
-      };
-
-      setSelectedUser(userProfile);
-      setUserModalVisible(true);
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
+  const handleCloseUserModal = () => {
+    setSelectedUserId(null);
+    setUserModalVisible(false);
   };
 
   return (
@@ -789,7 +720,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           style={dynamicStyles.flagButton}
         />
         {/* User Header */}
-        <TouchableOpacity style={dynamicStyles.userHeader} onPress={() => authorId && fetchUserProfile(authorId)}>
+        <TouchableOpacity style={dynamicStyles.userHeader} onPress={() => authorId && handleUserPress(authorId)}>
           <Image source={defaultProfileImage} style={dynamicStyles.avatar} />
           <View style={dynamicStyles.userInfo}>
             <View style={dynamicStyles.headerRow}>
@@ -957,109 +888,15 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         )}
       </View>
 
-      {/* User Profile Modal */}
-      <Modal
-        visible={userModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setUserModalVisible(false)}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ 
-            backgroundColor: colors.card, 
-            margin: 20, 
-            borderRadius: 16, 
-            padding: 20, 
-            maxHeight: '80%',
-            width: '90%'
-          }}>
-            {selectedUser && (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Header */}
-                <View style={{ alignItems: 'center', marginBottom: 20 }}>
-                  <Image 
-                    source={defaultProfileImage} 
-                    style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 12 }}
-                  />
-                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text, marginBottom: 4 }}>
-                    {selectedUser.full_name}
-                  </Text>
-                  <Text style={{ color: colors.textSecondary, marginBottom: 8 }}>
-                    Level {calculateLevel(selectedUser.total_voltz_earned)} • {selectedUser.total_voltz_earned} Voltz
-                  </Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                    Joined {new Date(selectedUser.created_at).toLocaleDateString()}
-                  </Text>
-                </View>
-
-                {/* Profile Details */}
-                {selectedUser.industries.length > 0 && (
-                  <View style={{ marginBottom: 16 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
-                      Industries
-                    </Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                      {selectedUser.industries.map((industry, index) => (
-                        <View key={index} style={{ 
-                          backgroundColor: colors.primary + '20', 
-                          paddingHorizontal: 12, 
-                          paddingVertical: 4, 
-                          borderRadius: 16, 
-                          marginRight: 8, 
-                          marginBottom: 4 
-                        }}>
-                          <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>{industry}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-
-                {selectedUser.education && (
-                  <View style={{ marginBottom: 16 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
-                      Education
-                    </Text>
-                    <Text style={{ color: colors.textSecondary }}>{selectedUser.education}</Text>
-                  </View>
-                )}
-
-                {selectedUser.experience && (
-                  <View style={{ marginBottom: 16 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
-                      Experience
-                    </Text>
-                    <Text style={{ color: colors.textSecondary }}>{selectedUser.experience}</Text>
-                  </View>
-                )}
-
-                {selectedUser.goals && (
-                  <View style={{ marginBottom: 16 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
-                      Goals
-                    </Text>
-                    <Text style={{ color: colors.textSecondary }}>{selectedUser.goals}</Text>
-                  </View>
-                )}
-
-                {/* Close Button */}
-                <TouchableOpacity 
-                  style={{ 
-                    backgroundColor: colors.primary, 
-                    borderRadius: 8, 
-                    paddingVertical: 12, 
-                    alignItems: 'center',
-                    marginTop: 16 
-                  }}
-                  onPress={() => setUserModalVisible(false)}
-                >
-                  <Text style={{ color: 'white', fontWeight: '600' }}>Close</Text>
-                </TouchableOpacity>
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
+      {/* User Detail Modal */}
+      {selectedUserId && (
+        <UserDetailModal
+          visible={userModalVisible}
+          onClose={handleCloseUserModal}
+          userId={selectedUserId}
+          currentUserId={user?.id}
+        />
+      )}
 
       <CommentsModal
         videoId={insight.id}

@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { FriendsService } from '../../lib/friendsService';
 import { ShareService } from '../../lib/shareService';
+import { UserDetailModal } from '../profile/UserDetailModal';
 import type { FriendProfile, LeaderboardEntry, FriendSuggestion, FriendsListItem } from '../../types/friends';
 
 export function People() {
@@ -30,6 +31,8 @@ export function People() {
   const [friends, setFriends] = useState<FriendsListItem[]>([]);
   const [, setLoading] = useState(true);
   const [requestsCount, setRequestsCount] = useState(0);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -96,6 +99,16 @@ export function People() {
     } catch (error) {
       Alert.alert('Error', 'Failed to share invitation');
     }
+  };
+
+  const handleUserPress = (userId: string) => {
+    setSelectedUserId(userId);
+    setShowUserModal(true);
+  };
+
+  const handleCloseUserModal = () => {
+    setSelectedUserId(null);
+    setShowUserModal(false);
   };
 
   const handleSendFriendRequest = async (userId: string) => {
@@ -428,12 +441,15 @@ export function People() {
       //   shouldUseDefault: !(entry.avatar_url && entry.avatar_url.trim() && entry.avatar_url !== 'null' && entry.avatar_url !== 'undefined')
       // });
       return (
-        <View
+        <TouchableOpacity
           key={entry.user_id}
           style={[
             dynamicStyles.leaderboardItem,
             isCurrentUser && dynamicStyles.currentUserItem
           ]}
+          onPress={() => handleUserPress(entry.user_id)}
+          disabled={isCurrentUser}
+          activeOpacity={isCurrentUser ? 1 : 0.7}
         >
           <Text style={[
             dynamicStyles.rank,
@@ -458,6 +474,11 @@ export function People() {
             ]}>
               {`${entry.full_name || 'Unknown'}${isCurrentUser ? ' (you)' : ''}`}
             </Text>
+            {entry.tagline && (
+              <Text style={dynamicStyles.tagline} numberOfLines={1}>
+                {entry.tagline}
+              </Text>
+            )}
           </View>
           <Text style={[
             dynamicStyles.points,
@@ -465,7 +486,7 @@ export function People() {
           ]}>
             {entry.total_voltz_earned || 0}⚡
           </Text>
-        </View>
+        </TouchableOpacity>
       );
     });
   };
@@ -475,16 +496,21 @@ export function People() {
       // console.log('🔍 PEOPLE RENDER: Suggestion:', suggestion);
       return (
         <View key={suggestion.id} style={dynamicStyles.suggestionCard}>
-          <Image
-            source={suggestion.avatar_url ? { uri: suggestion.avatar_url } : require('../../assets/profileIconDefault.png')}
-            style={dynamicStyles.suggestionAvatar}
-          />
-          <Text style={dynamicStyles.suggestionName} numberOfLines={1}>
-            {suggestion.full_name || 'Unknown'}
-          </Text>
-          <Text style={dynamicStyles.suggestionReason} numberOfLines={2}>
-            {suggestion.suggestion_reasons?.[0] || 'Suggested for you'}
-          </Text>
+          <TouchableOpacity
+            onPress={() => handleUserPress(suggestion.suggested_user_id)}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={suggestion.avatar_url ? { uri: suggestion.avatar_url } : require('../../assets/profileIconDefault.png')}
+              style={dynamicStyles.suggestionAvatar}
+            />
+            <Text style={dynamicStyles.suggestionName} numberOfLines={1}>
+              {suggestion.full_name || 'Unknown'}
+            </Text>
+            <Text style={dynamicStyles.suggestionReason} numberOfLines={2}>
+              {suggestion.suggestion_reasons?.[0] || 'Suggested for you'}
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={dynamicStyles.suggestionButton}
             onPress={() => handleSendFriendRequest(suggestion.suggested_user_id)}
@@ -500,12 +526,17 @@ export function People() {
     return friends.map((friendItem) => {
       // console.log('🔍 PEOPLE RENDER: Friend item:', friendItem);
       return (
-        <View key={friendItem.id} style={dynamicStyles.friendCard}>
+        <TouchableOpacity
+          key={friendItem.id}
+          style={dynamicStyles.friendCard}
+          onPress={() => handleUserPress(friendItem.friend_id)}
+          activeOpacity={0.7}
+        >
           <View style={dynamicStyles.friendAvatar} />
           <Text style={dynamicStyles.friendName} numberOfLines={1}>
             {friendItem.friend.full_name || 'Unknown'}
           </Text>
-        </View>
+        </TouchableOpacity>
       );
     });
   };
@@ -548,15 +579,21 @@ export function People() {
             <View style={dynamicStyles.searchResults}>
               {searchResults.map((person) => (
                 <View key={person.id} style={dynamicStyles.searchResult}>
-                  <View style={dynamicStyles.avatar} />
-                  <View style={dynamicStyles.resultInfo}>
-                    <Text style={dynamicStyles.resultName}>
-                      {person.full_name || 'Unknown'}
-                    </Text>
-                    <Text style={dynamicStyles.resultMeta}>
-                      {person.friends_count || 0} friends
-                    </Text>
-                  </View>
+                  <TouchableOpacity
+                    onPress={() => handleUserPress(person.id)}
+                    activeOpacity={0.7}
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+                  >
+                    <View style={dynamicStyles.avatar} />
+                    <View style={dynamicStyles.resultInfo}>
+                      <Text style={dynamicStyles.resultName}>
+                        {person.full_name || 'Unknown'}
+                      </Text>
+                      <Text style={dynamicStyles.resultMeta}>
+                        {person.friends_count || 0} friends
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     style={dynamicStyles.addButton}
                     onPress={() => handleSendFriendRequest(person.id)}
@@ -648,6 +685,16 @@ export function People() {
           </View>
         </View>
       </ScrollView>
+
+      {/* User Detail Modal */}
+      {selectedUserId && (
+        <UserDetailModal
+          visible={showUserModal}
+          onClose={handleCloseUserModal}
+          userId={selectedUserId}
+          currentUserId={user?.id}
+        />
+      )}
     </SafeAreaView>
   );
 }

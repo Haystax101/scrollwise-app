@@ -7,14 +7,18 @@ interface NewProfileHeaderProps {
   fullName: string;
   avatarUrl?: string | null;
   userLevel: number;
+  tagline?: string | null;
   onAvatarPress: () => void;
+  onTaglinePress: () => void;
 }
 
 export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
   fullName,
   avatarUrl,
   userLevel,
-  onAvatarPress
+  tagline,
+  onAvatarPress,
+  onTaglinePress
 }) => {
   const { colors, isDark } = useTheme();
 
@@ -64,7 +68,27 @@ export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
       fontSize: 16,
       color: colors.textSecondary,
       textAlign: 'center',
+      marginBottom: 4,
+    },
+    tagline: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      fontStyle: 'italic',
       marginBottom: 8,
+      paddingHorizontal: 20,
+    },
+    addTaglineButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderWidth: 1,
+      borderColor: colors.textSecondary,
+      borderRadius: 12,
+      marginBottom: 8,
+    },
+    addTaglineText: {
+      fontSize: 12,
+      color: colors.textSecondary,
     },
     levelBadge: {
       backgroundColor: '#EAB308',
@@ -97,6 +121,17 @@ export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
       <View style={styles.nameContainer}>
         <Text style={styles.userName}>{fullName}</Text>
         <Text style={styles.userHandle}>@{fullName.toLowerCase().replace(/\s+/g, '')}</Text>
+
+        {tagline ? (
+          <TouchableOpacity onPress={onTaglinePress}>
+            <Text style={styles.tagline}>{tagline}</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.addTaglineButton} onPress={onTaglinePress}>
+            <Text style={styles.addTaglineText}>Add tagline</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={styles.levelBadge}>
           <Feather name="zap" size={16} color="#000000" />
           <Text style={styles.levelBadgeText}>Level {userLevel}</Text>

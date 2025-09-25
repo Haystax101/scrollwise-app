@@ -97,7 +97,7 @@ CREATE TABLE public.book_comment_likes (
   user_id uuid NOT NULL,
   comment_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT book_comment_likes_pkey PRIMARY KEY (user_id, comment_id),
+  CONSTRAINT book_comment_likes_pkey PRIMARY KEY (comment_id, user_id),
   CONSTRAINT book_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.book_comments(id),
   CONSTRAINT book_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -120,7 +120,7 @@ CREATE TABLE public.book_likes (
   user_id uuid NOT NULL,
   book_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT book_likes_pkey PRIMARY KEY (user_id, book_id),
+  CONSTRAINT book_likes_pkey PRIMARY KEY (book_id, user_id),
   CONSTRAINT book_likes_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id),
   CONSTRAINT book_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -326,7 +326,7 @@ CREATE TABLE public.insight_comment_likes (
   user_id uuid NOT NULL,
   comment_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT insight_comment_likes_pkey PRIMARY KEY (user_id, comment_id),
+  CONSTRAINT insight_comment_likes_pkey PRIMARY KEY (comment_id, user_id),
   CONSTRAINT insight_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.insight_comments(id),
   CONSTRAINT insight_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -517,8 +517,22 @@ CREATE TABLE public.learning_sessions_partitioned (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT learning_sessions_partitioned_pkey PRIMARY KEY (session_start_time, id),
+  CONSTRAINT learning_sessions_partitioned_pkey PRIMARY KEY (id, session_start_time),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  type text NOT NULL CHECK (type = ANY (ARRAY['like'::text, 'comment'::text, 'friend_request'::text])),
+  source_user_id uuid NOT NULL,
+  content_type text CHECK (content_type = ANY (ARRAY['insight'::text, 'article'::text, 'paper'::text, 'book'::text])),
+  content_id text,
+  message text NOT NULL,
+  is_read boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT notifications_source_user_id_fkey FOREIGN KEY (source_user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.occupation_aliases (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -663,12 +677,12 @@ CREATE TABLE public.profiles (
   avatar_url text,
   days_streak integer DEFAULT 0,
   email text,
-  theme_preference text NOT NULL DEFAULT 'dark'::text CHECK (theme_preference = ANY (ARRAY['light'::text, 'dark'::text, 'system'::text])),
+  theme_preference text NOT NULL DEFAULT 'dark'::text CHECK (theme_preference = ANY (ARRAY['light'::text, 'dark'::text])),
   pro_plan boolean NOT NULL DEFAULT false,
   xp bigint NOT NULL DEFAULT 0,
   level integer NOT NULL DEFAULT 1,
   spendable_voltz integer DEFAULT 100,
-  bio text,
+  tagline text CHECK (length(tagline) <= 100),
   profile_completion_percentage integer DEFAULT 0 CHECK (profile_completion_percentage >= 0 AND profile_completion_percentage <= 100),
   total_voltz_earned integer DEFAULT 0,
   is_levelled boolean DEFAULT false,

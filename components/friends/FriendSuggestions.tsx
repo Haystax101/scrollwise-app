@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import { UserDetailModal } from '../profile/UserDetailModal';
 import type { FriendSuggestion } from '../../types/friends';
 
 interface FriendSuggestionsProps {
@@ -30,7 +32,10 @@ export const FriendSuggestions: React.FC<FriendSuggestionsProps> = ({
   refreshing
 }) => {
   const { colors } = useTheme();
+  const { user } = useAuth();
   const [processingUsers, setProcessingUsers] = useState<Set<string>>(new Set());
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
 
   const handleSendRequest = async (userId: string, suggestionId: string) => {
     setProcessingUsers(prev => new Set(prev).add(userId));
@@ -46,12 +51,26 @@ export const FriendSuggestions: React.FC<FriendSuggestionsProps> = ({
     }
   };
 
+  const handleUserPress = (userId: string) => {
+    setSelectedUserId(userId);
+    setShowUserModal(true);
+  };
+
+  const handleCloseUserModal = () => {
+    setSelectedUserId(null);
+    setShowUserModal(false);
+  };
+
   const renderSuggestion = ({ item }: { item: FriendSuggestion }) => {
     const isProcessing = processingUsers.has(item.suggested_user_id);
 
     return (
       <View style={[styles.suggestionCard, { borderColor: colors.border }]}>
-        <View style={styles.suggestionInfo}>
+        <TouchableOpacity
+          style={styles.suggestionInfo}
+          onPress={() => handleUserPress(item.suggested_user_id)}
+          activeOpacity={0.7}
+        >
           <Image
             source={{ uri: item.avatar_url || 'https://via.placeholder.com/50' }}
             style={styles.avatar}
@@ -97,7 +116,7 @@ export const FriendSuggestions: React.FC<FriendSuggestionsProps> = ({
               </View>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.suggestionActions}>
           <TouchableOpacity
@@ -148,22 +167,34 @@ export const FriendSuggestions: React.FC<FriendSuggestionsProps> = ({
   }
 
   return (
-    <FlatList
-      data={suggestions}
-      renderItem={renderSuggestion}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={colors.primary}
-          colors={[colors.primary]}
+    <>
+      <FlatList
+        data={suggestions}
+        renderItem={renderSuggestion}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        ListEmptyComponent={renderEmptyState}
+        showsVerticalScrollIndicator={false}
+      />
+
+      {/* User Detail Modal */}
+      {selectedUserId && (
+        <UserDetailModal
+          visible={showUserModal}
+          onClose={handleCloseUserModal}
+          userId={selectedUserId}
+          currentUserId={user?.id}
         />
-      }
-      ListEmptyComponent={renderEmptyState}
-      showsVerticalScrollIndicator={false}
-    />
+      )}
+    </>
   );
 };
 

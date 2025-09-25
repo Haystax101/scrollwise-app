@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { FriendsService } from '../../lib/friendsService';
+import { UserDetailModal } from '../profile/UserDetailModal';
 import type { LeaderboardEntry } from '../../types/friends';
 
 export function Leaderboard() {
@@ -25,6 +26,8 @@ export function Leaderboard() {
   const [friendsLeaderboard, setFriendsLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState({ global: 0, among_friends: 0 });
   const [loading, setLoading] = useState(true);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -44,6 +47,16 @@ export function Leaderboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUserPress = (userId: string) => {
+    setSelectedUserId(userId);
+    setShowUserModal(true);
+  };
+
+  const handleCloseUserModal = () => {
+    setSelectedUserId(null);
+    setShowUserModal(false);
   };
 
   const currentLeaderboard = activeTab === 'global' ? globalLeaderboard : friendsLeaderboard;
@@ -295,13 +308,16 @@ export function Leaderboard() {
             const isFriend = entry.is_friend && activeTab === 'global';
 
             return (
-              <View
+              <TouchableOpacity
                 key={entry.user_id}
                 style={[
                   dynamicStyles.leaderboardItem,
                   isCurrentUser && dynamicStyles.currentUserItem,
                   isFriend && !isCurrentUser && dynamicStyles.friendItem
                 ]}
+                onPress={() => handleUserPress(entry.user_id)}
+                disabled={isCurrentUser} // Don't allow tapping own entry
+                activeOpacity={isCurrentUser ? 1 : 0.7}
               >
                 <Text style={[
                   dynamicStyles.rank,
@@ -344,10 +360,20 @@ export function Leaderboard() {
                 <Text style={dynamicStyles.points}>
                   {entry.total_voltz_earned}⚡
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </ScrollView>
+      )}
+
+      {/* User Detail Modal */}
+      {selectedUserId && (
+        <UserDetailModal
+          visible={showUserModal}
+          onClose={handleCloseUserModal}
+          userId={selectedUserId}
+          currentUserId={user?.id}
+        />
       )}
     </SafeAreaView>
   );
