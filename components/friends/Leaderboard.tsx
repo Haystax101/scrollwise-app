@@ -149,14 +149,11 @@ export function Leaderboard() {
       marginBottom: 8,
       borderWidth: 1,
       borderColor: colors.border,
+      minHeight: 80,
     },
     currentUserItem: {
       backgroundColor: colors.primary + '10',
       borderColor: colors.primary,
-    },
-    friendItem: {
-      backgroundColor: colors.accent + '10',
-      borderColor: colors.accent,
     },
     rank: {
       fontSize: 18,
@@ -166,9 +163,6 @@ export function Leaderboard() {
     },
     currentUserRank: {
       color: colors.primary,
-    },
-    friendRank: {
-      color: colors.accent,
     },
     avatar: {
       width: 48,
@@ -201,12 +195,15 @@ export function Leaderboard() {
       fontWeight: '700',
       color: colors.primary,
     },
+    pointsContainer: {
+      alignItems: 'flex-end',
+    },
     friendBadge: {
       backgroundColor: colors.accent,
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: 10,
-      marginLeft: 8,
+      marginTop: 4,
     },
     friendBadgeText: {
       color: 'white',
@@ -302,6 +299,7 @@ export function Leaderboard() {
         <ScrollView
           style={dynamicStyles.leaderboard}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }}
         >
           {currentLeaderboard.map((entry, index) => {
             const isCurrentUser = entry.user_id === user?.id;
@@ -312,8 +310,7 @@ export function Leaderboard() {
                 key={entry.user_id}
                 style={[
                   dynamicStyles.leaderboardItem,
-                  isCurrentUser && dynamicStyles.currentUserItem,
-                  isFriend && !isCurrentUser && dynamicStyles.friendItem
+                  isCurrentUser && dynamicStyles.currentUserItem
                 ]}
                 onPress={() => handleUserPress(entry.user_id)}
                 disabled={isCurrentUser} // Don't allow tapping own entry
@@ -321,8 +318,7 @@ export function Leaderboard() {
               >
                 <Text style={[
                   dynamicStyles.rank,
-                  isCurrentUser && dynamicStyles.currentUserRank,
-                  isFriend && !isCurrentUser && dynamicStyles.friendRank
+                  isCurrentUser && dynamicStyles.currentUserRank
                 ]}>
                   #{entry.rank || index + 1} {/* Added # prefix for consistency */}
                 </Text>
@@ -336,30 +332,26 @@ export function Leaderboard() {
                   defaultSource={require('../../assets/profileIconDefault.png')}
                 />
                 <View style={dynamicStyles.userInfo}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={dynamicStyles.userName}>
-                      {entry.full_name}
-                      {isCurrentUser && ' (You)'}
-                    </Text>
-                    {isFriend && !isCurrentUser && (
-                      <View style={dynamicStyles.friendBadge}>
-                        <Text style={dynamicStyles.friendBadgeText}>Friend</Text>
-                      </View>
-                    )}
-                  </View>
+                  <Text style={dynamicStyles.userName}>
+                    {entry.full_name}
+                  </Text>
                   {/* Display tagline if available */}
                   {entry.tagline && (
-                    <Text style={dynamicStyles.tagline}>
+                    <Text style={dynamicStyles.tagline} numberOfLines={2} ellipsizeMode="tail">
                       {entry.tagline}
                     </Text>
                   )}
-                  <Text style={dynamicStyles.userMeta}>
-                    {entry.friends_count || 0} friends
-                  </Text>
                 </View>
-                <Text style={dynamicStyles.points}>
-                  {entry.total_voltz_earned}⚡
-                </Text>
+                <View style={dynamicStyles.pointsContainer}>
+                  <Text style={dynamicStyles.points}>
+                    {entry.total_voltz_earned}⚡
+                  </Text>
+                  {isFriend && !isCurrentUser && (
+                    <View style={dynamicStyles.friendBadge}>
+                      <Text style={dynamicStyles.friendBadgeText}>Friend</Text>
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>
             );
           })}

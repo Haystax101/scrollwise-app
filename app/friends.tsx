@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { FriendsService } from '../lib/friendsService';
 import { ShareService } from '../lib/shareService';
+import { UserDetailModal } from '../components/profile/UserDetailModal';
 import type { FriendsListItem, FriendSearchFilters } from '../types/friends';
 
 export default function FriendsPage() {
@@ -27,6 +28,8 @@ export default function FriendsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'recent' | 'mutual_friends'>('recent');
   const [loading, setLoading] = useState(true);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -95,6 +98,16 @@ export default function FriendsPage() {
     } catch (error) {
       Alert.alert('Error', 'Failed to share invitation');
     }
+  };
+
+  const handleUserPress = (userId: string) => {
+    setSelectedUserId(userId);
+    setShowUserModal(true);
+  };
+
+  const handleCloseUserModal = () => {
+    setSelectedUserId(null);
+    setShowUserModal(false);
   };
 
   const dynamicStyles = StyleSheet.create({
@@ -375,11 +388,21 @@ export default function FriendsPage() {
         >
           {filteredFriends.map((friendItem) => (
             <View key={friendItem.id} style={dynamicStyles.friendItem}>
-              <View style={dynamicStyles.avatar} />
+              <TouchableOpacity
+                onPress={() => handleUserPress(friendItem.friend.id)}
+                activeOpacity={0.7}
+              >
+                <View style={dynamicStyles.avatar} />
+              </TouchableOpacity>
               <View style={dynamicStyles.friendInfo}>
-                <Text style={dynamicStyles.friendName}>
-                  {friendItem.friend.full_name}
-                </Text>
+                <TouchableOpacity
+                  onPress={() => handleUserPress(friendItem.friend.id)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={dynamicStyles.friendName}>
+                    {friendItem.friend.full_name}
+                  </Text>
+                </TouchableOpacity>
                 <Text style={dynamicStyles.friendMeta}>
                   {friendItem.friend.friends_count || 0} friends
                   {friendItem.mutual_friends_count > 0 ? (
@@ -403,6 +426,16 @@ export default function FriendsPage() {
             </View>
           ))}
         </ScrollView>
+      )}
+
+      {/* User Detail Modal */}
+      {selectedUserId && (
+        <UserDetailModal
+          visible={showUserModal}
+          onClose={handleCloseUserModal}
+          userId={selectedUserId}
+          currentUserId={user?.id}
+        />
       )}
     </SafeAreaView>
   );

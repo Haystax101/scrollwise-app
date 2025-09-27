@@ -625,8 +625,8 @@ export class FriendsService {
       friends_count: 0 // This would need to be added to the leaderboard view
     })) || [];
 
-    // Filter for friends only
-    const friendsOnly = enhancedGlobal.filter(entry => entry.is_friend);
+    // Filter for friends only, but also include current user
+    const friendsOnly = enhancedGlobal.filter(entry => entry.is_friend || entry.user_id === currentUser.user.id);
 
     // Find user's rank
     const userGlobalRank = enhancedGlobal.findIndex(entry => entry.user_id === currentUser.user.id) + 1;

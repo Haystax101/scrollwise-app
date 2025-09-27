@@ -16,6 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { FriendsService } from '../../lib/friendsService';
 import { NotificationService } from '../../lib/notificationService';
+import { UserDetailModal } from '../profile/UserDetailModal';
 import type { FriendRequest, Notification } from '../../types/friends';
 
 interface NotificationItem {
@@ -45,6 +46,8 @@ export function Inbox() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -62,7 +65,7 @@ export function Inbox() {
       setSentRequests(requests.outgoing);
 
       // Load real notifications
-      const notificationsData = await NotificationService.getNotifications(user.id, 50);
+      const notificationsData = await NotificationService.getNotifications(user!.id, 50);
       setNotifications(notificationsData as NotificationItem[]);
 
     } catch (error) {
@@ -90,7 +93,7 @@ export function Inbox() {
 
   const handleRejectRequest = async (requestId: string) => {
     try {
-      await FriendsService.rejectFriendRequest(requestId);
+      await FriendsService.declineFriendRequest(requestId);
       Alert.alert('Request rejected');
       loadData();
     } catch (error) {
@@ -106,6 +109,16 @@ export function Inbox() {
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to cancel request');
     }
+  };
+
+  const handleUserPress = (userId: string) => {
+    setSelectedUserId(userId);
+    setShowUserModal(true);
+  };
+
+  const handleCloseUserModal = () => {
+    setSelectedUserId(null);
+    setShowUserModal(false);
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -323,19 +336,29 @@ export function Inbox() {
       ) : (
         receivedRequests.map((request) => (
           <View key={request.id} style={dynamicStyles.requestItem}>
-            <Image
-              source={
-                request.requester_profile?.avatar_url
-                  ? { uri: request.requester_profile.avatar_url }
-                  : require('../../assets/profileIconDefault.png')
-              }
-              style={dynamicStyles.avatar}
-              defaultSource={require('../../assets/profileIconDefault.png')}
-            />
+            <TouchableOpacity
+              onPress={() => handleUserPress(request.requester.id)}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={
+                  request.requester?.avatar_url
+                    ? { uri: request.requester.avatar_url }
+                    : require('../../assets/profileIconDefault.png')
+                }
+                style={dynamicStyles.avatar}
+                defaultSource={require('../../assets/profileIconDefault.png')}
+              />
+            </TouchableOpacity>
             <View style={dynamicStyles.requestInfo}>
-              <Text style={dynamicStyles.requestName}>
-                {request.requester_profile?.full_name}
-              </Text>
+              <TouchableOpacity
+                onPress={() => handleUserPress(request.requester.id)}
+                activeOpacity={0.7}
+              >
+                <Text style={dynamicStyles.requestName}>
+                  {request.requester?.full_name}
+                </Text>
+              </TouchableOpacity>
               <Text style={dynamicStyles.requestMessage}>
                 Sent you a friend request
               </Text>
@@ -380,19 +403,29 @@ export function Inbox() {
       ) : (
         sentRequests.map((request) => (
           <View key={request.id} style={dynamicStyles.requestItem}>
-            <Image
-              source={
-                request.addressee_profile?.avatar_url
-                  ? { uri: request.addressee_profile.avatar_url }
-                  : require('../../assets/profileIconDefault.png')
-              }
-              style={dynamicStyles.avatar}
-              defaultSource={require('../../assets/profileIconDefault.png')}
-            />
+            <TouchableOpacity
+              onPress={() => handleUserPress(request.addressee.id)}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={
+                  request.addressee?.avatar_url
+                    ? { uri: request.addressee.avatar_url }
+                    : require('../../assets/profileIconDefault.png')
+                }
+                style={dynamicStyles.avatar}
+                defaultSource={require('../../assets/profileIconDefault.png')}
+              />
+            </TouchableOpacity>
             <View style={dynamicStyles.requestInfo}>
-              <Text style={dynamicStyles.requestName}>
-                {request.addressee_profile?.full_name}
-              </Text>
+              <TouchableOpacity
+                onPress={() => handleUserPress(request.addressee.id)}
+                activeOpacity={0.7}
+              >
+                <Text style={dynamicStyles.requestName}>
+                  {request.addressee?.full_name}
+                </Text>
+              </TouchableOpacity>
               <Text style={dynamicStyles.requestMessage}>
                 Friend request sent
               </Text>
@@ -516,6 +549,16 @@ export function Inbox() {
 
       {/* Content */}
       {renderActiveTab()}
+
+      {/* User Detail Modal */}
+      {selectedUserId && (
+        <UserDetailModal
+          visible={showUserModal}
+          onClose={handleCloseUserModal}
+          userId={selectedUserId}
+          currentUserId={user?.id}
+        />
+      )}
     </SafeAreaView>
   );
 }

@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { FriendsService } from '../lib/friendsService';
+import { UserDetailModal } from '../components/profile/UserDetailModal';
 import type { FriendSuggestion } from '../types/friends';
 
 export default function SuggestionsPage() {
@@ -24,6 +25,8 @@ export default function SuggestionsPage() {
   const [suggestions, setSuggestions] = useState<FriendSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingUsers, setProcessingUsers] = useState<Set<string>>(new Set());
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -83,6 +86,16 @@ export default function SuggestionsPage() {
     } catch (error) {
       Alert.alert('Error', 'Failed to dismiss suggestion');
     }
+  };
+
+  const handleUserPress = (userId: string) => {
+    setSelectedUserId(userId);
+    setShowUserModal(true);
+  };
+
+  const handleCloseUserModal = () => {
+    setSelectedUserId(null);
+    setShowUserModal(false);
   };
 
   const dynamicStyles = StyleSheet.create({
@@ -298,14 +311,24 @@ export default function SuggestionsPage() {
 
             return (
               <View key={suggestion.id} style={dynamicStyles.suggestionCard}>
-                <Image
-                  source={suggestion.avatar_url ? { uri: suggestion.avatar_url } : require('../assets/profileIconDefault.png')}
-                  style={dynamicStyles.avatar}
-                />
+                <TouchableOpacity
+                  onPress={() => handleUserPress(suggestion.suggested_user_id)}
+                  activeOpacity={0.7}
+                >
+                  <Image
+                    source={suggestion.avatar_url ? { uri: suggestion.avatar_url } : require('../assets/profileIconDefault.png')}
+                    style={dynamicStyles.avatar}
+                  />
+                </TouchableOpacity>
                 <View style={dynamicStyles.suggestionInfo}>
-                  <Text style={dynamicStyles.suggestionName}>
-                    {suggestion.full_name}
-                  </Text>
+                  <TouchableOpacity
+                    onPress={() => handleUserPress(suggestion.suggested_user_id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={dynamicStyles.suggestionName}>
+                      {suggestion.full_name}
+                    </Text>
+                  </TouchableOpacity>
                   <Text style={dynamicStyles.suggestionScore}>
                     {suggestion.mutual_friends_count > 0 &&
                       `${suggestion.mutual_friends_count} mutual friend${suggestion.mutual_friends_count > 1 ? 's' : ''}`
@@ -361,6 +384,16 @@ export default function SuggestionsPage() {
             );
           })}
         </ScrollView>
+      )}
+
+      {/* User Detail Modal */}
+      {selectedUserId && (
+        <UserDetailModal
+          visible={showUserModal}
+          onClose={handleCloseUserModal}
+          userId={selectedUserId}
+          currentUserId={user?.id}
+        />
       )}
     </SafeAreaView>
   );

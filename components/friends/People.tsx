@@ -33,6 +33,7 @@ export function People() {
   const [requestsCount, setRequestsCount] = useState(0);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [addedUsers, setAddedUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) {
@@ -115,6 +116,9 @@ export function People() {
     try {
       await FriendsService.sendFriendRequest(userId);
       Alert.alert('Success', 'Friend request sent!');
+
+      // Add to added users set
+      setAddedUsers(prev => new Set(prev).add(userId));
 
       // Remove the suggestion from the list immediately
       setSuggestions(prev => prev.filter(suggestion => suggestion.suggested_user_id !== userId));
@@ -232,6 +236,12 @@ export function People() {
       fontSize: 14,
       fontWeight: '600',
     },
+    addButtonAdded: {
+      backgroundColor: colors.border,
+    },
+    addButtonAddedText: {
+      color: colors.textSecondary,
+    },
     section: {
       marginBottom: 32,
     },
@@ -332,6 +342,7 @@ export function People() {
       borderRadius: 30,
       backgroundColor: colors.border,
       marginBottom: 8,
+      alignSelf: 'center',
     },
     suggestionName: {
       fontSize: 14,
@@ -356,6 +367,12 @@ export function People() {
       color: 'white',
       fontSize: 12,
       fontWeight: '600',
+    },
+    suggestionButtonAdded: {
+      backgroundColor: colors.border,
+    },
+    suggestionButtonAddedText: {
+      color: colors.textSecondary,
     },
     friendsGrid: {
       paddingHorizontal: 16,
@@ -474,11 +491,6 @@ export function People() {
             ]}>
               {`${entry.full_name || 'Unknown'}${isCurrentUser ? ' (you)' : ''}`}
             </Text>
-            {entry.tagline && (
-              <Text style={dynamicStyles.tagline} numberOfLines={1}>
-                {entry.tagline}
-              </Text>
-            )}
           </View>
           <Text style={[
             dynamicStyles.points,
@@ -494,6 +506,7 @@ export function People() {
   const renderSuggestions = () => {
     return suggestions.map((suggestion) => {
       // console.log('🔍 PEOPLE RENDER: Suggestion:', suggestion);
+      const hasBeenAdded = addedUsers.has(suggestion.suggested_user_id);
       return (
         <View key={suggestion.id} style={dynamicStyles.suggestionCard}>
           <TouchableOpacity
@@ -512,10 +525,19 @@ export function People() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={dynamicStyles.suggestionButton}
+            style={[
+              dynamicStyles.suggestionButton,
+              hasBeenAdded && dynamicStyles.suggestionButtonAdded
+            ]}
             onPress={() => handleSendFriendRequest(suggestion.suggested_user_id)}
+            disabled={hasBeenAdded}
           >
-            <Text style={dynamicStyles.suggestionButtonText}>Add</Text>
+            <Text style={[
+              dynamicStyles.suggestionButtonText,
+              hasBeenAdded && dynamicStyles.suggestionButtonAddedText
+            ]}>
+              {hasBeenAdded ? 'Added' : 'Add'}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -529,7 +551,7 @@ export function People() {
         <TouchableOpacity
           key={friendItem.id}
           style={dynamicStyles.friendCard}
-          onPress={() => handleUserPress(friendItem.friend_id)}
+          onPress={() => handleUserPress(friendItem.friend.id)}
           activeOpacity={0.7}
         >
           <View style={dynamicStyles.friendAvatar} />
@@ -577,31 +599,43 @@ export function People() {
 
           {searchResults.length > 0 && (
             <View style={dynamicStyles.searchResults}>
-              {searchResults.map((person) => (
-                <View key={person.id} style={dynamicStyles.searchResult}>
-                  <TouchableOpacity
-                    onPress={() => handleUserPress(person.id)}
-                    activeOpacity={0.7}
-                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
-                  >
-                    <View style={dynamicStyles.avatar} />
-                    <View style={dynamicStyles.resultInfo}>
-                      <Text style={dynamicStyles.resultName}>
-                        {person.full_name || 'Unknown'}
+              {searchResults.map((person) => {
+                const hasBeenAdded = addedUsers.has(person.id);
+                return (
+                  <View key={person.id} style={dynamicStyles.searchResult}>
+                    <TouchableOpacity
+                      onPress={() => handleUserPress(person.id)}
+                      activeOpacity={0.7}
+                      style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+                    >
+                      <View style={dynamicStyles.avatar} />
+                      <View style={dynamicStyles.resultInfo}>
+                        <Text style={dynamicStyles.resultName}>
+                          {person.full_name || 'Unknown'}
+                        </Text>
+                        <Text style={dynamicStyles.resultMeta}>
+                          {person.friends_count || 0} friends
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        dynamicStyles.addButton,
+                        hasBeenAdded && dynamicStyles.addButtonAdded
+                      ]}
+                      onPress={() => handleSendFriendRequest(person.id)}
+                      disabled={hasBeenAdded}
+                    >
+                      <Text style={[
+                        dynamicStyles.addButtonText,
+                        hasBeenAdded && dynamicStyles.addButtonAddedText
+                      ]}>
+                        {hasBeenAdded ? 'Added' : 'Add'}
                       </Text>
-                      <Text style={dynamicStyles.resultMeta}>
-                        {person.friends_count || 0} friends
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={dynamicStyles.addButton}
-                    onPress={() => handleSendFriendRequest(person.id)}
-                  >
-                    <Text style={dynamicStyles.addButtonText}>Add</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
             </View>
           )}
         </View>
