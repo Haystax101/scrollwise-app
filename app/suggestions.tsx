@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { FriendsService } from '../lib/friendsService';
 import { UserDetailModal } from '../components/profile/UserDetailModal';
+import { profileImageService } from '../services/profileImageService';
 import type { FriendSuggestion } from '../types/friends';
 
 export default function SuggestionsPage() {
@@ -316,7 +317,11 @@ export default function SuggestionsPage() {
                   activeOpacity={0.7}
                 >
                   <Image
-                    source={suggestion.avatar_url ? { uri: suggestion.avatar_url } : require('../assets/profileIconDefault.png')}
+                    source={
+                      suggestion.avatar_url
+                        ? { uri: profileImageService.getProfileImageUrl(suggestion.avatar_url) }
+                        : require('../assets/profileIconDefault.png')
+                    }
                     style={dynamicStyles.avatar}
                   />
                 </TouchableOpacity>

@@ -18,15 +18,17 @@ import { profileImageService } from '../../services/profileImageService';
 interface PhotoUploadModalProps {
   visible: boolean;
   onClose: () => void;
-  onImageUploaded: (imageUrl: string) => void;
+  onImageUploaded: (imageUrl: string | null) => void;
   userId: string;
+  currentAvatarUrl?: string | null;
 }
 
 export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   visible,
   onClose,
   onImageUploaded,
-  userId
+  userId,
+  currentAvatarUrl
 }) => {
   const { colors } = useTheme();
   const [uploading, setUploading] = useState(false);
@@ -116,6 +118,38 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
     }
   };
 
+  const handleRemovePhoto = async () => {
+    Alert.alert(
+      'Remove Photo',
+      'Are you sure you want to remove your profile photo?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            setUploading(true);
+            try {
+              const success = await profileImageService.removeUserAvatar(userId);
+              if (success) {
+                onImageUploaded(null);
+                onClose();
+                Alert.alert('Success', 'Profile photo removed successfully!');
+              } else {
+                Alert.alert('Error', 'Failed to remove photo. Please try again.');
+              }
+            } catch (error) {
+              console.error('❌ Remove photo error:', error);
+              Alert.alert('Error', 'Failed to remove photo. Please try again.');
+            } finally {
+              setUploading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const styles = StyleSheet.create({
     modalOverlay: {
       flex: 1,
@@ -151,21 +185,26 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
       alignItems: 'center',
       paddingHorizontal: 24,
       paddingVertical: 18,
+      minHeight: 64,
     },
     optionIcon: {
       marginRight: 16,
       width: 24,
       alignItems: 'center',
     },
+    optionTextContainer: {
+      flex: 1,
+    },
     optionText: {
       fontSize: 16,
       color: colors.text,
-      flex: 1,
+      fontWeight: '500',
+      marginBottom: 2,
     },
     optionDescription: {
       fontSize: 14,
       color: colors.textSecondary,
-      marginTop: 2,
+      lineHeight: 18,
     },
     cancelButton: {
       borderTopWidth: 1,
@@ -224,7 +263,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                   <View style={styles.optionIcon}>
                     <Feather name="camera" size={24} color={colors.text} />
                   </View>
-                  <View style={{ flex: 1 }}>
+                  <View style={styles.optionTextContainer}>
                     <Text style={styles.optionText}>Take Photo</Text>
                     <Text style={styles.optionDescription}>
                       Use your camera to take a new photo
@@ -239,13 +278,30 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                   <View style={styles.optionIcon}>
                     <Feather name="image" size={24} color={colors.text} />
                   </View>
-                  <View style={{ flex: 1 }}>
+                  <View style={styles.optionTextContainer}>
                     <Text style={styles.optionText}>Choose from Library</Text>
                     <Text style={styles.optionDescription}>
                       Select a photo from your gallery
                     </Text>
                   </View>
                 </TouchableOpacity>
+
+                {currentAvatarUrl && (
+                  <TouchableOpacity
+                    style={styles.option}
+                    onPress={handleRemovePhoto}
+                  >
+                    <View style={styles.optionIcon}>
+                      <Feather name="trash-2" size={24} color={colors.error} />
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                      <Text style={[styles.optionText, { color: colors.error }]}>Remove Photo</Text>
+                      <Text style={styles.optionDescription}>
+                        Remove your current profile photo
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
               </View>
 
               <TouchableOpacity style={styles.cancelButton} onPress={onClose}>

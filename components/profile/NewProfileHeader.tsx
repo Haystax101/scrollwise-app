@@ -108,10 +108,15 @@ export const NewProfileHeader: React.FC<NewProfileHeaderProps> = ({
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.avatarContainer} disabled={true}>
+      <TouchableOpacity style={styles.avatarContainer} onPress={onAvatarPress}>
         <Image
-          source={require('../../assets/profileIconDefault.png')}
+          source={
+            avatarUrl
+              ? { uri: avatarUrl }
+              : require('../../assets/profileIconDefault.png')
+          }
           style={styles.avatar}
+          defaultSource={require('../../assets/profileIconDefault.png')}
         />
         <View style={styles.avatarEditOverlay}>
           <Feather name="zap" size={16} color="#000000" />

@@ -15,12 +15,14 @@ import { TaglineEditModal } from './TaglineEditModal';
 import { IndustrySelectionPage } from './IndustrySelectionPage';
 import { AllAchievementsPage } from './AllAchievementsPage';
 import { CareerGoalEditModal } from './CareerGoalEditModal';
+import { PhotoUploadModal } from './PhotoUploadModal';
 import { OnboardingProgressCard } from '../onboarding/OnboardingProgressCard';
 import SettingsModal from '../SettingsModal';
 import { supabase } from '../../lib/supabase';
 import { voltzService } from '../../lib/voltzService';
 import { AchievementService, UserAchievement } from '../../services/achievementService';
 import { onboardingService } from '../../services/onboardingService';
+import { profileImageService } from '../../services/profileImageService';
 import { useIndustries } from '../../context/IndustriesContext';
 import type { Industry } from '../../types';
 
@@ -104,6 +106,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [showAllAchievements, setShowAllAchievements] = useState(false);
   const [showCareerGoalModal, setShowCareerGoalModal] = useState(false);
   const [showTaglineModal, setShowTaglineModal] = useState(false);
+  const [showPhotoUploadModal, setShowPhotoUploadModal] = useState(false);
   
   // Component lifecycle management
   useEffect(() => {
@@ -148,9 +151,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       } else if (profileData && isMountedRef.current) {
         setFullName(profileData.full_name || '');
         setUserTagline(profileData.tagline);
-        // TODO: ProfileImageService disabled due to crash - needs fixing
-        // setAvatarUrl(profileImageService.getProfileImageUrl(profileData.avatar_url));
-        setAvatarUrl(null);
+        setAvatarUrl(profileImageService.getProfileImageUrl(profileData.avatar_url));
       }
 
       // Fetch comprehensive voltz stats using voltzService
@@ -378,6 +379,19 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     }
   };
 
+  const handleAvatarPress = () => {
+    if (isMountedRef.current) {
+      setShowPhotoUploadModal(true);
+    }
+  };
+
+  const handlePhotoUploaded = (newAvatarUrl: string | null) => {
+    if (isMountedRef.current) {
+      setAvatarUrl(newAvatarUrl);
+      setShowPhotoUploadModal(false);
+    }
+  };
+
   const handleEditIndustries = () => {
     if (isMountedRef.current) {
       setShowIndustrySelection(true);
@@ -495,7 +509,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             avatarUrl={avatarUrl}
             userLevel={userLevel}
             tagline={userTagline}
-            onAvatarPress={() => {}}
+            onAvatarPress={handleAvatarPress}
             onTaglinePress={handleTaglinePress}
           />
         </View>
@@ -590,6 +604,14 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         onSave={handleTaglineSave}
         userId={currentUser?.id || ''}
         currentTagline={userTagline}
+      />
+
+      <PhotoUploadModal
+        visible={showPhotoUploadModal}
+        onClose={() => setShowPhotoUploadModal(false)}
+        onImageUploaded={handlePhotoUploaded}
+        userId={currentUser?.id || ''}
+        currentAvatarUrl={avatarUrl}
       />
     </View>
   );

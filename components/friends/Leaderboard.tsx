@@ -14,6 +14,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { FriendsService } from '../../lib/friendsService';
 import { UserDetailModal } from '../profile/UserDetailModal';
+import { profileImageService } from '../../services/profileImageService';
 import type { LeaderboardEntry } from '../../types/friends';
 
 export function Leaderboard() {
@@ -325,7 +326,7 @@ export function Leaderboard() {
                 <Image
                   source={
                     (entry.avatar_url && entry.avatar_url.trim() && entry.avatar_url !== 'null' && entry.avatar_url !== 'undefined')
-                      ? { uri: entry.avatar_url }
+                      ? { uri: profileImageService.getProfileImageUrl(entry.avatar_url) }
                       : require('../../assets/profileIconDefault.png')
                   }
                   style={dynamicStyles.avatar}

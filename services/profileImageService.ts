@@ -13,8 +13,8 @@ const compressImage = async (uri: string): Promise<string> => {
     console.log('Compressing image:', uri);
     const result = await manipulateAsync(
       uri,
-      [{ resize: { width: 400 } }], // Max width 400px
-      { compress: 0.7, format: SaveFormat.JPEG } // 70% quality
+      [{ resize: { width: 300 } }], // Max width 300px
+      { compress: 0.6, format: SaveFormat.JPEG } // 60% quality
     );
     console.log('Image compressed successfully:', {
       originalUri: uri,
@@ -76,14 +76,23 @@ export const profileImageService = {
    * Returns the public URL and path of the uploaded image.
    */
   async uploadProfileImage(
-    userId: string, 
-    imageUri: string, 
+    userId: string,
+    imageUri: string,
     fileName?: string
   ): Promise<{ url: string | null; path: string | null; error: Error | null }> {
     try {
-      console.log('Starting profile image upload for user:', userId);
-      console.log('Original image URI:', imageUri);
-      
+      console.log('🚀 Starting profile image upload for user:', userId);
+      console.log('📷 Original image URI:', imageUri);
+
+      // Get current avatar_url to delete old file later
+      console.log('🔍 Getting current avatar URL to delete old file...');
+      const currentAvatarPath = await this.getCurrentUserAvatarPath(userId);
+      if (currentAvatarPath) {
+        console.log('🎯 Found existing avatar to delete:', currentAvatarPath);
+      } else {
+        console.log('✨ No existing avatar found for user (first upload or no previous avatar)');
+      }
+
       // Compress image before upload to save bucket space
       console.log('Compressing profile image...');
       const compressedUri = await compressImage(imageUri);
@@ -132,11 +141,29 @@ export const profileImageService = {
       const updateSuccess = await this.updateUserAvatarUrl(userId, data.path);
       if (!updateSuccess) {
         console.error('Failed to update user avatar URL in database');
-        return { 
-          url: null, 
-          path: null, 
-          error: new Error('Failed to update user avatar URL in database') 
+        return {
+          url: null,
+          path: null,
+          error: new Error('Failed to update user avatar URL in database')
         };
+      }
+
+      // Clean up ALL old avatar files for this user, keeping only the current one
+      console.log('🧹 Cleaning up old avatar files for user...');
+
+      // Add a small delay to ensure new upload is fully completed before cleanup
+      console.log('⏳ Waiting 1 second for upload to complete before cleanup...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const cleanupResult = await this.cleanupUserAvatarFiles(userId, data.path);
+      if (cleanupResult.cleaned > 0) {
+        console.log(`✅ Successfully cleaned up ${cleanupResult.cleaned} old avatar file(s)`);
+      } else {
+        console.log('ℹ️ No old avatar files found to clean up');
+      }
+
+      if (cleanupResult.errors.length > 0) {
+        console.warn('⚠️ Some cleanup errors occurred:', cleanupResult.errors);
       }
 
       // Generate public URL
@@ -196,22 +223,43 @@ export const profileImageService = {
 
   /**
    * Remove user's profile image (set back to default).
+   * This deletes ALL user avatar files from storage and sets avatar_url to null in database.
    */
   async removeUserAvatar(userId: string): Promise<boolean> {
     try {
+      console.log('🗑️ Removing user avatar for user:', userId);
+
+      // Update database first (set avatar_url to null)
       const { error } = await supabase
         .from('profiles')
         .update({ avatar_url: null })
         .eq('id', userId);
 
       if (error) {
-        console.error('Error removing user avatar:', error);
+        console.error('❌ Error removing user avatar from database:', error);
         return false;
+      }
+
+      console.log('✅ Successfully updated database to remove avatar_url');
+
+      // Clean up ALL avatar files for this user from storage
+      console.log('🧹 Cleaning up all avatar files for user...');
+      const cleanupResult = await this.cleanupUserAvatarFiles(userId, ''); // Empty string means delete all user files
+
+      if (cleanupResult.cleaned > 0) {
+        console.log(`✅ Successfully cleaned up ${cleanupResult.cleaned} avatar file(s) from storage`);
+      } else {
+        console.log('ℹ️ No avatar files found in storage to clean up');
+      }
+
+      if (cleanupResult.errors.length > 0) {
+        console.warn('⚠️ Some cleanup errors occurred:', cleanupResult.errors);
+        // Still return true since database was updated successfully
       }
 
       return true;
     } catch (error) {
-      console.error('Exception removing user avatar:', error);
+      console.error('❌ Exception removing user avatar:', error);
       return false;
     }
   },
@@ -221,5 +269,294 @@ export const profileImageService = {
    */
   isDefaultProfileImage(avatarUrl: string | null | undefined): boolean {
     return !avatarUrl || avatarUrl.trim() === '';
+  },
+
+  /**
+   * Get current user's avatar path from database.
+   * Returns null if user has no avatar or if there's an error.
+   */
+  async getCurrentUserAvatarPath(userId: string): Promise<string | null> {
+    try {
+      console.log('Fetching current avatar path for user:', userId);
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching current avatar path:', error);
+        return null;
+      }
+
+      const avatarPath = data?.avatar_url;
+      if (!avatarPath || avatarPath.trim() === '') {
+        console.log('User has no current avatar');
+        return null;
+      }
+
+      // Skip deletion if it's a full URL (external image)
+      if (avatarPath.startsWith('http://') || avatarPath.startsWith('https://')) {
+        console.log('Current avatar is external URL, not deleting:', avatarPath);
+        return null;
+      }
+
+      console.log('✅ Current avatar path found:', avatarPath);
+      console.log('📋 Avatar path details:', {
+        path: avatarPath,
+        pathType: typeof avatarPath,
+        pathLength: avatarPath.length,
+        isStoragePath: !avatarPath.startsWith('http')
+      });
+      return avatarPath;
+    } catch (error) {
+      console.error('Exception fetching current avatar path:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Delete avatar file from Supabase storage.
+   * This is used to clean up old avatar files when users upload new ones.
+   */
+  async deleteAvatarFromStorage(avatarPath: string): Promise<boolean> {
+    try {
+      console.log('Attempting to delete avatar from storage:', avatarPath);
+
+      // The Supabase storage remove API expects an array of file paths
+      console.log('🗑️ Calling Supabase storage remove with:', [avatarPath]);
+
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .remove([avatarPath]);
+
+      if (error) {
+        console.error('❌ Supabase storage deletion error:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          name: error.name,
+          avatarPath
+        });
+        return false;
+      }
+
+      // Log the exact response from Supabase
+      console.log('📋 Supabase delete response:', {
+        data: data,
+        dataType: typeof data,
+        dataLength: data?.length,
+        hasData: !!data,
+        isArray: Array.isArray(data)
+      });
+
+      // Check if deletion actually occurred
+      if (!data || data.length === 0) {
+        console.warn('⚠️ Deletion request succeeded but no files were reported as deleted');
+        console.warn('⚠️ This might mean:');
+        console.warn('   - File didn\'t exist in storage');
+        console.warn('   - Path was incorrect');
+        console.warn('   - File was already deleted');
+        console.warn('   - Timing issue with concurrent operations');
+        return false;
+      }
+
+      console.log('✅ Successfully deleted avatar from storage:', {
+        avatarPath,
+        deletedFiles: data,
+        deletedCount: data.length,
+        firstDeletedFile: data[0]
+      });
+      return true;
+    } catch (error) {
+      console.error('❌ Exception during avatar deletion:', error);
+      console.error('❌ Exception details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        avatarPath
+      });
+      return false;
+    }
+  },
+
+  /**
+   * Clean up all old avatar files for a specific user, keeping only the current one.
+   * This ensures each user has only one avatar file in storage.
+   */
+  async cleanupUserAvatarFiles(userId: string, currentFilePath: string): Promise<{ cleaned: number; errors: string[] }> {
+    try {
+      console.log('🧹 Starting cleanup of old avatar files for user:', userId);
+      console.log('🎯 Current file to keep:', currentFilePath);
+
+      // Get all files in the avatars bucket
+      const { data: allFiles, error: listError } = await supabase.storage
+        .from('avatars')
+        .list();
+
+      if (listError) {
+        console.error('❌ Error listing avatar files:', listError);
+        return { cleaned: 0, errors: [listError.message] };
+      }
+
+      if (!allFiles || allFiles.length === 0) {
+        console.log('📁 No files found in avatars bucket');
+        return { cleaned: 0, errors: [] };
+      }
+
+      // Find all files belonging to this user (files start with userId)
+      const userFiles = allFiles.filter(file =>
+        file.name && file.name.startsWith(userId)
+      );
+
+      console.log('📋 User files analysis:', {
+        totalFiles: allFiles.length,
+        userFiles: userFiles.length,
+        userFileNames: userFiles.map(f => f.name),
+        currentFile: currentFilePath
+      });
+
+      // Find files to delete (all user files except the current one)
+      const filesToDelete = userFiles.filter(file =>
+        file.name !== currentFilePath
+      );
+
+      console.log('🗑️ Files to delete:', {
+        count: filesToDelete.length,
+        files: filesToDelete.map(f => f.name)
+      });
+
+      if (filesToDelete.length === 0) {
+        console.log('✨ No old files to clean up');
+        return { cleaned: 0, errors: [] };
+      }
+
+      const errors: string[] = [];
+      let cleaned = 0;
+
+      // Delete each old file
+      for (const file of filesToDelete) {
+        try {
+          console.log(`🗑️ Deleting old file: ${file.name}`);
+
+          const { data, error } = await supabase.storage
+            .from('avatars')
+            .remove([file.name]);
+
+          console.log(`🔍 Delete response for ${file.name}:`, {
+            hasError: !!error,
+            error: error,
+            data: data,
+            dataType: typeof data,
+            dataLength: data?.length
+          });
+
+          if (error) {
+            const errorMsg = `Failed to delete ${file.name}: ${error.message}`;
+            console.error('❌', errorMsg);
+            errors.push(errorMsg);
+          } else if (!data || data.length === 0) {
+            const warningMsg = `Delete request for ${file.name} succeeded but no files were deleted (likely permissions issue)`;
+            console.warn('⚠️', warningMsg);
+            console.warn('💡 Check Supabase Storage policies for DELETE operations on avatars bucket');
+            errors.push(warningMsg);
+          } else {
+            console.log('✅ Successfully deleted:', file.name);
+            cleaned++;
+          }
+        } catch (error) {
+          const errorMsg = `Exception deleting ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          console.error('❌', errorMsg);
+          errors.push(errorMsg);
+        }
+      }
+
+      console.log(`🧹 Cleanup completed: ${cleaned} files cleaned, ${errors.length} errors`);
+      return { cleaned, errors };
+
+    } catch (error) {
+      console.error('❌ Exception during user avatar cleanup:', error);
+      return { cleaned: 0, errors: [error instanceof Error ? error.message : 'Unknown error'] };
+    }
+  },
+
+  /**
+   * Clean up orphaned avatar files in storage.
+   * This is a utility method to remove files that exist in storage but are not referenced in the database.
+   * Use with caution - should only be run by administrators.
+   */
+  async cleanupOrphanedAvatars(): Promise<{ cleaned: number; errors: string[] }> {
+    try {
+      console.log('Starting cleanup of orphaned avatar files...');
+
+      // Get all files in the avatars bucket
+      const { data: files, error: listError } = await supabase.storage
+        .from('avatars')
+        .list();
+
+      if (listError) {
+        console.error('Error listing avatar files:', listError);
+        return { cleaned: 0, errors: [listError.message] };
+      }
+
+      if (!files || files.length === 0) {
+        console.log('No avatar files found in storage');
+        return { cleaned: 0, errors: [] };
+      }
+
+      console.log(`Found ${files.length} files in avatars storage`);
+
+      // Get all avatar_url references from the database
+      const { data: profiles, error: dbError } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .not('avatar_url', 'is', null);
+
+      if (dbError) {
+        console.error('Error fetching avatar URLs from database:', dbError);
+        return { cleaned: 0, errors: [dbError.message] };
+      }
+
+      const referencedPaths = new Set(
+        (profiles || [])
+          .map(p => p.avatar_url)
+          .filter(url => url && !url.startsWith('http'))
+      );
+
+      console.log(`Found ${referencedPaths.size} referenced avatar paths in database`);
+
+      // Find orphaned files
+      const orphanedFiles = files.filter(file =>
+        file.name && !referencedPaths.has(file.name)
+      );
+
+      console.log(`Found ${orphanedFiles.length} orphaned files to clean up`);
+
+      const errors: string[] = [];
+      let cleaned = 0;
+
+      // Delete orphaned files
+      for (const file of orphanedFiles) {
+        try {
+          const success = await this.deleteAvatarFromStorage(file.name);
+          if (success) {
+            cleaned++;
+            console.log(`Cleaned up orphaned file: ${file.name}`);
+          } else {
+            errors.push(`Failed to delete ${file.name}`);
+          }
+        } catch (error) {
+          const errorMsg = `Error deleting ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          console.error(errorMsg);
+          errors.push(errorMsg);
+        }
+      }
+
+      console.log(`Cleanup completed: ${cleaned} files cleaned, ${errors.length} errors`);
+      return { cleaned, errors };
+
+    } catch (error) {
+      console.error('Exception during avatar cleanup:', error);
+      return { cleaned: 0, errors: [error instanceof Error ? error.message : 'Unknown error'] };
+    }
   },
 };

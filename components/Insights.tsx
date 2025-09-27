@@ -100,7 +100,7 @@ const Insights = () => {
         .select(`
           insights!insight_id(
             id, content, created_at, likes_count, comments_count, views_count, author_id,
-            author:profiles!author_id(full_name)
+            author:profiles!author_id(full_name, avatar_url)
           )
         `)
         .eq('user_id', user.id)

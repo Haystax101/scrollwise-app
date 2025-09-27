@@ -4,6 +4,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { formatNumber } from '../../lib/utils';
 import { Insight } from '../../types';
+import { profileImageService } from '../../services/profileImageService';
 const defaultProfileImage = require('../../assets/profileIconDefault.png');
 
 interface InsightsCardsListProps {
@@ -242,7 +243,14 @@ export const InsightsCardsList: React.FC<InsightsCardsListProps> = ({
           
           {/* User Header */}
           <View style={styles.userHeader}>
-            <Image source={defaultProfileImage} style={styles.avatar} />
+            <Image
+              source={
+                insight.author?.avatar
+                  ? { uri: profileImageService.getProfileImageUrl(insight.author.avatar) }
+                  : defaultProfileImage
+              }
+              style={styles.avatar}
+            />
             <View style={styles.userInfo}>
               <Text style={styles.name}>{insight.author?.name || 'User'}</Text>
               {insight.created_at && (

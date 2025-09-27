@@ -12,6 +12,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
+import { profileImageService } from '../../services/profileImageService';
 
 interface UserProfile {
   id: string;
@@ -428,7 +429,11 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               {/* Profile Header */}
               <View style={styles.profileHeader}>
                 <Image
-                  source={require('../../assets/profileIconDefault.png')}
+                  source={
+                    profile.avatar_url
+                      ? { uri: profileImageService.getProfileImageUrl(profile.avatar_url) }
+                      : require('../../assets/profileIconDefault.png')
+                  }
                   style={styles.avatar}
                 />
                 <Text style={styles.name}>{profile.full_name}</Text>

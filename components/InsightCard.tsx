@@ -721,7 +721,14 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         />
         {/* User Header */}
         <TouchableOpacity style={dynamicStyles.userHeader} onPress={() => authorId && handleUserPress(authorId)}>
-          <Image source={defaultProfileImage} style={dynamicStyles.avatar} />
+          <Image
+            source={
+              insight.author.avatar
+                ? { uri: profileImageService.getProfileImageUrl(insight.author.avatar) }
+                : defaultProfileImage
+            }
+            style={dynamicStyles.avatar}
+          />
           <View style={dynamicStyles.userInfo}>
             <View style={dynamicStyles.headerRow}>
               <View style={dynamicStyles.textContainer}>
@@ -801,7 +808,11 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
             <View style={dynamicStyles.commentDisplay}>
               <View style={dynamicStyles.commentHeader}>
                 <Image
-                  source={defaultProfileImage}
+                  source={
+                    topComment.user?.photo
+                      ? { uri: profileImageService.getProfileImageUrl(topComment.user.photo) }
+                      : defaultProfileImage
+                  }
                   style={dynamicStyles.commentAvatar}
                 />
                 <View style={dynamicStyles.commentContent}>

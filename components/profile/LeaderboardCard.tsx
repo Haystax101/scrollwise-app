@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-// import { profileImageService } from '../../services/profileImageService'; // Disabled due to crash
+import { profileImageService } from '../../services/profileImageService';
 
 interface LeaderboardUser {
   user_id: string;
@@ -221,8 +221,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
       
       {displayUsers.map((u) => {
         const isCurrentUser = u.user_id === user?.id;
-        // const imageUrl = profileImageService.getProfileImageUrl(u.avatar_url); // Temporarily disabled due to crash
-        const imageUrl = null; // Always use default avatar for now
+        const imageUrl = u.avatar_url ? profileImageService.getProfileImageUrl(u.avatar_url) : null;
         return (
           <View key={u.user_id} style={[styles.userRow, isCurrentUser && styles.currentUserRow]}>
             <View style={styles.rankContainer}>

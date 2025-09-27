@@ -17,6 +17,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { FriendsService } from '../../lib/friendsService';
 import { ShareService } from '../../lib/shareService';
 import { UserDetailModal } from '../profile/UserDetailModal';
+import { profileImageService } from '../../services/profileImageService';
 import type { FriendProfile, LeaderboardEntry, FriendSuggestion, FriendsListItem } from '../../types/friends';
 
 export function People() {
@@ -477,7 +478,7 @@ export function People() {
           <Image
             source={
               (entry.avatar_url && entry.avatar_url.trim() && entry.avatar_url !== 'null' && entry.avatar_url !== 'undefined')
-                ? { uri: entry.avatar_url }
+                ? { uri: profileImageService.getProfileImageUrl(entry.avatar_url) }
                 : require('../../assets/profileIconDefault.png')
             }
             style={dynamicStyles.leaderboardAvatar}
@@ -514,7 +515,11 @@ export function People() {
             activeOpacity={0.7}
           >
             <Image
-              source={suggestion.avatar_url ? { uri: suggestion.avatar_url } : require('../../assets/profileIconDefault.png')}
+              source={
+                suggestion.avatar_url
+                  ? { uri: profileImageService.getProfileImageUrl(suggestion.avatar_url) }
+                  : require('../../assets/profileIconDefault.png')
+              }
               style={dynamicStyles.suggestionAvatar}
             />
             <Text style={dynamicStyles.suggestionName} numberOfLines={1}>
@@ -554,7 +559,14 @@ export function People() {
           onPress={() => handleUserPress(friendItem.friend.id)}
           activeOpacity={0.7}
         >
-          <View style={dynamicStyles.friendAvatar} />
+          <Image
+            source={
+              friendItem.friend.avatar_url
+                ? { uri: profileImageService.getProfileImageUrl(friendItem.friend.avatar_url) }
+                : require('../../assets/profileIconDefault.png')
+            }
+            style={dynamicStyles.friendAvatar}
+          />
           <Text style={dynamicStyles.friendName} numberOfLines={1}>
             {friendItem.friend.full_name || 'Unknown'}
           </Text>
@@ -608,7 +620,14 @@ export function People() {
                       activeOpacity={0.7}
                       style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
                     >
-                      <View style={dynamicStyles.avatar} />
+                      <Image
+                        source={
+                          person.avatar_url
+                            ? { uri: profileImageService.getProfileImageUrl(person.avatar_url) }
+                            : require('../../assets/profileIconDefault.png')
+                        }
+                        style={dynamicStyles.avatar}
+                      />
                       <View style={dynamicStyles.resultInfo}>
                         <Text style={dynamicStyles.resultName}>
                           {person.full_name || 'Unknown'}

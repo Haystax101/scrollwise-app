@@ -17,6 +17,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { FriendsService } from '../../lib/friendsService';
 import { NotificationService } from '../../lib/notificationService';
 import { UserDetailModal } from '../profile/UserDetailModal';
+import { profileImageService } from '../../services/profileImageService';
 import type { FriendRequest, Notification } from '../../types/friends';
 
 interface NotificationItem {
@@ -343,7 +344,7 @@ export function Inbox() {
               <Image
                 source={
                   request.requester?.avatar_url
-                    ? { uri: request.requester.avatar_url }
+                    ? { uri: profileImageService.getProfileImageUrl(request.requester.avatar_url) }
                     : require('../../assets/profileIconDefault.png')
                 }
                 style={dynamicStyles.avatar}
@@ -410,7 +411,7 @@ export function Inbox() {
               <Image
                 source={
                   request.addressee?.avatar_url
-                    ? { uri: request.addressee.avatar_url }
+                    ? { uri: profileImageService.getProfileImageUrl(request.addressee.avatar_url) }
                     : require('../../assets/profileIconDefault.png')
                 }
                 style={dynamicStyles.avatar}

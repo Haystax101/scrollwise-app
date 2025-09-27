@@ -7,6 +7,7 @@ import { formatNumber } from '../../lib/utils';
 import { supabase } from '../../lib/supabase';
 import { InsightOptionsModal } from './InsightOptionsModal';
 import { EditInsightModal } from './EditInsightModal';
+import { profileImageService } from '../../services/profileImageService';
 const defaultProfileImage = require('../../assets/profileIconDefault.png');
 
 interface SavedInsight {
@@ -19,6 +20,7 @@ interface SavedInsight {
   author_id?: string;
   author?: {
     full_name: string;
+    avatar_url?: string;
   };
 }
 
@@ -277,7 +279,14 @@ export const SavedInsightsList: React.FC<SavedInsightsListProps> = ({
           
           {/* User Header */}
           <View style={styles.userHeader}>
-            <Image source={defaultProfileImage} style={styles.avatar} />
+            <Image
+              source={
+                insight.author?.avatar_url
+                  ? { uri: profileImageService.getProfileImageUrl(insight.author.avatar_url) }
+                  : defaultProfileImage
+              }
+              style={styles.avatar}
+            />
             <View style={styles.userInfo}>
               <Text style={styles.name}>{insight.author?.full_name || 'User'}</Text>
               {insight.created_at && (
