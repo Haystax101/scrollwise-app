@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Modal, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
   Alert,
   ActivityIndicator,
   Platform
@@ -12,7 +12,6 @@ import {
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../context/ThemeContext';
-import { supabase } from '../../lib/supabase';
 import { profileImageService } from '../../services/profileImageService';
 
 interface PhotoUploadModalProps {
@@ -64,17 +63,17 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   const uploadImage = async (uri: string) => {
     try {
       setUploading(true);
-      
+
       const result = await profileImageService.uploadProfileImage(userId, uri);
-      
+
       if (result.error) {
         throw new Error(result.error.message);
       }
-      
+
       if (!result.url) {
         throw new Error('No URL returned from upload');
       }
-      
+
       onImageUploaded(result.url);
       onClose();
       Alert.alert('Success', 'Profile photo updated successfully!');

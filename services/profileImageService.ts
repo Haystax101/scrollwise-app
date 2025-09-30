@@ -1,29 +1,34 @@
 import { supabase } from '../lib/supabase';
-// NOTE: Install with: npm install expo-image-manipulator
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 /**
  * Service for handling profile images.
  */
+
 /**
  * Compress image to save bucket space and improve performance
  */
 const compressImage = async (uri: string): Promise<string> => {
   try {
     console.log('Compressing image:', uri);
-    const context = ImageManipulator.manipulate(uri);
-    context.resize({ width: 300 }); // Max width 300px
-    const image = await context.renderAsync();
-    const result = await image.saveAsync({
+
+    // Use the non-hook API
+    const ctx = ImageManipulator.manipulate(uri);
+    ctx.resize({ width: 300 }); // Max width 300px
+
+    const imageRef = await ctx.renderAsync();
+    const result = await imageRef.saveAsync({
       compress: 0.6,
       format: SaveFormat.JPEG
     });
+
     console.log('Image compressed successfully:', {
       originalUri: uri,
       compressedUri: result.uri,
       width: result.width,
       height: result.height
     });
+
     return result.uri;
   } catch (error) {
     console.error('Error compressing image:', error);
