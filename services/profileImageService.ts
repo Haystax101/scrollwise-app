@@ -12,27 +12,43 @@ const compressImage = async (uri: string): Promise<string> => {
   try {
     console.log('Compressing image:', uri);
 
-    // Use the non-hook API
+    // Use the non-hook API with conservative sizing to prevent memory crashes
+    // First resize to a reasonable intermediate size to reduce memory load
     const ctx = ImageManipulator.manipulate(uri);
-    ctx.resize({ width: 300 }); // Max width 300px
+
+    // More aggressive initial resize to prevent memory issues with very large images
+    // Target max dimension of 800px instead of 300px to reduce processing load
+    ctx.resize({ width: 800 });
 
     const imageRef = await ctx.renderAsync();
     const result = await imageRef.saveAsync({
+      compress: 0.7, // Slightly less aggressive compression
+      format: SaveFormat.JPEG
+    });
+
+    // Now do final resize to target size of 300px
+    const finalCtx = ImageManipulator.manipulate(result.uri);
+    finalCtx.resize({ width: 300 });
+
+    const finalImageRef = await finalCtx.renderAsync();
+    const finalResult = await finalImageRef.saveAsync({
       compress: 0.6,
       format: SaveFormat.JPEG
     });
 
     console.log('Image compressed successfully:', {
       originalUri: uri,
-      compressedUri: result.uri,
-      width: result.width,
-      height: result.height
+      intermediateUri: result.uri,
+      finalUri: finalResult.uri,
+      finalWidth: finalResult.width,
+      finalHeight: finalResult.height
     });
 
-    return result.uri;
+    return finalResult.uri;
   } catch (error) {
     console.error('Error compressing image:', error);
-    // If compression fails, return original URI as fallback
+    console.warn('Compression failed, likely due to memory constraints. Using original image.');
+    // If compression fails due to memory issues, return original URI as fallback
     return uri;
   }
 };

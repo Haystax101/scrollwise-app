@@ -94,6 +94,9 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      // Limit size to prevent memory issues with ImageManipulator
+      base64: false,
+      exif: false,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -110,6 +113,9 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      // Limit size to prevent memory issues with ImageManipulator
+      base64: false,
+      exif: false,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -271,8 +277,8 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={styles.option} 
-                  onPress={handleChooseFromLibrary}
+                  style={styles.option}
+                  onPress={handleChooseFromLibrary} 
                 >
                   <View style={styles.optionIcon}>
                     <Feather name="image" size={24} color={colors.text} />
