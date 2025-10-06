@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { TouchableOpacity, StyleSheet, Animated, View, Dimensions, Text } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDeviceInfo } from '../../utils/deviceUtils';
 
 interface FloatingCreateButtonProps {
   onPress: () => void;
@@ -10,6 +11,7 @@ interface FloatingCreateButtonProps {
 export const FloatingCreateButton: React.FC<FloatingCreateButtonProps> = ({ onPress }) => {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const deviceInfo = useDeviceInfo();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const { width: screenWidth } = Dimensions.get('window');
 
@@ -32,7 +34,7 @@ export const FloatingCreateButton: React.FC<FloatingCreateButtonProps> = ({ onPr
   const styles = StyleSheet.create({
     container: {
       position: 'absolute',
-      bottom: insets.bottom + 50, 
+      bottom: insets.bottom + 50 + (deviceInfo.isSmallScreenWithHomeButton ? 32 : 0),
       left: 20, // Center horizontally (56 is button width)
       zIndex: 1000,
     },

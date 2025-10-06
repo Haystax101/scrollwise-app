@@ -16,15 +16,20 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.gdwhastings.scrollwise",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to allow you to select and upload profile pictures.",
+        "NSCameraUsageDescription": "This app needs access to your camera to allow you to take profile pictures."
       },
-      "associatedDomains": ["applinks:learningsupercharged.com"]
+      "associatedDomains": [
+        "applinks:learningsupercharged.com"
+      ]
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.gdwhastings.scrollwise"
     },
     "web": {
       "favicon": "./assets/favicon.png"

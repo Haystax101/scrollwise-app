@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useDirectionalNavigation } from '../context/NavigationContext';
 import { feedNavigationService } from '../services/FeedNavigationService';
 import { getDeviceInfo, useDeviceOrientation } from '../utils/deviceDetection';
+import { useDeviceInfo } from '../utils/deviceUtils';
 
 type ScreenName = 'home' | 'vault' | 'people' | 'profile' | 'chats' | 'saved-feed';
 
@@ -26,6 +27,7 @@ export const Header: React.FC<HeaderProps> = ({ currentScreen, navigateTo }) => 
   const { navigateWithDirection } = useDirectionalNavigation();
   const { isTablet } = getDeviceInfo();
   const { isLandscape } = useDeviceOrientation();
+  const deviceInfo = useDeviceInfo();
 
   const handleNavigation = (path: string, screenName: ScreenName) => {
     const isLeavingFeed = currentScreen === 'home' && screenName !== 'home';
@@ -60,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({ currentScreen, navigateTo }) => 
     navText: {
       fontSize: isTablet ? 14 : 12,
       marginTop: isTablet ? 6 : 4,
-      marginBottom: isTablet ? 20 : 15,
+      marginBottom: isTablet ? 20 : (deviceInfo.isSmallScreenWithHomeButton ? 8 : 15),
       fontWeight: isTablet ? '500' : 'normal',
     },
     activeNavText: {
@@ -73,7 +75,7 @@ export const Header: React.FC<HeaderProps> = ({ currentScreen, navigateTo }) => 
 
   const responsiveNavRowStyles = {
     ...styles.navRow,
-    height: isTablet ? 100 : 84,
+    height: isTablet ? 100 : (deviceInfo.isSmallScreenWithHomeButton ? 76 : 84),
     paddingHorizontal: isTablet ? 20 : 0,
   };
 

@@ -62,9 +62,13 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
 
   const uploadImage = async (uri: string) => {
     try {
+      console.log('🚀 uploadImage called with URI:', uri);
       setUploading(true);
+      console.log('✅ setUploading(true) completed');
 
+      console.log('📞 Calling profileImageService.uploadProfileImage...');
       const result = await profileImageService.uploadProfileImage(userId, uri);
+      console.log('✅ profileImageService.uploadProfileImage completed:', result);
 
       if (result.error) {
         throw new Error(result.error.message);
@@ -86,9 +90,15 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   };
 
   const handleTakePhoto = async () => {
+    console.log('📷 handleTakePhoto called');
     const hasPermission = await requestCameraPermission();
-    if (!hasPermission) return;
+    if (!hasPermission) {
+      console.log('❌ Camera permission denied');
+      return;
+    }
+    console.log('✅ Camera permission granted');
 
+    console.log('📞 Calling ImagePicker.launchCameraAsync...');
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: 'images',
       allowsEditing: true,
@@ -99,14 +109,24 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
       exif: false,
     });
 
+    console.log('✅ ImagePicker.launchCameraAsync completed:', result);
+
     if (!result.canceled && result.assets[0]) {
+      console.log('📸 Image selected, calling uploadImage with URI:', result.assets[0].uri);
       await uploadImage(result.assets[0].uri);
+    } else {
+      console.log('❌ Image picker was canceled or no asset selected');
     }
   };
 
   const handleChooseFromLibrary = async () => {
+    console.log('📚 handleChooseFromLibrary called');
     const hasPermission = await requestPermission();
-    if (!hasPermission) return;
+    if (!hasPermission) {
+      console.log('❌ Library permission denied');
+      return;
+    }
+    console.log('✅ Library permission granted');
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: 'images',

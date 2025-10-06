@@ -15,6 +15,7 @@ import { optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
 import { useResponsiveLayout } from '../utils/screenUtils';
 import { ShareService } from '../lib/shareService';
 import { useDeviceOrientation, getResponsiveFontSize } from '../utils/deviceDetection';
+import { useDeviceInfo, getStaticVisualHeightMultiplier, getContentBottomPadding } from '../utils/deviceUtils';
 
 interface ArticleCardProps {
   article: Article;
@@ -86,6 +87,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
   }, [allIndustries, article.industry_id]);
 
   const { isTablet, isLandscape } = useDeviceOrientation();
+  const deviceInfo = useDeviceInfo();
 
   const dynamicTextLines = useMemo(() => {
     if (isTablet) {
@@ -248,7 +250,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
       width: '100%',
     },
     visualSection: {
-      height: visualHeight,
+      height: visualHeight * getStaticVisualHeightMultiplier(deviceInfo),
       width: '100%',
       position: 'relative',
     },
@@ -274,11 +276,11 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
       flex: 1,
       backgroundColor: colors.background,
       paddingHorizontal: 16,
-      paddingTop: 0,
-      paddingBottom: isInVault ? 60 : insets.bottom + 60,
+      paddingTop: 56,
+      paddingBottom: isInVault ? 60 : insets.bottom + 60 + getContentBottomPadding(deviceInfo),
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
-      marginTop: isTablet ? 0 : -20, // Remove negative margin on iPad to push content down
+      marginTop: 0, // Remove negative margin to prevent overlap with StaticVisual
       // Remove shadow and border to keep a clean aesthetic
       shadowColor: 'transparent',
       shadowOffset: { width: 0, height: 0 },
@@ -358,7 +360,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingTop: 16,
-      paddingBottom: isTablet ? 24 : 0, // Extra bottom padding on iPad for taller bottom navbar
+      paddingBottom: isTablet ? 24 : getContentBottomPadding(deviceInfo), // Extra bottom padding on iPad and iPhone SE
       borderTopWidth: 1,
       borderTopColor: colors.border,
     },

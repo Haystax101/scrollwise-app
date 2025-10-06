@@ -14,6 +14,7 @@ import { optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
 import { useResponsiveLayout } from '../utils/screenUtils';
 import { ShareService } from '../lib/shareService';
 import { getDeviceInfo, useDeviceOrientation } from '../utils/deviceDetection';
+import { useDeviceInfo, getStaticVisualHeightMultiplier, getContentBottomPadding } from '../utils/deviceUtils';
 
 interface PaperCardProps {
   paper: Paper;
@@ -59,6 +60,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
   const { visualHeight, totalHeight, fontSizes } = useResponsiveLayout();
   const { isTablet } = getDeviceInfo();
   const { isLandscape } = useDeviceOrientation();
+  const deviceInfo = useDeviceInfo();
 
   const [likes, setLikes] = useState(paper.likes_count || 0);
   const [hasLiked, setHasLiked] = useState(false);
@@ -78,8 +80,14 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
     if (isTablet) {
       return isLandscape ? 4 : 3; // More lines on tablet
     }
+
+    // Reduce lines on iPhone SE due to limited space
+    if (deviceInfo.isSmallScreenWithHomeButton) {
+      return (paper.authors && paper.authors.length > 0) ? 5 : 6;
+    }
+
     return (paper.authors && paper.authors.length > 0) ? 7 : 8; // Original mobile behavior
-  }, [isTablet, isLandscape, paper.authors]);
+  }, [isTablet, isLandscape, paper.authors, deviceInfo.isSmallScreenWithHomeButton]);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -248,7 +256,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       width: '100%',
     },
     visualSection: {
-      height: visualHeight,
+      height: visualHeight * getStaticVisualHeightMultiplier(deviceInfo),
       width: '100%',
       position: 'relative',
     },
@@ -262,11 +270,11 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       flex: 1,
       backgroundColor: colors.background,
       paddingHorizontal: 16,
-      paddingTop: 0,
-      paddingBottom: isInVault ? 60 : insets.bottom + 60,
+      paddingTop: 56,
+      paddingBottom: isInVault ? 60 : insets.bottom + 60 + getContentBottomPadding(deviceInfo),
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
-      marginTop: isTablet ? 0 : -20, // Remove negative margin on iPad to push content down
+      marginTop: 0, // Remove negative margin to prevent overlap with StaticVisual
       // Remove shadow and border to keep a clean aesthetic
       shadowColor: 'transparent',
       shadowOffset: { width: 0, height: 0 },
@@ -346,7 +354,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       justifyContent: 'space-between',
       alignItems: 'center',
       paddingTop: 16,
-      paddingBottom: isTablet ? 24 : 0, // Extra bottom padding on iPad for taller bottom navbar
+      paddingBottom: isTablet ? 24 : getContentBottomPadding(deviceInfo), // Extra bottom padding on iPad and iPhone SE
       borderTopWidth: 1,
       borderTopColor: colors.border,
     },
