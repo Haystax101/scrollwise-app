@@ -11,7 +11,7 @@ SELECT cron.schedule(
   '0 10 * * *', -- 10:00 AM every day
   $$
   SELECT net.http_post(
-    url := 'https://your-project.supabase.co/functions/v1/daily-streak-reminders',
+    url := 'https://hefmtydvnbouibdulyjs.supabase.co/functions/v1/daily-streak-reminders',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer ' || current_setting('app.supabase_service_role_key', true)
@@ -28,7 +28,7 @@ SELECT cron.schedule(
   '*/5 * * * *', -- Every 5 minutes
   $$
   SELECT net.http_post(
-    url := 'https://your-project.supabase.co/functions/v1/process-notification-batches',
+    url := 'https://hefmtydvnbouibdulyjs.supabase.co/functions/v1/process-notification-batches',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer ' || current_setting('app.supabase_service_role_key', true)
@@ -64,7 +64,7 @@ SELECT cron.schedule(
   'weekly-analytics-refresh',
   '0 3 * * 0', -- 3:00 AM every Sunday
   $$
-  DO $$
+  DO $weekly$
   BEGIN
     -- Refresh analytics views (check if exists first)
     IF EXISTS (
@@ -90,7 +90,7 @@ SELECT cron.schedule(
       )
     FROM notifications
     WHERE created_at >= CURRENT_DATE - INTERVAL '7 days';
-  END $$;
+  END $weekly$;
   $$
 );
 
@@ -100,7 +100,7 @@ SELECT cron.schedule(
   'notification-health-check',
   '*/10 * * * *', -- Every 10 minutes
   $$
-  DO $$
+  DO $health$
   DECLARE
     alert_record RECORD;
     alert_count INTEGER := 0;
@@ -131,7 +131,7 @@ SELECT cron.schedule(
       -- PERFORM net.http_post(...);
       NULL; -- Placeholder for external alert logic
     END IF;
-  END $$;
+  END $health$;
   $$
 );
 
@@ -141,7 +141,7 @@ SELECT cron.schedule(
   'token-cleanup',
   '0 1 * * *', -- 1:00 AM every day
   $$
-  DO $$
+  DO $cleanup$
   DECLARE
     tokens_deactivated INTEGER;
   BEGIN
@@ -174,7 +174,7 @@ SELECT cron.schedule(
         'cleanup_date', CURRENT_DATE
       )
     );
-  END $$;
+  END $cleanup$;
   $$
 );
 
@@ -184,7 +184,7 @@ SELECT cron.schedule(
   'weekly-performance-optimization',
   '0 4 * * 6', -- 4:00 AM every Saturday
   $$
-  DO $$
+  DO $optimize$
   BEGIN
     -- Analyze table statistics
     ANALYZE notifications;
@@ -207,7 +207,7 @@ SELECT cron.schedule(
         'indexes_rebuilt', 2
       )
     );
-  END $$;
+  END $optimize$;
   $$
 );
 
@@ -217,7 +217,7 @@ SELECT cron.schedule(
   'monthly-notification-report',
   '0 5 1 * *', -- 5:00 AM on the 1st of every month
   $$
-  DO $$
+  DO $report$
   DECLARE
     report_data JSONB;
   BEGIN
@@ -259,7 +259,7 @@ SELECT cron.schedule(
       'Monthly notification performance report',
       report_data
     );
-  END $$;
+  END $report$;
   $$
 );
 
@@ -287,21 +287,31 @@ RETURNS TABLE(
   schedule TEXT,
   active BOOLEAN,
   last_run TIMESTAMP WITH TIME ZONE,
-  next_run TIMESTAMP WITH TIME ZONE
+  last_status TEXT
 ) AS $$
 BEGIN
   RETURN QUERY
   SELECT
-    cron.jobname::TEXT,
-    cron.schedule::TEXT,
-    cron.active,
-    cron.last_run,
-    cron.next_run
-  FROM cron.job cron
-  WHERE cron.jobname LIKE '%notification%'
-     OR cron.jobname LIKE '%streak%'
-     OR cron.jobname LIKE '%batch%'
-  ORDER BY cron.jobname;
+    j.jobname::TEXT,
+    j.schedule::TEXT,
+    j.active,
+    (
+      SELECT MAX(r.start_time)
+      FROM cron.job_run_details r
+      WHERE r.jobid = j.jobid
+    ) as last_run,
+    (
+      SELECT r.status
+      FROM cron.job_run_details r
+      WHERE r.jobid = j.jobid
+      ORDER BY r.start_time DESC
+      LIMIT 1
+    )::TEXT as last_status
+  FROM cron.job j
+  WHERE j.jobname LIKE '%notification%'
+     OR j.jobname LIKE '%streak%'
+     OR j.jobname LIKE '%batch%'
+  ORDER BY j.jobname;
 END;
 $$ LANGUAGE plpgsql;
 

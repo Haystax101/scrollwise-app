@@ -270,7 +270,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       flex: 1,
       backgroundColor: colors.background,
       paddingHorizontal: 16,
-      paddingTop: 56,
+      paddingTop: deviceInfo.isSmallScreenWithHomeButton ? 56 : 40, // Extra padding only for iPhone SE
       paddingBottom: isInVault ? 60 : insets.bottom + 60 + getContentBottomPadding(deviceInfo),
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
