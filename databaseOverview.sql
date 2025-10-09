@@ -33,7 +33,7 @@ CREATE TABLE public.article_comment_likes (
   user_id uuid NOT NULL,
   comment_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT article_comment_likes_pkey PRIMARY KEY (user_id, comment_id),
+  CONSTRAINT article_comment_likes_pkey PRIMARY KEY (comment_id, user_id),
   CONSTRAINT article_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.comments(id),
   CONSTRAINT article_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -120,7 +120,7 @@ CREATE TABLE public.book_likes (
   user_id uuid NOT NULL,
   book_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT book_likes_pkey PRIMARY KEY (book_id, user_id),
+  CONSTRAINT book_likes_pkey PRIMARY KEY (user_id, book_id),
   CONSTRAINT book_likes_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id),
   CONSTRAINT book_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -448,7 +448,7 @@ CREATE TABLE public.learning_sessions_2025_08 (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT learning_sessions_2025_08_pkey PRIMARY KEY (session_start_time, id),
+  CONSTRAINT learning_sessions_2025_08_pkey PRIMARY KEY (id, session_start_time),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.learning_sessions_2025_09 (
@@ -494,7 +494,7 @@ CREATE TABLE public.learning_sessions_2025_10 (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT learning_sessions_2025_10_pkey PRIMARY KEY (session_start_time, id),
+  CONSTRAINT learning_sessions_2025_10_pkey PRIMARY KEY (id, session_start_time),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.learning_sessions_partitioned (
@@ -517,7 +517,7 @@ CREATE TABLE public.learning_sessions_partitioned (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT learning_sessions_partitioned_pkey PRIMARY KEY (id, session_start_time),
+  CONSTRAINT learning_sessions_partitioned_pkey PRIMARY KEY (session_start_time, id),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.notifications (
@@ -572,7 +572,7 @@ CREATE TABLE public.paper_comment_likes (
   user_id uuid NOT NULL,
   comment_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT paper_comment_likes_pkey PRIMARY KEY (user_id, comment_id),
+  CONSTRAINT paper_comment_likes_pkey PRIMARY KEY (comment_id, user_id),
   CONSTRAINT paper_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.paper_comments(id),
   CONSTRAINT paper_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -655,6 +655,16 @@ CREATE TABLE public.politics_books_catalogue (
   created_at timestamp with time zone DEFAULT now(),
   used boolean DEFAULT false,
   CONSTRAINT politics_books_catalogue_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.profile_passions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  passionate_about text CHECK (length(passionate_about) <= 400),
+  working_on text CHECK (length(working_on) <= 400),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT profile_passions_pkey PRIMARY KEY (id),
+  CONSTRAINT profile_passions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.profile_sections (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -957,7 +967,7 @@ CREATE TABLE public.user_industries (
   stage text,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT user_industries_pkey PRIMARY KEY (industry_id, user_id),
+  CONSTRAINT user_industries_pkey PRIMARY KEY (user_id, industry_id),
   CONSTRAINT user_industries_industry_id_fkey FOREIGN KEY (industry_id) REFERENCES public.industries(id),
   CONSTRAINT user_industries_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );

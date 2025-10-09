@@ -6,6 +6,7 @@ import { InputField } from './InputField';
 import { Button } from './Button';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { streakService } from '../../services/streakService';
 
 // Import onboarding components
 import { OnboardingScreen } from './OnboardingScreen';
@@ -597,18 +598,14 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
 
   const handleStreakSelection = async (data: { streakGoal: number }) => {
     updateOnboardingData(data);
-    
+
     if (userId) {
       console.log('Setting up user learning streak:', data.streakGoal);
-      // Use the new streak management system instead of storing in user_goals
-      const { error } = await supabase.rpc('setup_user_learning_streak', {
-        user_id_param: userId,
-        target_days_param: data.streakGoal
-      });
-      
-      if (error) {
-        console.error('Error setting up learning streak:', error);
-        Alert.alert('Database Error', `Failed to set up learning streak: ${error.message}`);
+
+      const success = await streakService.initializeStreak(userId, data.streakGoal);
+
+      if (!success) {
+        Alert.alert('Error', 'Failed to set up learning streak. Please try again.');
         return; // Don't proceed if streak setup failed
       }
       console.log('Learning streak set up successfully');

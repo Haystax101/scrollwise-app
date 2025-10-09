@@ -3,10 +3,11 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-// Configure notification handler
+// Configure notification handler with modern 2025 API
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,  // Updated from shouldShowAlert (deprecated)
+    shouldShowList: true,    // Added for iOS notification list
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -27,16 +28,81 @@ export class NotificationService {
   }
 
   /**
-   * Request notification permissions from the user
+   * Set up Android notification channels (required for Android 13+)
+   */
+  static async setupAndroidChannels(): Promise<void> {
+    if (Platform.OS !== 'android') return;
+
+    try {
+      // Social notifications channel
+      await Notifications.setNotificationChannelAsync('social', {
+        name: 'Social',
+        importance: Notifications.AndroidImportance.HIGH,
+        description: 'Friend requests, likes, and comments',
+        sound: 'default',
+        vibrationPattern: [0, 250, 250, 250],
+        enableLights: true,
+        lightColor: '#FF6B9D',
+      });
+
+      // Learning notifications channel
+      await Notifications.setNotificationChannelAsync('learning', {
+        name: 'Learning',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        description: 'Streak reminders and learning goals',
+        sound: 'default',
+        vibrationPattern: [0, 500],
+        enableLights: true,
+        lightColor: '#FF6B9D',
+      });
+
+      // System notifications channel
+      await Notifications.setNotificationChannelAsync('system', {
+        name: 'System',
+        importance: Notifications.AndroidImportance.LOW,
+        description: 'App updates and system notifications',
+        sound: 'default',
+        enableLights: true,
+        lightColor: '#FF6B9D',
+      });
+
+      console.log('✅ Android notification channels created');
+    } catch (error) {
+      console.error('❌ Error setting up Android channels:', error);
+    }
+  }
+
+  /**
+   * Request notification permissions from the user with enhanced options
    */
   static async requestPermissions(): Promise<NotificationPermissionStatus> {
     try {
+      // Set up Android channels before requesting permissions
+      if (Platform.OS === 'android') {
+        await this.setupAndroidChannels();
+      }
+
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
 
       let finalStatus = existingStatus;
 
       if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
+        const { status } = await Notifications.requestPermissionsAsync({
+          ios: {
+            allowAlert: true,
+            allowBadge: true,
+            allowSound: true,
+            allowDisplayInCarPlay: true,
+            allowCriticalAlerts: false, // Requires special entitlement
+            allowProvisional: false,
+            allowAnnouncements: true,
+          },
+          android: {
+            allowAlert: true,
+            allowBadge: true,
+            allowSound: true,
+          },
+        });
         finalStatus = status;
       }
 
@@ -87,9 +153,14 @@ export class NotificationService {
         return null;
       }
 
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+      // Try multiple ways to get project ID for 2025 compatibility
+      const projectId =
+        process.env.EXPO_PUBLIC_PROJECT_ID ||
+        Constants.expoConfig?.extra?.eas?.projectId ||
+        Constants.easConfig?.projectId;
+
       if (!projectId) {
-        console.error('Project ID not found. Make sure EAS is configured.');
+        console.error('Project ID not found. Set EXPO_PUBLIC_PROJECT_ID environment variable.');
         return null;
       }
 
@@ -231,11 +302,12 @@ export class NotificationService {
   }
 
   /**
-   * Add notification listeners
+   * Add notification listeners with enhanced features
    */
   static addNotificationListeners(callbacks: {
     onNotificationReceived?: (notification: Notifications.Notification) => void;
     onNotificationResponse?: (response: Notifications.NotificationResponse) => void;
+    onPushTokenRefresh?: (token: string) => void;
   }): Notifications.Subscription[] {
     const subscriptions: Notifications.Subscription[] = [];
 
@@ -251,6 +323,15 @@ export class NotificationService {
         callbacks.onNotificationResponse
       );
       subscriptions.push(responseSubscription);
+    }
+
+    // Add push token refresh listener (handles token rollovers)
+    if (callbacks.onPushTokenRefresh) {
+      const tokenSubscription = Notifications.addPushTokenListener((event) => {
+        console.log('🔄 Push token refreshed:', event.data);
+        callbacks.onPushTokenRefresh?.(event.data);
+      });
+      subscriptions.push(tokenSubscription);
     }
 
     return subscriptions;

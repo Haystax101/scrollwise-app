@@ -16,6 +16,7 @@ import { IndustrySelectionPage } from './IndustrySelectionPage';
 import { AllAchievementsPage } from './AllAchievementsPage';
 import { CareerGoalEditModal } from './CareerGoalEditModal';
 import { PhotoUploadModal } from './PhotoUploadModal';
+import { StreakDisplay } from './StreakDisplay';
 import { OnboardingProgressCard } from '../onboarding/OnboardingProgressCard';
 import SettingsModal from '../SettingsModal';
 import { supabase } from '../../lib/supabase';
@@ -547,7 +548,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           loading={loading}
         />
 
-
+        <StreakDisplay
+          userId={currentUser?.id || ''}
+          onRefresh={fetchProfileData}
+        />
 
         <AchievementsBelt
           userId={currentUser?.id || ''}

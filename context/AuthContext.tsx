@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { analytics, ANALYTICS_EVENTS } from '../lib/posthog';
 import { ContentPreloader } from '../lib/ContentPreloader';
+import { streakService } from '../services/streakService';
 
 // Define the shape of the context's value
 interface AuthContextData {
@@ -56,6 +57,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Start content preloading if user is already signed in
       if (session?.user) {
         startContentPreloading(session.user.id);
+
+        // Log daily activity for streak tracking on app launch
+        streakService.logDailyActivity(session.user.id, ['app_open'])
+          .then(success => {
+            if (success) {
+              console.log('✅ Daily activity logged for streak tracking (app launch)');
+            } else {
+              console.log('⚠️ Failed to log daily activity for streak (app launch)');
+            }
+          })
+          .catch(error => {
+            console.error('❌ Error logging daily activity (app launch):', error);
+          });
       }
     };
 
@@ -87,6 +101,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         // Start content preloading for signed-in users
         startContentPreloading(session.user.id);
+
+        // Log daily activity for streak tracking
+        streakService.logDailyActivity(session.user.id, ['app_open', 'sign_in'])
+          .then(success => {
+            if (success) {
+              console.log('✅ Daily activity logged for streak tracking');
+            } else {
+              console.log('⚠️ Failed to log daily activity for streak');
+            }
+          })
+          .catch(error => {
+            console.error('❌ Error logging daily activity:', error);
+          });
       } else if (event === 'SIGNED_OUT') {
         // Track sign out event
         analytics.track(ANALYTICS_EVENTS.USER_SIGNED_OUT, {

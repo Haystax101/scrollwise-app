@@ -33,30 +33,184 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   const [uploading, setUploading] = useState(false);
 
   const requestPermission = async () => {
+    console.log('📷 requestPermission: Starting media library permission request...');
+
     if (Platform.OS !== 'web') {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Sorry, we need camera roll permissions to upload photos.'
-        );
+      console.log('📷 Platform is not web, requesting media library permissions...');
+
+      try {
+        // First check current permission status
+        const currentPermission = await ImagePicker.getMediaLibraryPermissionsAsync();
+        console.log('📷 Current media library permission status:', currentPermission);
+
+        let permissionResult;
+        if (currentPermission.status !== 'granted') {
+          console.log('📷 Permission not granted, requesting permission...');
+          permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          console.log('📷 Permission request result:', permissionResult);
+        } else {
+          console.log('📷 Permission already granted');
+          permissionResult = currentPermission;
+        }
+
+        if (permissionResult.status !== 'granted') {
+          console.log('❌ Media library permission denied. Status:', permissionResult.status);
+          console.log('📋 Permission details:', JSON.stringify(permissionResult, null, 2));
+
+          let alertTitle = 'Permission Required';
+          let alertMessage = '';
+          let buttons: any[] = [];
+
+          switch (permissionResult.status) {
+            case 'denied':
+              alertMessage = 'Access to your photo library has been denied. To upload photos, please enable photo library access in your device settings.';
+              buttons = [
+                { text: 'Cancel', style: 'cancel' as const },
+                {
+                  text: 'Open Settings',
+                  onPress: async () => {
+                    console.log('🔄 User chose to open settings from denied state');
+                    try {
+                      const retryResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                      console.log('🔄 Retry permission result:', retryResult);
+                    } catch (error) {
+                      console.error('❌ Error retrying permission:', error);
+                    }
+                  }
+                }
+              ];
+              break;
+            case 'undetermined':
+              alertMessage = 'We need access to your photo library to upload photos. Would you like to grant permission?';
+              buttons = [
+                { text: 'Cancel', style: 'cancel' as const },
+                {
+                  text: 'Allow',
+                  onPress: async () => {
+                    console.log('🔄 User chose to retry permission from undetermined state');
+                    const retryResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    console.log('🔄 Retry permission result:', retryResult);
+                    if (retryResult.status === 'granted') {
+                      console.log('✅ Permission granted on retry');
+                      Alert.alert('Success', 'Photo library access granted! You can now upload photos.');
+                    }
+                  }
+                }
+              ];
+              break;
+            default:
+              alertMessage = `Photo library permission status: ${permissionResult.status}. Please enable photo library access in your device settings to upload photos.`;
+              buttons = [
+                { text: 'Cancel', style: 'cancel' as const },
+                { text: 'Retry', onPress: () => ImagePicker.requestMediaLibraryPermissionsAsync() }
+              ];
+          }
+
+          Alert.alert(alertTitle, alertMessage, buttons);
+          return false;
+        }
+
+        console.log('✅ Media library permission granted successfully');
+        return true;
+      } catch (error) {
+        console.error('❌ Error requesting media library permission:', error);
+        Alert.alert('Error', 'Failed to request camera roll permission. Please try again.');
         return false;
       }
     }
+
+    console.log('📷 Platform is web, skipping permission request');
     return true;
   };
 
   const requestCameraPermission = async () => {
+    console.log('📸 requestCameraPermission: Starting camera permission request...');
+
     if (Platform.OS !== 'web') {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Sorry, we need camera permissions to take photos.'
-        );
+      console.log('📸 Platform is not web, requesting camera permissions...');
+
+      try {
+        // First check current permission status
+        const currentPermission = await ImagePicker.getCameraPermissionsAsync();
+        console.log('📸 Current camera permission status:', currentPermission);
+
+        let permissionResult;
+        if (currentPermission.status !== 'granted') {
+          console.log('📸 Permission not granted, requesting permission...');
+          permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+          console.log('📸 Permission request result:', permissionResult);
+        } else {
+          console.log('📸 Permission already granted');
+          permissionResult = currentPermission;
+        }
+
+        if (permissionResult.status !== 'granted') {
+          console.log('❌ Camera permission denied. Status:', permissionResult.status);
+          console.log('📋 Permission details:', JSON.stringify(permissionResult, null, 2));
+
+          let alertTitle = 'Permission Required';
+          let alertMessage = '';
+          let buttons: any[] = [];
+
+          switch (permissionResult.status) {
+            case 'denied':
+              alertMessage = 'Camera access has been denied. To take photos, please enable camera access in your device settings.';
+              buttons = [
+                { text: 'Cancel', style: 'cancel' as const },
+                {
+                  text: 'Open Settings',
+                  onPress: async () => {
+                    console.log('🔄 User chose to open settings from camera denied state');
+                    try {
+                      const retryResult = await ImagePicker.requestCameraPermissionsAsync();
+                      console.log('🔄 Retry camera permission result:', retryResult);
+                    } catch (error) {
+                      console.error('❌ Error retrying camera permission:', error);
+                    }
+                  }
+                }
+              ];
+              break;
+            case 'undetermined':
+              alertMessage = 'We need access to your camera to take photos. Would you like to grant permission?';
+              buttons = [
+                { text: 'Cancel', style: 'cancel' as const },
+                {
+                  text: 'Allow',
+                  onPress: async () => {
+                    console.log('🔄 User chose to retry camera permission from undetermined state');
+                    const retryResult = await ImagePicker.requestCameraPermissionsAsync();
+                    console.log('🔄 Retry camera permission result:', retryResult);
+                    if (retryResult.status === 'granted') {
+                      console.log('✅ Camera permission granted on retry');
+                      Alert.alert('Success', 'Camera access granted! You can now take photos.');
+                    }
+                  }
+                }
+              ];
+              break;
+            default:
+              alertMessage = `Camera permission status: ${permissionResult.status}. Please enable camera access in your device settings to take photos.`;
+              buttons = [
+                { text: 'Cancel', style: 'cancel' as const },
+                { text: 'Retry', onPress: () => ImagePicker.requestCameraPermissionsAsync() }
+              ];
+          }
+
+          Alert.alert(alertTitle, alertMessage, buttons);
+          return false;
+        }
+
+        console.log('✅ Camera permission granted successfully');
+        return true;
+      } catch (error) {
+        console.error('❌ Error requesting camera permission:', error);
+        Alert.alert('Error', 'Failed to request camera permission. Please try again.');
         return false;
       }
     }
+
+    console.log('📸 Platform is web, skipping permission request');
     return true;
   };
 
@@ -91,55 +245,125 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
 
   const handleTakePhoto = async () => {
     console.log('📷 handleTakePhoto called');
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) {
-      console.log('❌ Camera permission denied');
-      return;
-    }
-    console.log('✅ Camera permission granted');
+    console.log('📷 Platform:', Platform.OS);
+    console.log('📷 Platform version:', Platform.Version);
 
-    console.log('📞 Calling ImagePicker.launchCameraAsync...');
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: 'images',
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-      // Limit size to prevent memory issues with ImageManipulator
-      base64: false,
-      exif: false,
-    });
+    try {
+      const hasPermission = await requestCameraPermission();
+      console.log('📷 requestCameraPermission returned:', hasPermission);
 
-    console.log('✅ ImagePicker.launchCameraAsync completed:', result);
+      if (!hasPermission) {
+        console.log('❌ Camera permission denied, exiting handleTakePhoto');
+        return;
+      }
+      console.log('✅ Camera permission granted, proceeding with camera launch');
 
-    if (!result.canceled && result.assets[0]) {
-      console.log('📸 Image selected, calling uploadImage with URI:', result.assets[0].uri);
-      await uploadImage(result.assets[0].uri);
-    } else {
-      console.log('❌ Image picker was canceled or no asset selected');
+      console.log('📞 About to call ImagePicker.launchCameraAsync with config:', {
+        mediaTypes: 'images',
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: false,
+        exif: false,
+      });
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: 'images',
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: false,
+        exif: false,
+      });
+
+      console.log('✅ ImagePicker.launchCameraAsync completed with result:', JSON.stringify(result, null, 2));
+
+      if (!result.canceled && result.assets && result.assets.length > 0 && result.assets[0]) {
+        const selectedAsset = result.assets[0];
+        console.log('📸 Image selected successfully:', {
+          uri: selectedAsset.uri,
+          width: selectedAsset.width,
+          height: selectedAsset.height,
+          type: selectedAsset.type,
+          fileSize: selectedAsset.fileSize
+        });
+        console.log('🚀 Calling uploadImage...');
+        await uploadImage(selectedAsset.uri);
+      } else {
+        console.log('❌ Image picker was canceled or no valid asset selected:', {
+          canceled: result.canceled,
+          assetsLength: result.assets?.length || 0
+        });
+      }
+    } catch (error) {
+      console.error('❌ Unexpected error in handleTakePhoto:', error);
+      Alert.alert(
+        'Error',
+        'An unexpected error occurred while trying to access the camera. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
   const handleChooseFromLibrary = async () => {
     console.log('📚 handleChooseFromLibrary called');
-    const hasPermission = await requestPermission();
-    if (!hasPermission) {
-      console.log('❌ Library permission denied');
-      return;
-    }
-    console.log('✅ Library permission granted');
+    console.log('📚 Platform:', Platform.OS);
+    console.log('📚 Platform version:', Platform.Version);
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-      // Limit size to prevent memory issues with ImageManipulator
-      base64: false,
-      exif: false,
-    });
+    try {
+      const hasPermission = await requestPermission();
+      console.log('📚 requestPermission returned:', hasPermission);
 
-    if (!result.canceled && result.assets[0]) {
-      await uploadImage(result.assets[0].uri);
+      if (!hasPermission) {
+        console.log('❌ Library permission denied, exiting handleChooseFromLibrary');
+        return;
+      }
+      console.log('✅ Library permission granted, proceeding with library launch');
+
+      console.log('📞 About to call ImagePicker.launchImageLibraryAsync with config:', {
+        mediaTypes: 'images',
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: false,
+        exif: false,
+      });
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: false,
+        exif: false,
+      });
+
+      console.log('✅ ImagePicker.launchImageLibraryAsync completed with result:', JSON.stringify(result, null, 2));
+
+      if (!result.canceled && result.assets && result.assets.length > 0 && result.assets[0]) {
+        const selectedAsset = result.assets[0];
+        console.log('📚 Image selected successfully:', {
+          uri: selectedAsset.uri,
+          width: selectedAsset.width,
+          height: selectedAsset.height,
+          type: selectedAsset.type,
+          fileSize: selectedAsset.fileSize
+        });
+        console.log('🚀 Calling uploadImage...');
+        await uploadImage(selectedAsset.uri);
+      } else {
+        console.log('❌ Image library picker was canceled or no valid asset selected:', {
+          canceled: result.canceled,
+          assetsLength: result.assets?.length || 0
+        });
+      }
+    } catch (error) {
+      console.error('❌ Unexpected error in handleChooseFromLibrary:', error);
+      Alert.alert(
+        'Error',
+        'An unexpected error occurred while trying to access the photo library. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 

@@ -48,6 +48,13 @@
           "color": "#F59E0B",
           "defaultChannel": "default"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to allow you to upload profile pictures.",
+          "cameraPermission": "The app accesses your camera to allow you to take profile pictures."
+        }
       ]
     ],
     "updates": {
