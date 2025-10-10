@@ -202,7 +202,7 @@ export const Vault: React.FC = () => {
           'papers',
           'paper_views',
           'paper_id',
-          'id, title, content_simple, authors, created_at, industry_id, likes_count, saves_count, comments_count, views_count'
+          'id, title, content_simple, content_complex, authors, created_at, industry_id, likes_count, saves_count, comments_count, views_count'
         ),
         fetchPrioritizedContent(
           'books',

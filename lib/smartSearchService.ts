@@ -6,6 +6,7 @@ export interface SearchResult {
   summary?: string;
   longer_summary?: string; // For articles expanded view
   content_simple?: string;
+  content_complex?: string; // For papers detailed summary
   short_summary?: string;
   key_insights?: string[]; // For books slideshow
   authors?: string[] | string;

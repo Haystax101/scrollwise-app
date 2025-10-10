@@ -116,7 +116,7 @@ serve(async (req: Request) => {
             .limit(10),
           supabase
             .from('papers')
-            .select('id, title, content_simple, authors, site_name, date, industry_id, created_at, likes_count')
+            .select('id, title, content_simple, content_complex, authors, site_name, date, industry_id, created_at, likes_count')
             .gte('created_at', thirtyDaysAgo)
             .order('likes_count', { ascending: false })
             .limit(10),
@@ -138,7 +138,7 @@ serve(async (req: Request) => {
             likes_count: a.likes_count
           }))),
           ...((papers.data || []).map((p: any) => ({
-            id: p.id, type: 'paper', title: p.title, content_simple: p.content_simple, authors: p.authors,
+            id: p.id, type: 'paper', title: p.title, content_simple: p.content_simple, content_complex: p.content_complex, authors: p.authors,
             site_name: p.site_name, date: p.date, industry_id: p.industry_id, created_at: p.created_at,
             likes_count: p.likes_count
           }))),

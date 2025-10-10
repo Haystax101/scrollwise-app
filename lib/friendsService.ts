@@ -89,7 +89,7 @@ export class FriendsService {
       throw new FriendsError('Not authenticated', 'UNAUTHENTICATED');
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('friendships')
       .update({
         status: 'accepted',
@@ -97,11 +97,34 @@ export class FriendsService {
       })
       .eq('id', friendshipId)
       .eq('addressee_id', currentUser.user.id) // Only addressee can accept
-      .eq('status', 'pending'); // Only pending requests can be accepted
+      .eq('status', 'pending') // Only pending requests can be accepted
+      .select(); // Return updated row to verify success
 
     if (error) {
+      console.error('Accept friend request error:', {
+        error,
+        friendshipId,
+        userId: currentUser.user.id,
+        errorCode: error.code,
+        errorMessage: error.message
+      });
       throw new FriendsError('Failed to accept friend request', 'ACCEPT_FAILED', error);
     }
+
+    // Check if any row was actually updated
+    if (!data || data.length === 0) {
+      console.error('No friendship updated:', {
+        friendshipId,
+        userId: currentUser.user.id,
+        reason: 'Request not found, already processed, or user is not the addressee'
+      });
+      throw new FriendsError(
+        'Friend request not found or already processed',
+        FRIENDS_ERROR_CODES.REQUEST_NOT_FOUND
+      );
+    }
+
+    console.log('✅ Friend request accepted successfully:', { friendshipId, data });
   }
 
   /**
@@ -113,7 +136,7 @@ export class FriendsService {
       throw new FriendsError('Not authenticated', 'UNAUTHENTICATED');
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('friendships')
       .update({
         status: 'declined',
@@ -121,11 +144,34 @@ export class FriendsService {
       })
       .eq('id', friendshipId)
       .eq('addressee_id', currentUser.user.id)
-      .eq('status', 'pending');
+      .eq('status', 'pending')
+      .select(); // Return updated row to verify success
 
     if (error) {
+      console.error('Decline friend request error:', {
+        error,
+        friendshipId,
+        userId: currentUser.user.id,
+        errorCode: error.code,
+        errorMessage: error.message
+      });
       throw new FriendsError('Failed to decline friend request', 'DECLINE_FAILED', error);
     }
+
+    // Check if any row was actually updated
+    if (!data || data.length === 0) {
+      console.error('No friendship updated:', {
+        friendshipId,
+        userId: currentUser.user.id,
+        reason: 'Request not found, already processed, or user is not the addressee'
+      });
+      throw new FriendsError(
+        'Friend request not found or already processed',
+        FRIENDS_ERROR_CODES.REQUEST_NOT_FOUND
+      );
+    }
+
+    console.log('✅ Friend request declined successfully:', { friendshipId, data });
   }
 
   /**
@@ -146,16 +192,30 @@ export class FriendsService {
       .select();
 
     if (error) {
-      console.error('Cancel friend request error:', error);
+      console.error('Cancel friend request error:', {
+        error,
+        friendshipId,
+        userId: currentUser.user.id,
+        errorCode: error.code,
+        errorMessage: error.message
+      });
       throw new FriendsError('Failed to cancel friend request', 'CANCEL_FAILED', error);
     }
 
+    // Check if any row was actually deleted
     if (!data || data.length === 0) {
-      console.warn('No friend request was deleted. Friendship may not exist or RLS policy issue.');
-      // Still don't throw an error since the UI should refresh anyway
-    } else {
-      console.log('Successfully canceled friend request:', data[0]);
+      console.error('No friendship deleted:', {
+        friendshipId,
+        userId: currentUser.user.id,
+        reason: 'Request not found, already processed, or user is not the requester'
+      });
+      throw new FriendsError(
+        'Friend request not found or already processed',
+        FRIENDS_ERROR_CODES.REQUEST_NOT_FOUND
+      );
     }
+
+    console.log('✅ Friend request canceled successfully:', { friendshipId, data });
   }
 
   /**

@@ -2,7 +2,9 @@
 -- Enhanced with 2025 security best practices and performance optimizations
 
 -- Step 1: Enhanced notification creation function with batching and security
-CREATE OR REPLACE FUNCTION create_notification_secure(
+DROP FUNCTION IF EXISTS create_notification_secure(UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT);
+
+CREATE FUNCTION create_notification_secure(
   recipient_id UUID,
   source_user_id UUID,
   notification_type TEXT,
@@ -64,6 +66,8 @@ BEGIN
       IF user_prefs.comments = FALSE THEN RETURN NULL; END IF;
       should_batch := (user_prefs.digest_frequency = 'batched_5min');
     WHEN 'friend_request' THEN
+      IF user_prefs.friend_requests = FALSE THEN RETURN NULL; END IF;
+    WHEN 'friend_accepted' THEN
       IF user_prefs.friend_requests = FALSE THEN RETURN NULL; END IF;
     WHEN 'friend_activity' THEN
       IF user_prefs.friend_activity = FALSE THEN RETURN NULL; END IF;
@@ -193,12 +197,17 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Step 2: Secure trigger functions with improved performance
-CREATE OR REPLACE FUNCTION notify_on_like_secure()
+-- Drop trigger first before dropping function
+DROP TRIGGER IF EXISTS insight_like_notification_secure ON insight_likes;
+DROP FUNCTION IF EXISTS notify_on_like_secure();
+
+CREATE FUNCTION notify_on_like_secure()
 RETURNS TRIGGER AS $$
 DECLARE
   content_owner_id UUID;
   content_type_name TEXT;
   content_title TEXT;
+  content_id_value UUID;
 BEGIN
   -- Determine content owner and type with single query optimization
   CASE TG_TABLE_NAME
@@ -206,6 +215,7 @@ BEGIN
       SELECT author_id, 'insight', LEFT(content, 50)
       INTO content_owner_id, content_type_name, content_title
       FROM insights WHERE id = NEW.insight_id;
+      content_id_value := NEW.insight_id;
     WHEN 'article_likes' THEN
       -- Articles don't have individual owners, skip notification
       RETURN NEW;
@@ -224,9 +234,9 @@ BEGIN
       NEW.user_id,
       'like',
       content_type_name,
-      COALESCE(NEW.insight_id, NEW.article_id, NEW.paper_id, NEW.book_id)::TEXT,
+      content_id_value::TEXT,
       NULL, -- Use default message
-      '/content/' || content_type_name || '/' || COALESCE(NEW.insight_id, NEW.article_id, NEW.paper_id, NEW.book_id),
+      '/content/' || content_type_name || '/' || content_id_value::TEXT,
       jsonb_build_object('content_preview', content_title)
     );
   END IF;
@@ -242,7 +252,11 @@ CREATE TRIGGER insight_like_notification_secure
   FOR EACH ROW EXECUTE FUNCTION notify_on_like_secure();
 
 -- Step 3: Secure comment notification function
-CREATE OR REPLACE FUNCTION notify_on_comment_secure()
+-- Drop trigger first before dropping function
+DROP TRIGGER IF EXISTS insight_comment_notification_secure ON insight_comments;
+DROP FUNCTION IF EXISTS notify_on_comment_secure();
+
+CREATE FUNCTION notify_on_comment_secure()
 RETURNS TRIGGER AS $$
 DECLARE
   content_owner_id UUID;
@@ -311,7 +325,11 @@ CREATE TRIGGER insight_comment_notification_secure
   FOR EACH ROW EXECUTE FUNCTION notify_on_comment_secure();
 
 -- Step 4: Secure friend request notifications
-CREATE OR REPLACE FUNCTION notify_on_friend_request_secure()
+-- Drop trigger first before dropping function
+DROP TRIGGER IF EXISTS friendship_notification_secure ON friendships;
+DROP FUNCTION IF EXISTS notify_on_friend_request_secure();
+
+CREATE FUNCTION notify_on_friend_request_secure()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.status = 'pending' AND (OLD IS NULL OR OLD.status IS NULL) THEN
@@ -351,7 +369,9 @@ CREATE TRIGGER friendship_notification_secure
   FOR EACH ROW EXECUTE FUNCTION notify_on_friend_request_secure();
 
 -- Step 5: Batch processing function for digest notifications
-CREATE OR REPLACE FUNCTION process_notification_batches()
+DROP FUNCTION IF EXISTS process_notification_batches();
+
+CREATE FUNCTION process_notification_batches()
 RETURNS INTEGER AS $$
 DECLARE
   batch_record RECORD;
@@ -409,7 +429,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Step 6: Analytics function for notification tracking
-CREATE OR REPLACE FUNCTION track_notification_event(
+DROP FUNCTION IF EXISTS track_notification_event(UUID, TEXT, JSONB);
+
+CREATE FUNCTION track_notification_event(
   notification_id_param UUID,
   event_type TEXT, -- 'delivered', 'opened', 'failed'
   additional_info JSONB DEFAULT '{}'

@@ -318,6 +318,7 @@ export class InstantContentLoader {
             summary: item.summary || item.content_simple || item.short_summary || '',
             longer_summary: item.longer_summary, // Include longer_summary for articles
             content_simple: item.content_simple,
+            content_complex: item.content_complex, // Include content_complex for papers
             short_summary: item.short_summary,
             authors: item.authors || item.author,
             link: item.link || '#',

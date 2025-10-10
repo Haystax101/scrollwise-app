@@ -340,6 +340,11 @@ export class FeedManager {
         console.log(`📡 FeedManager: Converting paper ${data.id}:`, {
           id: data.id,
           title: data.title?.substring(0, 30),
+          content_simple_length: data.content_simple?.length || 0,
+          content_complex_length: data.content_complex?.length || 0,
+          hasContentSimple: !!data.content_simple,
+          hasContentComplex: !!data.content_complex,
+          content_simple_preview: data.content_simple ? data.content_simple.substring(0, 50) + '...' : 'NOT PRESENT',
           raw_date: data.date,
           raw_created_at: data.created_at,
           hasDate: !!data.date,
