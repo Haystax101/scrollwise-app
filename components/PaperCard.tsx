@@ -274,7 +274,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       paddingBottom: isInVault ? 60 : insets.bottom + 60 + getContentBottomPadding(deviceInfo),
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
-      marginTop: 0, // Remove negative margin to prevent overlap with StaticVisual
+      marginTop: deviceInfo.isSmallScreenWithHomeButton ? 0 : -60, // Remove negative margin to prevent overlap with StaticVisual
       // Remove shadow and border to keep a clean aesthetic
       shadowColor: 'transparent',
       shadowOffset: { width: 0, height: 0 },
