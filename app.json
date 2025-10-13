@@ -23,7 +23,8 @@
       },
       "associatedDomains": [
         "applinks:learningsupercharged.com"
-      ]
+      ],
+      "buildNumber": "3"
     },
     "android": {
       "adaptiveIcon": {

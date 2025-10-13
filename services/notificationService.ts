@@ -148,8 +148,9 @@ export class NotificationService {
    */
   static async getExpoPushToken(): Promise<string | null> {
     try {
-      if (!Device.isDevice) {
-        console.warn('Push notifications only work on physical devices');
+      // Allow simulator for testing (iOS Simulator supports push since Xcode 11.4+)
+      if (!Device.isDevice && Platform.OS !== 'ios') {
+        console.warn('Push notifications only work on physical devices or iOS Simulator');
         return null;
       }
 
@@ -184,10 +185,11 @@ export class NotificationService {
     error?: string;
   }> {
     try {
-      if (!Device.isDevice) {
+      // Allow simulator for testing (iOS Simulator supports push since Xcode 11.4+)
+      if (!Device.isDevice && Platform.OS !== 'ios') {
         return {
           success: false,
-          error: 'Push notifications only work on physical devices',
+          error: 'Push notifications only work on physical devices or iOS Simulator',
         };
       }
 

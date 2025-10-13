@@ -41,7 +41,7 @@ CREATE TABLE public.article_likes (
   user_id uuid NOT NULL,
   article_id integer NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT article_likes_pkey PRIMARY KEY (user_id, article_id),
+  CONSTRAINT article_likes_pkey PRIMARY KEY (article_id, user_id),
   CONSTRAINT article_likes_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.articles(id),
   CONSTRAINT article_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -49,7 +49,7 @@ CREATE TABLE public.article_saves (
   user_id uuid NOT NULL,
   article_id integer NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT article_saves_pkey PRIMARY KEY (user_id, article_id),
+  CONSTRAINT article_saves_pkey PRIMARY KEY (article_id, user_id),
   CONSTRAINT article_saves_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.articles(id),
   CONSTRAINT article_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -120,7 +120,7 @@ CREATE TABLE public.book_likes (
   user_id uuid NOT NULL,
   book_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT book_likes_pkey PRIMARY KEY (user_id, book_id),
+  CONSTRAINT book_likes_pkey PRIMARY KEY (book_id, user_id),
   CONSTRAINT book_likes_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id),
   CONSTRAINT book_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -448,7 +448,7 @@ CREATE TABLE public.learning_sessions_2025_08 (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT learning_sessions_2025_08_pkey PRIMARY KEY (id, session_start_time),
+  CONSTRAINT learning_sessions_2025_08_pkey PRIMARY KEY (session_start_time, id),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.learning_sessions_2025_09 (
@@ -494,7 +494,7 @@ CREATE TABLE public.learning_sessions_2025_10 (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT learning_sessions_2025_10_pkey PRIMARY KEY (id, session_start_time),
+  CONSTRAINT learning_sessions_2025_10_pkey PRIMARY KEY (session_start_time, id),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.learning_sessions_partitioned (
@@ -517,19 +517,40 @@ CREATE TABLE public.learning_sessions_partitioned (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT learning_sessions_partitioned_pkey PRIMARY KEY (session_start_time, id),
+  CONSTRAINT learning_sessions_partitioned_pkey PRIMARY KEY (id, session_start_time),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.notification_batches (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  notification_type text NOT NULL,
+  content_type text,
+  content_id text,
+  batch_key text NOT NULL,
+  count integer DEFAULT 1,
+  last_notification_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  expires_at timestamp with time zone DEFAULT (now() + '00:05:00'::interval),
+  CONSTRAINT notification_batches_pkey PRIMARY KEY (id),
+  CONSTRAINT notification_batches_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.notifications (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
-  type text NOT NULL CHECK (type = ANY (ARRAY['like'::text, 'comment'::text, 'friend_request'::text])),
+  type text NOT NULL CHECK (type = ANY (ARRAY['like'::text, 'comment'::text, 'friend_request'::text, 'friend_accepted'::text, 'save'::text, 'share'::text, 'streak_reminder'::text, 'goal_achievement'::text, 'friend_insight'::text, 'milestone'::text, 'reply'::text, 'digest'::text])),
   source_user_id uuid NOT NULL,
   content_type text CHECK (content_type = ANY (ARRAY['insight'::text, 'article'::text, 'paper'::text, 'book'::text])),
   content_id text,
   message text NOT NULL,
   is_read boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
+  batch_id uuid,
+  action_url text,
+  push_sent boolean DEFAULT false,
+  push_sent_at timestamp with time zone,
+  opened_at timestamp with time zone,
+  data jsonb DEFAULT '{}'::jsonb,
+  channel text DEFAULT 'general'::text CHECK (channel = ANY (ARRAY['social'::text, 'learning'::text, 'system'::text, 'general'::text])),
   CONSTRAINT notifications_pkey PRIMARY KEY (id),
   CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
   CONSTRAINT notifications_source_user_id_fkey FOREIGN KEY (source_user_id) REFERENCES public.profiles(id)
@@ -603,7 +624,7 @@ CREATE TABLE public.paper_saves (
   user_id uuid NOT NULL,
   paper_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT paper_saves_pkey PRIMARY KEY (user_id, paper_id),
+  CONSTRAINT paper_saves_pkey PRIMARY KEY (paper_id, user_id),
   CONSTRAINT paper_saves_paper_id_fkey FOREIGN KEY (paper_id) REFERENCES public.papers(id),
   CONSTRAINT paper_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -785,6 +806,15 @@ CREATE TABLE public.startup_books_catalogue (
   used boolean DEFAULT false,
   CONSTRAINT startup_books_catalogue_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.system_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  log_type text NOT NULL,
+  message text NOT NULL,
+  data jsonb DEFAULT '{}'::jsonb,
+  severity text DEFAULT 'info'::text CHECK (severity = ANY (ARRAY['info'::text, 'warning'::text, 'error'::text, 'critical'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT system_logs_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.technology_books_catalogue (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL,
@@ -941,7 +971,7 @@ CREATE TABLE public.user_experiences (
 CREATE TABLE public.user_goal_companies (
   user_id uuid NOT NULL,
   company_id uuid NOT NULL,
-  CONSTRAINT user_goal_companies_pkey PRIMARY KEY (user_id, company_id),
+  CONSTRAINT user_goal_companies_pkey PRIMARY KEY (company_id, user_id),
   CONSTRAINT user_goal_companies_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id),
   CONSTRAINT user_goal_companies_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -1024,6 +1054,32 @@ CREATE TABLE public.user_learning_goals (
   CONSTRAINT user_learning_goals_pkey PRIMARY KEY (id),
   CONSTRAINT user_learning_goals_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
+CREATE TABLE public.user_notification_preferences (
+  user_id uuid NOT NULL,
+  social_notifications boolean DEFAULT true,
+  learning_notifications boolean DEFAULT true,
+  system_notifications boolean DEFAULT true,
+  friend_requests boolean DEFAULT true,
+  likes boolean DEFAULT true,
+  comments boolean DEFAULT true,
+  saves boolean DEFAULT true,
+  friend_activity boolean DEFAULT true,
+  streak_reminders boolean DEFAULT true,
+  goal_achievements boolean DEFAULT true,
+  digest_frequency text DEFAULT 'immediate'::text CHECK (digest_frequency = ANY (ARRAY['immediate'::text, 'batched_5min'::text, 'hourly'::text, 'daily'::text, 'weekly'::text, 'off'::text])),
+  quiet_hours_enabled boolean DEFAULT true,
+  quiet_hours_start time without time zone DEFAULT '22:00:00'::time without time zone,
+  quiet_hours_end time without time zone DEFAULT '08:00:00'::time without time zone,
+  timezone text DEFAULT 'GMT'::text,
+  high_priority_override boolean DEFAULT true,
+  android_social_channel_id text DEFAULT 'social'::text,
+  android_learning_channel_id text DEFAULT 'learning'::text,
+  android_system_channel_id text DEFAULT 'system'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_notification_preferences_pkey PRIMARY KEY (user_id),
+  CONSTRAINT user_notification_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
 CREATE TABLE public.user_projects (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid,
@@ -1061,6 +1117,19 @@ CREATE TABLE public.user_publications (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT user_publications_pkey PRIMARY KEY (id),
   CONSTRAINT user_publications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.user_push_tokens (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  push_token text NOT NULL,
+  device_type text NOT NULL CHECK (device_type = ANY (ARRAY['ios'::text, 'android'::text, 'web'::text])),
+  app_version text,
+  os_version text,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_push_tokens_pkey PRIMARY KEY (id),
+  CONSTRAINT user_push_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.user_referrals (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
