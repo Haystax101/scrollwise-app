@@ -10,15 +10,10 @@ import AppHeader from '../components/AppHeader';
 import { PostHogProvider } from 'posthog-react-native';
 import { posthog } from '../lib/posthog';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import { Text, TextInput } from 'react-native';
 import { useDeepLinkHandler } from '../lib/deepLinkHandler';
 
-// Disable text scaling to maintain consistent UI layout
-Text.defaultProps = Text.defaultProps || {};
-Text.defaultProps.maxFontSizeMultiplier = 1.0;
-
-TextInput.defaultProps = TextInput.defaultProps || {};
-TextInput.defaultProps.maxFontSizeMultiplier = 1.0;
+// Note: Text scaling prevention removed due to React 19 deprecation
+// If needed, use allowFontScaling={false} on individual Text/TextInput components
 
 // Component to handle deep links
 function DeepLinkWrapper({ children }: { children: React.ReactNode }) {
