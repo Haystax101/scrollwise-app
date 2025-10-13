@@ -186,16 +186,19 @@ serve(async (req: Request) => {
         ...(payload.batch_id && { batch_id: payload.batch_id }),
       },
       badge: 1,
-      priority: isHighPriority ? "high" : "normal",
+      priority: isHighPriority ? "high" : "default",
       // Android-specific settings
       channelId: getChannelId(payload.type, payload.channel || ""),
-      // iOS-specific settings
-      _displayInForeground: true,
     }));
 
     // Send to Expo Push API with retry logic
     let expoResponse;
     retryCount = 0;
+
+    console.log(`📤 Sending ${messages.length} push notification(s) to Expo...`);
+    console.log(`📱 Tokens: ${tokens.map(t => t.push_token.substring(0, 20) + '...').join(', ')}`);
+    console.log(`🔔 Notification: "${notificationTitle}" - "${notificationBody}"`);
+    console.log(`⏰ Priority: ${isHighPriority ? 'high' : 'default'}, Type: ${payload.type}`);
 
     while (retryCount < maxRetries) {
       try {
@@ -211,13 +214,17 @@ serve(async (req: Request) => {
         });
 
         if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`❌ Expo API error ${response.status}: ${errorText}`);
           throw new Error(`Expo API returned ${response.status}: ${response.statusText}`);
         }
 
         expoResponse = await response.json();
+        console.log(`✅ Expo API response:`, JSON.stringify(expoResponse, null, 2));
         break;
       } catch (error) {
         retryCount++;
+        console.error(`⚠️ Attempt ${retryCount}/${maxRetries} failed:`, error);
         if (retryCount >= maxRetries) throw error;
         await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
       }
@@ -226,14 +233,21 @@ serve(async (req: Request) => {
     // Process Expo response and handle token cleanup
     const failedTokens: string[] = [];
     if (Array.isArray(expoResponse.data)) {
+      console.log(`📊 Processing ${expoResponse.data.length} ticket(s)...`);
       for (let i = 0; i < expoResponse.data.length; i++) {
         const result = expoResponse.data[i];
+        console.log(`Ticket ${i + 1}: status=${result.status}, id=${result.id || 'N/A'}, message=${result.message || 'N/A'}`);
+
         if (result.status === "error") {
+          console.error(`❌ Ticket ${i + 1} failed:`, result.details || result.message);
           const token = tokens[i];
           if (result.details?.error === "DeviceNotRegistered" ||
               result.details?.error === "InvalidCredentials") {
+            console.log(`🗑️ Marking token as inactive: ${token.push_token.substring(0, 20)}...`);
             failedTokens.push(token.push_token);
           }
+        } else if (result.status === "ok") {
+          console.log(`✅ Ticket ${i + 1} accepted by Expo (will be delivered to APNs/FCM)`);
         }
       }
     }
@@ -283,7 +297,7 @@ serve(async (req: Request) => {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
       const payload: NotificationRequest = await req.clone().json();
       await trackNotificationEvent(supabase, payload.notification_id, "failed", {
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString(),
       });
     } catch (trackingError) {
@@ -293,7 +307,7 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       }),
       {
         status: 500,
