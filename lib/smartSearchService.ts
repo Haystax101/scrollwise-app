@@ -60,10 +60,24 @@ export interface SearchFilters {
  * The RPC functions already return correct content_type, so we just ensure type field matches
  */
 function processSearchResults(results: SearchResult[]): SearchResult[] {
-  return results.map(result => ({
-    ...result,
-    type: (result.content_type || result.type) as 'article' | 'paper' | 'book'
-  }));
+  return results.map(result => {
+    const processedResult: SearchResult = {
+      ...result,
+      type: (result.content_type || result.type) as 'article' | 'paper' | 'book'
+    };
+
+    // Map summary to content_simple for papers if not already present
+    if (processedResult.type === 'paper' && result.summary && !processedResult.content_simple) {
+      processedResult.content_simple = result.summary;
+    }
+
+    // Map summary to short_summary for books if not already present
+    if (processedResult.type === 'book' && result.summary && !processedResult.short_summary) {
+      processedResult.short_summary = result.summary;
+    }
+
+    return processedResult;
+  });
 }
 
 export async function immediateKeywordSearch(
