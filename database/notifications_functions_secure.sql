@@ -144,6 +144,7 @@ BEGIN
       WHEN 'comment' THEN default_message := default_message || ' commented on your ' || COALESCE(content_type, 'content');
       WHEN 'friend_request' THEN default_message := default_message || ' sent you a friend request';
       WHEN 'friend_accepted' THEN default_message := default_message || ' accepted your friend request';
+      WHEN 'friend_activity' THEN default_message := default_message || ' posted a new insight';
       WHEN 'save' THEN default_message := default_message || ' saved your ' || COALESCE(content_type, 'content');
       WHEN 'streak_reminder' THEN default_message := 'Keep your learning streak going!';
       WHEN 'goal_achievement' THEN default_message := 'Congratulations on reaching your goal!';
