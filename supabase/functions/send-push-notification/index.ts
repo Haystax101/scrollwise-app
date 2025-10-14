@@ -267,15 +267,56 @@ serve(async (req: Request) => {
       expo_tickets: expoResponse.data || [],
     });
 
-    // Schedule receipt checking (for production monitoring)
+    // Check receipts immediately (they may not be ready yet, but worth trying)
     if (expoResponse.data && Array.isArray(expoResponse.data)) {
       const tickets = expoResponse.data
         .filter((result: any) => result.status === "ok" && result.id)
         .map((result: any) => result.id);
 
       if (tickets.length > 0) {
-        // In a production app, you'd want to store these tickets and check receipts later
-        console.log(`Generated ${tickets.length} push tickets for notification ${payload.notification_id}`);
+        console.log(`📋 Generated ${tickets.length} push ticket(s) for notification ${payload.notification_id}`);
+        console.log(`🎫 Ticket IDs: ${tickets.join(", ")}`);
+
+        // Wait a moment then check receipts
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        try {
+          console.log(`🔍 Checking receipts for tickets...`);
+          const receiptResponse = await fetch("https://exp.host/--/api/v2/push/getReceipts", {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${EXPO_ACCESS_TOKEN}`,
+            },
+            body: JSON.stringify({ ids: tickets }),
+          });
+
+          if (receiptResponse.ok) {
+            const receipts = await receiptResponse.json();
+            console.log(`📨 Push Receipts:`, JSON.stringify(receipts, null, 2));
+
+            // Check each receipt for errors
+            for (const ticketId of tickets) {
+              const receipt = receipts.data?.[ticketId];
+              if (receipt) {
+                if (receipt.status === "ok") {
+                  console.log(`✅ Receipt ${ticketId}: Successfully delivered to APNs/FCM`);
+                } else if (receipt.status === "error") {
+                  console.error(`❌ Receipt ${ticketId}: DELIVERY FAILED`);
+                  console.error(`   Error: ${receipt.message}`);
+                  console.error(`   Details:`, JSON.stringify(receipt.details, null, 2));
+                }
+              } else {
+                console.log(`⏳ Receipt ${ticketId}: Not yet available (check again in a few minutes)`);
+              }
+            }
+          } else {
+            console.error(`❌ Failed to fetch receipts: ${receiptResponse.status}`);
+          }
+        } catch (receiptError) {
+          console.error(`⚠️ Error checking receipts:`, receiptError);
+        }
       }
     }
 
