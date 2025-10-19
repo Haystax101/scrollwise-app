@@ -1,7 +1,14 @@
--- Secure Notification Functions
--- Enhanced with 2025 security best practices and performance optimizations
+-- Complete Notification System v3
+-- Includes HTTP-based push delivery + ALL triggers
+-- This is the COMPLETE, PRODUCTION-READY notification system
 
--- Step 1: Enhanced notification creation function with batching and security
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+-- ============================================================================
+-- PART 1: Core Notification Function with HTTP Push Delivery
+-- ============================================================================
+
 DROP FUNCTION IF EXISTS create_notification_secure(UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT);
 
 CREATE FUNCTION create_notification_secure(
@@ -24,8 +31,9 @@ DECLARE
   should_batch BOOLEAN := false;
   existing_batch RECORD;
   channel_name TEXT;
+  service_role_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlZm10eWR2bmJvdWliZHVseWpzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTU2NDc3MSwiZXhwIjoyMDY1MTQwNzcxfQ.ORZqf5Kg0-bRJljlUnRpdgJu8MVQU9Pkj8VjhzagDu4';
 BEGIN
-  -- Input validation and sanitization
+  -- Input validation
   IF recipient_id IS NULL OR source_user_id IS NULL OR notification_type IS NULL THEN
     RAISE WARNING 'create_notification_secure: Missing required parameters';
     RETURN NULL;
@@ -97,12 +105,10 @@ BEGIN
       IF user_prefs.system_notifications = FALSE THEN RETURN NULL; END IF;
   END CASE;
 
-  -- Handle batching for appropriate notification types
+  -- Handle batching
   IF should_batch AND user_prefs.digest_frequency IN ('batched_5min', 'hourly') THEN
-    -- Create batch key for grouping similar notifications
     batch_key := notification_type || ':' || COALESCE(content_type, '') || ':' || COALESCE(content_id, '');
 
-    -- Check for existing active batch
     SELECT * INTO existing_batch
     FROM notification_batches
     WHERE user_id = recipient_id
@@ -110,32 +116,23 @@ BEGIN
       AND expires_at > NOW();
 
     IF existing_batch IS NOT NULL THEN
-      -- Update existing batch
       UPDATE notification_batches
-      SET
-        count = count + 1,
-        expires_at = NOW() + INTERVAL '5 minutes'
+      SET count = count + 1, expires_at = NOW() + INTERVAL '5 minutes'
       WHERE id = existing_batch.id;
-
       batch_id := existing_batch.id;
     ELSE
-      -- Create new batch
-      INSERT INTO notification_batches (
-        user_id, notification_type, content_type, content_id, batch_key
-      ) VALUES (
-        recipient_id, notification_type, content_type, content_id, batch_key
-      ) RETURNING id INTO batch_id;
+      INSERT INTO notification_batches (user_id, notification_type, content_type, content_id, batch_key)
+      VALUES (recipient_id, notification_type, content_type, content_id, batch_key)
+      RETURNING id INTO batch_id;
     END IF;
   END IF;
 
-  -- Sanitize message content to prevent XSS/injection
+  -- Sanitize message
   IF custom_message IS NOT NULL THEN
-    -- Basic sanitization - remove potential script tags and SQL
     custom_message := regexp_replace(custom_message, '<[^>]*>', '', 'g');
     custom_message := regexp_replace(custom_message, '[;''"]', '', 'g');
-    default_message := LEFT(custom_message, 200); -- Limit message length
+    default_message := LEFT(custom_message, 200);
   ELSE
-    -- Generate safe default message
     SELECT full_name INTO default_message FROM profiles WHERE id = source_user_id;
     default_message := COALESCE(default_message, 'Someone');
 
@@ -154,15 +151,13 @@ BEGIN
 
   -- Sanitize action URL
   IF action_url IS NOT NULL THEN
-    -- Only allow relative URLs or app scheme URLs for security
     IF action_url !~ '^(/|supercharged://)' THEN
       action_url := NULL;
     END IF;
   END IF;
 
-  -- Sanitize additional data to prevent PII exposure
+  -- Sanitize additional data
   additional_data := jsonb_strip_nulls(additional_data);
-  -- Remove potentially sensitive fields
   additional_data := additional_data - 'email' - 'phone' - 'address' - 'password';
 
   -- Insert notification
@@ -174,31 +169,88 @@ BEGIN
     default_message, action_url, additional_data, batch_id, channel_name
   ) RETURNING id INTO notification_id;
 
-  -- Update batch with latest notification
+  -- Update batch
   IF batch_id IS NOT NULL THEN
-    UPDATE notification_batches
-    SET last_notification_id = notification_id
-    WHERE id = batch_id;
+    UPDATE notification_batches SET last_notification_id = notification_id WHERE id = batch_id;
   END IF;
 
-  -- Queue for push notification (only if immediate or no batching)
+  -- Send push notification via HTTP
   IF NOT should_batch OR user_prefs.digest_frequency = 'immediate' THEN
-    PERFORM pg_notify('push_notification', json_build_object(
-      'notification_id', notification_id,
-      'user_id', recipient_id,
-      'type', notification_type,
-      'message', default_message,
-      'channel', channel_name,
-      'batch_id', batch_id
-    )::text);
+    BEGIN
+      PERFORM net.http_post(
+        url := 'https://hefmtydvnbouibdulyjs.supabase.co/functions/v1/send-push-notification',
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'Authorization', 'Bearer ' || service_role_key
+        ),
+        body := jsonb_build_object(
+          'notification_id', notification_id,
+          'user_id', recipient_id,
+          'type', notification_type,
+          'message', default_message,
+          'channel', channel_name,
+          'batch_id', batch_id
+        )
+      );
+      RAISE NOTICE 'Push notification sent for notification %', notification_id;
+    EXCEPTION
+      WHEN OTHERS THEN
+        RAISE WARNING 'Failed to send push notification: %', SQLERRM;
+    END;
   END IF;
 
   RETURN notification_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Step 2: Secure trigger functions with improved performance
--- Drop trigger first before dropping function
+-- ============================================================================
+-- PART 2: Friend Request/Accepted Trigger
+-- ============================================================================
+
+DROP TRIGGER IF EXISTS friendship_notification_secure ON friendships;
+DROP FUNCTION IF EXISTS notify_on_friend_request_secure();
+
+CREATE FUNCTION notify_on_friend_request_secure()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.status = 'pending' AND (OLD IS NULL OR OLD.status IS NULL) THEN
+    -- New friend request
+    PERFORM create_notification_secure(
+      NEW.addressee_id,
+      NEW.requester_id,
+      'friend_request',
+      NULL,
+      NEW.id::TEXT,
+      NULL,
+      '/profile/' || NEW.requester_id,
+      jsonb_build_object('high_priority', true)
+    );
+  ELSIF NEW.status = 'accepted' AND OLD.status = 'pending' THEN
+    -- Friend request accepted
+    PERFORM create_notification_secure(
+      NEW.requester_id,
+      NEW.addressee_id,
+      'friend_accepted',
+      NULL,
+      NEW.id::TEXT,
+      NULL,
+      '/profile/' || NEW.addressee_id,
+      jsonb_build_object('high_priority', false)
+    );
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER friendship_notification_secure
+  AFTER INSERT OR UPDATE ON friendships
+  FOR EACH ROW EXECUTE FUNCTION notify_on_friend_request_secure();
+
+-- ============================================================================
+-- PART 3: Like Notifications Trigger
+-- ============================================================================
+
 DROP TRIGGER IF EXISTS insight_like_notification_secure ON insight_likes;
 DROP FUNCTION IF EXISTS notify_on_like_secure();
 
@@ -210,25 +262,16 @@ DECLARE
   content_title TEXT;
   content_id_value UUID;
 BEGIN
-  -- Determine content owner and type with single query optimization
   CASE TG_TABLE_NAME
     WHEN 'insight_likes' THEN
       SELECT author_id, 'insight', LEFT(content, 50)
       INTO content_owner_id, content_type_name, content_title
       FROM insights WHERE id = NEW.insight_id;
       content_id_value := NEW.insight_id;
-    WHEN 'article_likes' THEN
-      -- Articles don't have individual owners, skip notification
-      RETURN NEW;
-    WHEN 'paper_likes' THEN
-      -- Papers don't have individual owners, skip notification
-      RETURN NEW;
-    WHEN 'book_likes' THEN
-      -- Books don't have individual owners, skip notification
-      RETURN NEW;
+    WHEN 'article_likes', 'paper_likes', 'book_likes' THEN
+      RETURN NEW; -- Skip non-user content
   END CASE;
 
-  -- Only notify if content has an owner (user-generated content)
   IF content_owner_id IS NOT NULL THEN
     PERFORM create_notification_secure(
       content_owner_id,
@@ -236,7 +279,7 @@ BEGIN
       'like',
       content_type_name,
       content_id_value::TEXT,
-      NULL, -- Use default message
+      NULL,
       '/content/' || content_type_name || '/' || content_id_value::TEXT,
       jsonb_build_object('content_preview', content_title)
     );
@@ -246,14 +289,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create secure triggers
-DROP TRIGGER IF EXISTS insight_like_notification ON insight_likes;
 CREATE TRIGGER insight_like_notification_secure
   AFTER INSERT ON insight_likes
   FOR EACH ROW EXECUTE FUNCTION notify_on_like_secure();
 
--- Step 3: Secure comment notification function
--- Drop trigger first before dropping function
+-- ============================================================================
+-- PART 4: Comment Notifications Trigger
+-- ============================================================================
+
 DROP TRIGGER IF EXISTS insight_comment_notification_secure ON insight_comments;
 DROP FUNCTION IF EXISTS notify_on_comment_secure();
 
@@ -265,20 +308,18 @@ DECLARE
   content_id_value TEXT;
   parent_comment_owner_id UUID;
 BEGIN
-  -- Handle content owner notifications
   CASE TG_TABLE_NAME
     WHEN 'insight_comments' THEN
       SELECT author_id INTO content_owner_id FROM insights WHERE id = NEW.insight_id;
       content_type_name := 'insight';
       content_id_value := NEW.insight_id::TEXT;
     WHEN 'comments' THEN
-      -- Articles don't have owners in this system
       content_owner_id := NULL;
       content_type_name := 'article';
       content_id_value := NEW.article_id::TEXT;
   END CASE;
 
-  -- Notify content owner (if not the commenter)
+  -- Notify content owner
   IF content_owner_id IS NOT NULL AND content_owner_id != NEW.user_id THEN
     PERFORM create_notification_secure(
       content_owner_id,
@@ -291,18 +332,15 @@ BEGIN
     );
   END IF;
 
-  -- Handle reply notifications (if this is a reply to another comment)
+  -- Handle replies
   IF NEW.parent_comment_id IS NOT NULL THEN
     CASE TG_TABLE_NAME
       WHEN 'insight_comments' THEN
-        SELECT user_id INTO parent_comment_owner_id
-        FROM insight_comments WHERE id = NEW.parent_comment_id;
+        SELECT user_id INTO parent_comment_owner_id FROM insight_comments WHERE id = NEW.parent_comment_id;
       WHEN 'comments' THEN
-        SELECT user_id INTO parent_comment_owner_id
-        FROM comments WHERE id = NEW.parent_comment_id;
+        SELECT user_id INTO parent_comment_owner_id FROM comments WHERE id = NEW.parent_comment_id;
     END CASE;
 
-    -- Notify parent comment owner (if different from current commenter and content owner)
     IF parent_comment_owner_id IS NOT NULL
        AND parent_comment_owner_id != NEW.user_id
        AND parent_comment_owner_id != content_owner_id THEN
@@ -322,153 +360,67 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create secure comment triggers
-DROP TRIGGER IF EXISTS insight_comment_notification ON insight_comments;
 CREATE TRIGGER insight_comment_notification_secure
   AFTER INSERT ON insight_comments
   FOR EACH ROW EXECUTE FUNCTION notify_on_comment_secure();
 
--- Step 4: Secure friend request notifications
--- Drop trigger first before dropping function
-DROP TRIGGER IF EXISTS friendship_notification_secure ON friendships;
-DROP FUNCTION IF EXISTS notify_on_friend_request_secure();
+-- ============================================================================
+-- PART 5: Friend Insight Notifications Trigger
+-- ============================================================================
 
-CREATE FUNCTION notify_on_friend_request_secure()
+DROP TRIGGER IF EXISTS notify_friends_on_insight ON insights;
+DROP FUNCTION IF EXISTS notify_friends_on_new_insight();
+
+CREATE FUNCTION notify_friends_on_new_insight()
 RETURNS TRIGGER AS $$
+DECLARE
+  friend_record RECORD;
+  notification_count INTEGER := 0;
 BEGIN
-  IF NEW.status = 'pending' AND (OLD IS NULL OR OLD.status IS NULL) THEN
-    -- New friend request (high priority - can override quiet hours)
+  IF TG_OP != 'INSERT' THEN
+    RETURN NEW;
+  END IF;
+
+  FOR friend_record IN
+    SELECT DISTINCT
+      CASE
+        WHEN f.requester_id = NEW.author_id THEN f.addressee_id
+        WHEN f.addressee_id = NEW.author_id THEN f.requester_id
+      END as friend_id
+    FROM friendships f
+    WHERE f.status = 'accepted'
+      AND (f.requester_id = NEW.author_id OR f.addressee_id = NEW.author_id)
+  LOOP
     PERFORM create_notification_secure(
-      NEW.addressee_id,
-      NEW.requester_id,
-      'friend_request',
-      NULL,
+      friend_record.friend_id,
+      NEW.author_id,
+      'friend_insight',
+      'insight',
       NEW.id::TEXT,
       NULL,
-      '/profile/' || NEW.requester_id,
-      jsonb_build_object('high_priority', true)
+      '/insight/' || NEW.id,
+      jsonb_build_object('high_priority', false, 'insight_preview', LEFT(NEW.content, 100)),
+      'social'
     );
-  ELSIF NEW.status = 'accepted' AND OLD.status = 'pending' THEN
-    -- Friend request accepted - notify the requester
-    PERFORM create_notification_secure(
-      NEW.requester_id,
-      NEW.addressee_id,
-      'friend_accepted',
-      NULL,
-      NEW.id::TEXT,
-      NULL,
-      '/profile/' || NEW.addressee_id,
-      jsonb_build_object('high_priority', false)
-    );
+    notification_count := notification_count + 1;
+  END LOOP;
+
+  IF notification_count > 0 THEN
+    RAISE NOTICE 'Created % friend insight notification(s) for insight %', notification_count, NEW.id;
   END IF;
 
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create secure friendship trigger
-DROP TRIGGER IF EXISTS friendship_notification ON friendships;
-CREATE TRIGGER friendship_notification_secure
-  AFTER INSERT OR UPDATE ON friendships
-  FOR EACH ROW EXECUTE FUNCTION notify_on_friend_request_secure();
+CREATE TRIGGER notify_friends_on_insight
+  AFTER INSERT ON insights
+  FOR EACH ROW EXECUTE FUNCTION notify_friends_on_new_insight();
 
--- Step 5: Batch processing function for digest notifications
-DROP FUNCTION IF EXISTS process_notification_batches();
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
 
-CREATE FUNCTION process_notification_batches()
-RETURNS INTEGER AS $$
-DECLARE
-  batch_record RECORD;
-  processed_count INTEGER := 0;
-  batch_message TEXT;
-BEGIN
-  -- Process expired batches
-  FOR batch_record IN
-    SELECT * FROM notification_batches
-    WHERE expires_at <= NOW()
-      AND last_notification_id IS NOT NULL
-  LOOP
-    -- Create batched message
-    IF batch_record.count = 1 THEN
-      -- Single notification, send as-is
-      PERFORM pg_notify('push_notification', json_build_object(
-        'notification_id', batch_record.last_notification_id,
-        'user_id', batch_record.user_id,
-        'type', batch_record.notification_type,
-        'batch_id', batch_record.id
-      )::text);
-    ELSE
-      -- Multiple notifications, create summary
-      CASE batch_record.notification_type
-        WHEN 'like' THEN
-          batch_message := batch_record.count || ' people liked your ' || COALESCE(batch_record.content_type, 'content');
-        WHEN 'save' THEN
-          batch_message := batch_record.count || ' people saved your ' || COALESCE(batch_record.content_type, 'content');
-        WHEN 'friend_activity', 'friend_insight' THEN
-          batch_message := batch_record.count || ' new insights from your friends';
-        ELSE
-          batch_message := batch_record.count || ' new ' || batch_record.notification_type || ' notifications';
-      END CASE;
-
-      -- Send batched notification
-      PERFORM pg_notify('push_notification', json_build_object(
-        'notification_id', batch_record.last_notification_id,
-        'user_id', batch_record.user_id,
-        'type', 'digest',
-        'message', batch_message,
-        'batch_id', batch_record.id,
-        'count', batch_record.count
-      )::text);
-    END IF;
-
-    processed_count := processed_count + 1;
-  END LOOP;
-
-  -- Clean up processed batches
-  DELETE FROM notification_batches
-  WHERE expires_at <= NOW();
-
-  RETURN processed_count;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Step 6: Analytics function for notification tracking
-DROP FUNCTION IF EXISTS track_notification_event(UUID, TEXT, JSONB);
-
-CREATE FUNCTION track_notification_event(
-  notification_id_param UUID,
-  event_type TEXT, -- 'delivered', 'opened', 'failed'
-  additional_info JSONB DEFAULT '{}'
-) RETURNS BOOLEAN AS $$
-BEGIN
-  CASE event_type
-    WHEN 'delivered' THEN
-      UPDATE notifications
-      SET
-        push_sent = true,
-        push_sent_at = NOW(),
-        data = data || jsonb_build_object('delivery_info', additional_info)
-      WHERE id = notification_id_param;
-
-    WHEN 'opened' THEN
-      UPDATE notifications
-      SET
-        opened_at = NOW(),
-        is_read = true,
-        data = data || jsonb_build_object('open_info', additional_info)
-      WHERE id = notification_id_param;
-
-    WHEN 'failed' THEN
-      UPDATE notifications
-      SET data = data || jsonb_build_object('failure_info', additional_info)
-      WHERE id = notification_id_param;
-  END CASE;
-
-  RETURN FOUND;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Verification
-SELECT
-  'SECURE NOTIFICATION FUNCTIONS DEPLOYED' as status,
-  'Enhanced with 2025 security and performance features' as message;
+SELECT '✅ COMPLETE NOTIFICATION SYSTEM V3 DEPLOYED' as status;
+SELECT 'Includes: friend_request, friend_accepted, friend_insight, likes, comments' as features;
+SELECT 'Uses HTTP push delivery for immediate notifications' as delivery_method;

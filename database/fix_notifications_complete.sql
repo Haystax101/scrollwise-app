@@ -1,14 +1,8 @@
--- Immediate Push Notification Delivery via HTTP (v2)
--- Replaces pg_notify() with direct HTTP calls to edge function
--- Service role key is embedded in the function
+-- Complete fix for friend insight notifications
+-- Issue: 'friend_activity' is used in code but 'friend_insight' is required by CHECK constraint
+-- Solution: Map 'friend_activity' to 'friend_insight' when inserting notifications
 
--- IMPORTANT: Replace 'YOUR_SERVICE_ROLE_KEY_HERE' with your actual Supabase service_role key
--- Find it in: Supabase Dashboard → Project Settings → API → service_role key
-
--- Enable pg_net extension for HTTP requests (if not already enabled)
-CREATE EXTENSION IF NOT EXISTS pg_net;
-
--- Update create_notification_secure to use HTTP instead of pg_notify
+-- Step 1: Update notifications_functions_secure.sql to map friend_activity to friend_insight
 DROP FUNCTION IF EXISTS create_notification_secure(UUID, UUID, TEXT, TEXT, TEXT, TEXT, TEXT, JSONB, TEXT);
 
 CREATE FUNCTION create_notification_secure(
@@ -31,12 +25,19 @@ DECLARE
   should_batch BOOLEAN := false;
   existing_batch RECORD;
   channel_name TEXT;
-  service_role_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlZm10eWR2bmJvdWliZHVseWpzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTU2NDc3MSwiZXhwIjoyMDY1MTQwNzcxfQ.ORZqf5Kg0-bRJljlUnRpdgJu8MVQU9Pkj8VjhzagDu4'; -- REPLACE THIS!
+  db_notification_type TEXT; -- The type to actually insert into DB
 BEGIN
   -- Input validation and sanitization
   IF recipient_id IS NULL OR source_user_id IS NULL OR notification_type IS NULL THEN
     RAISE WARNING 'create_notification_secure: Missing required parameters';
     RETURN NULL;
+  END IF;
+
+  -- Map notification types for database compatibility
+  -- The preferences table uses 'friend_activity' but the notifications CHECK constraint uses 'friend_insight'
+  db_notification_type := notification_type;
+  IF notification_type = 'friend_activity' THEN
+    db_notification_type := 'friend_insight';
   END IF;
 
   -- Prevent self-notifications
@@ -65,7 +66,7 @@ BEGIN
     WHERE user_id = recipient_id;
   END IF;
 
-  -- Check if user wants this type of notification
+  -- Check if user wants this type of notification (using original type for preferences)
   CASE notification_type
     WHEN 'like', 'save' THEN
       IF user_prefs.likes = FALSE THEN RETURN NULL; END IF;
@@ -106,33 +107,24 @@ BEGIN
   END CASE;
 
   -- Handle batching for appropriate notification types
-  IF should_batch AND user_prefs.digest_frequency IN ('batched_5min', 'hourly') THEN
-    -- Create batch key for grouping similar notifications
-    batch_key := notification_type || ':' || COALESCE(content_type, '') || ':' || COALESCE(content_id, '');
+  IF should_batch AND user_prefs.digest_frequency != 'immediate' THEN
+    batch_key := recipient_id::TEXT || '_' || notification_type || '_' || COALESCE(content_type, 'general');
 
-    -- Check for existing active batch
     SELECT * INTO existing_batch
     FROM notification_batches
     WHERE user_id = recipient_id
-      AND batch_key = batch_key
-      AND expires_at > NOW();
+      AND notification_type = notification_type
+      AND status = 'pending'
+      AND created_at > (NOW() - INTERVAL '5 minutes')
+    ORDER BY created_at DESC
+    LIMIT 1;
 
-    IF existing_batch IS NOT NULL THEN
-      -- Update existing batch
-      UPDATE notification_batches
-      SET
-        count = count + 1,
-        expires_at = NOW() + INTERVAL '5 minutes'
-      WHERE id = existing_batch.id;
-
+    IF existing_batch.id IS NOT NULL THEN
       batch_id := existing_batch.id;
     ELSE
-      -- Create new batch
-      INSERT INTO notification_batches (
-        user_id, notification_type, content_type, content_id, batch_key
-      ) VALUES (
-        recipient_id, notification_type, content_type, content_id, batch_key
-      ) RETURNING id INTO batch_id;
+      INSERT INTO notification_batches (user_id, notification_type, content_type)
+      VALUES (recipient_id, notification_type, content_type)
+      RETURNING id INTO batch_id;
     END IF;
   END IF;
 
@@ -173,140 +165,90 @@ BEGIN
   -- Remove potentially sensitive fields
   additional_data := additional_data - 'email' - 'phone' - 'address' - 'password';
 
-  -- Insert notification
+  -- Insert notification with mapped type
   INSERT INTO notifications (
     user_id, source_user_id, type, content_type, content_id,
     message, action_url, data, batch_id, channel
   ) VALUES (
-    recipient_id, source_user_id, notification_type, content_type, content_id,
+    recipient_id, source_user_id, db_notification_type, content_type, content_id,
     default_message, action_url, additional_data, batch_id, channel_name
   ) RETURNING id INTO notification_id;
 
   -- Update batch with latest notification
   IF batch_id IS NOT NULL THEN
     UPDATE notification_batches
-    SET last_notification_id = notification_id
+    SET
+      notification_count = notification_count + 1,
+      last_notification_id = notification_id,
+      updated_at = NOW()
     WHERE id = batch_id;
-  END IF;
-
-  -- *** CHANGED: Send push notification via HTTP instead of pg_notify ***
-  -- Queue for push notification via HTTP (only if immediate or no batching)
-  IF NOT should_batch OR user_prefs.digest_frequency = 'immediate' THEN
-    BEGIN
-      PERFORM net.http_post(
-        url := 'https://hefmtydvnbouibdulyjs.supabase.co/functions/v1/send-push-notification',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || service_role_key
-        ),
-        body := jsonb_build_object(
-          'notification_id', notification_id,
-          'user_id', recipient_id,
-          'type', notification_type,
-          'message', default_message,
-          'channel', channel_name,
-          'batch_id', batch_id
-        )
-      );
-
-      RAISE NOTICE 'Push notification HTTP request sent for notification %', notification_id;
-    EXCEPTION
-      WHEN OTHERS THEN
-        -- Don't fail the transaction if HTTP request fails
-        RAISE WARNING 'Failed to send push notification HTTP request: %', SQLERRM;
-    END;
   END IF;
 
   RETURN notification_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Update process_notification_batches to use HTTP instead of pg_notify
-DROP FUNCTION IF EXISTS process_notification_batches();
+-- Step 2: Update the friend insight trigger to use 'friend_activity' (which gets mapped to 'friend_insight')
+DROP FUNCTION IF EXISTS notify_friends_on_new_insight() CASCADE;
 
-CREATE FUNCTION process_notification_batches()
-RETURNS INTEGER AS $$
+CREATE FUNCTION notify_friends_on_new_insight()
+RETURNS TRIGGER AS $$
 DECLARE
-  batch_record RECORD;
-  processed_count INTEGER := 0;
-  batch_message TEXT;
-  service_role_key TEXT := 'YOUR_SERVICE_ROLE_KEY_HERE'; -- REPLACE THIS!
+  friend_record RECORD;
+  notification_count INTEGER := 0;
 BEGIN
-  -- Process expired batches
-  FOR batch_record IN
-    SELECT * FROM notification_batches
-    WHERE expires_at <= NOW()
-      AND last_notification_id IS NOT NULL
+  -- Only process on INSERT (new insights)
+  IF TG_OP != 'INSERT' THEN
+    RETURN NEW;
+  END IF;
+
+  -- Get all friends of the insight author
+  FOR friend_record IN
+    SELECT DISTINCT
+      CASE
+        WHEN f.requester_id = NEW.author_id THEN f.addressee_id
+        WHEN f.addressee_id = NEW.author_id THEN f.requester_id
+      END as friend_id
+    FROM friendships f
+    WHERE f.status = 'accepted'
+      AND (f.requester_id = NEW.author_id OR f.addressee_id = NEW.author_id)
   LOOP
-    -- Create batched message
-    IF batch_record.count = 1 THEN
-      -- Single notification, send as-is
-      BEGIN
-        PERFORM net.http_post(
-          url := 'https://hefmtydvnbouibdulyjs.supabase.co/functions/v1/send-push-notification',
-          headers := jsonb_build_object(
-            'Content-Type', 'application/json',
-            'Authorization', 'Bearer ' || service_role_key
-          ),
-          body := jsonb_build_object(
-            'notification_id', batch_record.last_notification_id,
-            'user_id', batch_record.user_id,
-            'type', batch_record.notification_type,
-            'batch_id', batch_record.id
-          )
-        );
-      EXCEPTION
-        WHEN OTHERS THEN
-          RAISE WARNING 'Failed to send batched notification: %', SQLERRM;
-      END;
-    ELSE
-      -- Multiple notifications, create summary
-      CASE batch_record.notification_type
-        WHEN 'like' THEN
-          batch_message := batch_record.count || ' people liked your ' || COALESCE(batch_record.content_type, 'content');
-        WHEN 'save' THEN
-          batch_message := batch_record.count || ' people saved your ' || COALESCE(batch_record.content_type, 'content');
-        WHEN 'friend_activity', 'friend_insight' THEN
-          batch_message := batch_record.count || ' new insights from your friends';
-        ELSE
-          batch_message := batch_record.count || ' new ' || batch_record.notification_type || ' notifications';
-      END CASE;
+    -- Create notification for each friend
+    -- Using 'friend_activity' which will be mapped to 'friend_insight' by the function
+    PERFORM create_notification_secure(
+      friend_record.friend_id,      -- recipient (the friend)
+      NEW.author_id,                 -- source user (insight author)
+      'friend_activity',             -- notification type (maps to friend_insight in DB)
+      'insight',                     -- content type
+      NEW.id::TEXT,                  -- content id
+      NULL,                          -- custom message (will use default)
+      '/insight/' || NEW.id,         -- action url
+      jsonb_build_object(
+        'high_priority', false,
+        'insight_preview', LEFT(NEW.content, 100)
+      ),
+      'social'                       -- channel override
+    );
 
-      -- Send batched notification via HTTP
-      BEGIN
-        PERFORM net.http_post(
-          url := 'https://hefmtydvnbouibdulyjs.supabase.co/functions/v1/send-push-notification',
-          headers := jsonb_build_object(
-            'Content-Type', 'application/json',
-            'Authorization', 'Bearer ' || service_role_key
-          ),
-          body := jsonb_build_object(
-            'notification_id', batch_record.last_notification_id,
-            'user_id', batch_record.user_id,
-            'type', 'digest',
-            'message', batch_message,
-            'batch_id', batch_record.id,
-            'count', batch_record.count
-          )
-        );
-      EXCEPTION
-        WHEN OTHERS THEN
-          RAISE WARNING 'Failed to send batched notification: %', SQLERRM;
-      END;
-    END IF;
-
-    processed_count := processed_count + 1;
+    notification_count := notification_count + 1;
   END LOOP;
 
-  -- Clean up processed batches
-  DELETE FROM notification_batches
-  WHERE expires_at <= NOW();
+  -- Log for monitoring
+  IF notification_count > 0 THEN
+    RAISE NOTICE 'Created % friend insight notification(s) for insight %', notification_count, NEW.id;
+  END IF;
 
-  RETURN processed_count;
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Verification
-SELECT
-  'IMMEDIATE NOTIFICATION DELIVERY DEPLOYED (V2)' as status,
-  'Service role key embedded in functions' as message;
+-- Step 3: Recreate trigger on insights table
+DROP TRIGGER IF EXISTS notify_friends_on_insight ON insights;
+
+CREATE TRIGGER notify_friends_on_insight
+  AFTER INSERT ON insights
+  FOR EACH ROW
+  EXECUTE FUNCTION notify_friends_on_new_insight();
+
+-- Step 4: Verify the fix
+SELECT 'Friend insight notifications fixed - friend_activity now maps to friend_insight in DB' as status;

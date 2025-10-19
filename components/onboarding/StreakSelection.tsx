@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Button } from './Button';
 import { OnboardingPage } from './OnboardingPage';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingStyles } from './styles';
+import { NotificationService } from '../../services/notificationService';
 
 const streakOptions = [
   { days: 10, title: 'Getting Started', subtitle: '10 day streak goal', icon: 'flame' as const, color: '#FFE4B5' },
@@ -13,15 +14,42 @@ const streakOptions = [
 ];
 
 interface StreakSelectionProps {
-  onNext: (data: { streakGoal: number }) => void;
+  onNext: (data: { streakGoal: number; enableNotifications?: boolean }) => void;
   onBack?: () => void;
 }
 
 export const StreakSelection: React.FC<StreakSelectionProps> = ({ onNext, onBack }) => {
   const [selectedDays, setSelectedDays] = useState<number>(10);
+  const [isRequestingPermissions, setIsRequestingPermissions] = useState(false);
 
-  const handleNext = () => {
-    onNext({ streakGoal: selectedDays });
+  const handleNext = async () => {
+    // First, proceed with the streak goal
+    setIsRequestingPermissions(true);
+
+    try {
+      // Request notification permissions
+      if (NotificationService.isDeviceSupported()) {
+        const result = await NotificationService.registerForPushNotifications();
+
+        if (result.success) {
+          console.log('✅ Notifications enabled during onboarding');
+          onNext({ streakGoal: selectedDays, enableNotifications: true });
+        } else {
+          console.log('⚠️ User declined notifications or they failed to enable');
+          // Still proceed, just without notifications
+          onNext({ streakGoal: selectedDays, enableNotifications: false });
+        }
+      } else {
+        console.log('📱 Device does not support push notifications');
+        onNext({ streakGoal: selectedDays, enableNotifications: false });
+      }
+    } catch (error) {
+      console.error('Error requesting notification permissions:', error);
+      // Proceed anyway
+      onNext({ streakGoal: selectedDays, enableNotifications: false });
+    } finally {
+      setIsRequestingPermissions(false);
+    }
   };
 
   return (
@@ -30,10 +58,23 @@ export const StreakSelection: React.FC<StreakSelectionProps> = ({ onNext, onBack
       subtitle="Choose your daily learning streak target to stay motivated"
       onNext={handleNext}
       onBack={onBack}
-      buttonText="Continue"
+      buttonText={isRequestingPermissions ? "Setting up..." : "Continue"}
+      buttonDisabled={isRequestingPermissions}
     >
       <View style={styles.container}>
+        <View style={styles.notificationInfo}>
+          <Ionicons name="notifications-outline" size={20} color="#6B7280" />
+          <Text style={styles.notificationText}>
+            We'll ask for notification permission to send you daily learning reminders
+          </Text>
+        </View>
         <View style={styles.streakWrapper}>
+          {isRequestingPermissions && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color={OnboardingStyles.accent} />
+              <Text style={styles.loadingText}>Requesting notification permissions...</Text>
+            </View>
+          )}
           {streakOptions.map((option) => {
             const isSelected = selectedDays === option.days;
             return (
@@ -85,11 +126,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-start',
-    paddingTop: 10, // Reduced from 20
+    paddingTop: 10,
+  },
+  notificationInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  notificationText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 18,
   },
   streakWrapper: {
     paddingHorizontal: 16,
-    paddingVertical: 10, // Added vertical padding to container
+    paddingVertical: 10,
+    position: 'relative',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+    borderRadius: 12,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   streakItem: {
     flexDirection: 'row',

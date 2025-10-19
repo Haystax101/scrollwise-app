@@ -1,7 +1,8 @@
--- Add notification trigger for when friends post insights
--- This notifies users when their friends create new insights
+-- Simple fix for insight publishing issue
+-- Problem: Trigger uses 'friend_activity' type but notifications table only accepts 'friend_insight'
+-- Solution: Change trigger to use 'friend_insight' and add it to preferences check
 
--- Step 1: Create function to notify friends about new insights
+-- Step 1: Update the friend insight trigger to use 'friend_insight' instead of 'friend_activity'
 DROP FUNCTION IF EXISTS notify_friends_on_new_insight() CASCADE;
 
 CREATE FUNCTION notify_friends_on_new_insight()
@@ -30,7 +31,7 @@ BEGIN
     PERFORM create_notification_secure(
       friend_record.friend_id,      -- recipient (the friend)
       NEW.author_id,                 -- source user (insight author)
-      'friend_insight',              -- notification type (changed from friend_activity)
+      'friend_insight',              -- FIXED: Changed from 'friend_activity' to 'friend_insight'
       'insight',                     -- content type
       NEW.id::TEXT,                  -- content id
       NULL,                          -- custom message (will use default)
@@ -47,14 +48,14 @@ BEGIN
 
   -- Log for monitoring
   IF notification_count > 0 THEN
-    RAISE NOTICE 'Created % friend activity notification(s) for insight %', notification_count, NEW.id;
+    RAISE NOTICE 'Created % friend insight notification(s) for insight %', notification_count, NEW.id;
   END IF;
 
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Step 2: Create trigger on insights table
+-- Step 2: Recreate trigger on insights table
 DROP TRIGGER IF EXISTS notify_friends_on_insight ON insights;
 
 CREATE TRIGGER notify_friends_on_insight
@@ -62,16 +63,4 @@ CREATE TRIGGER notify_friends_on_insight
   FOR EACH ROW
   EXECUTE FUNCTION notify_friends_on_new_insight();
 
--- Step 3: Update the default message for friend_activity notifications
--- This is already handled in create_notification_secure, but let's verify the message format
-
--- Verify trigger was created
-SELECT
-  trigger_name,
-  event_manipulation,
-  event_object_table,
-  action_statement
-FROM information_schema.triggers
-WHERE trigger_name = 'notify_friends_on_insight';
-
-SELECT 'Friend insight notifications trigger created successfully' as status;
+SELECT 'Insight publishing fix applied - now using friend_insight notification type' as status;

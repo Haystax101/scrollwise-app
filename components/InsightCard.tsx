@@ -52,6 +52,8 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   const [userModalVisible, setUserModalVisible] = useState(false);
   const [commentLiked, setCommentLiked] = useState(false);
   const [commentLikes, setCommentLikes] = useState(0);
+  const [isTextTruncated, setIsTextTruncated] = useState(false);
+  const [showReadMoreModal, setShowReadMoreModal] = useState(false);
 
   const dynamicStyles = StyleSheet.create({
     wrapper: {
@@ -276,6 +278,61 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     },
     replyText: {
       fontSize: 12,
+      color: colors.text,
+    },
+    readMoreButton: {
+      marginTop: 8,
+      alignSelf: 'flex-start',
+    },
+    readMoreText: {
+      fontSize: 14,
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    // Read More Modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContainer: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      marginHorizontal: 20,
+      maxHeight: screenHeight * 0.8,
+      width: '90%',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    modalCloseButton: {
+      padding: 4,
+    },
+    modalContent: {
+      padding: 16,
+    },
+    modalScrollContent: {
+      paddingBottom: 16,
+    },
+    modalInsightText: {
+      fontSize: 16,
+      lineHeight: 24,
       color: colors.text,
     },
     joinDiscussionSection: {
@@ -749,7 +806,24 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
 
         {/* Content */}
         <View style={dynamicStyles.contentSection}>
-          <Text style={dynamicStyles.contentText}>{insight.content}</Text>
+          <Text
+            style={dynamicStyles.contentText}
+            numberOfLines={14}
+            onTextLayout={(e) => {
+              const { lines } = e.nativeEvent;
+              setIsTextTruncated(lines.length >= 14);
+            }}
+          >
+            {insight.content}
+          </Text>
+          {isTextTruncated && (
+            <TouchableOpacity
+              style={dynamicStyles.readMoreButton}
+              onPress={() => setShowReadMoreModal(true)}
+            >
+              <Text style={dynamicStyles.readMoreText}>Read More</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Views Section - Above separator */}
@@ -927,6 +1001,76 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         }}
         contentType="insight"
       />
+
+      {/* Read More Modal */}
+      <Modal
+        visible={showReadMoreModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReadMoreModal(false)}
+      >
+        <TouchableOpacity
+          style={dynamicStyles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowReadMoreModal(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={dynamicStyles.modalContainer}
+          >
+            {/* Modal Header */}
+            <View style={dynamicStyles.modalHeader}>
+              <Text style={dynamicStyles.modalTitle}>Insight</Text>
+              <TouchableOpacity
+                style={dynamicStyles.modalCloseButton}
+                onPress={() => setShowReadMoreModal(false)}
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Modal Content with ScrollView */}
+            <ScrollView style={dynamicStyles.modalContent} contentContainerStyle={dynamicStyles.modalScrollContent}>
+              {/* Author Info */}
+              <TouchableOpacity
+                style={dynamicStyles.userHeader}
+                onPress={() => authorId && handleUserPress(authorId)}
+              >
+                <Image
+                  source={
+                    insight.author.avatar
+                      ? { uri: profileImageService.getProfileImageUrl(insight.author.avatar) }
+                      : defaultProfileImage
+                  }
+                  style={dynamicStyles.avatar}
+                />
+                <View style={dynamicStyles.userInfo}>
+                  <View style={dynamicStyles.headerRow}>
+                    <View style={dynamicStyles.textContainer}>
+                      <Text style={dynamicStyles.name}>{insight.author.name}</Text>
+                      {insight.author.tagline && (
+                        <Text style={dynamicStyles.tagline}>{insight.author.tagline}</Text>
+                      )}
+                      {insight.created_at && (
+                        <View style={dynamicStyles.timestampContainer}>
+                          <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+                          <Text style={dynamicStyles.timestamp}>{formatTimestamp(insight.created_at)}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              {/* Full Insight Content */}
+              <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+                <Text style={dynamicStyles.modalInsightText}>{insight.content}</Text>
+              </View>
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };

@@ -17,12 +17,7 @@ import { EmailInput } from './EmailInput';
 import { PasswordSetup } from './PasswordSetup';
 import { PersonalInfo } from './PersonalInfo';
 import { IndustrySelection } from './IndustrySelection';
-import { DreamRole } from './DreamRole';
-import { CurrentWork } from './CurrentWork';
 import { StreakSelection } from './StreakSelection';
-import { Notifications } from './Notifications';
-import { CongratulationsScreen } from './CongratulationsScreen';
-import { YoureAllSetScreen } from './YoureAllSetScreen';
 import { OnboardingProgressBar } from './OnboardingProgressBar';
 import { FinalOnboardingScreen } from './FinalOnboardingScreen';
 import { OtpVerificationScreen } from './OtpVerificationScreen';
@@ -139,7 +134,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
         setCurrentStep(0);
       }
     } else if (currentSection === 'registration') {
-      if (currentStep < 10) { // 11 registration screens (0-10)
+      if (currentStep < 5) { // 6 registration screens (0-5)
         setCurrentStep(prev => prev + 1);
       } else {
         // Move to tutorial section
@@ -170,7 +165,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     } else if (currentSection === 'tutorial') {
       // Go back to registration
       setCurrentSection('registration');
-      setCurrentStep(10); // Last registration step (YoureAllSetScreen)
+      setCurrentStep(5); // Last registration step (StreakSelection)
     }
   };
 
@@ -596,7 +591,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     nextStep();
   };
 
-  const handleStreakSelection = async (data: { streakGoal: number }) => {
+  const handleStreakSelection = async (data: { streakGoal: number; enableNotifications?: boolean }) => {
     updateOnboardingData(data);
 
     if (userId) {
@@ -610,7 +605,10 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
       }
       console.log('Learning streak set up successfully');
     }
-    nextStep();
+
+    // Transition directly to tutorial after streak setup
+    setCurrentSection('tutorial');
+    setCurrentStep(0);
   };
 
   const handleNotifications = async (data: { enableNotifications: boolean }) => {
@@ -637,7 +635,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
   const renderRegistrationStep = () => {
     // Show progress bar starting from IndustrySelection (step 4) onwards
     const showProgressBar = currentStep >= 4;
-    const totalProgressSteps = 7; // Steps 4-10 (IndustrySelection through YoureAllSetScreen)
+    const totalProgressSteps = 2; // Steps 4-5 (IndustrySelection and StreakSelection)
     const currentProgressStep = Math.max(1, currentStep - 3); // Adjust to start from 1
 
     const stepContent = (() => {
@@ -645,9 +643,9 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
         case 0:
           return <EmailInput onNext={handleEmailInput} onBack={prevStep} emailExistsError={emailExistsError} onGoToLogin={goToLogin} />;
         case 1:
-          return <OtpVerificationScreen 
-            email={onboardingData.email} 
-            onSuccess={handleOtpSuccess} 
+          return <OtpVerificationScreen
+            email={onboardingData.email}
+            onSuccess={handleOtpSuccess}
             onBack={handleOtpBack}
             skipInitialOtpSend={true} // OTP was already sent in EmailInput
           />;
@@ -658,17 +656,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
         case 4:
           return <IndustrySelection onNext={handleIndustrySelection} />;
         case 5:
-          return <CongratulationsScreen onNext={nextStep} onBack={prevStep} />;
-        case 6:
-          return <DreamRole onNext={handleDreamRole} onBack={showProgressBar ? undefined : prevStep} />;
-        case 7:
           return <StreakSelection onNext={handleStreakSelection} onBack={showProgressBar ? undefined : prevStep} />;
-        case 8:
-          return <CurrentWork onNext={handleCurrentWork} onBack={showProgressBar ? undefined : prevStep} />;
-        case 9:
-          return <Notifications onNext={handleNotifications} />;
-        case 10:
-          return <YoureAllSetScreen onNext={handleYoureAllSet} />;
         default:
           return null;
       }
@@ -678,8 +666,8 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
       <View style={{ flex: 1 }}>
         {stepContent}
         {showProgressBar && (
-          <OnboardingProgressBar 
-            currentStep={currentProgressStep} 
+          <OnboardingProgressBar
+            currentStep={currentProgressStep}
             totalSteps={totalProgressSteps}
             onBack={prevStep}
             hideBackButton={currentStep === 4} // Hide back button on IndustrySelection

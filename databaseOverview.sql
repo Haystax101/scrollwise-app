@@ -33,7 +33,7 @@ CREATE TABLE public.article_comment_likes (
   user_id uuid NOT NULL,
   comment_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT article_comment_likes_pkey PRIMARY KEY (comment_id, user_id),
+  CONSTRAINT article_comment_likes_pkey PRIMARY KEY (user_id, comment_id),
   CONSTRAINT article_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.comments(id),
   CONSTRAINT article_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -41,7 +41,7 @@ CREATE TABLE public.article_likes (
   user_id uuid NOT NULL,
   article_id integer NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT article_likes_pkey PRIMARY KEY (article_id, user_id),
+  CONSTRAINT article_likes_pkey PRIMARY KEY (user_id, article_id),
   CONSTRAINT article_likes_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.articles(id),
   CONSTRAINT article_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -49,7 +49,7 @@ CREATE TABLE public.article_saves (
   user_id uuid NOT NULL,
   article_id integer NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT article_saves_pkey PRIMARY KEY (article_id, user_id),
+  CONSTRAINT article_saves_pkey PRIMARY KEY (user_id, article_id),
   CONSTRAINT article_saves_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.articles(id),
   CONSTRAINT article_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -97,7 +97,7 @@ CREATE TABLE public.book_comment_likes (
   user_id uuid NOT NULL,
   comment_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT book_comment_likes_pkey PRIMARY KEY (comment_id, user_id),
+  CONSTRAINT book_comment_likes_pkey PRIMARY KEY (user_id, comment_id),
   CONSTRAINT book_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.book_comments(id),
   CONSTRAINT book_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -120,7 +120,7 @@ CREATE TABLE public.book_likes (
   user_id uuid NOT NULL,
   book_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT book_likes_pkey PRIMARY KEY (book_id, user_id),
+  CONSTRAINT book_likes_pkey PRIMARY KEY (user_id, book_id),
   CONSTRAINT book_likes_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id),
   CONSTRAINT book_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -128,7 +128,7 @@ CREATE TABLE public.book_saves (
   user_id uuid NOT NULL,
   book_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT book_saves_pkey PRIMARY KEY (book_id, user_id),
+  CONSTRAINT book_saves_pkey PRIMARY KEY (user_id, book_id),
   CONSTRAINT book_saves_book_id_fkey FOREIGN KEY (book_id) REFERENCES public.books(id),
   CONSTRAINT book_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -326,7 +326,7 @@ CREATE TABLE public.insight_comment_likes (
   user_id uuid NOT NULL,
   comment_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT insight_comment_likes_pkey PRIMARY KEY (comment_id, user_id),
+  CONSTRAINT insight_comment_likes_pkey PRIMARY KEY (user_id, comment_id),
   CONSTRAINT insight_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.insight_comments(id),
   CONSTRAINT insight_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -349,7 +349,7 @@ CREATE TABLE public.insight_likes (
   user_id uuid NOT NULL,
   insight_id uuid NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT insight_likes_pkey PRIMARY KEY (insight_id, user_id),
+  CONSTRAINT insight_likes_pkey PRIMARY KEY (user_id, insight_id),
   CONSTRAINT insight_likes_insight_id_fkey FOREIGN KEY (insight_id) REFERENCES public.insights(id),
   CONSTRAINT insight_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -448,7 +448,7 @@ CREATE TABLE public.learning_sessions_2025_08 (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT learning_sessions_2025_08_pkey PRIMARY KEY (session_start_time, id),
+  CONSTRAINT learning_sessions_2025_08_pkey PRIMARY KEY (id, session_start_time),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.learning_sessions_2025_09 (
@@ -494,7 +494,7 @@ CREATE TABLE public.learning_sessions_2025_10 (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT learning_sessions_2025_10_pkey PRIMARY KEY (session_start_time, id),
+  CONSTRAINT learning_sessions_2025_10_pkey PRIMARY KEY (id, session_start_time),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.learning_sessions_partitioned (
@@ -593,7 +593,7 @@ CREATE TABLE public.paper_comment_likes (
   user_id uuid NOT NULL,
   comment_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT paper_comment_likes_pkey PRIMARY KEY (comment_id, user_id),
+  CONSTRAINT paper_comment_likes_pkey PRIMARY KEY (user_id, comment_id),
   CONSTRAINT paper_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.paper_comments(id),
   CONSTRAINT paper_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -624,7 +624,7 @@ CREATE TABLE public.paper_saves (
   user_id uuid NOT NULL,
   paper_id bigint NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  CONSTRAINT paper_saves_pkey PRIMARY KEY (paper_id, user_id),
+  CONSTRAINT paper_saves_pkey PRIMARY KEY (user_id, paper_id),
   CONSTRAINT paper_saves_paper_id_fkey FOREIGN KEY (paper_id) REFERENCES public.papers(id),
   CONSTRAINT paper_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -971,7 +971,7 @@ CREATE TABLE public.user_experiences (
 CREATE TABLE public.user_goal_companies (
   user_id uuid NOT NULL,
   company_id uuid NOT NULL,
-  CONSTRAINT user_goal_companies_pkey PRIMARY KEY (company_id, user_id),
+  CONSTRAINT user_goal_companies_pkey PRIMARY KEY (user_id, company_id),
   CONSTRAINT user_goal_companies_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id),
   CONSTRAINT user_goal_companies_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
