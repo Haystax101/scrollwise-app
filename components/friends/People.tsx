@@ -18,6 +18,7 @@ import { FriendsService } from '../../lib/friendsService';
 import { ShareService } from '../../lib/shareService';
 import { UserDetailModal } from '../profile/UserDetailModal';
 import { profileImageService } from '../../services/profileImageService';
+import { FeedbackBoardModal } from '../feedback/FeedbackBoardModal';
 import type { FriendProfile, LeaderboardEntry, FriendSuggestion, FriendsListItem } from '../../types/friends';
 
 export function People() {
@@ -35,6 +36,7 @@ export function People() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [addedUsers, setAddedUsers] = useState<Set<string>>(new Set());
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -151,6 +153,19 @@ export function People() {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
+    },
+    feedbackButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
+    feedbackButtonText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: 0.5,
     },
     iconButton: {
       width: 40,
@@ -582,6 +597,12 @@ export function People() {
         <Text style={dynamicStyles.headerTitle}>People</Text>
         <View style={dynamicStyles.headerButtons}>
           <TouchableOpacity
+            style={[dynamicStyles.feedbackButton, { backgroundColor: colors.primary }]}
+            onPress={() => setShowFeedbackModal(true)}
+          >
+            <Text style={dynamicStyles.feedbackButtonText}>FEEDBACK</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={dynamicStyles.iconButton}
             onPress={() => router.push('/inbox')}
           >
@@ -748,6 +769,12 @@ export function People() {
           currentUserId={user?.id}
         />
       )}
+
+      {/* Feedback Board Modal */}
+      <FeedbackBoardModal
+        visible={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+      />
     </SafeAreaView>
   );
 }

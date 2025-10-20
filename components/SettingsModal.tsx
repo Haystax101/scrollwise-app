@@ -6,6 +6,7 @@ import { useTheme, ThemeMode } from '../context/ThemeContext';
 import { NotificationService } from '../services/notificationService';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { FeedbackBoardModal } from './feedback/FeedbackBoardModal';
 
 interface SettingsModalProps {
   visible: boolean;
@@ -27,6 +28,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
     const [notificationsLoading, setNotificationsLoading] = useState(true);
     const [pushToken, setPushToken] = useState<string | null>(null);
+
+    // Feedback modal state
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
     // Check notification permission status on mount
     useEffect(() => {
@@ -430,6 +434,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
               <View style={dynamicStyles.settingCard}>
                 <TouchableOpacity
                   style={dynamicStyles.settingItem}
+                  onPress={() => setShowFeedbackModal(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Send feedback"
+                >
+                  <View style={dynamicStyles.settingIcon}>
+                    <Feather name="message-circle" size={20} color={colors.primary} />
+                  </View>
+                  <View style={dynamicStyles.settingContent}>
+                    <Text style={dynamicStyles.settingTitle}>Send Feedback</Text>
+                    <Text style={dynamicStyles.settingDescription}>Share your thoughts and ideas</Text>
+                  </View>
+                  <View style={dynamicStyles.settingAction}>
+                    <Feather name="chevron-right" size={16} color={colors.textSecondary} />
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={dynamicStyles.settingItem}
                   onPress={handleSupportPress}
                   accessibilityRole="button"
                   accessibilityLabel="Contact support"
@@ -504,6 +526,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
               </View>
             </View>
           </ScrollView>
+
+          {/* Feedback Board Modal */}
+          <FeedbackBoardModal
+            visible={showFeedbackModal}
+            onClose={() => setShowFeedbackModal(false)}
+          />
         </View>
       </Modal>
     );

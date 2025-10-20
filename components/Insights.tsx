@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -11,6 +11,7 @@ import { InsightsStatsOverview } from './insights/InsightsStatsOverview';
 import { InsightsCardsList } from './insights/InsightsCardsList';
 import { SavedInsightsList } from './insights/SavedInsightsList';
 import { FloatingCreateButton } from './insights/FloatingCreateButton';
+import { FeedbackBoardModal } from './feedback/FeedbackBoardModal';
 import { Insight } from '../types';
 
 interface SavedInsight {
@@ -51,6 +52,7 @@ const Insights = () => {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showEditor, setShowEditor] = useState(false);
   const [editingInsight, setEditingInsight] = useState<Insight | null>(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -229,6 +231,29 @@ const Insights = () => {
       backgroundColor: colors.background,
       paddingTop: 60,
     },
+    feedbackButtonContainer: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      position: 'absolute',
+      top: 60,
+      right: 0,
+      zIndex: 10,
+    },
+    feedbackButton: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
+    feedbackButtonText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+    },
     scrollContainer: {
       flex: 1,
     },
@@ -265,7 +290,17 @@ const Insights = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView 
+      {/* Feedback Button */}
+      <View style={styles.feedbackButtonContainer}>
+        <TouchableOpacity
+          style={[styles.feedbackButton, { backgroundColor: colors.primary }]}
+          onPress={() => setShowFeedbackModal(true)}
+        >
+          <Text style={styles.feedbackButtonText}>FEEDBACK</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
         style={styles.scrollContainer}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
@@ -313,9 +348,15 @@ const Insights = () => {
           }}
         />
       </ScrollView>
-      
+
       {/* Floating Create Button */}
       <FloatingCreateButton onPress={() => setShowPublisher(true)} />
+
+      {/* Feedback Board Modal */}
+      <FeedbackBoardModal
+        visible={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+      />
     </View>
   );
 };

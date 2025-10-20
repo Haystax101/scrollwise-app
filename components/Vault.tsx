@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
+import { View, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, Text } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useIndustries } from '../context/IndustriesContext';
@@ -10,6 +10,7 @@ import { ContentSection } from './vault/ContentSection';
 import { SavedContentSection } from './vault/SavedContentSection';
 import { VaultContentViewer } from './vault/VaultContentViewer';
 import { supabase } from '../lib/supabase';
+import { FeedbackBoardModal } from './feedback/FeedbackBoardModal';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -60,6 +61,9 @@ export const Vault: React.FC = () => {
 
   // Content viewer state
   const [selectedContent, setSelectedContent] = useState<SearchResult | null>(null);
+
+  // Feedback modal state
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Debounce search query for better performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -362,6 +366,16 @@ export const Vault: React.FC = () => {
         onBlur={() => setIsFocused(false)}
       />
 
+      {/* Feedback Button */}
+      <View style={styles.feedbackButtonContainer}>
+        <TouchableOpacity
+          style={[styles.feedbackButton, { backgroundColor: colors.primary }]}
+          onPress={() => setShowFeedbackModal(true)}
+        >
+          <Text style={styles.feedbackButtonText}>FEEDBACK</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -393,6 +407,12 @@ export const Vault: React.FC = () => {
 
         <SavedContentSection searchQuery={searchQuery} onItemPress={handleContentPress} />
       </ScrollView>
+
+      {/* Feedback Board Modal */}
+      <FeedbackBoardModal
+        visible={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -406,5 +426,24 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100, // Extra padding for navbar
+  },
+  feedbackButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  feedbackButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  feedbackButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { ArticleCard } from './ArticleCard';
 import { PaperCard } from './PaperCard';
 import { BookCard } from './BookCard';
@@ -13,6 +13,7 @@ import { CommentsModal } from './CommentsModal';
 import { supabase } from '../lib/supabase';
 import { useResponsiveLayout } from '../utils/screenUtils';
 import { getDeviceInfo, useDeviceOrientation } from '../utils/deviceDetection';
+import { FeedbackBoardModal } from './feedback/FeedbackBoardModal';
 
 /**
  * MainFeed Component - Completely Rewritten
@@ -322,6 +323,9 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
   // Comments modal state
   const [commentsArticleId, setCommentsArticleId] = useState<number | null>(null);
+
+  // Feedback modal state
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Quiz state with full functionality - COMMENTED OUT
   // const [quizVisible, setQuizVisible] = useState(false);
@@ -637,6 +641,23 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         windowSize={isTablet ? 7 : 5}
       />
 
+      {/* Feedback Button - Only show when not viewing Vault content */}
+      {!showBackButton && (
+        <TouchableOpacity
+          style={[
+            styles.feedbackButton,
+            {
+              backgroundColor: colors.primary,
+              borderColor: colors.primary,
+            }
+          ]}
+          onPress={() => setShowFeedbackModal(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.feedbackButtonText}>FEEDBACK</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Comments Modal */}
       <CommentsModal
         videoId={commentsArticleId}
@@ -644,10 +665,16 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         onClose={handleCloseComments}
         onCommentsCountChange={handleCommentsCountChange}
         contentType={
-          commentsArticleId 
+          commentsArticleId
             ? (feedItems.find(item => item.id === commentsArticleId)?.type as 'article' | 'paper' | 'book' | 'insight') || 'article'
             : undefined
         }
+      />
+
+      {/* Feedback Board Modal */}
+      <FeedbackBoardModal
+        visible={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
       />
 
       {/* Quiz Modal - With full functionality - COMMENTED OUT FOR NOW */}
@@ -687,6 +714,27 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
+  },
+  feedbackButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 10,
+  },
+  feedbackButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   footerLoader: {
     padding: 20,

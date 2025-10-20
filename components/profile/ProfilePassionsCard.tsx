@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { ProfilePassionsModal } from './ProfilePassionsModal';
+import { ProfilePassionsOnlyModal } from './ProfilePassionsOnlyModal';
 
 interface ProfilePassion {
   passionate_about: string | null;
@@ -154,12 +154,12 @@ export const ProfilePassionsCard: React.FC<ProfilePassionsCardProps> = ({
         )}
       </View>
 
-      <ProfilePassionsModal
+      <ProfilePassionsOnlyModal
         visible={showModal}
         onClose={handleModalClose}
         onSave={handleModalSave}
         userId={userId}
-        currentPassions={passions}
+        currentPassionateAbout={passions?.passionate_about || null}
       />
     </>
   );
