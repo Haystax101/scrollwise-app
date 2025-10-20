@@ -163,19 +163,6 @@ export const FeedbackItem: React.FC<FeedbackItemProps> = ({
             />
           </View>
 
-          <View style={dynamicStyles.author}>
-            {feedback.profiles?.avatar_url ? (
-              <Image
-                source={{ uri: feedback.profiles.avatar_url }}
-                style={dynamicStyles.avatar}
-              />
-            ) : (
-              <View style={dynamicStyles.avatar} />
-            )}
-            <Text style={dynamicStyles.authorName}>
-              {feedback.profiles?.full_name || 'Anonymous'}
-            </Text>
-          </View>
         </View>
 
         <View style={[dynamicStyles.statusBadge, { backgroundColor: getStatusColor() }]}>
