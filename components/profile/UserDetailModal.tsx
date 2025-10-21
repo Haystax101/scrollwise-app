@@ -10,17 +10,24 @@ import {
   Image,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { profileImageService } from '../../services/profileImageService';
+import { SavedInsightsList } from '../insights/SavedInsightsList';
 
-interface UserInsight {
+interface SavedInsight {
   id: string;
   content: string;
   created_at: string;
   likes_count: number;
   comments_count: number;
   views_count: number;
+  author_id?: string;
+  author?: {
+    full_name: string;
+    avatar_url?: string;
+  };
 }
 
 interface UserProfile {
@@ -59,10 +66,11 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
   currentUserId,
 }) => {
   const { colors, isDark } = useTheme();
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [insights, setInsights] = useState<UserInsight[]>([]);
+  const [insights, setInsights] = useState<SavedInsight[]>([]);
 
   useEffect(() => {
     if (visible && userId) {
@@ -194,8 +202,22 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         if (insightsError) {
           console.error('❌ UserDetailModal: Error fetching insights:', insightsError);
         } else {
-          setInsights(insightsData || []);
-          console.log('✅ UserDetailModal: Fetched', insightsData?.length || 0, 'insights');
+          // Format insights to match SavedInsight type
+          const formattedInsights: SavedInsight[] = (insightsData || []).map(insight => ({
+            id: insight.id,
+            content: insight.content,
+            created_at: insight.created_at,
+            likes_count: insight.likes_count || 0,
+            comments_count: insight.comments_count || 0,
+            views_count: insight.views_count || 0,
+            author_id: userId,
+            author: {
+              full_name: completeProfile.full_name,
+              avatar_url: completeProfile.avatar_url || undefined
+            }
+          }));
+          setInsights(formattedInsights);
+          console.log('✅ UserDetailModal: Fetched', formattedInsights.length, 'insights');
         }
       } else {
         setInsights([]);
@@ -423,39 +445,8 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
       color: colors.primary,
     },
     insightsSection: {
-      marginHorizontal: 20,
       marginVertical: 8,
-    },
-    insightsScroll: {
-      marginTop: 12,
-    },
-    insightCard: {
-      backgroundColor: colors.surface,
-      borderRadius: 16,
-      padding: 16,
-      marginRight: 12,
-      width: 280,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    insightContent: {
-      fontSize: 14,
-      color: colors.text,
-      lineHeight: 20,
-      marginBottom: 12,
-    },
-    insightStats: {
-      flexDirection: 'row',
-      gap: 16,
-    },
-    insightStat: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    insightStatText: {
-      fontSize: 12,
-      color: colors.textSecondary,
+      paddingLeft: 20,
     },
   });
 
@@ -595,37 +586,19 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               {profile.is_friend && insights.length > 0 && (
                 <View style={styles.insightsSection}>
                   <Text style={styles.sectionTitle}>Recent Insights</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.insightsScroll}
-                    contentContainerStyle={{ paddingRight: 20 }}
-                  >
-                    {insights.map((insight) => (
-                      <View key={insight.id} style={styles.insightCard}>
-                        <Text
-                          style={styles.insightContent}
-                          numberOfLines={4}
-                        >
-                          {insight.content}
-                        </Text>
-                        <View style={styles.insightStats}>
-                          <View style={styles.insightStat}>
-                            <Feather name="heart" size={14} color={colors.textSecondary} />
-                            <Text style={styles.insightStatText}>{insight.likes_count || 0}</Text>
-                          </View>
-                          <View style={styles.insightStat}>
-                            <Feather name="message-circle" size={14} color={colors.textSecondary} />
-                            <Text style={styles.insightStatText}>{insight.comments_count || 0}</Text>
-                          </View>
-                          <View style={styles.insightStat}>
-                            <Feather name="eye" size={14} color={colors.textSecondary} />
-                            <Text style={styles.insightStatText}>{insight.views_count || 0}</Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </ScrollView>
+                  <SavedInsightsList
+                    savedInsights={insights}
+                    loading={false}
+                    onInsightPress={(insight) => {
+                      onClose(); // Close the modal first
+                      setTimeout(() => {
+                        router.push({
+                          pathname: `/insight/${insight.id}`,
+                          params: { showBackButton: 'true' }
+                        });
+                      }, 100);
+                    }}
+                  />
                 </View>
               )}
             </View>
