@@ -46,10 +46,11 @@ interface SavedContent {
 
 interface SavedContentSectionProps {
   searchQuery?: string;
+  selectedIndustry?: string | null;
   onItemPress?: (item: any) => void;
 }
 
-export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ searchQuery = '', onItemPress }) => {
+export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ searchQuery = '', selectedIndustry = null, onItemPress }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
@@ -66,19 +67,26 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
     }
   }, [user]);
 
-  // Filter saved content based on search query
+  // Filter saved content based on search query and selected industry
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredContent(savedContent);
-    } else {
-      const filtered = savedContent.filter(item =>
+    let filtered = savedContent;
+
+    // Filter by industry if one is selected
+    if (selectedIndustry) {
+      filtered = filtered.filter(item => item.industry_id === selectedIndustry);
+    }
+
+    // Filter by search query if provided
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(item =>
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.summary?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.author?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setFilteredContent(filtered);
     }
-  }, [savedContent, searchQuery]);
+
+    setFilteredContent(filtered);
+  }, [savedContent, searchQuery, selectedIndustry]);
 
   const fetchSavedContent = useCallback(async () => {
     if (!user) {
@@ -108,7 +116,7 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(20),
+          .limit(10),
 
         supabase
           .from('paper_saves')
@@ -125,7 +133,7 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(20),
+          .limit(10),
 
         supabase
           .from('book_saves')
@@ -142,7 +150,7 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
-          .limit(20)
+          .limit(10)
       ]);
 
       console.log('📄 SavedContentSection: Query results - articles:', articlesRes.data?.length, 'papers:', papersRes.data?.length, 'books:', booksRes.data?.length);
@@ -364,7 +372,7 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Saved Content</Text>
         {filteredContent.length > 0 && (
-          <TouchableOpacity onPress={() => {/* TODO: Navigate to full saved content */}}>
+          <TouchableOpacity onPress={() => router.push('/saved-feed')}>
             <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
           </TouchableOpacity>
         )}

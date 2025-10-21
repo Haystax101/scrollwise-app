@@ -84,10 +84,10 @@ export const removeHtmlTags = (text: string): string => {
 export const processInsightText = (text: string, _accentColor: string): Array<{ text: string; style: any }> => {
   // Remove line breaks and normalize whitespace
   const cleanText = text.replace(/\s+/g, ' ').trim();
-  
-  // Return entire text as one block with consistent white styling for book cards
+
+  // Return entire text as one block with fontWeight only - let theme color apply from parent
   return [{
     text: cleanText,
-    style: { color: '#FFFFFF', fontWeight: '700' }
+    style: { fontWeight: '700' }
   }];
 };

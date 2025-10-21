@@ -14,6 +14,15 @@ import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { profileImageService } from '../../services/profileImageService';
 
+interface UserInsight {
+  id: string;
+  content: string;
+  created_at: string;
+  likes_count: number;
+  comments_count: number;
+  views_count: number;
+}
+
 interface UserProfile {
   id: string;
   full_name: string;
@@ -53,6 +62,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [insights, setInsights] = useState<UserInsight[]>([]);
 
   useEffect(() => {
     if (visible && userId) {
@@ -170,6 +180,26 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
       });
 
       setProfile(completeProfile);
+
+      // Fetch insights if they're friends
+      if (friendshipInfo.is_friend) {
+        console.log('🔍 UserDetailModal: User is a friend, fetching insights');
+        const { data: insightsData, error: insightsError } = await supabase
+          .from('insights')
+          .select('id, content, created_at, likes_count, comments_count, views_count')
+          .eq('author_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (insightsError) {
+          console.error('❌ UserDetailModal: Error fetching insights:', insightsError);
+        } else {
+          setInsights(insightsData || []);
+          console.log('✅ UserDetailModal: Fetched', insightsData?.length || 0, 'insights');
+        }
+      } else {
+        setInsights([]);
+      }
 
     } catch (error) {
       console.error('❌ UserDetailModal: Error fetching user profile:', error);
@@ -392,6 +422,41 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
       fontWeight: '600',
       color: colors.primary,
     },
+    insightsSection: {
+      marginHorizontal: 20,
+      marginVertical: 8,
+    },
+    insightsScroll: {
+      marginTop: 12,
+    },
+    insightCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 16,
+      marginRight: 12,
+      width: 280,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    insightContent: {
+      fontSize: 14,
+      color: colors.text,
+      lineHeight: 20,
+      marginBottom: 12,
+    },
+    insightStats: {
+      flexDirection: 'row',
+      gap: 16,
+    },
+    insightStat: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    insightStatText: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
   });
 
   if (!visible) return null;
@@ -523,6 +588,44 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>What they're working on</Text>
                   <Text style={styles.sectionContent}>{profile.working_on}</Text>
+                </View>
+              )}
+
+              {/* Friend's Insights */}
+              {profile.is_friend && insights.length > 0 && (
+                <View style={styles.insightsSection}>
+                  <Text style={styles.sectionTitle}>Recent Insights</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.insightsScroll}
+                    contentContainerStyle={{ paddingRight: 20 }}
+                  >
+                    {insights.map((insight) => (
+                      <View key={insight.id} style={styles.insightCard}>
+                        <Text
+                          style={styles.insightContent}
+                          numberOfLines={4}
+                        >
+                          {insight.content}
+                        </Text>
+                        <View style={styles.insightStats}>
+                          <View style={styles.insightStat}>
+                            <Feather name="heart" size={14} color={colors.textSecondary} />
+                            <Text style={styles.insightStatText}>{insight.likes_count || 0}</Text>
+                          </View>
+                          <View style={styles.insightStat}>
+                            <Feather name="message-circle" size={14} color={colors.textSecondary} />
+                            <Text style={styles.insightStatText}>{insight.comments_count || 0}</Text>
+                          </View>
+                          <View style={styles.insightStat}>
+                            <Feather name="eye" size={14} color={colors.textSecondary} />
+                            <Text style={styles.insightStatText}>{insight.views_count || 0}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </ScrollView>
                 </View>
               )}
             </View>

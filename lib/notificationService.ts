@@ -119,6 +119,47 @@ export class NotificationService {
   }
 
   /**
+   * Subscribe to real-time notification changes for a user
+   * Returns a cleanup function to unsubscribe
+   */
+  static subscribeToNotifications(
+    userId: string,
+    callback: (unreadCount: number) => void
+  ): () => void {
+    // Initial fetch
+    this.getUnreadCount(userId)
+      .then(callback)
+      .catch(error => console.error('Error fetching initial unread count:', error));
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel(`notifications_${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        async () => {
+          try {
+            const count = await this.getUnreadCount(userId);
+            callback(count);
+          } catch (error) {
+            console.error('Error updating unread count:', error);
+          }
+        }
+      )
+      .subscribe();
+
+    // Return cleanup function
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }
+
+  /**
    * Helper methods to create specific notification types
    */
   static async createLikeNotification(

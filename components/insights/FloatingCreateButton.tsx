@@ -34,7 +34,7 @@ export const FloatingCreateButton: React.FC<FloatingCreateButtonProps> = ({ onPr
   const styles = StyleSheet.create({
     container: {
       position: 'absolute',
-      bottom: insets.bottom + 50 + (deviceInfo.isSmallScreenWithHomeButton ? 32 : 0),
+      bottom: insets.bottom + 50 + (deviceInfo.isSmallScreenWithHomeButton ? 50 : 0),
       left: 20, // Center horizontally (56 is button width)
       zIndex: 1000,
     },

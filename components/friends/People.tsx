@@ -19,6 +19,7 @@ import { ShareService } from '../../lib/shareService';
 import { UserDetailModal } from '../profile/UserDetailModal';
 import { profileImageService } from '../../services/profileImageService';
 import { FeedbackBoardModal } from '../feedback/FeedbackBoardModal';
+import { NotificationService } from '../../lib/notificationService';
 import type { FriendProfile, LeaderboardEntry, FriendSuggestion, FriendsListItem } from '../../types/friends';
 
 export function People() {
@@ -37,12 +38,27 @@ export function People() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [addedUsers, setAddedUsers] = useState<Set<string>>(new Set());
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     if (user) {
       loadData();
     }
   }, [user]);
+
+  // Subscribe to notification updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const unsubscribe = NotificationService.subscribeToNotifications(
+      user.id,
+      (count) => setUnreadNotifications(count)
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [user?.id]);
 
   const loadData = async () => {
     try {
@@ -607,6 +623,13 @@ export function People() {
             onPress={() => router.push('/inbox')}
           >
             <Feather name="mail" size={20} color={colors.text} />
+            {unreadNotifications > 0 && (
+              <View style={dynamicStyles.badge}>
+                <Text style={dynamicStyles.badgeText}>
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>

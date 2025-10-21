@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, Text, RefreshControl } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useIndustries } from '../context/IndustriesContext';
@@ -65,6 +65,13 @@ export const Vault: React.FC = () => {
   // Feedback modal state
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
+  // Pull to refresh state
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Cache invalidation - store last fetch time
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+
   // Debounce search query for better performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -88,13 +95,6 @@ export const Vault: React.FC = () => {
     }
   }, [allIndustries.length]);
 
-  // Load initial content when industry filter changes and no search query
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      loadInitialContent();
-    }
-  }, [selectedIndustry]);
-
   // Perform search when search query or industry changes
   useEffect(() => {
     if (debouncedSearchQuery.trim()) {
@@ -102,7 +102,7 @@ export const Vault: React.FC = () => {
     } else {
       loadInitialContent();
     }
-  }, [debouncedSearchQuery, selectedIndustry]);
+  }, [debouncedSearchQuery, selectedIndustry, loadInitialContent, performSearch]);
 
   const fetchContentByIndustry = useCallback(async (industryId: string): Promise<VaultData> => {
     if (!user) {
@@ -117,9 +117,28 @@ export const Vault: React.FC = () => {
         tableName: 'articles' | 'papers' | 'books',
         viewTableName: 'article_views_enhanced' | 'paper_views' | 'book_views',
         contentIdField: 'article_id' | 'paper_id' | 'book_id',
-        selectFields: string
+        selectFields: string,
+        ignoreViews: boolean = false
       ) => {
-        console.log(`🔍 Vault: Fetching unviewed ${tableName} for industry ${industryId}`);
+        console.log(`🔍 Vault: Fetching ${ignoreViews ? 'all' : 'unviewed'} ${tableName} for industry ${industryId}`);
+
+        // If ignoring views, just fetch latest content without filtering
+        if (ignoreViews) {
+          const { data, error } = await supabase
+            .from(tableName)
+            .select(selectFields)
+            .eq('industry_id', industryId)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+          if (error) {
+            console.warn(`🔍 Vault: Error fetching ${tableName}:`, error);
+            return [];
+          }
+
+          console.log(`🔍 Vault: Found ${data?.length || 0} ${tableName} (ignoring views)`);
+          return data || [];
+        }
 
         // First, get the list of viewed content IDs for this user
         const { data: viewedIds } = await supabase
@@ -200,19 +219,22 @@ export const Vault: React.FC = () => {
           'articles',
           'article_views_enhanced',
           'article_id',
-          'id, title, summary, author, site_name, date, industry_id, likes_count, saves_count, comments_count, views_count, created_at'
+          'id, title, summary, author, site_name, date, industry_id, likes_count, saves_count, comments_count, views_count, created_at',
+          false // Filter by views for articles
         ),
         fetchPrioritizedContent(
           'papers',
           'paper_views',
           'paper_id',
-          'id, title, content_simple, content_complex, authors, created_at, industry_id, likes_count, saves_count, comments_count, views_count'
+          'id, title, content_simple, content_complex, authors, created_at, industry_id, likes_count, saves_count, comments_count, views_count',
+          false // Filter by views for papers
         ),
         fetchPrioritizedContent(
           'books',
           'book_views',
           'book_id',
-          'id, title, short_summary, author, created_at, industry_id, likes_count, saves_count, comments_count, views_count, key_insights'
+          'id, title, short_summary, author, created_at, industry_id, likes_count, saves_count, comments_count, views_count, key_insights',
+          true // Ignore views for books - always show latest
         )
       ]);
 
@@ -243,9 +265,16 @@ export const Vault: React.FC = () => {
     }
   }, [user]);
 
-  const loadInitialContent = useCallback(async () => {
+  const loadInitialContent = useCallback(async (forceRefresh = false) => {
     if (!user) {
       console.log('🔍 Vault: No user available, skipping content load');
+      return;
+    }
+
+    // Check cache validity (skip cache check if forceRefresh is true)
+    const now = Date.now();
+    if (!forceRefresh && lastFetchTime > 0 && (now - lastFetchTime) < CACHE_DURATION) {
+      console.log('🔍 Vault: Using cached data (fetch was', Math.floor((now - lastFetchTime) / 1000 / 60), 'minutes ago)');
       return;
     }
 
@@ -262,24 +291,58 @@ export const Vault: React.FC = () => {
         console.log('🔍 Vault: Fetching prioritized content by industry:', selectedIndustry);
         vaultResults = await fetchContentByIndustry(selectedIndustry);
       } else {
-        // If no industry selected, use general search to get diverse content
-        const [articlesResponse, papersResponse, booksResponse] = await Promise.all([
-          immediateKeywordSearch('', undefined, 'article'),
-          immediateKeywordSearch('', undefined, 'paper'),
-          immediateKeywordSearch('', undefined, 'book')
+        // If no industry selected, fetch recent content across all industries
+        console.log('🔍 Vault: Fetching recent content across all industries');
+
+        const [articlesData, papersData, booksData] = await Promise.all([
+          // Articles - show unviewed first
+          supabase
+            .from('articles')
+            .select('id, title, summary, author, site_name, date, industry_id, likes_count, saves_count, comments_count, views_count, created_at')
+            .order('created_at', { ascending: false })
+            .limit(5),
+
+          // Papers - show unviewed first
+          supabase
+            .from('papers')
+            .select('id, title, content_simple, content_complex, authors, created_at, industry_id, likes_count, saves_count, comments_count, views_count')
+            .order('created_at', { ascending: false })
+            .limit(5),
+
+          // Books - always show latest regardless of views
+          supabase
+            .from('books')
+            .select('id, title, short_summary, author, created_at, industry_id, likes_count, saves_count, comments_count, views_count, key_insights')
+            .order('created_at', { ascending: false })
+            .limit(5)
         ]);
 
-        console.log('🔍 Vault: General content responses - articles:', articlesResponse.results?.length, 'papers:', papersResponse.results?.length, 'books:', booksResponse.results?.length);
+        const articles: SearchResult[] = (articlesData.data || []).map((item: any) => ({
+          ...item,
+          type: 'article' as const,
+          link: '#'
+        }));
 
-        vaultResults = {
-          articles: articlesResponse.results || [],
-          papers: papersResponse.results || [],
-          books: booksResponse.results || []
-        };
+        const papers: SearchResult[] = (papersData.data || []).map((item: any) => ({
+          ...item,
+          type: 'paper' as const,
+          link: '#'
+        }));
+
+        const books: SearchResult[] = (booksData.data || []).map((item: any) => ({
+          ...item,
+          type: 'book' as const,
+          link: '#'
+        }));
+
+        console.log('🔍 Vault: General content responses - articles:', articles.length, 'papers:', papers.length, 'books:', books.length);
+
+        vaultResults = { articles, papers, books };
       }
 
       console.log('🔍 Vault: Final initial content - articles:', vaultResults.articles.length, 'papers:', vaultResults.papers.length, 'books:', vaultResults.books.length);
       setVaultData(vaultResults);
+      setLastFetchTime(Date.now()); // Update cache timestamp
     } catch (error) {
       console.error('🔍 Vault: Error loading initial content:', error);
       setError('Failed to load content');
@@ -287,8 +350,15 @@ export const Vault: React.FC = () => {
     } finally {
       setLoading({ articles: false, papers: false, books: false });
     }
-  }, [selectedIndustry, user, fetchContentByIndustry]);
+  }, [selectedIndustry, user, fetchContentByIndustry, lastFetchTime]);
 
+
+  // Pull to refresh handler
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadInitialContent(true); // Force refresh, bypass cache
+    setRefreshing(false);
+  }, [loadInitialContent]);
 
   const performSearch = useCallback(async (query: string) => {
     if (!user) {
@@ -344,6 +414,17 @@ export const Vault: React.FC = () => {
     setSelectedContent(null);
   };
 
+  // Handle industry filter change - clear search if it has content and force refresh
+  const handleIndustryChange = useCallback((industryId: string | null) => {
+    // Clear search when changing industry filter so user sees filtered results
+    if (searchQuery.trim()) {
+      setSearchQuery('');
+    }
+    setSelectedIndustry(industryId);
+    // Force immediate refresh bypassing cache
+    setLastFetchTime(0);
+  }, [searchQuery]);
+
   // Show content viewer when content is selected
   if (selectedContent) {
     return (
@@ -360,7 +441,7 @@ export const Vault: React.FC = () => {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         selectedIndustry={selectedIndustry}
-        onIndustryChange={setSelectedIndustry}
+        onIndustryChange={handleIndustryChange}
         isFocused={isFocused}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
@@ -380,6 +461,14 @@ export const Vault: React.FC = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
         <ContentSection
           title="Articles"
@@ -405,7 +494,11 @@ export const Vault: React.FC = () => {
           onItemPress={handleContentPress}
         />
 
-        <SavedContentSection searchQuery={searchQuery} onItemPress={handleContentPress} />
+        <SavedContentSection
+          searchQuery={searchQuery}
+          selectedIndustry={selectedIndustry}
+          onItemPress={handleContentPress}
+        />
       </ScrollView>
 
       {/* Feedback Board Modal */}

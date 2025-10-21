@@ -76,6 +76,19 @@ export function Inbox() {
     }
   };
 
+  // Mark all notifications as read when user views the notifications tab
+  const markNotificationsAsRead = async () => {
+    if (!user?.id) return;
+
+    try {
+      await NotificationService.markAllAsRead(user.id);
+      // Update local state to reflect read status
+      setNotifications(prev => prev.map(notif => ({ ...notif, is_read: true })));
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadData();
@@ -540,7 +553,10 @@ export function Inbox() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[dynamicStyles.tab, activeTab === 'notifications' && dynamicStyles.activeTab]}
-          onPress={() => setActiveTab('notifications')}
+          onPress={() => {
+            setActiveTab('notifications');
+            markNotificationsAsRead();
+          }}
         >
           <Text style={[dynamicStyles.tabText, activeTab === 'notifications' && dynamicStyles.activeTabText]}>
             Activity
