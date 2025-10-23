@@ -7,7 +7,6 @@ import {
   ScrollView,
   Modal,
   Alert,
-  Image,
   ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -160,36 +159,17 @@ export const FeedbackDetailModal: React.FC<FeedbackDetailModalProps> = ({
       paddingVertical: 20,
       gap: 16,
     },
-    authorSection: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      marginBottom: 8,
-    },
-    avatar: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.border,
-    },
-    authorInfo: {
-      flex: 1,
-    },
-    authorName: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    timestamp: {
-      fontSize: 13,
-      color: colors.textSecondary,
-    },
     feedbackTitle: {
       fontSize: 24,
       fontWeight: '700',
       color: colors.text,
-      marginBottom: 16,
+      marginBottom: 8,
       lineHeight: 32,
+    },
+    timestamp: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginBottom: 16,
     },
     feedbackBody: {
       fontSize: 16,
@@ -279,28 +259,13 @@ export const FeedbackDetailModal: React.FC<FeedbackDetailModalProps> = ({
 
         <ScrollView style={dynamicStyles.content} showsVerticalScrollIndicator={false}>
           <View style={dynamicStyles.scrollContent}>
-            {/* Author Info */}
-            <View style={dynamicStyles.authorSection}>
-              {feedback.profiles?.avatar_url ? (
-                <Image
-                  source={{ uri: feedback.profiles.avatar_url }}
-                  style={dynamicStyles.avatar}
-                />
-              ) : (
-                <View style={dynamicStyles.avatar} />
-              )}
-              <View style={dynamicStyles.authorInfo}>
-                <Text style={dynamicStyles.authorName}>
-                  {feedback.profiles?.full_name || 'Anonymous'}
-                </Text>
-                <Text style={dynamicStyles.timestamp}>
-                  {formatDistanceToNow(new Date(feedback.created_at), { addSuffix: true })}
-                </Text>
-              </View>
-            </View>
-
             {/* Title */}
             <Text style={dynamicStyles.feedbackTitle}>{feedback.title}</Text>
+
+            {/* Timestamp */}
+            <Text style={dynamicStyles.timestamp}>
+              {formatDistanceToNow(new Date(feedback.created_at), { addSuffix: true })}
+            </Text>
 
             {/* Status Badge */}
             <View style={[dynamicStyles.statusBadge, { backgroundColor: getStatusColor() }]}>
