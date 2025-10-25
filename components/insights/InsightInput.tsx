@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { MediaSelector } from './MediaSelector';
 import { useInsightsTheme } from '../../lib/insightsTheme';
 
 interface MediaType {
@@ -23,10 +22,6 @@ interface Props {
 export const InsightInput: React.FC<Props> = ({
   insightText,
   setInsightText,
-  selectedMedia,
-  setSelectedMedia,
-  showMediaSelector,
-  setShowMediaSelector,
   onNext,
   onBack,
 }) => {
@@ -146,30 +141,6 @@ export const InsightInput: React.FC<Props> = ({
         multiline
         textAlignVertical="top"
       />
-
-      {/* Media Selector Toggle */}
-      {!showMediaSelector ? (
-        <TouchableOpacity
-          style={styles.mediaToggle}
-          onPress={() => setShowMediaSelector(true)}
-        >
-          <Feather name="image" size={20} color={colors.insightsTextSecondary} />
-          <Text style={styles.mediaToggleText}>Add media to your insight</Text>
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.mediaSelectorContainer}>
-          <View style={styles.mediaSelectorHeader}>
-            <Text style={styles.mediaSelectorTitle}>Media</Text>
-            <TouchableOpacity onPress={() => setShowMediaSelector(false)}>
-              <Text style={styles.hideButton}>Hide</Text>
-            </TouchableOpacity>
-          </View>
-          <MediaSelector
-            selectedMedia={selectedMedia}
-            setSelectedMedia={setSelectedMedia}
-          />
-        </View>
-      )}
 
       {/* Next Button */}
       <TouchableOpacity

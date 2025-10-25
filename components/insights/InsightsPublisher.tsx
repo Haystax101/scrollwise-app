@@ -13,11 +13,6 @@ import { voltzService } from '../../lib/voltzService';
 
 const { width } = Dimensions.get('window');
 
-interface MediaType {
-  type: 'photo' | 'reel';
-  source: string;
-}
-
 interface InsightsPublisherProps {
   onComplete?: () => void;
 }
@@ -27,8 +22,6 @@ export const InsightsPublisher: React.FC<InsightsPublisherProps> = ({ onComplete
   const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [insightText, setInsightText] = useState('');
-  const [selectedMedia, setSelectedMedia] = useState<MediaType | null>(null);
-  const [showMediaSelector, setShowMediaSelector] = useState(false);
   const [supercharged, setSupercharged] = useState(false);
   const [voltz, setVoltz] = useState(10);
   const [totalVoltz, setTotalVoltz] = useState(100);
@@ -102,8 +95,6 @@ export const InsightsPublisher: React.FC<InsightsPublisherProps> = ({ onComplete
   const resetFlow = () => {
     setStep(1);
     setInsightText('');
-    setSelectedMedia(null);
-    setShowMediaSelector(false);
     setSupercharged(false);
     setVoltz(10);
     onComplete?.();
@@ -116,10 +107,10 @@ export const InsightsPublisher: React.FC<InsightsPublisherProps> = ({ onComplete
           <InsightInput
             insightText={insightText}
             setInsightText={setInsightText}
-            selectedMedia={selectedMedia}
-            setSelectedMedia={setSelectedMedia}
-            showMediaSelector={showMediaSelector}
-            setShowMediaSelector={setShowMediaSelector}
+            selectedMedia={null}
+            setSelectedMedia={() => {}}
+            showMediaSelector={false}
+            setShowMediaSelector={() => {}}
             onNext={() => setStep(6)}
             onBack={onComplete}
           />
@@ -151,14 +142,14 @@ export const InsightsPublisher: React.FC<InsightsPublisherProps> = ({ onComplete
             onBack={() => setStep(2)}
             onContinue={handlePublish}
             insightText={insightText}
-            selectedMedia={selectedMedia}
+            selectedMedia={null}
           />
         );
       case 6:
         return (
           <PostPreview
             insightText={insightText}
-            selectedMedia={selectedMedia}
+            selectedMedia={null}
             onBack={() => setStep(1)}
             onContinue={() => setStep(2)}
           />

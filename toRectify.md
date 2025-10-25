@@ -146,27 +146,31 @@
 
 ---
 
-## Issue 7: Debug Daily Streak Notifications
+## Issue 7: Debug Daily Streak Notifications ✅ FIXED
 
-**Current State:**
+**Previous State:**
 - Streak notifications should send at 10 AM GMT daily
-- Not working (friend request notifications DO work)
+- Not working (cron job couldn't authenticate with edge function)
 
-**Investigation:**
-- Check if cron job is running
-- Check edge function logs for `daily-streak-reminders`
-- Verify notification preferences
+**Root Cause:**
+- Cron job tried to call edge function via HTTP
+- Couldn't set service role key as database parameter (permission denied)
+- Authentication failed silently
 
-**Plan:**
-1. Run SQL: `SELECT * FROM cron.job WHERE jobname = 'daily-streak-reminders';`
-2. Check function execution logs
-3. Verify `user_notification_preferences.streak_reminders = true`
-4. Test manual invocation of edge function
-5. Check if users have active push tokens
+**Solution Implemented:**
+- Created database function `send_daily_streak_reminders()` that creates notifications directly
+- No edge function call needed for scheduled reminders
+- Cleaner, faster, no authentication issues
 
-**Files to Check:**
-- `database/notifications_cron_jobs.sql`
-- `supabase/functions/daily-streak-reminders/index.ts`
+**Deployment:**
+1. Run `deploy_streak_notifications_db_function.sql` in Supabase SQL Editor
+2. Test with `SELECT * FROM send_daily_streak_reminders();`
+3. Verify notifications created
+
+**Files:**
+- ✅ `deploy_streak_notifications_db_function.sql` - Complete deployment
+- ✅ `STREAK_NOTIFICATIONS_FINAL.md` - Documentation
+- 📝 `supabase/functions/daily-streak-reminders/index.ts` - Edge function still exists for manual triggers
 
 ---
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, Dimensions, StatusBar, Alert } from 'react-native';
 import { InsightInput } from './InsightInput';
 import { EditSuccessScreen } from './EditSuccessScreen';
@@ -10,11 +10,6 @@ import { Insight } from '../../types';
 
 const { width } = Dimensions.get('window');
 
-interface MediaType {
-  type: 'photo' | 'reel';
-  source: string;
-}
-
 interface InsightsEditorProps {
   insight: Insight;
   onComplete?: () => void;
@@ -25,8 +20,6 @@ export const InsightsEditor: React.FC<InsightsEditorProps> = ({ insight, onCompl
   const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [insightText, setInsightText] = useState(insight.content || '');
-  const [selectedMedia, setSelectedMedia] = useState<MediaType | null>(null);
-  const [showMediaSelector, setShowMediaSelector] = useState(false);
 
   const handleSaveChanges = async () => {
     try {
@@ -68,8 +61,6 @@ export const InsightsEditor: React.FC<InsightsEditorProps> = ({ insight, onCompl
   const resetFlow = () => {
     setStep(1);
     setInsightText(insight.content || '');
-    setSelectedMedia(null);
-    setShowMediaSelector(false);
     onComplete?.();
   };
 
@@ -80,10 +71,10 @@ export const InsightsEditor: React.FC<InsightsEditorProps> = ({ insight, onCompl
           <InsightInput
             insightText={insightText}
             setInsightText={setInsightText}
-            selectedMedia={selectedMedia}
-            setSelectedMedia={setSelectedMedia}
-            showMediaSelector={showMediaSelector}
-            setShowMediaSelector={setShowMediaSelector}
+            selectedMedia={null}
+            setSelectedMedia={() => {}}
+            showMediaSelector={false}
+            setShowMediaSelector={() => {}}
             onNext={() => setStep(2)}
             onBack={onComplete}
           />
@@ -92,7 +83,7 @@ export const InsightsEditor: React.FC<InsightsEditorProps> = ({ insight, onCompl
         return (
           <PostPreview
             insightText={insightText}
-            selectedMedia={selectedMedia}
+            selectedMedia={null}
             onBack={() => setStep(1)}
             onContinue={handleSaveChanges}
             buttonText="Save Changes"
