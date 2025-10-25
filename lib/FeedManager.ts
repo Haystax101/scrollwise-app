@@ -48,7 +48,6 @@ export class FeedManager {
         const byType = {
           article: viewedArray.filter((id: string) => id.startsWith('article-')).length,
           paper: viewedArray.filter((id: string) => id.startsWith('paper-')).length,
-          book: viewedArray.filter((id: string) => id.startsWith('book-')).length,
           insight: viewedArray.filter((id: string) => id.startsWith('insight-')).length
         };
         console.log(`📱 FeedManager: Viewed content by type:`, byType);
@@ -84,12 +83,11 @@ export class FeedManager {
       
       const allContent: FeedItem[] = [];
       
-      // Define content type distribution
+      // Define content type distribution (books excluded - only in vault)
       const distribution = [
-        { type: 'article' as const, count: Math.ceil(targetCount * 0.4) },
-        { type: 'paper' as const, count: Math.ceil(targetCount * 0.2) },
-        { type: 'book' as const, count: Math.ceil(targetCount * 0.25) },
-        { type: 'insight' as const, count: Math.ceil(targetCount * 0.15) }
+        { type: 'article' as const, count: Math.ceil(targetCount * 0.5) },   // Increased from 40% to 50%
+        { type: 'paper' as const, count: Math.ceil(targetCount * 0.3) },     // Increased from 20% to 30%
+        { type: 'insight' as const, count: Math.ceil(targetCount * 0.2) }    // Increased from 15% to 20%
       ];
       
       console.log(`📡 FeedManager: Content distribution for ${targetCount} items:`, distribution);
@@ -103,14 +101,14 @@ export class FeedManager {
       }
       
       console.log(`📡 FeedManager: Total items collected before shuffle: ${allContent.length}`);
-      console.log(`📡 FeedManager: Breakdown before shuffle: ${allContent.filter(i => i.type === 'article').length} articles, ${allContent.filter(i => i.type === 'paper').length} papers, ${allContent.filter(i => i.type === 'book').length} books, ${allContent.filter(i => i.type === 'insight').length} insights`);
-      
+      console.log(`📡 FeedManager: Breakdown before shuffle: ${allContent.filter(i => i.type === 'article').length} articles, ${allContent.filter(i => i.type === 'paper').length} papers, ${allContent.filter(i => i.type === 'insight').length} insights`);
+
 
       // Shuffle for variety and return requested count
       const shuffled = this.shuffleArray(allContent);
       const result = shuffled.slice(0, targetCount);
-      
-      console.log(`📡 FeedManager: Retrieved ${result.length} items (${result.filter(i => i.type === 'article').length} articles, ${result.filter(i => i.type === 'paper').length} papers, ${result.filter(i => i.type === 'book').length} books, ${result.filter(i => i.type === 'insight').length} insights)`);
+
+      console.log(`📡 FeedManager: Retrieved ${result.length} items (${result.filter(i => i.type === 'article').length} articles, ${result.filter(i => i.type === 'paper').length} papers, ${result.filter(i => i.type === 'insight').length} insights)`);
       
       return result;
     } catch (error) {
