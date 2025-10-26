@@ -10,10 +10,13 @@ interface PasswordSetupProps {
 
 export const PasswordSetup: React.FC<PasswordSetupProps> = ({ onNext, onBack }) => {
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleNext = () => {
-    if (password && isValidPassword) {
+    if (password && isValidPassword && !isLoading) {
+      setIsLoading(true);
       onNext({ password });
+      setTimeout(() => setIsLoading(false), 2000);
     }
   };
 
@@ -30,8 +33,8 @@ export const PasswordSetup: React.FC<PasswordSetupProps> = ({ onNext, onBack }) 
       subtitle="Choose a strong password to keep your account secure"
       onBack={onBack}
       onNext={handleNext}
-      buttonText="Continue"
-      buttonDisabled={!canContinue}
+      buttonText={isLoading ? "Creating account..." : "Continue"}
+      buttonDisabled={!canContinue || isLoading}
     >
       <View style={styles.container}>
         <InputField

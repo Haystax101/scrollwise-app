@@ -262,6 +262,21 @@ CREATE TABLE public.education_books_catalogue (
   used boolean DEFAULT false,
   CONSTRAINT education_books_catalogue_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.feedback (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  title text NOT NULL CHECK (length(title) >= 5 AND length(title) <= 200),
+  body text NOT NULL CHECK (length(body) >= 10 AND length(body) <= 2000),
+  status text NOT NULL DEFAULT 'under_review'::text CHECK (status = ANY (ARRAY['under_review'::text, 'in_progress'::text, 'completed'::text, 'declined'::text, 'planned'::text])),
+  upvotes_count integer NOT NULL DEFAULT 0 CHECK (upvotes_count >= 0),
+  downvotes_count integer NOT NULL DEFAULT 0 CHECK (downvotes_count >= 0),
+  dev_response text,
+  dev_response_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT feedback_pkey PRIMARY KEY (id),
+  CONSTRAINT feedback_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
 CREATE TABLE public.finance_books_catalogue (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL,
@@ -537,7 +552,7 @@ CREATE TABLE public.notification_batches (
 CREATE TABLE public.notifications (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
-  type text NOT NULL CHECK (type = ANY (ARRAY['like'::text, 'comment'::text, 'friend_request'::text, 'friend_accepted'::text, 'save'::text, 'share'::text, 'streak_reminder'::text, 'goal_achievement'::text, 'friend_insight'::text, 'milestone'::text, 'reply'::text, 'digest'::text])),
+  type text NOT NULL CHECK (type = ANY (ARRAY['like'::text, 'comment'::text, 'friend_request'::text, 'friend_accepted'::text, 'save'::text, 'share'::text, 'streak_reminder'::text, 'goal_achievement'::text, 'friend_insight'::text, 'milestone'::text, 'reply'::text, 'digest'::text, 'level_up'::text])),
   source_user_id uuid NOT NULL,
   content_type text CHECK (content_type = ANY (ARRAY['insight'::text, 'article'::text, 'paper'::text, 'book'::text])),
   content_id text,
@@ -967,6 +982,24 @@ CREATE TABLE public.user_experiences (
   CONSTRAINT user_experiences_pkey PRIMARY KEY (id),
   CONSTRAINT user_experiences_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id),
   CONSTRAINT user_experiences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.user_feedback_downvotes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  feedback_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT user_feedback_downvotes_pkey PRIMARY KEY (id),
+  CONSTRAINT user_feedback_downvotes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT user_feedback_downvotes_feedback_id_fkey FOREIGN KEY (feedback_id) REFERENCES public.feedback(id)
+);
+CREATE TABLE public.user_feedback_upvotes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  feedback_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT user_feedback_upvotes_pkey PRIMARY KEY (id),
+  CONSTRAINT user_feedback_upvotes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT user_feedback_upvotes_feedback_id_fkey FOREIGN KEY (feedback_id) REFERENCES public.feedback(id)
 );
 CREATE TABLE public.user_goal_companies (
   user_id uuid NOT NULL,

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, Alert, TextInput, Keyboard, KeyboardAvoidingView, Platform, SafeAreaView, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Alert, TextInput, Keyboard, KeyboardAvoidingView, Platform, SafeAreaView, Text, TouchableOpacity, InputAccessoryView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { OnboardingScreen } from './OnboardingScreen';
@@ -124,19 +124,11 @@ export const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({ em
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        style={styles.keyboardContainer} 
+      <KeyboardAvoidingView
+        style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={24} color="#1F2937" />
-          </TouchableOpacity>
-          <View style={styles.spacer} />
-        </View>
-
         {/* Content */}
         <View style={styles.content}>
           <Text style={styles.title}>Enter Your Code</Text>
@@ -161,7 +153,9 @@ export const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({ em
               autoFocus={true}
               autoCapitalize="none"
               selectTextOnFocus={true}
-              returnKeyType="done"
+              blurOnSubmit={false}
+              enablesReturnKeyAutomatically={false}
+              inputAccessoryViewID="otpAccessory"
               onSubmitEditing={() => {
                 if (token.length === 6) {
                   handleVerifyOtp();
@@ -170,6 +164,11 @@ export const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({ em
             />
           </View>
         </View>
+
+        {/* Empty InputAccessoryView to hide the "Done" button */}
+        <InputAccessoryView nativeID="otpAccessory">
+          <View style={{ height: 0 }} />
+        </InputAccessoryView>
 
         {/* Footer - This will be positioned above keyboard */}
         <View style={styles.footer}>
@@ -203,27 +202,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: OnboardingStyles.containerPaddingHorizontal,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-    height: 60,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  spacer: {
-    flex: 1,
-  },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 16,
+    paddingTop: 120, // Space for OnboardingProgressBar overlay
     paddingBottom: 40, // Give space above the footer
   },
   iconContainer: {

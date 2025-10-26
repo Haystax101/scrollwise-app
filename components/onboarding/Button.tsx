@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
 import { OnboardingStyles } from './styles';
+import * as Haptics from 'expo-haptics';
 
 interface ButtonProps {
   children?: string;
@@ -9,6 +10,7 @@ interface ButtonProps {
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'outline';
   style?: ViewStyle;
+  disableHaptics?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -17,9 +19,19 @@ export const Button: React.FC<ButtonProps> = ({
   onPress,
   disabled = false,
   variant = 'primary',
-  style
+  style,
+  disableHaptics = false
 }) => {
   const buttonText = title || children;
+
+  const handlePress = async () => {
+    if (!disabled && !disableHaptics) {
+      // Trigger haptic feedback
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    onPress();
+  };
+
   return (
     <TouchableOpacity
       style={[
@@ -29,12 +41,12 @@ export const Button: React.FC<ButtonProps> = ({
         variant === 'outline' && styles.outline,
         style
       ]}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled}
       activeOpacity={0.8}
     >
       <Text style={[
-        styles.text, 
+        styles.text,
         variant === 'secondary' && styles.secondaryText,
         variant === 'outline' && styles.outlineText
       ]}>

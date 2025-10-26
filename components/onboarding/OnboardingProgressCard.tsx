@@ -35,14 +35,15 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
     }
   }, [userId]);
 
-  // Set up real-time subscription for user achievements to update onboarding progress
+  // Set up real-time subscriptions for onboarding progress
   useEffect(() => {
     if (!userId) return;
 
-    console.log('Setting up onboarding progress subscription for user:', userId);
+    console.log('Setting up onboarding progress subscriptions for user:', userId);
 
     const subscription = supabase
       .channel(`onboarding_progress_${userId}`)
+      // Subscribe to user_achievements for onboarding step completion
       .on(
         'postgres_changes',
         {
@@ -53,14 +54,14 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
         },
         async (payload) => {
           console.log('New achievement earned, updating onboarding progress:', payload.new);
-          
+
           // Check if the new achievement is one of the onboarding steps
           const achievementTitle = (payload.new as any).title;
           const onboardingAchievements = Object.values(ONBOARDING_STEPS);
-          
+
           if (onboardingAchievements.includes(achievementTitle)) {
             console.log('Onboarding-related achievement earned:', achievementTitle);
-            
+
             // Refresh the progress data
             try {
               const updatedProgress = await onboardingService.getProgress(userId);
@@ -71,10 +72,79 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
           }
         }
       )
+      // Subscribe to profiles table for profile_completion_percentage changes
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userId}`,
+        },
+        async (payload) => {
+          const oldCompletion = (payload.old as any)?.profile_completion_percentage || 0;
+          const newCompletion = (payload.new as any)?.profile_completion_percentage || 0;
+
+          // Only refresh if profile completion percentage changed
+          if (newCompletion !== oldCompletion) {
+            console.log('Profile completion changed:', oldCompletion, '→', newCompletion);
+
+            // Refresh the progress data
+            try {
+              const updatedProgress = await onboardingService.getProgress(userId);
+              setProgress(updatedProgress);
+            } catch (error) {
+              console.error('Error refreshing onboarding progress:', error);
+            }
+          }
+        }
+      )
+      // Subscribe to profile_passions for "passionate_about" and "working_on" field updates
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'profile_passions',
+          filter: `user_id=eq.${userId}`,
+        },
+        async (payload) => {
+          console.log('Profile passions updated:', payload);
+
+          // Refresh the progress data
+          try {
+            const updatedProgress = await onboardingService.getProgress(userId);
+            setProgress(updatedProgress);
+          } catch (error) {
+            console.error('Error refreshing onboarding progress:', error);
+          }
+        }
+      )
+      // Subscribe to user_goals for career goal updates
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'user_goals',
+          filter: `user_id=eq.${userId}`,
+        },
+        async (payload) => {
+          console.log('User goals updated:', payload);
+
+          // Refresh the progress data
+          try {
+            const updatedProgress = await onboardingService.getProgress(userId);
+            setProgress(updatedProgress);
+          } catch (error) {
+            console.error('Error refreshing onboarding progress:', error);
+          }
+        }
+      )
       .subscribe();
 
     return () => {
-      console.log('Cleaning up onboarding progress subscription');
+      console.log('Cleaning up onboarding progress subscriptions');
       supabase.removeChannel(subscription);
     };
   }, [userId]);

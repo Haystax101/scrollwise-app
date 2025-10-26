@@ -21,6 +21,7 @@ import { StreakSelection } from './StreakSelection';
 import { OnboardingProgressBar } from './OnboardingProgressBar';
 import { FinalOnboardingScreen } from './FinalOnboardingScreen';
 import { OtpVerificationScreen } from './OtpVerificationScreen';
+import { AnimatedStepContainer } from './AnimatedStepContainer';
 
 // Import assets
 const HeroImage = require('../../assets/hero.png');
@@ -122,31 +123,19 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
 
   const nextStep = () => {
     if (currentSection === 'welcome') {
-      // Skip intro-scroller, go directly to intro section
+      // Go to intro section (Get Supercharged)
       setCurrentSection('intro');
       setCurrentStep(0);
     } else if (currentSection === 'intro') {
-      if (currentStep < introSteps.length - 1) {
-        setCurrentStep(prev => prev + 1);
-      } else {
-        // Move to registration section
-        setCurrentSection('registration');
-        setCurrentStep(0);
-      }
+      // Only 1 intro screen now, go straight to registration
+      setCurrentSection('registration');
+      setCurrentStep(0);
     } else if (currentSection === 'registration') {
       if (currentStep < 5) { // 6 registration screens (0-5)
         setCurrentStep(prev => prev + 1);
       } else {
-        // Move to tutorial section
-        setCurrentSection('tutorial');
-        setCurrentStep(0);
-      }
-    } else {
-      if (currentStep < tutorialSteps.length - 1) {
-        setCurrentStep(prev => prev + 1);
-      } else {
-        // Complete onboarding
-        onComplete();
+        // Skip tutorial, complete onboarding
+        handleTutorialComplete();
       }
     }
   };
@@ -155,17 +144,13 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1);
     } else if (currentSection === 'intro') {
-      // Go back to welcome, skip intro-scroller
+      // Go back to welcome
       setCurrentSection('welcome');
       setCurrentStep(0);
     } else if (currentSection === 'registration') {
-      // Go back to intro
+      // Go back to intro (Get Supercharged)
       setCurrentSection('intro');
-      setCurrentStep(introSteps.length - 1);
-    } else if (currentSection === 'tutorial') {
-      // Go back to registration
-      setCurrentSection('registration');
-      setCurrentStep(5); // Last registration step (StreakSelection)
+      setCurrentStep(0);
     }
   };
 
@@ -633,10 +618,9 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
 
   // Render different sections
   const renderRegistrationStep = () => {
-    // Show progress bar starting from IndustrySelection (step 4) onwards
-    const showProgressBar = currentStep >= 4;
-    const totalProgressSteps = 2; // Steps 4-5 (IndustrySelection and StreakSelection)
-    const currentProgressStep = Math.max(1, currentStep - 3); // Adjust to start from 1
+    // Show progress bar for ALL registration steps (6 total steps)
+    const totalProgressSteps = 6; // Email, OTP, Password, Name, Industry, Streak
+    const currentProgressStep = currentStep + 1; // Steps 1-6
 
     const stepContent = (() => {
       switch (currentStep) {
@@ -656,7 +640,7 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
         case 4:
           return <IndustrySelection onNext={handleIndustrySelection} />;
         case 5:
-          return <StreakSelection onNext={handleStreakSelection} onBack={showProgressBar ? undefined : prevStep} />;
+          return <StreakSelection onNext={handleStreakSelection} onBack={prevStep} />;
         default:
           return null;
       }
@@ -664,15 +648,15 @@ export const MainOnboarding: React.FC<MainOnboardingProps> = ({ onComplete, onSi
 
     return (
       <View style={{ flex: 1 }}>
-        {stepContent}
-        {showProgressBar && (
-          <OnboardingProgressBar
-            currentStep={currentProgressStep}
-            totalSteps={totalProgressSteps}
-            onBack={prevStep}
-            hideBackButton={currentStep === 4} // Hide back button on IndustrySelection
-          />
-        )}
+        <AnimatedStepContainer stepKey={`registration-${currentStep}`}>
+          {stepContent}
+        </AnimatedStepContainer>
+        <OnboardingProgressBar
+          currentStep={currentProgressStep}
+          totalSteps={totalProgressSteps}
+          onBack={prevStep}
+          hideBackButton={false} // Always show back button, even on email input
+        />
       </View>
     );
   };

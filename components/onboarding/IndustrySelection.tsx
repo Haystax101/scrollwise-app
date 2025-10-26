@@ -4,6 +4,7 @@ import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { Button } from './Button';
 import { OnboardingStyles } from './styles';
 import { getIndustryIcon, getIndustryColor, LEGACY_INDUSTRY_MAPPING } from '../../utils/industryIcons';
+import * as Haptics from 'expo-haptics';
 
 const industries = [
   { id: 'finance', name: 'Finance and Economics' },
@@ -28,18 +29,24 @@ const getIndustryIconColor = (industryId: string, isSelected: boolean): string =
 export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext }) => {
   const [selectedIndustries, setSelectedIndustries] = useState<typeof industries>([]);
   const [searchText, setSearchText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const filteredIndustries = industries.filter(industry =>
     industry.name.toLowerCase().includes(searchText.toLowerCase())
   );
 
   const handleNext = () => {
-    if (selectedIndustries.length > 0) {
+    if (selectedIndustries.length > 0 && !isLoading) {
+      setIsLoading(true);
       onNext({ industries: selectedIndustries });
+      setTimeout(() => setIsLoading(false), 2000);
     }
   };
 
-  const handleIndustryToggle = (industry: typeof industries[0]) => {
+  const handleIndustryToggle = async (industry: typeof industries[0]) => {
+    // Trigger haptic feedback
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     const isSelected = selectedIndustries.some(selected => selected.id === industry.id);
     if (isSelected) {
       setSelectedIndustries(selectedIndustries.filter(selected => selected.id !== industry.id));
@@ -120,9 +127,9 @@ export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext }) 
       <View style={styles.footer}>
         <Button
           onPress={handleNext}
-          disabled={selectedIndustries.length === 0}
+          disabled={selectedIndustries.length === 0 || isLoading}
         >
-          Continue ({selectedIndustries.length} selected)
+          {isLoading ? "Saving..." : `Continue (${selectedIndustries.length} selected)`}
         </Button>
       </View>
     </SafeAreaView>
