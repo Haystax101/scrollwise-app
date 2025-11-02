@@ -75,44 +75,132 @@ export class FeedManager {
 
   /**
    * Fetch fresh content with simple deduplication
-   * No complex caching - always fetch from database
+   * PRIORITY: Content with slides first, then regular content
    */
   async fetchContent(targetCount: number = 10): Promise<FeedItem[]> {
     try {
       console.log(`📡 FeedManager: Fetching ${targetCount} fresh items`);
-      
+
       const allContent: FeedItem[] = [];
-      
-      // Define content type distribution (books excluded - only in vault)
-      const distribution = [
-        { type: 'article' as const, count: Math.ceil(targetCount * 0.5) },   // Increased from 40% to 50%
-        { type: 'paper' as const, count: Math.ceil(targetCount * 0.3) },     // Increased from 20% to 30%
-        { type: 'insight' as const, count: Math.ceil(targetCount * 0.2) }    // Increased from 15% to 20%
-      ];
-      
-      console.log(`📡 FeedManager: Content distribution for ${targetCount} items:`, distribution);
 
-      // Fetch each content type
-      for (const { type, count } of distribution) {
-        console.log(`📡 FeedManager: Fetching ${count} items of type ${type}`);
-        const items = await this.fetchContentByType(type, count);
-        console.log(`📡 FeedManager: Received ${items.length} items of type ${type} (requested ${count})`);
-        allContent.push(...items);
+      // STEP 1: Prioritize content with slides
+      console.log(`📡 FeedManager: Step 1 - Fetching content WITH slides first`);
+      const contentWithSlides = await this.fetchContentWithSlides(targetCount);
+      console.log(`📡 FeedManager: Found ${contentWithSlides.length} items with slides`);
+      allContent.push(...contentWithSlides);
+
+      // STEP 2: If we don't have enough items, fetch regular content
+      const remainingCount = targetCount - allContent.length;
+      if (remainingCount > 0) {
+        console.log(`📡 FeedManager: Step 2 - Fetching ${remainingCount} additional regular items`);
+
+        // Define content type distribution for remaining slots
+        const distribution = [
+          { type: 'article' as const, count: Math.ceil(remainingCount * 0.5) },
+          { type: 'paper' as const, count: Math.ceil(remainingCount * 0.3) },
+          { type: 'insight' as const, count: Math.ceil(remainingCount * 0.2) }
+        ];
+
+        console.log(`📡 FeedManager: Content distribution for ${remainingCount} items:`, distribution);
+
+        // Fetch each content type
+        for (const { type, count } of distribution) {
+          console.log(`📡 FeedManager: Fetching ${count} items of type ${type}`);
+          const items = await this.fetchContentByType(type, count);
+          console.log(`📡 FeedManager: Received ${items.length} items of type ${type} (requested ${count})`);
+          allContent.push(...items);
+        }
       }
-      
-      console.log(`📡 FeedManager: Total items collected before shuffle: ${allContent.length}`);
-      console.log(`📡 FeedManager: Breakdown before shuffle: ${allContent.filter(i => i.type === 'article').length} articles, ${allContent.filter(i => i.type === 'paper').length} papers, ${allContent.filter(i => i.type === 'insight').length} insights`);
 
+      console.log(`📡 FeedManager: Total items collected before shuffle: ${allContent.length}`);
+      console.log(`📡 FeedManager: Breakdown: ${allContent.filter(i => i.type === 'article').length} articles, ${allContent.filter(i => i.type === 'paper').length} papers, ${allContent.filter(i => i.type === 'insight').length} insights`);
+      console.log(`📡 FeedManager: Items with slides: ${allContent.filter((i: any) => i.hasSlides).length}`);
 
       // Shuffle for variety and return requested count
       const shuffled = this.shuffleArray(allContent);
       const result = shuffled.slice(0, targetCount);
 
-      console.log(`📡 FeedManager: Retrieved ${result.length} items (${result.filter(i => i.type === 'article').length} articles, ${result.filter(i => i.type === 'paper').length} papers, ${result.filter(i => i.type === 'insight').length} insights)`);
-      
+      console.log(`📡 FeedManager: Retrieved ${result.length} items (${result.filter((i: any) => i.hasSlides).length} with slides)`);
+
       return result;
     } catch (error) {
       console.error('📡 FeedManager: Error in fetchContent:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch content that has slides from content_slides table
+   */
+  private async fetchContentWithSlides(limit: number): Promise<FeedItem[]> {
+    try {
+      // Query content_slides to get IDs of content with slides
+      const { data: slidesData, error } = await supabase
+        .from('content_slides')
+        .select('content_id, content_type')
+        .in('content_type', ['article', 'paper'])
+        .order('generated_at', { ascending: false })
+        .limit(limit * 2); // Get more to account for viewed content filtering
+
+      if (error || !slidesData || slidesData.length === 0) {
+        console.log(`📡 FeedManager: No content_slides found`);
+        return [];
+      }
+
+      console.log(`📡 FeedManager: Found ${slidesData.length} total items in content_slides`);
+
+      // Group by content type
+      const articleIds = slidesData.filter(s => s.content_type === 'article').map(s => s.content_id);
+      const paperIds = slidesData.filter(s => s.content_type === 'paper').map(s => s.content_id);
+
+      const allItems: FeedItem[] = [];
+
+      // Fetch articles with slides
+      if (articleIds.length > 0) {
+        const { data: articles } = await supabase
+          .from('articles')
+          .select('*')
+          .in('id', articleIds)
+          .in('industry_id', this.userIndustries)
+          .limit(limit);
+
+        if (articles) {
+          const articleItems = articles.map(article => {
+            const item = this.convertToFeedItem(article, 'article');
+            (item as any).hasSlides = true;
+            return item;
+          });
+          allItems.push(...articleItems);
+          console.log(`📡 FeedManager: Fetched ${articleItems.length} articles with slides`);
+        }
+      }
+
+      // Fetch papers with slides
+      if (paperIds.length > 0) {
+        const { data: papers } = await supabase
+          .from('papers')
+          .select('*')
+          .in('id', paperIds)
+          .in('industry_id', this.userIndustries)
+          .limit(limit);
+
+        if (papers) {
+          const paperItems = papers.map(paper => {
+            const item = this.convertToFeedItem(paper, 'paper');
+            (item as any).hasSlides = true;
+            return item;
+          });
+          allItems.push(...paperItems);
+          console.log(`📡 FeedManager: Fetched ${paperItems.length} papers with slides`);
+        }
+      }
+
+      // Don't filter out viewed content for slides (we want to prioritize showing them)
+      // Regular content will still be filtered in fetchContentByType
+      console.log(`📡 FeedManager: Returning ${allItems.length} items with slides (not filtering viewed for slides)`);
+      return allItems.slice(0, limit);
+    } catch (error) {
+      console.error('📡 FeedManager: Error fetching content with slides:', error);
       return [];
     }
   }
@@ -149,7 +237,7 @@ export class FeedManager {
       if (error) {
         console.error(`📡 FeedManager: RPC error for ${contentType}:`, error);
         console.log(`📡 FeedManager: Falling back to simple query without view filtering...`);
-        
+
         // Fallback to original method if RPC doesn't exist yet
         return this.fetchContentByTypeOriginal(contentType, count);
       }
@@ -173,12 +261,36 @@ export class FeedManager {
         });
       }
 
-      // Convert to FeedItem format - no client-side filtering needed since DB already filtered
-      const feedItems = data.slice(0, count).map((item: any) =>
-        this.convertToFeedItem(item, contentType)
-      );
+      // Check which content has slides
+      // Convert IDs to integers since content_slides.content_id is integer type
+      const contentIds = data.map((item: any) => parseInt(item.id, 10));
+      console.log(`📡 FeedManager: Checking slides for ${contentIds.length} ${contentType} IDs:`, contentIds.slice(0, 5));
 
-      console.log(`📡 FeedManager: Final ${contentType} result: ${feedItems.length} items`);
+      const { data: slidesData, error: slidesError } = await supabase
+        .from('content_slides')
+        .select('content_id')
+        .eq('content_type', contentType)
+        .in('content_id', contentIds);
+
+      if (slidesError) {
+        console.error(`📡 FeedManager: Error fetching slides:`, slidesError);
+      }
+
+      console.log(`📡 FeedManager: Slides query returned:`, slidesData);
+      const contentWithSlidesIds = new Set(slidesData?.map(s => s.content_id) || []);
+      console.log(`📡 FeedManager: Found ${contentWithSlidesIds.size} ${contentType} items with slides out of ${data.length}`, Array.from(contentWithSlidesIds));
+
+      // Convert to FeedItem format - no client-side filtering needed since DB already filtered
+      const feedItems = data.slice(0, count).map((item: any) => {
+        const feedItem = this.convertToFeedItem(item, contentType);
+        // Mark if this item has slides (compare as integer)
+        if (contentType === 'article' || contentType === 'paper') {
+          (feedItem as any).hasSlides = contentWithSlidesIds.has(parseInt(item.id, 10));
+        }
+        return feedItem;
+      });
+
+      console.log(`📡 FeedManager: Final ${contentType} result: ${feedItems.length} items (${feedItems.filter((f: any) => f.hasSlides).length} with slides)`);
       return feedItems;
     } catch (error) {
       console.error(`📡 FeedManager: Exception in fetchContentByType for ${contentType}:`, error);

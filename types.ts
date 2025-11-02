@@ -73,6 +73,7 @@ export interface Article extends BaseContent {
   summary: string;
   longer_summary?: string; // For expanded view, falls back to summary if not available
   author?: string;
+  hasSlides?: boolean; // Whether this article has story-driven slides
 }
 
 export interface Paper extends BaseContent {
@@ -80,6 +81,7 @@ export interface Paper extends BaseContent {
   content_simple: string;
   content_complex: string;
   authors: string[];
+  hasSlides?: boolean; // Whether this paper has story-driven slides
 }
 
 export interface Book extends BaseContent {

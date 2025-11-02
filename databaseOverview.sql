@@ -238,6 +238,19 @@ CREATE TABLE public.company_aliases (
   CONSTRAINT company_aliases_pkey PRIMARY KEY (id),
   CONSTRAINT company_aliases_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id)
 );
+CREATE TABLE public.content_slides (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  content_id integer NOT NULL,
+  content_type text NOT NULL CHECK (content_type = ANY (ARRAY['article'::text, 'paper'::text])),
+  slides_text ARRAY NOT NULL,
+  slides_titles ARRAY NOT NULL,
+  slides_images ARRAY,
+  slides_chart_configs ARRAY,
+  total_slides integer NOT NULL,
+  generated_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT content_slides_pkey PRIMARY KEY (id)
+);
 CREATE TABLE public.content_views (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
@@ -552,7 +565,7 @@ CREATE TABLE public.notification_batches (
 CREATE TABLE public.notifications (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
-  type text NOT NULL CHECK (type = ANY (ARRAY['like'::text, 'comment'::text, 'friend_request'::text, 'friend_accepted'::text, 'save'::text, 'share'::text, 'streak_reminder'::text, 'goal_achievement'::text, 'friend_insight'::text, 'milestone'::text, 'reply'::text, 'digest'::text, 'level_up'::text])),
+  type text NOT NULL CHECK (type = ANY (ARRAY['like'::text, 'comment'::text, 'friend_request'::text, 'friend_accepted'::text, 'save'::text, 'share'::text, 'streak_reminder'::text, 'goal_achievement'::text, 'friend_insight'::text, 'milestone'::text, 'reply'::text, 'digest'::text, 'level_up'::text, 'feedback_posted'::text])),
   source_user_id uuid NOT NULL,
   content_type text CHECK (content_type = ANY (ARRAY['insight'::text, 'article'::text, 'paper'::text, 'book'::text])),
   content_id text,
@@ -1110,6 +1123,7 @@ CREATE TABLE public.user_notification_preferences (
   android_system_channel_id text DEFAULT 'system'::text,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  feedback_board boolean DEFAULT true,
   CONSTRAINT user_notification_preferences_pkey PRIMARY KEY (user_id),
   CONSTRAINT user_notification_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );

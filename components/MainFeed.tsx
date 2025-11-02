@@ -4,6 +4,7 @@ import { ArticleCard } from './ArticleCard';
 import { PaperCard } from './PaperCard';
 import { BookCard } from './BookCard';
 import InsightCard from './InsightCard';
+import { ContentCard } from './ContentCard';
 import type { Article, Insight, FeedItem, Industry, Paper, Book } from '../types';
 import { FeedManager } from '../lib/FeedManager';
 import { useAuth } from '../context/AuthContext';
@@ -470,6 +471,28 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     switch (item.type) {
       case 'article':
         const article = item as Article;
+
+        // If article has slides, use ContentCard
+        if (article.hasSlides) {
+          console.log(`📱 MainFeed: Rendering ContentCard for article ${article.id} (has slides)`);
+          return (
+            <ContentCard
+              contentId={article.id}
+              contentType="article"
+              title={article.title}
+              source={article.site_name}
+              date={article.date || article.created_at}
+              category={article.industry_id}
+              authors={article.author ? [article.author] : undefined}
+              likesCount={article.likes_count}
+              commentsCount={article.comments_count}
+              savesCount={article.saves_count}
+              onOpenComments={handleOpenComments}
+              onUserInteraction={handleUserInteraction}
+            />
+          );
+        }
+
         // Debug logging for article passed to ArticleCard
         console.log(`📱 MainFeed: Rendering ArticleCard for article ${article.id}:`, {
           id: article.id,
@@ -491,9 +514,32 @@ export const MainFeed: React.FC<MainFeedProps> = ({
           />
         );
       case 'paper':
+        const paper = item as Paper;
+
+        // If paper has slides, use ContentCard
+        if (paper.hasSlides) {
+          console.log(`📱 MainFeed: Rendering ContentCard for paper ${paper.id} (has slides)`);
+          return (
+            <ContentCard
+              contentId={paper.id}
+              contentType="paper"
+              title={paper.title}
+              source={paper.site_name}
+              date={paper.date || paper.created_at}
+              category={paper.industry_id}
+              authors={paper.authors}
+              likesCount={paper.likes_count}
+              commentsCount={paper.comments_count}
+              savesCount={paper.saves_count}
+              onOpenComments={handleOpenComments}
+              onUserInteraction={handleUserInteraction}
+            />
+          );
+        }
+
         return (
           <PaperCard
-            paper={item as Paper}
+            paper={paper}
             isActive={isActive}
             showBackButton={showBackButton}
             backTo={backTo}
