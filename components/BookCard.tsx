@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlagButton } from './common/FlagButton';
 import { processInsightText, removeHtmlTags } from '../utils/textUtils';
+import { FeedbackBoardModal } from './feedback/FeedbackBoardModal';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
@@ -54,7 +55,8 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
   const [saves, setSaves] = useState(book.saves_count || 0);
   const [hasSaved, setHasSaved] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
-  
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+
   const flatListRef = useRef<FlatList>(null);
 
   const slides: SlideItem[] = useMemo(() => {
@@ -195,6 +197,18 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
       right: 12,
       zIndex: 10,
     },
+    feedbackButton: {
+      position: 'absolute',
+      top: 52,
+      left: 12,
+      zIndex: 10,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      borderRadius: 20,
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     contentSection: { flex: 1, backgroundColor: colors.background, paddingTop: 0, paddingBottom: isInVault ? 60 : insets.bottom + 60 },
     slidesContainer: { flex: 1, position: 'relative' },
     slideIndicators: { 
@@ -217,14 +231,22 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
   });
 
   return (
-    <View style={dynamicStyles.container}>
-      <FlagButton
-        contentId={book.id}
-        contentType="book"
-        size={20}
-        style={dynamicStyles.flagButton}
-      />
-      <View style={dynamicStyles.contentSection}>
+    <>
+      <View style={dynamicStyles.container}>
+        <FlagButton
+          contentId={book.id}
+          contentType="book"
+          size={20}
+          style={dynamicStyles.flagButton}
+        />
+        <TouchableOpacity
+          style={dynamicStyles.feedbackButton}
+          onPress={() => setShowFeedbackModal(true)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Feather name="message-square" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <View style={dynamicStyles.contentSection}>
         <View style={dynamicStyles.slidesContainer}>
           <FlatList
             ref={flatListRef}
@@ -279,6 +301,11 @@ export const BookCard: React.FC<BookCardProps> = React.memo(({ book, onOpenComme
         </View>
       </View>
     </View>
+    <FeedbackBoardModal
+      visible={showFeedbackModal}
+      onClose={() => setShowFeedbackModal(false)}
+    />
+    </>
   );
 });
 

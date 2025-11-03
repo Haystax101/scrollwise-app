@@ -15,6 +15,7 @@ import { useResponsiveLayout } from '../utils/screenUtils';
 import { ShareService } from '../lib/shareService';
 import { getDeviceInfo, useDeviceOrientation } from '../utils/deviceDetection';
 import { useDeviceInfo, getStaticVisualHeightMultiplier, getContentBottomPadding } from '../utils/deviceUtils';
+import { FeedbackBoardModal } from './feedback/FeedbackBoardModal';
 
 interface PaperCardProps {
   paper: Paper;
@@ -68,6 +69,7 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
   const [hasSaved, setHasSaved] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showComplexContent, setShowComplexContent] = useState(true);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const tableNames = useMemo(() => getTableNames(), []);
 
@@ -266,6 +268,18 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
       right: 12,
       zIndex: 10,
     },
+    feedbackButton: {
+      position: 'absolute',
+      top: 52,
+      left: 12,
+      zIndex: 10,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      borderRadius: 20,
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     contentSection: {
       flex: 1,
       backgroundColor: colors.background,
@@ -383,6 +397,13 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
             size={20}
             style={dynamicStyles.flagButton}
           />
+          <TouchableOpacity
+            style={dynamicStyles.feedbackButton}
+            onPress={() => setShowFeedbackModal(true)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Feather name="message-square" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
         <View style={dynamicStyles.contentSection}>
           <View style={dynamicStyles.contentBody}>
@@ -484,6 +505,10 @@ export const PaperCard: React.FC<PaperCardProps> = React.memo(({ paper, onOpenCo
         content={expandedContent}
         externalLink={paper.link}
         contentType="paper"
+      />
+      <FeedbackBoardModal
+        visible={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
       />
     </>
   );

@@ -16,6 +16,7 @@ import { useResponsiveLayout } from '../utils/screenUtils';
 import { ShareService } from '../lib/shareService';
 import { useDeviceOrientation, getResponsiveFontSize } from '../utils/deviceDetection';
 import { useDeviceInfo, getStaticVisualHeightMultiplier, getContentBottomPadding } from '../utils/deviceUtils';
+import { FeedbackBoardModal } from './feedback/FeedbackBoardModal';
 
 interface ArticleCardProps {
   article: Article;
@@ -78,6 +79,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
   const [saves, setSaves] = useState(article.saves_count || 0);
   const [hasSaved, setHasSaved] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const tableNames = useMemo(() => getTableNames(), []);
 
@@ -260,6 +262,18 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
       right: 12,
       zIndex: 10,
     },
+    feedbackButton: {
+      position: 'absolute',
+      top: 52,
+      left: 12,
+      zIndex: 10,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      borderRadius: 20,
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     backButton: {
       position: 'absolute',
       top: 52, // Same as flag button
@@ -396,6 +410,13 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
             size={20}
             style={dynamicStyles.flagButton}
           />
+          <TouchableOpacity
+            style={dynamicStyles.feedbackButton}
+            onPress={() => setShowFeedbackModal(true)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Feather name="message-square" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
         <View style={dynamicStyles.contentSection}>
           <View style={dynamicStyles.contentBody}>
@@ -496,6 +517,10 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
         })()}
         externalLink={article.link}
         contentType="article"
+      />
+      <FeedbackBoardModal
+        visible={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
       />
     </>
   );

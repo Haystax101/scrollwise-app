@@ -249,7 +249,19 @@ CREATE TABLE public.content_slides (
   total_slides integer NOT NULL,
   generated_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT content_slides_pkey PRIMARY KEY (id)
+  title text NOT NULL DEFAULT 'Untitled'::text,
+  link text,
+  site_name text,
+  date date,
+  industry_id uuid,
+  authors ARRAY,
+  likes_count bigint NOT NULL DEFAULT 0,
+  saves_count bigint NOT NULL DEFAULT 0,
+  comments_count bigint NOT NULL DEFAULT 0,
+  views_count bigint NOT NULL DEFAULT 0,
+  category text,
+  CONSTRAINT content_slides_pkey PRIMARY KEY (id),
+  CONSTRAINT content_slides_industry_id_fkey FOREIGN KEY (industry_id) REFERENCES public.industries(id)
 );
 CREATE TABLE public.content_views (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

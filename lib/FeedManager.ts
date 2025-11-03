@@ -31,31 +31,14 @@ export class FeedManager {
   private async loadViewedContent(): Promise<void> {
     try {
       const viewedKey = `viewed_content_${this.userId}`;
-      console.log(`📱 FeedManager: Loading viewed content with key: ${viewedKey}`);
-      
       const viewedData = await AsyncStorage.getItem(viewedKey);
-      
+
       if (viewedData) {
         const viewedArray = JSON.parse(viewedData);
         this.viewedContentIds = new Set(viewedArray);
-        console.log(`📱 FeedManager: Loaded ${this.viewedContentIds.size} viewed items from AsyncStorage`);
-        
-        // Log first few viewed items for debugging
-        const viewedSample = Array.from(this.viewedContentIds).slice(0, 10);
-        console.log(`📱 FeedManager: Sample viewed items:`, viewedSample);
-        
-        // Show breakdown by content type
-        const byType = {
-          article: viewedArray.filter((id: string) => id.startsWith('article-')).length,
-          paper: viewedArray.filter((id: string) => id.startsWith('paper-')).length,
-          insight: viewedArray.filter((id: string) => id.startsWith('insight-')).length
-        };
-        console.log(`📱 FeedManager: Viewed content by type:`, byType);
-      } else {
-        console.log(`📱 FeedManager: No viewed content found in AsyncStorage`);
       }
     } catch (error) {
-      console.error('📱 FeedManager: Error loading viewed content:', error);
+      console.error('FeedManager: Error loading viewed content:', error);
     }
   }
 
@@ -67,9 +50,8 @@ export class FeedManager {
       const viewedKey = `viewed_content_${this.userId}`;
       const viewedArray = Array.from(this.viewedContentIds);
       await AsyncStorage.setItem(viewedKey, JSON.stringify(viewedArray));
-      console.log(`📱 FeedManager: Saved ${viewedArray.length} viewed items to AsyncStorage`);
     } catch (error) {
-      console.error('📱 FeedManager: Error saving viewed content:', error);
+      console.error('FeedManager: Error saving viewed content:', error);
     }
   }
 
@@ -79,128 +61,100 @@ export class FeedManager {
    */
   async fetchContent(targetCount: number = 10): Promise<FeedItem[]> {
     try {
-      console.log(`📡 FeedManager: Fetching ${targetCount} fresh items`);
-
       const allContent: FeedItem[] = [];
 
       // STEP 1: Prioritize content with slides
-      console.log(`📡 FeedManager: Step 1 - Fetching content WITH slides first`);
       const contentWithSlides = await this.fetchContentWithSlides(targetCount);
-      console.log(`📡 FeedManager: Found ${contentWithSlides.length} items with slides`);
       allContent.push(...contentWithSlides);
 
       // STEP 2: If we don't have enough items, fetch regular content
       const remainingCount = targetCount - allContent.length;
       if (remainingCount > 0) {
-        console.log(`📡 FeedManager: Step 2 - Fetching ${remainingCount} additional regular items`);
-
-        // Define content type distribution for remaining slots
         const distribution = [
-          { type: 'article' as const, count: Math.ceil(remainingCount * 0.5) },
+          { type: 'article' as const, count: Math.ceil(remainingCount * 0.4) },
           { type: 'paper' as const, count: Math.ceil(remainingCount * 0.3) },
-          { type: 'insight' as const, count: Math.ceil(remainingCount * 0.2) }
+          { type: 'insight' as const, count: Math.ceil(remainingCount * 0.3) }
         ];
 
-        console.log(`📡 FeedManager: Content distribution for ${remainingCount} items:`, distribution);
-
-        // Fetch each content type
         for (const { type, count } of distribution) {
-          console.log(`📡 FeedManager: Fetching ${count} items of type ${type}`);
           const items = await this.fetchContentByType(type, count);
-          console.log(`📡 FeedManager: Received ${items.length} items of type ${type} (requested ${count})`);
-          allContent.push(...items);
+          // Filter out items that already have slides to prevent duplicates
+          const itemsWithoutSlides = items.filter(item => !(item as any).hasSlides);
+          allContent.push(...itemsWithoutSlides);
         }
       }
 
-      console.log(`📡 FeedManager: Total items collected before shuffle: ${allContent.length}`);
-      console.log(`📡 FeedManager: Breakdown: ${allContent.filter(i => i.type === 'article').length} articles, ${allContent.filter(i => i.type === 'paper').length} papers, ${allContent.filter(i => i.type === 'insight').length} insights`);
-      console.log(`📡 FeedManager: Items with slides: ${allContent.filter((i: any) => i.hasSlides).length}`);
-
-      // Shuffle for variety and return requested count
       const shuffled = this.shuffleArray(allContent);
-      const result = shuffled.slice(0, targetCount);
-
-      console.log(`📡 FeedManager: Retrieved ${result.length} items (${result.filter((i: any) => i.hasSlides).length} with slides)`);
-
-      return result;
+      return shuffled.slice(0, targetCount);
     } catch (error) {
-      console.error('📡 FeedManager: Error in fetchContent:', error);
+      console.error('FeedManager: Error in fetchContent:', error);
       return [];
     }
   }
 
   /**
    * Fetch content that has slides from content_slides table
+   * Now queries content_slides directly with all metadata (self-sufficient)
    */
   private async fetchContentWithSlides(limit: number): Promise<FeedItem[]> {
     try {
-      // Query content_slides to get IDs of content with slides
+      // Fetch more than we need to account for filtering
       const { data: slidesData, error } = await supabase
         .from('content_slides')
-        .select('content_id, content_type')
+        .select('*')
         .in('content_type', ['article', 'paper'])
+        .in('industry_id', this.userIndustries)
         .order('generated_at', { ascending: false })
-        .limit(limit * 2); // Get more to account for viewed content filtering
+        .limit(limit * 2); // Fetch 2x to account for filtering
 
       if (error || !slidesData || slidesData.length === 0) {
-        console.log(`📡 FeedManager: No content_slides found`);
         return [];
       }
 
-      console.log(`📡 FeedManager: Found ${slidesData.length} total items in content_slides`);
+      console.log(`📊 ContentCard: Found ${slidesData.length} items with slides`);
 
-      // Group by content type
-      const articleIds = slidesData.filter(s => s.content_type === 'article').map(s => s.content_id);
-      const paperIds = slidesData.filter(s => s.content_type === 'paper').map(s => s.content_id);
+      // Filter out viewed content using the standard view key format
+      const unviewedSlides = slidesData.filter((slide: any) => {
+        const viewKey = `${slide.content_type}-${slide.content_id}`;
+        return !this.viewedContentIds.has(viewKey);
+      });
 
-      const allItems: FeedItem[] = [];
+      console.log(`📊 ContentCard: ${unviewedSlides.length} unviewed items with slides after filtering`);
 
-      // Fetch articles with slides
-      if (articleIds.length > 0) {
-        const { data: articles } = await supabase
-          .from('articles')
-          .select('*')
-          .in('id', articleIds)
-          .in('industry_id', this.userIndustries)
-          .limit(limit);
+      const allItems: FeedItem[] = unviewedSlides.map((slide: any) => {
+        const feedItem: any = {
+          id: slide.content_id,
+          type: slide.content_type,
+          title: slide.title,
+          link: slide.link,
+          created_at: slide.generated_at,
+          date: slide.date,
+          site_name: slide.site_name,
+          industry_id: slide.industry_id,
+          likes_count: slide.likes_count || 0,
+          saves_count: slide.saves_count || 0,
+          comments_count: slide.comments_count || 0,
+          views_count: slide.views_count || 0,
+          hasSlides: true,
+          slidesId: slide.id,
+          category: slide.category,
+        };
 
-        if (articles) {
-          const articleItems = articles.map(article => {
-            const item = this.convertToFeedItem(article, 'article');
-            (item as any).hasSlides = true;
-            return item;
-          });
-          allItems.push(...articleItems);
-          console.log(`📡 FeedManager: Fetched ${articleItems.length} articles with slides`);
+        if (slide.content_type === 'article') {
+          feedItem.summary = slide.slides_text[0] || '';
+          feedItem.author = slide.authors?.[0];
+        } else if (slide.content_type === 'paper') {
+          feedItem.content_simple = slide.slides_text[0] || '';
+          feedItem.content_complex = slide.slides_text[1] || '';
+          feedItem.authors = slide.authors || [];
         }
-      }
 
-      // Fetch papers with slides
-      if (paperIds.length > 0) {
-        const { data: papers } = await supabase
-          .from('papers')
-          .select('*')
-          .in('id', paperIds)
-          .in('industry_id', this.userIndustries)
-          .limit(limit);
+        return feedItem;
+      });
 
-        if (papers) {
-          const paperItems = papers.map(paper => {
-            const item = this.convertToFeedItem(paper, 'paper');
-            (item as any).hasSlides = true;
-            return item;
-          });
-          allItems.push(...paperItems);
-          console.log(`📡 FeedManager: Fetched ${paperItems.length} papers with slides`);
-        }
-      }
-
-      // Don't filter out viewed content for slides (we want to prioritize showing them)
-      // Regular content will still be filtered in fetchContentByType
-      console.log(`📡 FeedManager: Returning ${allItems.length} items with slides (not filtering viewed for slides)`);
       return allItems.slice(0, limit);
     } catch (error) {
-      console.error('📡 FeedManager: Error fetching content with slides:', error);
+      console.error('FeedManager: Error fetching content with slides:', error);
       return [];
     }
   }
@@ -209,21 +163,14 @@ export class FeedManager {
    * Fetch content of a specific type with simple exclusion logic
    */
   private async fetchContentByType(
-    contentType: 'article' | 'paper' | 'book' | 'insight', 
+    contentType: 'article' | 'paper' | 'book' | 'insight',
     count: number
   ): Promise<FeedItem[]> {
     try {
-      console.log(`📡 FeedManager: Starting fetchContentByType for ${contentType}, target count: ${count}`);
-      
-      console.log(`📡 FeedManager: Using efficient database-level filtering for ${contentType}`);
-
       // For insights, always use the original method to ensure proper profile joins
       // The RPC function may not properly join with profiles table
       if (contentType === 'insight') {
-        console.log(`📡 FeedManager: Using original method for insights to ensure profile data`);
-        const insightsResult = await this.fetchContentByTypeOriginal(contentType, count);
-        console.log(`📡 FeedManager: Original method returned ${insightsResult.length} insights for target count ${count}`);
-        return insightsResult;
+        return await this.fetchContentByTypeOriginal(contentType, count);
       }
 
       // Use RPC function for other content types
@@ -235,36 +182,18 @@ export class FeedManager {
       });
 
       if (error) {
-        console.error(`📡 FeedManager: RPC error for ${contentType}:`, error);
-        console.log(`📡 FeedManager: Falling back to simple query without view filtering...`);
-
+        console.error(`FeedManager: RPC error for ${contentType}:`, error);
         // Fallback to original method if RPC doesn't exist yet
         return this.fetchContentByTypeOriginal(contentType, count);
       }
 
       if (!data || data.length === 0) {
-        console.log(`📡 FeedManager: No unviewed ${contentType} data returned from RPC`);
         return [];
-      }
-
-      console.log(`📡 FeedManager: RPC returned ${data.length} unviewed ${contentType} items`);
-
-      // Debug logging for RPC response data
-      if (data.length > 0 && (contentType === 'article' || contentType === 'paper')) {
-        console.log(`📡 FeedManager: First ${contentType} RPC data sample:`, {
-          id: data[0].id,
-          title: data[0].title?.substring(0, 30),
-          date: data[0].date,
-          created_at: data[0].created_at,
-          hasDate: !!data[0].date,
-          dateType: typeof data[0].date
-        });
       }
 
       // Check which content has slides
       // Convert IDs to integers since content_slides.content_id is integer type
       const contentIds = data.map((item: any) => parseInt(item.id, 10));
-      console.log(`📡 FeedManager: Checking slides for ${contentIds.length} ${contentType} IDs:`, contentIds.slice(0, 5));
 
       const { data: slidesData, error: slidesError } = await supabase
         .from('content_slides')
@@ -273,12 +202,10 @@ export class FeedManager {
         .in('content_id', contentIds);
 
       if (slidesError) {
-        console.error(`📡 FeedManager: Error fetching slides:`, slidesError);
+        console.error(`FeedManager: Error fetching slides:`, slidesError);
       }
 
-      console.log(`📡 FeedManager: Slides query returned:`, slidesData);
       const contentWithSlidesIds = new Set(slidesData?.map(s => s.content_id) || []);
-      console.log(`📡 FeedManager: Found ${contentWithSlidesIds.size} ${contentType} items with slides out of ${data.length}`, Array.from(contentWithSlidesIds));
 
       // Convert to FeedItem format - no client-side filtering needed since DB already filtered
       const feedItems = data.slice(0, count).map((item: any) => {
@@ -290,10 +217,9 @@ export class FeedManager {
         return feedItem;
       });
 
-      console.log(`📡 FeedManager: Final ${contentType} result: ${feedItems.length} items (${feedItems.filter((f: any) => f.hasSlides).length} with slides)`);
       return feedItems;
     } catch (error) {
-      console.error(`📡 FeedManager: Exception in fetchContentByType for ${contentType}:`, error);
+      console.error(`FeedManager: Exception in fetchContentByType for ${contentType}:`, error);
       return [];
     }
   }
@@ -302,15 +228,14 @@ export class FeedManager {
    * Fallback method - original client-side filtering approach
    */
   private async fetchContentByTypeOriginal(
-    contentType: 'article' | 'paper' | 'book' | 'insight', 
+    contentType: 'article' | 'paper' | 'book' | 'insight',
     count: number
   ): Promise<FeedItem[]> {
     try {
       let query: any;
-      
+
       // Handle insights separately (no industry filtering)
       if (contentType === 'insight') {
-        console.log(`📡 FeedManager: Executing insights query with profile join for user ${this.userId}`);
         query = supabase
           .from('insights')
           .select(`
@@ -324,9 +249,9 @@ export class FeedManager {
           .order('created_at', { ascending: false })
           .limit(count * 5); // Get more to account for filtering
       } else {
-        const tableName = contentType === 'paper' ? 'papers' : 
+        const tableName = contentType === 'paper' ? 'papers' :
                          contentType === 'book' ? 'books' : 'articles';
-        
+
         query = supabase
           .from(tableName)
           .select('*')
@@ -338,55 +263,25 @@ export class FeedManager {
       const { data, error } = await query;
 
       if (error || !data) {
-        console.error(`📡 FeedManager: Fallback query error for ${contentType}:`, error);
+        console.error(`FeedManager: Fallback query error for ${contentType}:`, error);
         return [];
-      }
-
-      // Debug logging for articles specifically to check longer_summary
-      if (contentType === 'article' && data.length > 0) {
-        console.log(`📡 FeedManager: Articles query returned ${data.length} items`);
-        console.log(`📡 FeedManager: First article raw data sample:`, {
-          id: data[0].id,
-          title: data[0].title?.substring(0, 50),
-          summary: data[0].summary?.substring(0, 50),
-          longer_summary: data[0].longer_summary ? `${data[0].longer_summary.substring(0, 50)}...` : 'NOT PRESENT',
-          hasLongerSummary: !!data[0].longer_summary
-        });
-      }
-
-      // Debug logging for insights profile data
-      if (contentType === 'insight') {
-        console.log(`📡 FeedManager: Insights query returned ${data.length} items`);
-        if (data.length > 0) {
-          console.log(`📡 FeedManager: First insight data sample:`, {
-            id: data[0].id,
-            author_id: data[0].author_id,
-            profiles: data[0].profiles,
-            content_preview: data[0].content?.substring(0, 50)
-          });
-        }
       }
 
       // Filter out viewed content client-side
       const viewedKeys = Array.from(this.viewedContentIds);
-      console.log(`📡 FeedManager: Filtering ${contentType} - ${data.length} raw items, ${viewedKeys.length} viewed keys`);
-      
+
       const unviewedData = data.filter((item: any) => {
         const itemKey = `${contentType}-${item.id}`;
         return !viewedKeys.includes(itemKey);
       });
-      
-      console.log(`📡 FeedManager: After filtering ${contentType} - ${unviewedData.length} unviewed items (filtered out ${data.length - unviewedData.length} viewed items)`);
 
-      const feedItems = unviewedData.slice(0, count).map((item: any) => 
+      const feedItems = unviewedData.slice(0, count).map((item: any) =>
         this.convertToFeedItem(item, contentType)
       );
-      
-      console.log(`📡 FeedManager: Final ${contentType} result after conversion - ${feedItems.length} items (requested ${count})`);
 
       return feedItems;
     } catch (error) {
-      console.error(`📡 FeedManager: Fallback error for ${contentType}:`, error);
+      console.error(`FeedManager: Fallback error for ${contentType}:`, error);
       return [];
     }
   }
@@ -409,7 +304,7 @@ export class FeedManager {
 
     switch (type) {
       case 'article':
-        const articleItem = {
+        return {
           ...baseItem,
           title: data.title || '',
           summary: data.summary || '',
@@ -419,24 +314,8 @@ export class FeedManager {
           site_name: data.site_name
         } as Article;
 
-        // Debug logging for article conversion
-        console.log(`📡 FeedManager: Converting article ${data.id}:`, {
-          id: data.id,
-          title: data.title?.substring(0, 30),
-          summary_length: data.summary?.length || 0,
-          longer_summary_length: data.longer_summary?.length || 0,
-          hasLongerSummary: !!data.longer_summary,
-          longer_summary_preview: data.longer_summary ? `${data.longer_summary.substring(0, 50)}...` : 'NOT PRESENT',
-          raw_date: data.date,
-          raw_created_at: data.created_at,
-          hasDate: !!data.date,
-          dateType: typeof data.date
-        });
-
-        return articleItem;
-
       case 'paper':
-        const paperItem = {
+        return {
           ...baseItem,
           title: data.title || '',
           content_simple: data.content_simple || '',
@@ -445,23 +324,6 @@ export class FeedManager {
           date: data.date,
           site_name: data.site_name
         } as Paper;
-
-        // Debug logging for paper conversion
-        console.log(`📡 FeedManager: Converting paper ${data.id}:`, {
-          id: data.id,
-          title: data.title?.substring(0, 30),
-          content_simple_length: data.content_simple?.length || 0,
-          content_complex_length: data.content_complex?.length || 0,
-          hasContentSimple: !!data.content_simple,
-          hasContentComplex: !!data.content_complex,
-          content_simple_preview: data.content_simple ? data.content_simple.substring(0, 50) + '...' : 'NOT PRESENT',
-          raw_date: data.date,
-          raw_created_at: data.created_at,
-          hasDate: !!data.date,
-          dateType: typeof data.date
-        });
-
-        return paperItem;
 
       case 'book':
         return {
@@ -477,19 +339,13 @@ export class FeedManager {
 
       case 'insight':
         const profile = data.profiles;
-        
-        // Debug log to see what profile data we're getting
-        console.log(`🧠 FeedManager: Processing insight ${data.id}, profile data:`, profile);
-        
+
         // Improved fallback logic - try to get name from different sources
         let authorName = 'User'; // Better fallback than 'Anonymous'
         if (profile?.full_name) {
           authorName = profile.full_name;
-        } else {
-          // Log when we have missing profile data
-          console.log(`⚠️ FeedManager: Missing profile data for insight ${data.id}, author_id: ${data.author_id}`);
         }
-        
+
         return {
           id: String(data.id),
           type: 'insight',
@@ -527,7 +383,6 @@ export class FeedManager {
 
     if (!this.viewedContentIds.has(viewKey)) {
       this.viewedContentIds.add(viewKey);
-      console.log(`👁️ FeedManager: Marked as viewed: ${viewKey} (total: ${this.viewedContentIds.size})`);
 
       // Save to AsyncStorage
       await this.saveViewedContent();
@@ -541,7 +396,7 @@ export class FeedManager {
           p_view_duration: 3
         });
       } catch (error) {
-        console.error('📡 FeedManager: Error recording view in database:', error);
+        console.error('FeedManager: Error recording view in database:', error);
       }
     }
   }
@@ -551,8 +406,6 @@ export class FeedManager {
    */
   async fetchSpecificContent(contentId: string | number, contentType: 'article' | 'paper' | 'book' | 'insight'): Promise<FeedItem | null> {
     try {
-      console.log(`🔍 FeedManager: Fetching specific ${contentType} with ID: ${contentId} (type: ${typeof contentId})`);
-
       const tableName = contentType === 'paper' ? 'papers' :
                        contentType === 'book' ? 'books' :
                        contentType === 'insight' ? 'insights' : 'articles';
@@ -579,20 +432,16 @@ export class FeedManager {
           .single();
       }
 
-      console.log(`🔍 FeedManager: Querying ${tableName} table for ID: ${contentId}`);
       const { data, error } = await query;
 
       if (error) {
-        console.error(`📡 FeedManager: Query error for ${contentType} ${contentId}:`, error);
+        console.error(`FeedManager: Query error for ${contentType} ${contentId}:`, error);
         return null;
       }
 
       if (!data) {
-        console.log(`📡 FeedManager: No data found for ${contentType} ${contentId}`);
         return null;
       }
-
-      console.log(`✅ FeedManager: Successfully found ${contentType} ${contentId}, now fetching fresh interaction counts...`);
 
       // Fetch fresh interaction counts from interaction tables
       const likesTable = contentType === 'insight' ? 'user_insights_likes' : `user_${contentType}_likes`;
@@ -614,8 +463,6 @@ export class FeedManager {
       const freshSaves = contentType === 'insight' ? 0 : ((savesCountRes.count as number | null) ?? data.saves_count ?? 0);
       const freshComments = (commentsCountRes.count as number | null) ?? data.comments_count ?? 0;
 
-      console.log(`📊 FeedManager: Fresh counts for ${contentType} ${contentId}: likes=${freshLikes}, saves=${freshSaves}, comments=${freshComments}`);
-
       // Update data with fresh counts
       const dataWithFreshCounts = {
         ...data,
@@ -626,7 +473,7 @@ export class FeedManager {
 
       return this.convertToFeedItem(dataWithFreshCounts, contentType);
     } catch (error) {
-      console.error(`📡 FeedManager: Exception fetching specific ${contentType} ${contentId}:`, error);
+      console.error(`FeedManager: Exception fetching specific ${contentType} ${contentId}:`, error);
       return null;
     }
   }
@@ -639,9 +486,8 @@ export class FeedManager {
       this.viewedContentIds.clear();
       const viewedKey = `viewed_content_${this.userId}`;
       await AsyncStorage.removeItem(viewedKey);
-      console.log('🧹 FeedManager: Cleared all viewed content');
     } catch (error) {
-      console.error('📡 FeedManager: Error clearing viewed content:', error);
+      console.error('FeedManager: Error clearing viewed content:', error);
     }
   }
 
