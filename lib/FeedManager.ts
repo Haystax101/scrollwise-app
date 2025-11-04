@@ -121,6 +121,9 @@ export class FeedManager {
 
       console.log(`📊 ContentCard: ${unviewedSlides.length} unviewed items with slides after filtering`);
 
+      // Map slides to feed items
+      // Note: Interaction counts start at 0 and update via optimistic UI in ContentCard
+      // TODO: Implement efficient count fetching from content_* tables (RPC function)
       const allItems: FeedItem[] = unviewedSlides.map((slide: any) => {
         const feedItem: any = {
           id: slide.content_id,
@@ -131,9 +134,9 @@ export class FeedManager {
           date: slide.date,
           site_name: slide.site_name,
           industry_id: slide.industry_id,
-          likes_count: slide.likes_count || 0,
-          saves_count: slide.saves_count || 0,
-          comments_count: slide.comments_count || 0,
+          likes_count: 0, // Will be updated by optimistic UI when user interacts
+          saves_count: 0, // Will be updated by optimistic UI when user interacts
+          comments_count: 0, // TODO: Fetch from content_comments table
           views_count: slide.views_count || 0,
           hasSlides: true,
           slidesId: slide.id,

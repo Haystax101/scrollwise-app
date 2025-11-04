@@ -1,6 +1,14 @@
 # Victory Native Chart Generation Guide for Backend
 
-## Victory Native Version
+## ⚠️ IMPORTANT: Charts Not Yet Implemented
+
+**Status**: Chart rendering is currently disabled in the frontend. The infrastructure is ready, but Victory Native charts will be implemented in a future native build.
+
+**For now**: The backend can continue generating chart configurations in the `content_slides.slides_chart_configs` field. They will be stored but not displayed until the next native build includes Victory Native.
+
+---
+
+## Victory Native Version (Future Implementation)
 
 **Package**: `victory-native` v41.20.1 (Victory Native XL)
 

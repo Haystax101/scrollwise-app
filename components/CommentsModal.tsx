@@ -27,42 +27,73 @@ interface CommentsModalProps {
   onClose: () => void;
   onCommentsCountChange?: (count: number) => void;
   contentType?: 'article' | 'paper' | 'book' | 'insight';
+  useContentTables?: boolean; // true = use content_comments/content_slides, false = use legacy tables
 }
 
 // Helper function to get table names based on content type
-const getCommentTableInfo = (contentType: 'article' | 'paper' | 'book' | 'insight' = 'article') => {
+const getCommentTableInfo = (
+  contentType: 'article' | 'paper' | 'book' | 'insight' = 'article',
+  useContentTables: boolean = false
+) => {
+  // Use new unified content tables for ContentCard
+  if (useContentTables && (contentType === 'article' || contentType === 'paper')) {
+    return {
+      commentTable: 'content_comments',
+      commentLikesTable: 'content_comment_likes',
+      contentTable: 'content_slides',
+      idField: 'content_id',
+      usesContentType: true, // Indicates this table uses content_type field
+    };
+  }
+
+  // Legacy tables for old ArticleCard/PaperCard/BookCard
   switch (contentType) {
     case 'insight':
       return {
         commentTable: 'insight_comments',
+        commentLikesTable: 'insight_comment_likes',
         contentTable: 'insights',
         idField: 'insight_id',
+        usesContentType: false,
       };
     case 'paper':
-      return { 
-        commentTable: 'paper_comments', 
+      return {
+        commentTable: 'paper_comments',
+        commentLikesTable: 'paper_comment_likes',
         contentTable: 'papers',
-        idField: 'paper_id'
+        idField: 'paper_id',
+        usesContentType: false,
       };
     case 'book':
-      return { 
-        commentTable: 'book_comments', 
+      return {
+        commentTable: 'book_comments',
+        commentLikesTable: 'book_comment_likes',
         contentTable: 'books',
-        idField: 'book_id'
+        idField: 'book_id',
+        usesContentType: false,
       };
     case 'article':
     default:
-      return { 
-        commentTable: 'comments', 
+      return {
+        commentTable: 'comments',
+        commentLikesTable: 'article_comment_likes',
         contentTable: 'articles',
-        idField: 'article_id'
+        idField: 'article_id',
+        usesContentType: false,
       };
   }
 };
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
-export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, onClose, onCommentsCountChange, contentType = 'article' }) => {
+export const CommentsModal: React.FC<CommentsModalProps> = ({
+  videoId,
+  visible,
+  onClose,
+  onCommentsCountChange,
+  contentType = 'article',
+  useContentTables = false
+}) => {
   const { user } = useAuth();
   const { colors } = useTheme();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -76,18 +107,18 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
   const textInputRef = useRef<TextInput>(null);
   // Keep stable references for the lifetime of the open modal to avoid drift between renders
   const stableVideoIdRef = useRef<number | string | null>(null);
-  const stableTableInfoRef = useRef(getCommentTableInfo(contentType));
+  const stableTableInfoRef = useRef(getCommentTableInfo(contentType, useContentTables));
 
   // Get table info for current content type (used for initial mount; stable ref will be used afterward)
-  const tableInfo = getCommentTableInfo(contentType);
+  const tableInfo = getCommentTableInfo(contentType, useContentTables);
 
   // Animate modal in/out
   useEffect(() => {
     if (visible) {
       // Capture stable identifiers for the session of this open modal
       stableVideoIdRef.current = videoId ?? null;
-      stableTableInfoRef.current = getCommentTableInfo(contentType);
-      console.log('COMMENTS_MODAL_OPEN', { videoId: stableVideoIdRef.current, contentType, tableInfo: stableTableInfoRef.current });
+      stableTableInfoRef.current = getCommentTableInfo(contentType, useContentTables);
+      console.log('COMMENTS_MODAL_OPEN', { videoId: stableVideoIdRef.current, contentType, useContentTables, tableInfo: stableTableInfoRef.current });
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 300,
@@ -155,14 +186,14 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
             let hasLiked = false;
             if (user) {
               const { data: likeData } = await supabase
-                .from('insight_comment_likes')
+                .from(tableCfg.commentLikesTable)
                 .select('user_id')
                 .eq('user_id', user.id)
                 .eq('comment_id', c.id)
                 .maybeSingle();
               hasLiked = !!likeData;
             }
-            
+
             return {
               id: c.id,
               user_id: c.user_id,
@@ -183,22 +214,43 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
         }
       } else {
         // Use regular flat comments for other content types
-        const { data, error } = await supabase
+        let query = supabase
           .from(tableCfg.commentTable)
-          .select(`id, user_id, ${tableCfg.idField}, content, created_at`)
-          .eq(tableCfg.idField, vid)
-          .order('created_at', { ascending: true }); // Oldest first (first comment at top)
+          .select(`id, user_id, ${tableCfg.idField}, content, created_at${tableCfg.usesContentType ? ', content_type' : ''}`)
+          .eq(tableCfg.idField, vid);
+
+        // Add content_type filter if using content_comments table
+        if (tableCfg.usesContentType) {
+          query = query.eq('content_type', contentType);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: true }); // Oldest first (first comment at top)
         
         if (error) {
           setComments([]);
           onCommentsCountChange && onCommentsCountChange(0);
         } else {
-          const mapped = (data || []).map((c: any) => ({
-            ...c,
-            author_name: c.user_id === user?.id ? 'You' : 'User',
-            depth_level: 0,
-            likes_count: 0,
-            reply_count: 0
+          const mapped = await Promise.all((data || []).map(async (c: any) => {
+            // Check if current user has liked this comment
+            let hasLiked = false;
+            if (user) {
+              const { data: likeData } = await supabase
+                .from(tableCfg.commentLikesTable)
+                .select('user_id')
+                .eq('user_id', user.id)
+                .eq('comment_id', c.id)
+                .maybeSingle();
+              hasLiked = !!likeData;
+            }
+
+            return {
+              ...c,
+              author_name: c.user_id === user?.id ? 'You' : 'User',
+              depth_level: 0,
+              likes_count: 0,
+              reply_count: 0,
+              hasLiked
+            };
           }));
           setComments(mapped);
           onCommentsCountChange && onCommentsCountChange(mapped.length);
@@ -296,17 +348,22 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
         }
       } else {
         // Regular comment (root level or non-insight content)
-        const insertData = { 
-          user_id: user.id, 
-          [tableInfo.idField]: videoId, 
+        const insertData: any = {
+          user_id: user.id,
+          [tableInfo.idField]: videoId,
           content: input.trim(),
           ...(contentType === 'insight' ? { depth_level: 0 } : {})
         };
-        
+
+        // Add content_type field for content_comments table
+        if (tableInfo.usesContentType) {
+          insertData.content_type = contentType;
+        }
+
         const { error, data } = await supabase
           .from(tableInfo.commentTable)
           .insert(insertData)
-          .select(`id, user_id, ${tableInfo.idField}, content, created_at`)
+          .select(`id, user_id, ${tableInfo.idField}, content, created_at${tableInfo.usesContentType ? ', content_type' : ''}`)
           .single();
           
         if (error) {
@@ -335,10 +392,17 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
           onCommentsCountChange && onCommentsCountChange(comments.length + 1);
           
           // Update comments_count in content table
-          await supabase
+          let updateQuery = supabase
             .from(tableInfo.contentTable)
             .update({ comments_count: comments.length + 1 })
             .eq('id', videoId);
+
+          // Add content_type filter for content_slides compound key
+          if (tableInfo.usesContentType) {
+            updateQuery = updateQuery.eq('content_type', contentType);
+          }
+
+          await updateQuery;
         }
       }
 
@@ -371,26 +435,28 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
 
   // Toggle comment like
   const toggleCommentLike = async (comment: Comment) => {
-    if (!user || contentType !== 'insight') return;
-    
+    if (!user) return;
+
     const wasLiked = comment.hasLiked || false;
     const newLikeCount = wasLiked ? (comment.likes_count || 0) - 1 : (comment.likes_count || 0) + 1;
-    
+
     // Optimistic update
-    setComments(prev => prev.map(c => 
-      c.id === comment.id 
+    setComments(prev => prev.map(c =>
+      c.id === comment.id
         ? { ...c, hasLiked: !wasLiked, likes_count: newLikeCount }
         : c
     ));
 
     try {
+      const tableInfo = getCommentTableInfo(contentType, useContentTables);
+
       if (wasLiked) {
         // Remove like
         const { error: deleteError } = await supabase
-          .from('insight_comment_likes')
+          .from(tableInfo.commentLikesTable)
           .delete()
           .match({ user_id: user.id, comment_id: comment.id });
-        
+
         if (deleteError) {
           console.error('Error removing comment like:', deleteError);
           throw deleteError;
@@ -399,9 +465,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
       } else {
         // Add like
         const { error: insertError } = await supabase
-          .from('insight_comment_likes')
+          .from(tableInfo.commentLikesTable)
           .insert({ user_id: user.id, comment_id: comment.id });
-        
+
         if (insertError) {
           console.error('Error adding comment like:', insertError);
           throw insertError;
@@ -411,8 +477,8 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({ videoId, visible, 
     } catch (error) {
       console.error('Error toggling comment like:', error);
       // Revert optimistic update on error
-      setComments(prev => prev.map(c => 
-        c.id === comment.id 
+      setComments(prev => prev.map(c =>
+        c.id === comment.id
           ? { ...c, hasLiked: wasLiked, likes_count: comment.likes_count || 0 }
           : c
       ));

@@ -323,6 +323,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
   // Comments modal state
   const [commentsArticleId, setCommentsArticleId] = useState<number | null>(null);
+  const [commentsSource, setCommentsSource] = useState<'legacy' | 'content_slides' | null>(null);
 
   // Quiz state with full functionality - COMMENTED OUT
   // const [quizVisible, setQuizVisible] = useState(false);
@@ -334,14 +335,15 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     if (!user || industries.length === 0 || allIndustries.length === 0) {
       return null;
     }
-    
+
     const industryIds = industries.map(ind => ind.id);
     return new FeedManager(user.id, industryIds, allIndustries);
   }, [user, industries, allIndustries]);
 
   // Memoized callbacks
-  const handleOpenComments = useCallback((articleId: number) => {
+  const handleOpenComments = useCallback((articleId: number, source?: 'legacy' | 'content_slides') => {
     setCommentsArticleId(articleId);
+    setCommentsSource(source || 'legacy'); // Default to legacy for backward compatibility
   }, []);
 
   const handleCloseComments = useCallback(() => {
@@ -694,6 +696,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
             ? (feedItems.find(item => item.id === commentsArticleId)?.type as 'article' | 'paper' | 'book' | 'insight') || 'article'
             : undefined
         }
+        useContentTables={commentsSource === 'content_slides'}
       />
 
 

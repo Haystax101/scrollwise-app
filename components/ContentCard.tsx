@@ -9,10 +9,10 @@ import {
   Image,
   ViewToken,
   Modal,
-  Alert
+  Alert,
+  Linking
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { CartesianChart, Line, Bar, Area, Scatter, Pie, PolarChart } from 'victory-native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -21,6 +21,8 @@ import { useRouter } from 'expo-router';
 import { useDeviceInfo, getContentBottomPadding } from '../utils/deviceUtils';
 import { useIndustries } from '../context/IndustriesContext';
 import { optimizeIndustryName } from '../utils/textUtils';
+import { FeedbackBoardModal } from './feedback/FeedbackBoardModal';
+import { ShareService } from '../lib/shareService';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
@@ -34,6 +36,7 @@ interface ContentSlides {
   slides_chart_configs: (VictoryChartConfig | null)[];
   total_slides: number;
   generated_at: string;
+  link?: string;
 }
 
 interface VictoryChartConfig {
@@ -65,7 +68,7 @@ interface ContentCardProps {
   commentsCount?: number;
   savesCount?: number;
   isInVault?: boolean;
-  onOpenComments?: (contentId: number) => void;
+  onOpenComments?: (contentId: number, source?: 'content_slides' | 'legacy') => void;
   onUserInteraction?: (contentId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => void;
 }
 
@@ -102,6 +105,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
   const [hasSaved, setHasSaved] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -159,29 +163,26 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
     return [{ type: 'title' }, ...contentSlides];
   }, [slides]);
 
-  // Fetch like/save status
+  // Fetch like/save status from unified content_* tables
   useEffect(() => {
     const fetchStatus = async () => {
       if (!user) return;
 
-      const tablePrefix = contentType === 'article' ? 'article' : 'paper';
-      const likesTable = `${tablePrefix}_likes`;
-      const savesTable = `${tablePrefix}_saves`;
-      const idField = `${tablePrefix}_id`;
-
       const { data: likeData } = await supabase
-        .from(likesTable)
+        .from('content_likes')
         .select('user_id')
         .eq('user_id', user.id)
-        .eq(idField, contentId)
+        .eq('content_id', contentId)
+        .eq('content_type', contentType)
         .maybeSingle();
       if (likeData) setHasLiked(true);
 
       const { data: saveData } = await supabase
-        .from(savesTable)
+        .from('content_saves')
         .select('user_id')
         .eq('user_id', user.id)
-        .eq(idField, contentId)
+        .eq('content_id', contentId)
+        .eq('content_type', contentType)
         .maybeSingle();
       if (saveData) setHasSaved(true);
     };
@@ -194,9 +195,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
     const isLikeAction = action === 'like' || action === 'unlike';
     const isAdding = action === 'like' || action === 'save';
 
-    const tablePrefix = contentType === 'article' ? 'article' : 'paper';
-    const table = isLikeAction ? `${tablePrefix}_likes` : `${tablePrefix}_saves`;
-    const idField = `${tablePrefix}_id`;
+    const table = isLikeAction ? 'content_likes' : 'content_saves';
     const stateSetter = isLikeAction ? setHasLiked : setHasSaved;
     const countSetter = isLikeAction ? setLikes : setSaves;
 
@@ -205,14 +204,23 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
     countSetter(prev => isAdding ? prev + 1 : prev - 1);
 
     if (isAdding) {
-      const { error } = await supabase.from(table).insert({ user_id: user.id, [idField]: contentId });
+      const { error } = await supabase.from(table).insert({
+        user_id: user.id,
+        content_id: contentId,
+        content_type: contentType
+      });
       if (error) {
+        console.error(`ContentCard: Error adding ${action}:`, error);
         stateSetter(!isAdding);
         countSetter(prev => isAdding ? prev - 1 : prev + 1);
       }
     } else {
-      const { error } = await supabase.from(table).delete().eq('user_id', user.id).eq(idField, contentId);
+      const { error } = await supabase.from(table).delete()
+        .eq('user_id', user.id)
+        .eq('content_id', contentId)
+        .eq('content_type', contentType);
       if (error) {
+        console.error(`ContentCard: Error removing ${action}:`, error);
         stateSetter(!isAdding);
         countSetter(prev => isAdding ? prev - 1 : prev + 1);
       }
@@ -238,158 +246,60 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
   };
 
-  const handleMenuAction = (action: 'authors' | 'flag' | 'feedback') => {
+  const handleMenuAction = (action: 'flag' | 'feedback') => {
     setMenuVisible(false);
     switch (action) {
-      case 'authors':
-        if (authors && authors.length > 0) {
-          Alert.alert('Authors', authors.join(', '));
-        }
-        break;
       case 'flag':
         // TODO: Implement flag functionality
         Alert.alert('Flag Content', 'Content flagging will be implemented');
         break;
       case 'feedback':
-        router.push('/feedback');
+        setShowFeedbackModal(true);
         break;
     }
   };
 
-  // Helper function to render Victory chart based on config - memoized to prevent re-renders
+  const handleSharePress = useCallback(async () => {
+    try {
+      // Use the first slide's text as summary for sharing
+      const summary = slides?.slides_text?.[0] || '';
+
+      await ShareService.shareContent({
+        type: contentType,
+        id: String(contentId),
+        title: title,
+        summary: summary
+      });
+    } catch (error) {
+      console.error('Error sharing content:', error);
+    }
+  }, [contentId, contentType, title, slides?.slides_text]);
+
+  const handleReadMore = useCallback(async () => {
+    if (!slides?.link) {
+      Alert.alert('No Link', 'This content does not have an external link available.');
+      return;
+    }
+
+    try {
+      const canOpen = await Linking.canOpenURL(slides.link);
+      if (canOpen) {
+        await Linking.openURL(slides.link);
+      } else {
+        Alert.alert('Invalid Link', 'Unable to open this link.');
+      }
+    } catch (error) {
+      console.error('Error opening link:', error);
+      Alert.alert('Error', 'Failed to open the link.');
+    }
+  }, [slides?.link]);
+
+  // Placeholder for future chart rendering - Victory Native not yet implemented
+  // Charts will be added in a future native build
   const renderVictoryChart = useCallback((chartConfig: VictoryChartConfig) => {
-    let { chartType, data, style } = chartConfig;
-
-    // Map old chartType names to new ones for backward compatibility
-    const chartTypeMapping: Record<string, typeof chartType> = {
-      'VictoryBar': 'Bar',
-      'VictoryLine': 'Line',
-      'VictoryArea': 'Area',
-      'VictoryPie': 'Pie',
-      'VictoryScatter': 'Scatter',
-    };
-    chartType = chartTypeMapping[chartType as string] || chartType;
-
-    // Default colors
-    const chartColor = style?.data?.stroke || style?.data?.fill || '#FFC107';
-    const strokeWidth = style?.data?.strokeWidth || 2;
-
-    // Log the chart being rendered for debugging
-    console.log(`📊 Rendering chart type: ${chartType} with ${data?.length || 0} data points`);
-
-    // Validate data
-    if (!data || data.length === 0) {
-      return <Text style={styles.placeholderText}>No chart data available</Text>;
-    }
-
-    // Victory Native XL uses different API - needs explicit dimensions
-    const chartWidth = screenWidth - 48;
-    const chartHeight = 250;
-
-    switch (chartType) {
-      case 'Bar':
-        return (
-          <View style={{ width: chartWidth, height: chartHeight }}>
-            <CartesianChart
-              data={data}
-              xKey="x"
-              yKeys={["y"]}
-              domainPadding={{ left: 20, right: 20 }}
-            >
-              {({ points, chartBounds }) => (
-                <Bar
-                  points={points.y}
-                  chartBounds={chartBounds}
-                  color={chartColor}
-                  roundedCorners={{ topLeft: 4, topRight: 4 }}
-                />
-              )}
-            </CartesianChart>
-          </View>
-        );
-
-      case 'Line':
-        return (
-          <View style={{ width: chartWidth, height: chartHeight }}>
-            <CartesianChart
-              data={data}
-              xKey="x"
-              yKeys={["y"]}
-            >
-              {({ points }) => (
-                <Line
-                  points={points.y}
-                  color={chartColor}
-                  strokeWidth={strokeWidth}
-                />
-              )}
-            </CartesianChart>
-          </View>
-        );
-
-      case 'Area':
-        return (
-          <View style={{ width: chartWidth, height: chartHeight }}>
-            <CartesianChart
-              data={data}
-              xKey="x"
-              yKeys={["y"]}
-            >
-              {({ points }) => (
-                <Area
-                  points={points.y}
-                  y0={0}
-                  color={chartColor}
-                />
-              )}
-            </CartesianChart>
-          </View>
-        );
-
-      case 'Scatter':
-        return (
-          <View style={{ width: chartWidth, height: chartHeight }}>
-            <CartesianChart
-              data={data}
-              xKey="x"
-              yKeys={["y"]}
-            >
-              {({ points }) => (
-                <Scatter
-                  points={points.y}
-                  color={chartColor}
-                  radius={4}
-                />
-              )}
-            </CartesianChart>
-          </View>
-        );
-
-      case 'Pie':
-        // Pie chart uses PolarChart wrapper with data keys
-        const pieData = data.map((d, i) => ({
-          value: d.y,
-          label: d.label || `${d.x}`,
-          color: i === 0 ? chartColor : `hsl(${(i * 360) / data.length}, 70%, 50%)`,
-        }));
-
-        return (
-          <View style={{ width: screenWidth - 48, height: 250 }}>
-            <PolarChart
-              data={pieData}
-              labelKey="label"
-              valueKey="value"
-              colorKey="color"
-            >
-              <Pie.Chart />
-            </PolarChart>
-          </View>
-        );
-
-      default:
-        console.error(`Unsupported chart type: ${chartType}`);
-        return <Text style={styles.placeholderText}>Unsupported chart type: {chartType}</Text>;
-    }
+    // For now, just show a placeholder
+    // TODO: Implement Victory Native charts in next native build
+    return null; // Don't show anything for charts yet
   }, []);
 
   const renderSlide = useCallback(({ item }: { item: SlideItem }) => {
@@ -498,13 +408,11 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Top metadata bar */}
-      <View style={[styles.metadataBar, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.metadataBar, { paddingTop: insets.top + 12, backgroundColor: colors.background }]}>
         <View style={styles.metadataLeft}>
+          <Feather name="globe" size={20} color="#999" style={styles.globeIcon} />
           <View style={styles.metadataColumn}>
-            <View style={styles.metadataSourceRow}>
-              <Feather name="globe" size={16} color="#999" style={styles.globeIcon} />
-              <Text style={styles.sourceText}>{source || 'Unknown Source'}</Text>
-            </View>
+            <Text style={[styles.sourceText, { color: colors.text }]}>{source || 'Unknown Source'}</Text>
             <Text style={styles.dateText}>{formatDate(date)}</Text>
           </View>
         </View>
@@ -515,7 +423,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
           </View>
 
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton}>
-            <Feather name="more-horizontal" size={20} color="#fff" />
+            <Feather name="more-horizontal" size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
       </View>
@@ -558,6 +466,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
       <View style={[
         styles.actionsRow,
         {
+          backgroundColor: colors.background,
           borderTopColor: colors.border,
           paddingBottom: isInVault ? 60 : insets.bottom + 60 + getContentBottomPadding(deviceInfo)
         }
@@ -568,7 +477,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
             <Text style={styles.actionText}>{likes}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => onOpenComments?.(contentId)} style={styles.actionButton}>
+          <TouchableOpacity onPress={() => onOpenComments?.(contentId, 'content_slides')} style={styles.actionButton}>
             <Feather name="message-circle" size={20} color="#999" />
             <Text style={styles.actionText}>{commentsCount}</Text>
           </TouchableOpacity>
@@ -578,12 +487,12 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
             <Text style={styles.actionText}>{saves}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity onPress={handleSharePress} style={styles.actionButton}>
             <Feather name="share" size={20} color="#999" />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.readMoreButton}>
+        <TouchableOpacity onPress={handleReadMore} style={styles.readMoreButton}>
           <Text style={styles.readMoreText}>Read More</Text>
         </TouchableOpacity>
       </View>
@@ -601,14 +510,27 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
           onPress={() => setMenuVisible(false)}
         >
           <View style={styles.menuContainer}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => handleMenuAction('authors')}
-            >
-              <Feather name="user" size={18} color="#fff" />
-              <Text style={styles.menuItemText}>View Author(s)</Text>
-            </TouchableOpacity>
+            {/* Authors Section - Display directly if available */}
+            {authors && authors.length > 0 && (
+              <>
+                <View style={styles.authorsSection}>
+                  <View style={styles.authorsSectionHeader}>
+                    <Feather name="user" size={18} color="#999" />
+                    <Text style={styles.authorsSectionTitle}>
+                      {authors.length === 1 ? 'Author' : 'Authors'}
+                    </Text>
+                  </View>
+                  {authors.map((author, index) => (
+                    <Text key={index} style={styles.authorName}>
+                      {author}
+                    </Text>
+                  ))}
+                </View>
+                <View style={styles.menuDivider} />
+              </>
+            )}
 
+            {/* Action Items */}
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => handleMenuAction('flag')}
@@ -627,25 +549,30 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Feedback Modal */}
+      <FeedbackBoardModal
+        visible={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+      />
     </View>
   );
 });
 
 // Helper function to split title for highlighting
-// Looks for common patterns like "One Thing in Common" in the title
+// Always highlights the last 4 words in yellow
 function splitTitleForHighlight(title: string): { normal: string; highlight?: string } {
-  // Simple heuristic: highlight last 3-5 words if title is long enough
   const words = title.split(' ');
-  if (words.length > 8) {
-    const highlightCount = Math.min(5, Math.floor(words.length / 3));
-    const normalWords = words.slice(0, -highlightCount);
-    const highlightWords = words.slice(-highlightCount);
+  if (words.length > 4) {
+    const normalWords = words.slice(0, -4);
+    const highlightWords = words.slice(-4);
     return {
       normal: normalWords.join(' '),
       highlight: highlightWords.join(' ')
     };
   }
-  return { normal: title };
+  // If 4 words or less, highlight the entire title
+  return { normal: '', highlight: title };
 }
 
 const styles = StyleSheet.create({
@@ -660,15 +587,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#000',
   },
   metadataLeft: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     flex: 1,
+    gap: 8,
   },
   metadataColumn: {
     flexDirection: 'column',
+    gap: 2,
   },
   metadataSourceRow: {
     flexDirection: 'row',
@@ -676,18 +604,17 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   globeIcon: {
-    marginRight: 8,
+    marginTop: -2,
   },
   sourceText: {
-    color: '#fff',
     fontSize: 13,
-    fontFamily: 'Montserrat',
+    fontFamily: 'Oswald',
     fontWeight: '600',
   },
   dateText: {
     color: '#999',
     fontSize: 11,
-    fontFamily: 'Montserrat',
+    fontFamily: 'Oswald',
   },
   metadataRight: {
     flexDirection: 'row',
@@ -703,7 +630,7 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     color: '#fff',
     fontSize: 13,
-    fontFamily: 'Montserrat',
+    fontFamily: 'Oswald',
     fontWeight: '600',
   },
   menuButton: {
@@ -712,6 +639,7 @@ const styles = StyleSheet.create({
   slidesContainer: {
     flex: 1,
     position: 'relative',
+    backgroundColor: '#000',
   },
   slide: {
     height: '100%',
@@ -737,7 +665,7 @@ const styles = StyleSheet.create({
   category: {
     color: '#5ED549',
     fontSize: 16,
-    fontFamily: 'Montserrat',
+    fontFamily: 'Oswald',
     fontWeight: '600',
     fontStyle: 'italic',
     marginBottom: 12,
@@ -748,12 +676,13 @@ const styles = StyleSheet.create({
   titleText: {
     color: '#fff',
     fontSize: 28,
-    fontFamily: 'Montserrat',
+    fontFamily: 'Oswald',
     fontWeight: '700',
     lineHeight: 36,
+    textAlign: 'left',
   },
   titleHighlight: {
-    color: '#FFC107',
+    color: '#ECDA19',
   },
   contentSlide: {
     flex: 1,
@@ -763,9 +692,10 @@ const styles = StyleSheet.create({
   slideTitle: {
     color: '#fff',
     fontSize: 24,
-    fontFamily: 'Montserrat',
+    fontFamily: 'Oswald',
     fontWeight: '700',
     marginBottom: 20,
+    textAlign: 'left',
   },
   chartContainer: {
     height: 250,
@@ -781,15 +711,15 @@ const styles = StyleSheet.create({
   slideText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Montserrat',
+    fontFamily: 'Oswald',
     lineHeight: 26,
-    textAlign: 'center',
+    textAlign: 'left',
     flexWrap: 'wrap',
   },
   placeholderText: {
     color: '#666',
     fontSize: 14,
-    fontFamily: 'Montserrat',
+    fontFamily: 'Oswald',
   },
   slideIndicators: {
     flexDirection: 'row',
@@ -810,7 +740,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    backgroundColor: '#0A0A0A',
   },
   actionGroup: {
     flexDirection: 'row',
@@ -825,7 +754,7 @@ const styles = StyleSheet.create({
   actionText: {
     color: '#999',
     fontSize: 14,
-    fontFamily: 'Montserrat',
+    fontFamily: 'Oswald',
     fontWeight: '500',
   },
   readMoreButton: {
@@ -837,7 +766,7 @@ const styles = StyleSheet.create({
   readMoreText: {
     color: '#000',
     fontSize: 14,
-    fontFamily: 'Montserrat',
+    fontFamily: 'Oswald',
     fontWeight: '700',
   },
   modalOverlay: {
@@ -862,7 +791,38 @@ const styles = StyleSheet.create({
   menuItemText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Montserrat',
+    fontFamily: 'Oswald',
     fontWeight: '500',
+  },
+  authorsSection: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  authorsSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  authorsSectionTitle: {
+    color: '#999',
+    fontSize: 14,
+    fontFamily: 'Oswald',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  authorName: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Oswald',
+    fontWeight: '400',
+    paddingLeft: 30,
+    paddingVertical: 4,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#333',
+    marginVertical: 8,
   },
 });
