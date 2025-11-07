@@ -102,6 +102,13 @@ export default function RootLayout() {
                       headerShown: false,
                     }}
                   />
+                  <Stack.Screen
+                    name="shared"
+                    options={{
+                      headerShown: false,
+                      animation: 'none',
+                    }}
+                  />
                 </Stack>
                     <AppHeader />
                       </DeepLinkWrapper>
