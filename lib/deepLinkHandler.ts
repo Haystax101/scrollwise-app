@@ -425,11 +425,11 @@ export function useDeepLinkHandler() {
           console.log('🔗 DeepLink: URL type:', typeof initialURL);
           await DeepLinkHandler.handleDeepLink(initialURL);
 
-          // Small delay to ensure router is ready (reduced to minimize "unmatched route" flash)
+          // Small delay to ensure router is ready (balanced for reliability and speed)
           setTimeout(() => {
-            console.log('🔗 DeepLink: Processing pending deep link after 200ms delay');
+            console.log('🔗 DeepLink: Processing pending deep link after 500ms delay');
             DeepLinkHandler.processPendingDeepLink(router);
-          }, 200);
+          }, 500);
         } else {
           console.log('🔗 DeepLink: No initial URL found');
         }

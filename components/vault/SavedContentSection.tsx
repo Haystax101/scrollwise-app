@@ -100,7 +100,7 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
       console.log('📄 SavedContentSection: Starting to fetch saved content for user:', user.id);
 
       // Fetch all saved content types with correct field names
-      const [articlesRes, papersRes, booksRes] = await Promise.all([
+      const [articlesRes, papersRes, booksRes, contentSlidesRes] = await Promise.all([
         supabase
           .from('article_saves')
           .select(`
@@ -150,13 +150,25 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
+          .limit(10),
+
+        supabase
+          .from('content_saves')
+          .select(`
+            created_at,
+            content_id,
+            content_type
+          `)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
           .limit(10)
       ]);
 
-      console.log('📄 SavedContentSection: Query results - articles:', articlesRes.data?.length, 'papers:', papersRes.data?.length, 'books:', booksRes.data?.length);
+      console.log('📄 SavedContentSection: Query results - articles:', articlesRes.data?.length, 'papers:', papersRes.data?.length, 'books:', booksRes.data?.length, 'content_slides:', contentSlidesRes.data?.length);
       console.log('📄 SavedContentSection: Articles error:', articlesRes.error);
       console.log('📄 SavedContentSection: Papers error:', papersRes.error);
       console.log('📄 SavedContentSection: Books error:', booksRes.error);
+      console.log('📄 SavedContentSection: Content slides error:', contentSlidesRes.error);
 
       // Log first few results for debugging
       if (articlesRes.data?.length) {
@@ -219,6 +231,42 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
           });
         }
       });
+
+      // Process content_slides (new format from ContentCard)
+      if (contentSlidesRes.data && contentSlidesRes.data.length > 0) {
+        // Fetch actual content_slides data
+        const contentTypes = [...new Set(contentSlidesRes.data.map(save => save.content_type))];
+
+        for (const contentType of contentTypes) {
+          const idsForType = contentSlidesRes.data
+            .filter(save => save.content_type === contentType)
+            .map(save => save.content_id);
+
+          const { data: slidesData } = await supabase
+            .from('content_slides')
+            .select('content_id, content_type, title, slides_text, industry_id, generated_at')
+            .eq('content_type', contentType)
+            .in('content_id', idsForType);
+
+          slidesData?.forEach(slide => {
+            const savedEntry = contentSlidesRes.data.find(
+              save => save.content_id === slide.content_id && save.content_type === slide.content_type
+            );
+
+            if (savedEntry) {
+              allSaved.push({
+                id: slide.content_id,
+                title: slide.title,
+                type: slide.content_type as 'article' | 'paper',
+                summary: slide.slides_text?.[0] || '',
+                created_at: slide.generated_at,
+                industry_id: slide.industry_id,
+                saved_at: savedEntry.created_at
+              });
+            }
+          });
+        }
+      }
 
       console.log('📄 SavedContentSection: Processed data - total saved items:', allSaved.length);
       console.log('📄 SavedContentSection: Saved items breakdown:', {
