@@ -311,19 +311,46 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
   const renderSlide = useCallback(({ item }: { item: SlideItem }) => {
     if (item.type === 'title') {
       // Title slide with image or chart from slides_images[0] / slides_chart_configs[0]
-      const titleParts = splitTitleForHighlight(title);
+      const quoteData = parseQuoteTitle(title);
+      const titleParts = splitTitleForHighlight(quoteData.isQuote ? quoteData.quote! : title);
       const coverImage = slides?.slides_images?.[0];
       const coverChart = slides?.slides_chart_configs?.[0];
 
       // Render title and industry content
-      const titleContent = (
+      const titleContent = quoteData.isQuote ? (
         <>
           {/* Industry name */}
           {industryName && (
             <Text style={styles.category}>{industryName}</Text>
           )}
 
-          {/* Title */}
+          {/* Quote with icon */}
+          <View style={styles.titleContainer}>
+            <View style={styles.quoteIconContainer}>
+              <Text style={styles.quoteIconText}>"</Text>
+            </View>
+            <Text style={styles.titleText}>
+              {titleParts.normal}
+              {titleParts.highlight && (
+                <Text style={styles.titleHighlight}> {titleParts.highlight}</Text>
+              )}
+            </Text>
+            <View style={styles.quoteAuthorContainer}>
+              <Text style={styles.quoteAuthor}>{quoteData.author}</Text>
+              {quoteData.jobTitle && (
+                <Text style={styles.quoteJobTitle}>{quoteData.jobTitle}</Text>
+              )}
+            </View>
+          </View>
+        </>
+      ) : (
+        <>
+          {/* Industry name */}
+          {industryName && (
+            <Text style={styles.category}>{industryName}</Text>
+          )}
+
+          {/* Regular Title */}
           <View style={styles.titleContainer}>
             <Text style={styles.titleText}>
               {titleParts.normal}
@@ -601,6 +628,45 @@ function splitTitleForHighlight(title: string): { normal: string; highlight?: st
   return { normal: '', highlight: title };
 }
 
+// Helper function to parse quote titles
+// Format: "Author Name, Job Title: 'Quote text'"
+function parseQuoteTitle(title: string): { isQuote: boolean; author?: string; jobTitle?: string; quote?: string } {
+  // Check if title ends with a single quote
+  if (!title.endsWith("'")) {
+    return { isQuote: false };
+  }
+
+  // Pattern: "Author, Job Title: 'Quote'"
+  const quotePattern = /^([^:]+?):\s*'(.+)'$/;
+  const match = title.match(quotePattern);
+
+  if (!match) {
+    return { isQuote: false };
+  }
+
+  const authorAndJob = match[1].trim();
+  const quote = match[2].trim();
+
+  // Split author and job title by comma
+  const parts = authorAndJob.split(',').map(p => p.trim());
+
+  if (parts.length >= 2) {
+    return {
+      isQuote: true,
+      author: parts[0],
+      jobTitle: parts.slice(1).join(', '), // Handle multiple commas
+      quote: quote
+    };
+  }
+
+  // If no comma, treat entire part before colon as author
+  return {
+    isQuote: true,
+    author: authorAndJob,
+    quote: quote
+  };
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -723,6 +789,36 @@ const styles = StyleSheet.create({
   },
   titleHighlight: {
     color: '#ECDA19',
+  },
+  quoteIconContainer: {
+    marginBottom: 12,
+  },
+  quoteIconText: {
+    fontSize: 80,
+    color: '#ECDA19',
+    fontFamily: 'Oswald',
+    fontWeight: '700',
+    lineHeight: 80,
+    opacity: 0.9,
+  },
+  quoteAuthorContainer: {
+    marginTop: 24,
+    borderLeftWidth: 3,
+    borderLeftColor: '#ECDA19',
+    paddingLeft: 16,
+  },
+  quoteAuthor: {
+    color: '#fff',
+    fontSize: 18,
+    fontFamily: 'Oswald',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  quoteJobTitle: {
+    color: '#999',
+    fontSize: 14,
+    fontFamily: 'Oswald',
+    fontWeight: '400',
   },
   contentSlide: {
     flex: 1,
