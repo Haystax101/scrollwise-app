@@ -107,6 +107,12 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
   const [menuVisible, setMenuVisible] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
+  // Randomly determine layout variant based on contentId (consistent per content)
+  const layoutVariant = useMemo(() => {
+    // Use contentId as seed for consistent but varied layout
+    return contentId % 2 === 0 ? 'below' : 'above';
+  }, [contentId]);
+
   const flatListRef = useRef<FlatList>(null);
 
   // Fetch slides from content_slides table
@@ -309,41 +315,61 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
       const coverImage = slides?.slides_images?.[0];
       const coverChart = slides?.slides_chart_configs?.[0];
 
+      // Render title and industry content
+      const titleContent = (
+        <>
+          {/* Industry name */}
+          {industryName && (
+            <Text style={styles.category}>{industryName}</Text>
+          )}
+
+          {/* Title */}
+          <View style={styles.titleContainer}>
+            <Text style={styles.titleText}>
+              {titleParts.normal}
+              {titleParts.highlight && (
+                <Text style={styles.titleHighlight}> {titleParts.highlight}</Text>
+              )}
+            </Text>
+          </View>
+        </>
+      );
+
+      // Render image or chart
+      const imageContent = coverChart && typeof coverChart === 'object' ? (
+        <View style={layoutVariant === 'above' ? styles.imageContainerSmall : styles.imageContainer}>
+          {renderVictoryChart(coverChart)}
+        </View>
+      ) : coverImage && typeof coverImage === 'string' && coverImage.length > 0 ? (
+        <View style={layoutVariant === 'above' ? styles.imageContainerSmall : styles.imageContainer}>
+          <Image
+            source={{ uri: coverImage }}
+            style={layoutVariant === 'above' ? styles.heroImageSmall : styles.heroImage}
+            resizeMode="cover"
+            onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+          />
+        </View>
+      ) : null;
+
       return (
         <View style={[styles.slide, { width: screenWidth }]}>
-          {/* Image or Chart */}
-          {coverChart && typeof coverChart === 'object' ? (
-            <View style={styles.imageContainer}>
-              {renderVictoryChart(coverChart)}
-            </View>
-          ) : coverImage && typeof coverImage === 'string' && coverImage.length > 0 ? (
-            <View style={styles.imageContainer}>
-              <Image
-                source={{ uri: coverImage }}
-                style={styles.heroImage}
-                resizeMode="cover"
-                onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
-              />
-            </View>
-          ) : null}
-
-          {/* Content overlay */}
-          <View style={styles.titleContent}>
-            {/* Industry name (replaces category) */}
-            {industryName && (
-              <Text style={styles.category}>{industryName}</Text>
-            )}
-
-            {/* Title */}
-            <View style={styles.titleContainer}>
-              <Text style={styles.titleText}>
-                {titleParts.normal}
-                {titleParts.highlight && (
-                  <Text style={styles.titleHighlight}> {titleParts.highlight}</Text>
-                )}
-              </Text>
-            </View>
-          </View>
+          {layoutVariant === 'above' ? (
+            // Layout: Title/Industry ABOVE image
+            <>
+              <View style={styles.titleContentTop}>
+                {titleContent}
+              </View>
+              {imageContent}
+            </>
+          ) : (
+            // Layout: Title/Industry BELOW image (original)
+            <>
+              {imageContent}
+              <View style={styles.titleContent}>
+                {titleContent}
+              </View>
+            </>
+          )}
         </View>
       );
     }
@@ -385,7 +411,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
         </View>
       </View>
     );
-  }, [title, category, slides, industryName, renderVictoryChart]);
+  }, [title, category, slides, industryName, renderVictoryChart, layoutVariant]);
 
   // Show loading state
   if (loading) {
@@ -654,6 +680,17 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  imageContainerSmall: {
+    width: '80%',
+    height: '50%',
+    overflow: 'hidden',
+    alignSelf: 'center',
+    marginBottom: 24,
+  },
+  heroImageSmall: {
+    width: '100%',
+    height: '100%',
+  },
   titleContent: {
     position: 'absolute',
     top: '60%', // Starts right after the image (which is 60% height)
@@ -661,6 +698,11 @@ const styles = StyleSheet.create({
     right: 0,
     paddingTop: 24, // Fixed gap from bottom of image
     paddingHorizontal: 24,
+  },
+  titleContentTop: {
+    paddingTop: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
   },
   category: {
     color: '#5ED549',
