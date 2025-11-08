@@ -90,7 +90,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
   onUserInteraction,
 }) => {
   const { user } = useAuth();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const deviceInfo = useDeviceInfo();
@@ -352,7 +352,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
       ) : null;
 
       return (
-        <View style={[styles.slide, { width: screenWidth }]}>
+        <View style={[styles.slide, { width: screenWidth, backgroundColor: isDark ? colors.background : '#000' }]}>
           {layoutVariant === 'above' ? (
             // Layout: Title/Industry ABOVE image
             <>
@@ -385,7 +385,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
     const chartConfig = slides.slides_chart_configs?.[slideIndex + 1];
 
     return (
-      <View style={[styles.slide, { width: screenWidth }]}>
+      <View style={[styles.slide, { width: screenWidth, backgroundColor: isDark ? colors.background : '#000' }]}>
         <View style={styles.contentSlide}>
           {/* Slide title */}
           {slideTitle && (
@@ -411,7 +411,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
         </View>
       </View>
     );
-  }, [title, category, slides, industryName, renderVictoryChart, layoutVariant]);
+  }, [title, category, slides, industryName, renderVictoryChart, layoutVariant, isDark, colors.background]);
 
   // Show loading state
   if (loading) {
@@ -455,7 +455,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
       </View>
 
       {/* Slides */}
-      <View style={styles.slidesContainer}>
+      <View style={[styles.slidesContainer, { backgroundColor: isDark ? colors.background : '#000' }]}>
         <FlatList
           ref={flatListRef}
           data={slideItems}
@@ -472,7 +472,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
 
       {/* Slide indicators - positioned above actions row */}
       {slideItems.length > 1 && (
-        <View style={styles.slideIndicators}>
+        <View style={[styles.slideIndicators, { backgroundColor: isDark ? colors.background : '#000' }]}>
           {slideItems.map((_, index) => (
             <View
               key={index}
@@ -665,11 +665,9 @@ const styles = StyleSheet.create({
   slidesContainer: {
     flex: 1,
     position: 'relative',
-    backgroundColor: '#000',
   },
   slide: {
     height: '100%',
-    backgroundColor: '#000',
   },
   imageContainer: {
     width: '100%',
