@@ -21,7 +21,7 @@ export interface Industry {
 
 export type ExperienceLevel = 'Student' | 'Working Professional' | 'Researcher' | 'Enthusiast';
 
-export type ContentType = 'paper' | 'book' | 'article' | 'insight';
+export type ContentType = 'paper' | 'book' | 'article' | 'insight' | 'video' | 'podcast';
 
 export interface InsightAuthor {
   name: string;
@@ -92,7 +92,21 @@ export interface Book extends BaseContent {
   key_insights?: string[];
 }
 
-// Legacy Video interface for backward compatibility
+export interface VideoContent extends BaseContent {
+  type: 'video';
+  summary: string;
+  author?: string;
+  hasSlides?: boolean; // Videos from content_slides always have slides
+}
+
+export interface PodcastContent extends BaseContent {
+  type: 'podcast';
+  summary: string;
+  author?: string;
+  hasSlides?: boolean; // Podcasts from content_slides always have slides
+}
+
+// Legacy Video interface for backward compatibility (actual video files/streams)
 export interface Video {
   id: number;
   title: string;
@@ -119,7 +133,7 @@ export interface Video {
   question?: string;
 }
 
-export type FeedItem = Article | Paper | Book | Insight;
+export type FeedItem = Article | Paper | Book | Insight | VideoContent | PodcastContent;
 
 export interface SavedContentItem {
   id: number;

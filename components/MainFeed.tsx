@@ -545,6 +545,26 @@ export const MainFeed: React.FC<MainFeedProps> = ({
             onUserInteraction={handleUserInteraction}
           />
         );
+      case 'video':
+      case 'podcast':
+        // Videos and podcasts are always from content_slides, so use ContentCard
+        console.log(`📱 MainFeed: Rendering ContentCard for ${item.type} ${item.id}`);
+        return (
+          <ContentCard
+            contentId={item.id}
+            contentType={item.type as 'video' | 'podcast'}
+            title={(item as any).title}
+            source={(item as any).site_name}
+            date={(item as any).date || (item as any).created_at}
+            category={(item as any).category}
+            authors={(item as any).author ? [(item as any).author] : undefined}
+            likesCount={(item as any).likes_count}
+            commentsCount={(item as any).comments_count}
+            savesCount={(item as any).saves_count}
+            onOpenComments={handleOpenComments}
+            onUserInteraction={handleUserInteraction}
+          />
+        );
       case 'book':
         return (
           <BookCard
@@ -558,6 +578,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
       case 'insight':
         return <InsightCard insight={item as Insight} showBackButton={showBackButton} backTo={backTo} />;
       default:
+        console.warn(`📱 MainFeed: Unknown content type: ${(item as any).type}`);
         return null;
     }
   }, [currentIndex, showBackButton, backTo, handleOpenComments, handleUserInteraction]);

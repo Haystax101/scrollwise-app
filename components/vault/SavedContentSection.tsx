@@ -35,7 +35,7 @@ const getIndustryColor = (industryId: string): string => {
 interface SavedContent {
   id: number;
   title: string;
-  type: 'article' | 'paper' | 'book';
+  type: 'article' | 'paper' | 'book' | 'video' | 'podcast';
   summary?: string;
   author?: string;
   authors?: string[];
@@ -257,7 +257,7 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
               allSaved.push({
                 id: slide.content_id,
                 title: slide.title,
-                type: slide.content_type as 'article' | 'paper',
+                type: slide.content_type as 'article' | 'paper' | 'video' | 'podcast',
                 summary: slide.slides_text?.[0] || '',
                 created_at: slide.generated_at,
                 industry_id: slide.industry_id,

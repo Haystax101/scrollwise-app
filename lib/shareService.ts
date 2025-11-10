@@ -2,7 +2,7 @@ import { Share, Platform, Alert } from 'react-native';
 import { supabase } from './supabase';
 import { FriendsService } from './friendsService';
 
-export type ShareContentType = 'article' | 'paper' | 'book' | 'insight';
+export type ShareContentType = 'article' | 'paper' | 'book' | 'insight' | 'video' | 'podcast';
 
 export interface ShareContent {
   type: ShareContentType;

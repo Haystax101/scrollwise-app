@@ -102,7 +102,7 @@ export class FeedManager {
       const { data: slidesData, error } = await supabase
         .from('content_slides')
         .select('*')
-        .in('content_type', ['article', 'paper'])
+        .in('content_type', ['article', 'paper', 'video', 'podcast'])
         .in('industry_id', this.userIndustries)
         .order('generated_at', { ascending: false })
         .limit(limit * 2); // Fetch 2x to account for filtering
@@ -143,7 +143,7 @@ export class FeedManager {
           category: slide.category,
         };
 
-        if (slide.content_type === 'article') {
+        if (slide.content_type === 'article' || slide.content_type === 'video' || slide.content_type === 'podcast') {
           feedItem.summary = slide.slides_text[0] || '';
           feedItem.author = slide.authors?.[0];
         } else if (slide.content_type === 'paper') {

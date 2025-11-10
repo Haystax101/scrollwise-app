@@ -29,7 +29,7 @@ const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 interface ContentSlides {
   id: string;
   content_id: number;
-  content_type: 'article' | 'paper';
+  content_type: 'article' | 'paper' | 'video' | 'podcast';
   slides_text: string[];
   slides_titles: string[];
   slides_images: (string | null)[];
@@ -58,7 +58,7 @@ interface VictoryChartConfig {
 
 interface ContentCardProps {
   contentId: number;
-  contentType: 'article' | 'paper';
+  contentType: 'article' | 'paper' | 'video' | 'podcast';
   title: string;
   source?: string;
   date?: string;
@@ -472,7 +472,11 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
 
         <View style={styles.metadataRight}>
           <View style={styles.typeBadge}>
-            <Text style={styles.typeBadgeText}>{contentType === 'article' ? 'Article' : 'Paper'}</Text>
+            <Text style={styles.typeBadgeText}>
+              {contentType === 'article' ? 'Article' :
+               contentType === 'paper' ? 'Paper' :
+               contentType === 'video' ? 'Video' : 'Podcast'}
+            </Text>
           </View>
 
           <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuButton}>
