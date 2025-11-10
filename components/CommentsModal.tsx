@@ -26,17 +26,17 @@ interface CommentsModalProps {
   visible: boolean;
   onClose: () => void;
   onCommentsCountChange?: (count: number) => void;
-  contentType?: 'article' | 'paper' | 'book' | 'insight';
+  contentType?: 'article' | 'paper' | 'book' | 'insight' | 'video' | 'podcast';
   useContentTables?: boolean; // true = use content_comments/content_slides, false = use legacy tables
 }
 
 // Helper function to get table names based on content type
 const getCommentTableInfo = (
-  contentType: 'article' | 'paper' | 'book' | 'insight' = 'article',
+  contentType: 'article' | 'paper' | 'book' | 'insight' | 'video' | 'podcast' = 'article',
   useContentTables: boolean = false
 ) => {
   // Use new unified content tables for ContentCard
-  if (useContentTables && (contentType === 'article' || contentType === 'paper')) {
+  if (useContentTables && (contentType === 'article' || contentType === 'paper' || contentType === 'video' || contentType === 'podcast')) {
     return {
       commentTable: 'content_comments',
       commentLikesTable: 'content_comment_likes',

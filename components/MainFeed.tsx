@@ -714,7 +714,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         onCommentsCountChange={handleCommentsCountChange}
         contentType={
           commentsArticleId
-            ? (feedItems.find(item => item.id === commentsArticleId)?.type as 'article' | 'paper' | 'book' | 'insight') || 'article'
+            ? (feedItems.find(item => item.id === commentsArticleId)?.type as 'article' | 'paper' | 'book' | 'insight' | 'video' | 'podcast') || 'article'
             : undefined
         }
         useContentTables={commentsSource === 'content_slides'}
