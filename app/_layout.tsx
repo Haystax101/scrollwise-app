@@ -11,6 +11,12 @@ import { PostHogProvider } from 'posthog-react-native';
 import { posthog } from '../lib/posthog';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useDeepLinkHandler } from '../lib/deepLinkHandler';
+import { useFonts, Oswald_200ExtraLight, Oswald_300Light, Oswald_400Regular, Oswald_500Medium, Oswald_600SemiBold, Oswald_700Bold } from '@expo-google-fonts/oswald';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
+
+// Keep splash screen visible while fonts load
+SplashScreen.preventAutoHideAsync();
 
 // Note: Text scaling prevention removed due to React 19 deprecation
 // If needed, use allowFontScaling={false} on individual Text/TextInput components
@@ -23,6 +29,25 @@ function DeepLinkWrapper({ children }: { children: React.ReactNode }) {
 
 // This is the main layout for the entire app.
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Oswald_200ExtraLight,
+    Oswald_300Light,
+    Oswald_400Regular,
+    Oswald_500Medium,
+    Oswald_600SemiBold,
+    Oswald_700Bold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   return (
     <PostHogProvider client={posthog}>
       <ErrorBoundary>

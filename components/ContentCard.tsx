@@ -319,16 +319,17 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
       // Render title and industry content
       const titleContent = quoteData.isQuote ? (
         <>
-          {/* Industry name */}
-          {industryName && (
-            <Text style={styles.category}>{industryName}</Text>
-          )}
-
-          {/* Quote with icon */}
+          {/* Quote with opening and closing marks */}
           <View style={styles.titleContainer}>
-            <View style={styles.quoteIconContainer}>
-              <Text style={styles.quoteIconText}>"</Text>
+            <View style={styles.quoteMarksContainer}>
+              <Text style={styles.quoteMarks}>“”</Text>
             </View>
+
+            {/* Industry name below quote marks */}
+            {industryName && (
+              <Text style={styles.category}>{industryName}</Text>
+            )}
+
             <Text style={styles.titleText}>
               {titleParts.normal}
               {titleParts.highlight && (
@@ -363,16 +364,25 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
       );
 
       // Render image or chart
+      // Determine image container style based on quote and layout variant
+      const getImageContainerStyle = () => {
+        if (layoutVariant === 'above') {
+          return styles.imageContainerSmall;
+        }
+        // For 'below' layout, use smaller container if there's a quote
+        return quoteData.isQuote ? styles.imageContainerQuote : styles.imageContainer;
+      };
+
       const imageContent = coverChart && typeof coverChart === 'object' ? (
-        <View style={layoutVariant === 'above' ? styles.imageContainerSmall : styles.imageContainer}>
+        <View style={getImageContainerStyle()}>
           {renderVictoryChart(coverChart)}
         </View>
       ) : coverImage && typeof coverImage === 'string' && coverImage.length > 0 ? (
-        <View style={layoutVariant === 'above' ? styles.imageContainerSmall : styles.imageContainer}>
+        <View style={getImageContainerStyle()}>
           <Image
             source={{ uri: coverImage }}
             style={layoutVariant === 'above' ? styles.heroImageSmall : styles.heroImage}
-            resizeMode="cover"
+            resizeMode="contain"
             onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
           />
         </View>
@@ -392,7 +402,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
             // Layout: Title/Industry BELOW image (original)
             <>
               {imageContent}
-              <View style={styles.titleContent}>
+              <View style={quoteData.isQuote ? styles.titleContentQuote : styles.titleContent}>
                 {titleContent}
               </View>
             </>
@@ -704,13 +714,14 @@ const styles = StyleSheet.create({
   },
   sourceText: {
     fontSize: 13,
-    fontFamily: 'Oswald',
-    fontWeight: '600',
+    fontFamily: 'Oswald_600SemiBold',
+    letterSpacing: 0.5,
   },
   dateText: {
     color: '#999',
     fontSize: 11,
-    fontFamily: 'Oswald',
+    fontFamily: 'Oswald_400Regular',
+    letterSpacing: 0.5,
   },
   metadataRight: {
     flexDirection: 'row',
@@ -726,8 +737,8 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     color: '#fff',
     fontSize: 13,
-    fontFamily: 'Oswald',
-    fontWeight: '600',
+    fontFamily: 'Oswald_600SemiBold',
+    letterSpacing: 0.5,
   },
   menuButton: {
     padding: 4,
@@ -742,11 +753,19 @@ const styles = StyleSheet.create({
   imageContainer: {
     width: '100%',
     height: '60%',
-    overflow: 'hidden',
+    overflow: 'visible',
+    zIndex: 1,
+  },
+  imageContainerQuote: {
+    width: '100%',
+    height: '40%',
+    overflow: 'visible',
+    zIndex: 1,
   },
   heroImage: {
     width: '100%',
     height: '100%',
+    zIndex: 1,
   },
   imageContainerSmall: {
     width: '80%',
@@ -754,10 +773,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     alignSelf: 'center',
     marginBottom: 24,
+    zIndex: 1,
   },
   heroImageSmall: {
     width: '100%',
     height: '100%',
+    zIndex: 1,
   },
   titleContent: {
     position: 'absolute',
@@ -766,63 +787,79 @@ const styles = StyleSheet.create({
     right: 0,
     paddingTop: 24, // Fixed gap from bottom of image
     paddingHorizontal: 24,
+    zIndex: 10,
+  },
+  titleContentQuote: {
+    position: 'absolute',
+    top: '40%', // Starts right after the quote image (which is 40% height)
+    left: 0,
+    right: 0,
+    paddingTop: 24, // Fixed gap from bottom of image
+    paddingHorizontal: 24,
+    zIndex: 10,
   },
   titleContentTop: {
     paddingTop: 24,
     paddingHorizontal: 24,
     paddingBottom: 16,
+    zIndex: 10,
   },
   category: {
     color: '#5ED549',
     fontSize: 16,
-    fontFamily: 'Oswald',
-    fontWeight: '600',
+    fontFamily: 'Oswald_600SemiBold',
     fontStyle: 'italic',
+    letterSpacing: 0.5,
     marginBottom: 12,
+    zIndex: 10,
   },
   titleContainer: {
     marginBottom: 16,
+    zIndex: 10,
   },
   titleText: {
     color: '#fff',
     fontSize: 28,
-    fontFamily: 'Oswald',
-    fontWeight: '700',
+    fontFamily: 'Oswald_700Bold',
+    letterSpacing: 0.5,
     lineHeight: 36,
     textAlign: 'left',
+    zIndex: 10,
   },
   titleHighlight: {
     color: '#ECDA19',
   },
-  quoteIconContainer: {
-    marginBottom: 12,
+  quoteMarksContainer: {
+    marginTop: -60,
+    marginBottom: -120,
+    zIndex: 10,
   },
-  quoteIconText: {
-    fontSize: 80,
+  quoteMarks: {
+    fontSize: 180,
     color: '#ECDA19',
-    fontFamily: 'Oswald',
-    fontWeight: '700',
-    lineHeight: 80,
+    fontFamily: 'Oswald_700Bold',
     opacity: 0.9,
+    zIndex: 10,
   },
   quoteAuthorContainer: {
     marginTop: 24,
     borderLeftWidth: 3,
     borderLeftColor: '#ECDA19',
     paddingLeft: 16,
+    zIndex: 10,
   },
   quoteAuthor: {
     color: '#fff',
     fontSize: 18,
-    fontFamily: 'Oswald',
-    fontWeight: '600',
+    fontFamily: 'Oswald_600SemiBold',
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
   quoteJobTitle: {
     color: '#999',
     fontSize: 14,
-    fontFamily: 'Oswald',
-    fontWeight: '400',
+    fontFamily: 'Oswald_400Regular',
+    letterSpacing: 0.5,
   },
   contentSlide: {
     flex: 1,
@@ -832,8 +869,8 @@ const styles = StyleSheet.create({
   slideTitle: {
     color: '#fff',
     fontSize: 24,
-    fontFamily: 'Oswald',
-    fontWeight: '700',
+    fontFamily: 'Oswald_700Bold',
+    letterSpacing: 0.5,
     marginBottom: 20,
     textAlign: 'left',
   },
@@ -851,7 +888,8 @@ const styles = StyleSheet.create({
   slideText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Oswald',
+    fontFamily: 'Oswald_400Regular',
+    letterSpacing: 0.5,
     lineHeight: 26,
     textAlign: 'left',
     flexWrap: 'wrap',
@@ -859,7 +897,8 @@ const styles = StyleSheet.create({
   placeholderText: {
     color: '#666',
     fontSize: 14,
-    fontFamily: 'Oswald',
+    fontFamily: 'Oswald_400Regular',
+    letterSpacing: 0.5,
   },
   slideIndicators: {
     flexDirection: 'row',
@@ -894,8 +933,8 @@ const styles = StyleSheet.create({
   actionText: {
     color: '#999',
     fontSize: 14,
-    fontFamily: 'Oswald',
-    fontWeight: '500',
+    fontFamily: 'Oswald_500Medium',
+    letterSpacing: 0.5,
   },
   readMoreButton: {
     backgroundColor: '#FFC107',
@@ -906,8 +945,8 @@ const styles = StyleSheet.create({
   readMoreText: {
     color: '#000',
     fontSize: 14,
-    fontFamily: 'Oswald',
-    fontWeight: '700',
+    fontFamily: 'Oswald_700Bold',
+    letterSpacing: 0.5,
   },
   modalOverlay: {
     flex: 1,
@@ -931,8 +970,8 @@ const styles = StyleSheet.create({
   menuItemText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Oswald',
-    fontWeight: '500',
+    fontFamily: 'Oswald_500Medium',
+    letterSpacing: 0.5,
   },
   authorsSection: {
     paddingVertical: 12,
@@ -947,16 +986,15 @@ const styles = StyleSheet.create({
   authorsSectionTitle: {
     color: '#999',
     fontSize: 14,
-    fontFamily: 'Oswald',
-    fontWeight: '600',
+    fontFamily: 'Oswald_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   authorName: {
     color: '#fff',
     fontSize: 15,
-    fontFamily: 'Oswald',
-    fontWeight: '400',
+    fontFamily: 'Oswald_400Regular',
+    letterSpacing: 0.5,
     paddingLeft: 30,
     paddingVertical: 4,
   },
