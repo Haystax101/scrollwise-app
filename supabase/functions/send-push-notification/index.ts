@@ -35,6 +35,7 @@ interface UserPreferences {
 const EXPO_ACCESS_TOKEN = Deno.env.get("EXPO_ACCESS_TOKEN");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const FUNCTION_SECRET = Deno.env.get("FUNCTION_SECRET");
 
 if (!EXPO_ACCESS_TOKEN || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("Missing required environment variables");
@@ -49,6 +50,16 @@ serve(async (req: Request) => {
   // Security: Validate content type
   if (!req.headers.get("content-type")?.includes("application/json")) {
     return new Response("Invalid content type", { status: 400 });
+  }
+
+  // Security: Validate function secret (for database trigger calls)
+  // This replaces JWT verification when using --no-verify-jwt
+  if (FUNCTION_SECRET) {
+    const providedSecret = req.headers.get("x-function-secret");
+    if (providedSecret !== FUNCTION_SECRET) {
+      console.error("Invalid or missing function secret");
+      return new Response("Unauthorized", { status: 401 });
+    }
   }
 
   try {

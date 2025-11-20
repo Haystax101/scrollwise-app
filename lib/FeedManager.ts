@@ -15,6 +15,7 @@ export class FeedManager {
   private userIndustries: string[];
   private allIndustries: Industry[];
   private viewedContentIds: Set<string> = new Set();
+  private blockedUserIds: Set<string> = new Set();
 
   constructor(userId: string, userIndustries: string[], allIndustries: Industry[]) {
     this.userId = userId;
@@ -23,6 +24,36 @@ export class FeedManager {
 
     // Load viewed content from AsyncStorage (simple persistence)
     this.loadViewedContent();
+    // Load blocked users
+    this.loadBlockedUsers();
+  }
+
+  /**
+   * Load blocked user IDs from database
+   */
+  private async loadBlockedUsers(): Promise<void> {
+    try {
+      const { data, error } = await supabase.rpc('get_blocked_user_ids');
+
+      if (error) {
+        console.error('FeedManager: Error loading blocked users:', error);
+        return;
+      }
+
+      if (data && Array.isArray(data)) {
+        this.blockedUserIds = new Set(data);
+        console.log(`FeedManager: Loaded ${data.length} blocked users`);
+      }
+    } catch (error) {
+      console.error('FeedManager: Error loading blocked users:', error);
+    }
+  }
+
+  /**
+   * Refresh blocked users list (call after blocking/unblocking)
+   */
+  async refreshBlockedUsers(): Promise<void> {
+    await this.loadBlockedUsers();
   }
 
   /**
@@ -275,7 +306,11 @@ export class FeedManager {
 
       const unviewedData = data.filter((item: any) => {
         const itemKey = `${contentType}-${item.id}`;
-        return !viewedKeys.includes(itemKey);
+        // Filter out viewed content
+        if (viewedKeys.includes(itemKey)) return false;
+        // Filter out blocked users for insights
+        if (contentType === 'insight' && this.blockedUserIds.has(item.author_id)) return false;
+        return true;
       });
 
       const feedItems = unviewedData.slice(0, count).map((item: any) =>

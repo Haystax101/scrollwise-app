@@ -15,7 +15,7 @@ interface StreakUser {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-const FUNCTION_SECRET = Deno.env.get("FUNCTION_SECRET"); // Additional security
+const FUNCTION_SECRET = Deno.env.get("FUNCTION_SECRET");
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("Missing required environment variables");
@@ -23,15 +23,18 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 
 serve(async (req: Request) => {
   try {
-    // Security: Validate request method and authorization
+    // Security: Validate request method
     if (req.method !== "POST") {
       return new Response("Method not allowed", { status: 405 });
     }
 
-    // Additional security: Check for function secret in production
-    const authHeader = req.headers.get("authorization");
-    if (FUNCTION_SECRET && !authHeader?.includes(FUNCTION_SECRET)) {
-      return new Response("Unauthorized", { status: 401 });
+    // Security: Validate function secret (for database/cron calls)
+    if (FUNCTION_SECRET) {
+      const providedSecret = req.headers.get("x-function-secret");
+      if (providedSecret !== FUNCTION_SECRET) {
+        console.error("Invalid or missing function secret");
+        return new Response("Unauthorized", { status: 401 });
+      }
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -59,12 +62,10 @@ serve(async (req: Request) => {
       `)
       .eq("streak_type", "daily_learning")
       .eq("is_active", true)
-      .eq("user_notification_preferences.streak_reminders", true)
-      .not("user_id", "in", `(
-        SELECT DISTINCT user_id
-        FROM user_daily_activities
-        WHERE activity_date = CURRENT_DATE
-      )`);
+      .eq("user_notification_preferences.streak_reminders", true);
+
+    // Note: We'll filter for morning time and no activity today in JavaScript
+    // because the subquery syntax doesn't work well with Supabase client
 
     if (queryError) {
       console.error("Database query error:", queryError);
@@ -83,10 +84,21 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`Found ${usersToRemind.length} users who need streak reminders`);
+    console.log(`Found ${usersToRemind.length} potential users for streak reminders`);
+
+    // Get users who have activity today to exclude them
+    const { data: activeUsers } = await supabase
+      .from("user_daily_activities")
+      .select("user_id")
+      .gte("activity_date", new Date().toISOString().split('T')[0]);
+
+    const activeUserIds = new Set((activeUsers || []).map(u => u.user_id));
+    console.log(`Found ${activeUserIds.size} users with activity today`);
 
     let remindersCreated = 0;
     let remindersFailed = 0;
+    let skippedNotMorning = 0;
+    let skippedAlreadyActive = 0;
     const batchSize = 50; // Process in batches to avoid overwhelming the system
 
     // Process users in batches for better performance
@@ -98,6 +110,19 @@ serve(async (req: Request) => {
           try {
             const userPrefs = user.user_notification_preferences;
             const profile = user.profiles;
+
+            // Skip if user already has activity today
+            if (activeUserIds.has(user.user_id)) {
+              skippedAlreadyActive++;
+              return;
+            }
+
+            // Skip if it's not morning (7-9 AM) in user's timezone
+            // This is the key change for timezone-aware hourly cron
+            if (!isMorningTime(userPrefs.timezone)) {
+              skippedNotMorning++;
+              return;
+            }
 
             // Skip if user has quiet hours enabled and it's currently quiet time
             if (userPrefs.quiet_hours_enabled && isQuietHours(userPrefs)) {
@@ -169,6 +194,8 @@ serve(async (req: Request) => {
       total_candidates: usersToRemind.length,
       reminders_created: remindersCreated,
       reminders_failed: remindersFailed,
+      skipped_not_morning: skippedNotMorning,
+      skipped_already_active: skippedAlreadyActive,
       batches_processed: batchesProcessed,
       execution_time: new Date().toISOString()
     };
@@ -264,5 +291,26 @@ function isQuietHours(prefs: any): boolean {
   } catch (error) {
     console.error("Error calculating quiet hours:", error);
     return false;
+  }
+}
+
+// Check if it's morning time (7-9 AM) in the user's timezone
+// This is called hourly by cron, and only sends to users where it's currently morning
+function isMorningTime(timezone: string): boolean {
+  try {
+    const now = new Date();
+    const userTime = new Date(
+      now.toLocaleString("en-US", { timeZone: timezone || "GMT" })
+    );
+    const currentHour = userTime.getHours();
+
+    // Send reminders between 7 AM and 9 AM in user's local time
+    // This gives a 2-hour window to catch users in the morning
+    return currentHour >= 7 && currentHour < 9;
+  } catch (error) {
+    console.error("Error calculating morning time for timezone:", timezone, error);
+    // Default to GMT check if timezone is invalid
+    const gmtHour = new Date().getUTCHours();
+    return gmtHour >= 7 && gmtHour < 9;
   }
 }

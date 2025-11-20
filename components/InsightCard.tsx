@@ -6,7 +6,7 @@ import type { Insight } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { CommentsModal } from './CommentsModal';
-import { FlagButton } from './common/FlagButton';
+import { ReportButton } from './common/ReportButton';
 import { UserDetailModal } from './profile/UserDetailModal';
 import { formatNumber } from '../lib/utils';
 import { profileImageService } from '../services/profileImageService';
@@ -770,12 +770,15 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   return (
     <View style={dynamicStyles.wrapper}>
       <View style={dynamicStyles.container}>
-        <FlagButton
-          contentId={insight.id}
-          contentType="insight"
-          size={20}
-          style={dynamicStyles.flagButton}
-        />
+        <View style={dynamicStyles.flagButton}>
+          <ReportButton
+            contentId={insight.id}
+            contentType="insight"
+            authorId={authorId || insight.author_id || ''}
+            authorName={insight.author.name}
+            size={20}
+          />
+        </View>
         {/* User Header */}
         <TouchableOpacity style={dynamicStyles.userHeader} onPress={() => authorId && handleUserPress(authorId)}>
           <Image

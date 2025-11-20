@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Modal,
   Image,
+  Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -71,6 +72,8 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [insights, setInsights] = useState<SavedInsight[]>([]);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
 
   useEffect(() => {
     if (visible && userId) {
@@ -160,6 +163,12 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
             }
           }
         }
+
+        // Check if user is blocked
+        const { data: blockData } = await supabase.rpc('is_user_blocked', {
+          p_user_id: userId
+        });
+        setIsBlocked(blockData || false);
       }
 
       const completeProfile: UserProfile = {
@@ -256,6 +265,54 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     } catch (error) {
       console.error('❌ Error sending friend request:', error);
     }
+  };
+
+  const handleBlockToggle = async () => {
+    if (!currentUserId || !profile) return;
+
+    const action = isBlocked ? 'unblock' : 'block';
+    const confirmMessage = isBlocked
+      ? `Are you sure you want to unblock ${profile.full_name}? You will see their content in your feed again.`
+      : `Are you sure you want to block ${profile.full_name}? You will no longer see their content in your feed.`;
+
+    Alert.alert(
+      isBlocked ? 'Unblock User' : 'Block User',
+      confirmMessage,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isBlocked ? 'Unblock' : 'Block',
+          style: isBlocked ? 'default' : 'destructive',
+          onPress: async () => {
+            setBlockLoading(true);
+            try {
+              const { data, error } = await supabase.rpc('toggle_user_block', {
+                p_blocked_id: profile.id
+              });
+
+              if (error) throw error;
+
+              if (data?.success) {
+                setIsBlocked(data.is_blocked);
+                Alert.alert(
+                  'Success',
+                  data.is_blocked
+                    ? `${profile.full_name} has been blocked. You will no longer see their content.`
+                    : `${profile.full_name} has been unblocked.`
+                );
+              } else {
+                throw new Error(data?.error || 'Failed to update block status');
+              }
+            } catch (error) {
+              console.error('❌ Error toggling block:', error);
+              Alert.alert('Error', 'Failed to update block status. Please try again.');
+            } finally {
+              setBlockLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const styles = StyleSheet.create({
@@ -378,6 +435,29 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
       textAlign: 'center',
     },
     connectButtonTextDisabled: {
+      color: colors.textSecondary,
+    },
+    blockButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: '#dc2626',
+    },
+    blockButtonBlocked: {
+      borderColor: colors.border,
+    },
+    blockButtonText: {
+      color: '#dc2626',
+      fontSize: 14,
+      fontWeight: '500',
+      marginLeft: 6,
+    },
+    blockButtonTextBlocked: {
       color: colors.textSecondary,
     },
     scrollContent: {
@@ -503,26 +583,56 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
                 {/* Connection Button */}
                 {currentUserId && currentUserId !== profile.id && (
-                  <TouchableOpacity
-                    style={[
-                      styles.connectButton,
-                      (profile.is_friend || profile.friend_request_sent || profile.friend_request_received) &&
-                      styles.connectButtonDisabled
-                    ]}
-                    onPress={handleSendFriendRequest}
-                    disabled={profile.is_friend || profile.friend_request_sent || profile.friend_request_received}
-                  >
-                    <Text style={[
-                      styles.connectButtonText,
-                      (profile.is_friend || profile.friend_request_sent || profile.friend_request_received) &&
-                      styles.connectButtonTextDisabled
-                    ]}>
-                      {profile.is_friend ? 'Connected' :
-                       profile.friend_request_sent ? 'Request Sent' :
-                       profile.friend_request_received ? 'Request Received' :
-                       'Connect'}
-                    </Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity
+                      style={[
+                        styles.connectButton,
+                        (profile.is_friend || profile.friend_request_sent || profile.friend_request_received) &&
+                        styles.connectButtonDisabled
+                      ]}
+                      onPress={handleSendFriendRequest}
+                      disabled={profile.is_friend || profile.friend_request_sent || profile.friend_request_received}
+                    >
+                      <Text style={[
+                        styles.connectButtonText,
+                        (profile.is_friend || profile.friend_request_sent || profile.friend_request_received) &&
+                        styles.connectButtonTextDisabled
+                      ]}>
+                        {profile.is_friend ? 'Connected' :
+                         profile.friend_request_sent ? 'Request Sent' :
+                         profile.friend_request_received ? 'Request Received' :
+                         'Connect'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Block/Unblock Button */}
+                    <TouchableOpacity
+                      style={[
+                        styles.blockButton,
+                        isBlocked && styles.blockButtonBlocked
+                      ]}
+                      onPress={handleBlockToggle}
+                      disabled={blockLoading}
+                    >
+                      {blockLoading ? (
+                        <ActivityIndicator size="small" color={isBlocked ? colors.textSecondary : '#dc2626'} />
+                      ) : (
+                        <>
+                          <Feather
+                            name={isBlocked ? 'user-check' : 'user-x'}
+                            size={16}
+                            color={isBlocked ? colors.textSecondary : '#dc2626'}
+                          />
+                          <Text style={[
+                            styles.blockButtonText,
+                            isBlocked && styles.blockButtonTextBlocked
+                          ]}>
+                            {isBlocked ? 'Unblock User' : 'Block User'}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </>
                 )}
               </View>
 

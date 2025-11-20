@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { NotificationService, NotificationPermissionStatus } from '../services/notificationService';
 import * as Notifications from 'expo-notifications';
 import { supabase } from '../lib/supabase';
@@ -145,15 +146,15 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const savePushTokenToDatabase = async (userId: string, token: string): Promise<void> => {
     try {
       const { error } = await supabase
-        .from('push_tokens')
+        .from('user_push_tokens')
         .upsert({
           user_id: userId,
-          token,
-          platform: 'ios',
+          push_token: token,
+          device_type: Platform.OS,
           is_active: true,
           updated_at: new Date().toISOString(),
         }, {
-          onConflict: 'user_id,token',
+          onConflict: 'user_id,push_token',
         });
 
       if (error) {
@@ -167,10 +168,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const removePushTokenFromDatabase = async (userId: string, token: string): Promise<void> => {
     try {
       const { error } = await supabase
-        .from('push_tokens')
-        .update({ is_active: false })
+        .from('user_push_tokens')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
         .eq('user_id', userId)
-        .eq('token', token);
+        .eq('push_token', token);
 
       if (error) {
         console.error('Error removing push token:', error);

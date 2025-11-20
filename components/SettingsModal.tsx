@@ -48,10 +48,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
           return;
         }
 
-        const permissionStatus = await NotificationService.getPermissionStatus();
-        setNotificationsEnabled(permissionStatus.granted);
-
-        // Check if we have a token saved
+        // Check if we have an active token in the database
+        // This is the source of truth for whether notifications are enabled
         const { data, error } = await supabase
           .from('user_push_tokens')
           .select('push_token')
@@ -61,6 +59,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
 
         if (!error && data?.push_token) {
           setPushToken(data.push_token);
+          setNotificationsEnabled(true);
+        } else {
+          setPushToken(null);
+          setNotificationsEnabled(false);
         }
       } catch (error) {
         console.error('Error checking notification status:', error);
@@ -87,6 +89,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose, navigat
                   device_type: 'ios', // or detect dynamically
                   is_active: true,
                   updated_at: new Date().toISOString(),
+                }, {
+                  onConflict: 'user_id,push_token',
                 });
 
               if (error) {
