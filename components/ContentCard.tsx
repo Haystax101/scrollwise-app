@@ -26,6 +26,18 @@ import { ShareService } from '../lib/shareService';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
+// Responsive font sizes for small screens with home button (iPhone SE)
+const getResponsiveTitleSize = (isSmallScreen: boolean) => ({
+  titleText: isSmallScreen ? 20 : 28,
+  titleLineHeight: isSmallScreen ? 26 : 36,
+  category: isSmallScreen ? 14 : 16,
+  quoteMarks: isSmallScreen ? 120 : 180,
+  quoteMarksMarginTop: isSmallScreen ? -40 : -60,
+  quoteMarksMarginBottom: isSmallScreen ? -80 : -120,
+  quoteAuthor: isSmallScreen ? 15 : 18,
+  quoteJobTitle: isSmallScreen ? 12 : 14,
+});
+
 interface ContentSlides {
   id: string;
   content_id: number;
@@ -316,30 +328,34 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
       const coverImage = slides?.slides_images?.[0];
       const coverChart = slides?.slides_chart_configs?.[0];
 
+      // Get responsive sizes for small screens
+      const responsiveSizes = getResponsiveTitleSize(deviceInfo.isSmallScreenWithHomeButton);
+      const isSmallScreen = deviceInfo.isSmallScreenWithHomeButton;
+
       // Render title and industry content
       const titleContent = quoteData.isQuote ? (
         <>
           {/* Quote with opening and closing marks */}
           <View style={styles.titleContainer}>
-            <View style={styles.quoteMarksContainer}>
-              <Text style={styles.quoteMarks}>“”</Text>
+            <View style={[styles.quoteMarksContainer, { marginTop: responsiveSizes.quoteMarksMarginTop, marginBottom: responsiveSizes.quoteMarksMarginBottom }]}>
+              <Text style={[styles.quoteMarks, { fontSize: responsiveSizes.quoteMarks }]}>""</Text>
             </View>
 
             {/* Industry name below quote marks */}
             {industryName && (
-              <Text style={styles.category}>{industryName}</Text>
+              <Text style={[styles.category, { fontSize: responsiveSizes.category }]}>{industryName}</Text>
             )}
 
-            <Text style={styles.titleText}>
+            <Text style={[styles.titleText, { fontSize: responsiveSizes.titleText, lineHeight: responsiveSizes.titleLineHeight }]}>
               {titleParts.normal}
               {titleParts.highlight && (
                 <Text style={styles.titleHighlight}> {titleParts.highlight}</Text>
               )}
             </Text>
-            <View style={styles.quoteAuthorContainer}>
-              <Text style={styles.quoteAuthor}>{quoteData.author}</Text>
+            <View style={[styles.quoteAuthorContainer, isSmallScreen && { marginTop: 16 }]}>
+              <Text style={[styles.quoteAuthor, { fontSize: responsiveSizes.quoteAuthor }]}>{quoteData.author}</Text>
               {quoteData.jobTitle && (
-                <Text style={styles.quoteJobTitle}>{quoteData.jobTitle}</Text>
+                <Text style={[styles.quoteJobTitle, { fontSize: responsiveSizes.quoteJobTitle }]}>{quoteData.jobTitle}</Text>
               )}
             </View>
           </View>
@@ -348,12 +364,12 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
         <>
           {/* Industry name */}
           {industryName && (
-            <Text style={styles.category}>{industryName}</Text>
+            <Text style={[styles.category, { fontSize: responsiveSizes.category }]}>{industryName}</Text>
           )}
 
           {/* Regular Title */}
           <View style={styles.titleContainer}>
-            <Text style={styles.titleText}>
+            <Text style={[styles.titleText, { fontSize: responsiveSizes.titleText, lineHeight: responsiveSizes.titleLineHeight }]}>
               {titleParts.normal}
               {titleParts.highlight && (
                 <Text style={styles.titleHighlight}> {titleParts.highlight}</Text>
@@ -367,9 +383,12 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
       // Determine image container style based on quote and layout variant
       const getImageContainerStyle = () => {
         if (layoutVariant === 'above') {
-          return styles.imageContainerSmall;
+          return isSmallScreen ? styles.imageContainerSmallSE : styles.imageContainerSmall;
         }
         // For 'below' layout, use smaller container if there's a quote
+        if (isSmallScreen) {
+          return quoteData.isQuote ? styles.imageContainerQuoteSE : styles.imageContainerSE;
+        }
         return quoteData.isQuote ? styles.imageContainerQuote : styles.imageContainer;
       };
 
@@ -393,7 +412,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
           {layoutVariant === 'above' ? (
             // Layout: Title/Industry ABOVE image
             <>
-              <View style={styles.titleContentTop}>
+              <View style={isSmallScreen ? styles.titleContentTopSE : styles.titleContentTop}>
                 {titleContent}
               </View>
               {imageContent}
@@ -402,7 +421,11 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
             // Layout: Title/Industry BELOW image (original)
             <>
               {imageContent}
-              <View style={quoteData.isQuote ? styles.titleContentQuote : styles.titleContent}>
+              <View style={
+                isSmallScreen
+                  ? (quoteData.isQuote ? styles.titleContentQuoteSE : styles.titleContentSE)
+                  : (quoteData.isQuote ? styles.titleContentQuote : styles.titleContent)
+              }>
                 {titleContent}
               </View>
             </>
@@ -448,7 +471,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
         </View>
       </View>
     );
-  }, [title, category, slides, industryName, renderVictoryChart, layoutVariant, isDark, colors.background]);
+  }, [title, category, slides, industryName, renderVictoryChart, layoutVariant, isDark, colors.background, deviceInfo.isSmallScreenWithHomeButton]);
 
   // Show loading state
   if (loading) {
@@ -535,7 +558,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
         {
           backgroundColor: colors.background,
           borderTopColor: colors.border,
-          paddingBottom: isInVault ? 60 : insets.bottom + 60 + getContentBottomPadding(deviceInfo)
+          paddingBottom: isInVault ? 60 : insets.bottom + 60 + getContentBottomPadding(deviceInfo) + (deviceInfo.isSmallScreenWithHomeButton ? 12 : 0)
         }
       ]}>
         <View style={styles.actionGroup}>
@@ -714,14 +737,12 @@ const styles = StyleSheet.create({
   },
   sourceText: {
     fontSize: 13,
-    fontFamily: 'Oswald_600SemiBold',
-    letterSpacing: 0.5,
+    fontFamily: 'Montserrat_600SemiBold',
   },
   dateText: {
     color: '#999',
     fontSize: 11,
-    fontFamily: 'Oswald_400Regular',
-    letterSpacing: 0.5,
+    fontFamily: 'Montserrat_400Regular',
   },
   metadataRight: {
     flexDirection: 'row',
@@ -737,8 +758,7 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     color: '#fff',
     fontSize: 13,
-    fontFamily: 'Oswald_600SemiBold',
-    letterSpacing: 0.5,
+    fontFamily: 'Montserrat_600SemiBold',
   },
   menuButton: {
     padding: 4,
@@ -756,9 +776,21 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     zIndex: 1,
   },
+  imageContainerSE: {
+    width: '100%',
+    height: '45%',
+    overflow: 'visible',
+    zIndex: 1,
+  },
   imageContainerQuote: {
     width: '100%',
     height: '40%',
+    overflow: 'visible',
+    zIndex: 1,
+  },
+  imageContainerQuoteSE: {
+    width: '100%',
+    height: '30%',
     overflow: 'visible',
     zIndex: 1,
   },
@@ -775,6 +807,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     zIndex: 1,
   },
+  imageContainerSmallSE: {
+    width: '75%',
+    height: '40%',
+    overflow: 'hidden',
+    alignSelf: 'center',
+    marginBottom: 16,
+    zIndex: 1,
+  },
   heroImageSmall: {
     width: '100%',
     height: '100%',
@@ -789,6 +829,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     zIndex: 10,
   },
+  titleContentSE: {
+    position: 'absolute',
+    top: '45%', // Starts right after the smaller SE image (which is 45% height)
+    left: 0,
+    right: 0,
+    paddingTop: 16, // Reduced gap from bottom of image
+    paddingHorizontal: 20,
+    zIndex: 10,
+  },
   titleContentQuote: {
     position: 'absolute',
     top: '40%', // Starts right after the quote image (which is 40% height)
@@ -798,10 +847,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     zIndex: 10,
   },
+  titleContentQuoteSE: {
+    position: 'absolute',
+    top: '30%', // Starts right after the smaller SE quote image (which is 30% height)
+    left: 0,
+    right: 0,
+    paddingTop: 12, // Reduced gap from bottom of image
+    paddingHorizontal: 20,
+    zIndex: 10,
+  },
   titleContentTop: {
     paddingTop: 24,
     paddingHorizontal: 24,
     paddingBottom: 16,
+    zIndex: 10,
+  },
+  titleContentTopSE: {
+    paddingTop: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
     zIndex: 10,
   },
   category: {
@@ -824,6 +888,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     lineHeight: 36,
     textAlign: 'left',
+    textTransform: 'uppercase',
     zIndex: 10,
   },
   titleHighlight: {
@@ -867,12 +932,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   slideTitle: {
-    color: '#fff',
+    color: '#5ED549',
     fontSize: 24,
     fontFamily: 'Oswald_700Bold',
     letterSpacing: 0.5,
     marginBottom: 20,
     textAlign: 'left',
+    textTransform: 'uppercase',
+    flexWrap: 'wrap',
   },
   chartContainer: {
     height: 250,
@@ -888,8 +955,7 @@ const styles = StyleSheet.create({
   slideText: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Oswald_400Regular',
-    letterSpacing: 0.5,
+    fontFamily: 'Montserrat_500Medium',
     lineHeight: 26,
     textAlign: 'left',
     flexWrap: 'wrap',
@@ -933,8 +999,7 @@ const styles = StyleSheet.create({
   actionText: {
     color: '#999',
     fontSize: 14,
-    fontFamily: 'Oswald_500Medium',
-    letterSpacing: 0.5,
+    fontFamily: 'Montserrat_500Medium',
   },
   readMoreButton: {
     backgroundColor: '#FFC107',
@@ -945,8 +1010,7 @@ const styles = StyleSheet.create({
   readMoreText: {
     color: '#000',
     fontSize: 14,
-    fontFamily: 'Oswald_700Bold',
-    letterSpacing: 0.5,
+    fontFamily: 'Montserrat_700Bold',
   },
   modalOverlay: {
     flex: 1,

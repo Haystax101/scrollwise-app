@@ -12,6 +12,7 @@ import { posthog } from '../lib/posthog';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useDeepLinkHandler } from '../lib/deepLinkHandler';
 import { useFonts, Oswald_200ExtraLight, Oswald_300Light, Oswald_400Regular, Oswald_500Medium, Oswald_600SemiBold, Oswald_700Bold } from '@expo-google-fonts/oswald';
+import { Montserrat_400Regular, Montserrat_500Medium, Montserrat_600SemiBold, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
@@ -36,6 +37,10 @@ export default function RootLayout() {
     Oswald_500Medium,
     Oswald_600SemiBold,
     Oswald_700Bold,
+    Montserrat_400Regular,
+    Montserrat_500Medium,
+    Montserrat_600SemiBold,
+    Montserrat_700Bold,
   });
 
   useEffect(() => {
