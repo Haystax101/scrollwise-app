@@ -67,7 +67,7 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
       if (initialContentId && initialContentType) {
         console.log(`🎯 MainFeed: Loading initial content - ID: ${initialContentId} (type: ${typeof initialContentId}), Type: ${initialContentType}`);
         const specificContent = await feedManager.fetchSpecificContent(
-          initialContentId, 
+          initialContentId,
           initialContentType as 'article' | 'paper' | 'book' | 'insight'
         );
         if (specificContent) {
@@ -126,11 +126,11 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
     try {
       const moreContent = await feedManager.fetchContent(10);
       console.log(`📱 MainFeed: Fetched ${moreContent.length} more items from FeedManager`);
-      
+
       // Filter out already displayed content
       const newContent = moreContent.filter(item => !displayedIds.has(String(item.id)));
       console.log(`📱 MainFeed: After deduplication: ${newContent.length} new items (filtered ${moreContent.length - newContent.length} duplicates)`);
-      
+
       if (newContent.length > 0) {
         setFeedItems(prev => {
           const updated = [...prev, ...newContent];
@@ -138,7 +138,7 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
           return updated;
         });
         // Continue loading if we got any content from database, even if some was filtered
-        setHasMore(true); 
+        setHasMore(true);
         console.log(`📱 MainFeed: hasMore remains true (added ${newContent.length} new items from ${moreContent.length} fetched)`);
       } else {
         // Only stop if database returned nothing OR returned very little (suggesting we're near the end)
@@ -182,8 +182,8 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
 
   // Update specific feed item
   const updateFeedItem = useCallback((contentId: number, updates: { comments_count?: number }) => {
-    setFeedItems(prev => 
-      prev.map(item => 
+    setFeedItems(prev =>
+      prev.map(item =>
         item.id === contentId ? { ...item, ...updates } as FeedItem : item
       )
     );
@@ -234,7 +234,7 @@ function useContentTracking(
       if (feedManager && currentItem) {
         // Updated to pass the content item for quiz tracking
         feedManager.markAsViewed(currentItem.id, currentItem.type, currentItem);
-        
+
         // Track engagement
         trackContentEngagement?.(
           currentItem.type,
@@ -254,7 +254,7 @@ function useContentTracking(
       if (newIndex > oldIndex) {
         const newScrollCount = scrollCount + 1;
         setScrollCount(newScrollCount);
-        
+
         trackScroll?.(newIndex * 10); // Simple scroll percentage
         trackInteraction?.('scroll', {
           from_index: oldIndex,
@@ -277,7 +277,7 @@ function useContentTracking(
         if (feedItems && loadMoreContent && hasMore && !isLoadingMore) { // Removed feedLocked check
           const remainingItems = feedItems.length - newIndex;
           const threshold = 3; // Start loading when 3 items remaining
-          
+
           if (remainingItems <= threshold) {
             console.log(`🚀 Preemptive loading triggered - ${remainingItems} items remaining, threshold: ${threshold}`);
             loadMoreContent();
@@ -353,7 +353,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   // Record content view in database for quiz system
   const recordContentView = useCallback(async (contentId: string | number, contentType: string) => {
     if (!user) return;
-    
+
     try {
       await supabase.rpc('record_content_view', {
         p_user_id: user.id,
@@ -440,9 +440,9 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     handleViewableItemsChanged,
     handleUserInteraction
   } = useContentTracking(
-    feedManager, 
-    trackScroll, 
-    trackInteraction, 
+    feedManager,
+    trackScroll,
+    trackInteraction,
     trackContentEngagement,
     recordContentView,
     // showQuizForRecentContent, // COMMENTED OUT
@@ -509,6 +509,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
             backTo={backTo}
             onOpenComments={handleOpenComments}
             onUserInteraction={handleUserInteraction}
+            preload={index < 3}
           />
         );
       case 'paper':
@@ -638,11 +639,11 @@ export const MainFeed: React.FC<MainFeedProps> = ({
       allIndustriesCount: allIndustries.length,
       hasUser: !!user
     });
-    
+
     if (feedManager) {
       console.error('📱 MainFeed: FeedManager debug info:', feedManager.getDebugInfo());
     }
-    
+
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
         <Text style={[

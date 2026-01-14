@@ -4,7 +4,7 @@
 import type { ReactElement } from 'react';
 
 // Re-export friends types for easy access
-export * from './types/friends'; 
+export * from './types/friends';
 
 export interface User {
   email: string;
@@ -74,6 +74,10 @@ export interface Article extends BaseContent {
   longer_summary?: string; // For expanded view, falls back to summary if not available
   author?: string;
   hasSlides?: boolean; // Whether this article has story-driven slides
+  animation_code?: string; // HTML/JS code for WebView animations
+  narrative_code?: string[]; // Array of HTML/JS code for subsequent narrative slides
+  storyboard?: string; // Reserved for future use
+  special?: boolean; // Triggers 65% height animation layout w/o title/summary
 }
 
 export interface Paper extends BaseContent {
@@ -169,7 +173,7 @@ export interface SearchResultUser {
 export interface SearchResultPost {
   type: 'post';
   id: number;
-  title:string;
+  title: string;
   author: string;
   thumbnail: string; // URL for the image
 }

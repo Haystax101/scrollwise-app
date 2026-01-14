@@ -90,6 +90,8 @@ CREATE TABLE public.articles (
   questions ARRAY,
   flag smallint NOT NULL DEFAULT '0'::smallint,
   longer_summary text,
+  animation_code text,
+  storyboard text,
   CONSTRAINT articles_pkey PRIMARY KEY (id),
   CONSTRAINT articles_industry_id_fkey FOREIGN KEY (industry_id) REFERENCES public.industries(id)
 );
@@ -238,10 +240,44 @@ CREATE TABLE public.company_aliases (
   CONSTRAINT company_aliases_pkey PRIMARY KEY (id),
   CONSTRAINT company_aliases_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id)
 );
+CREATE TABLE public.content_comment_likes (
+  user_id uuid NOT NULL,
+  comment_id bigint NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT content_comment_likes_pkey PRIMARY KEY (user_id, comment_id),
+  CONSTRAINT content_comment_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT content_comment_likes_comment_id_fkey FOREIGN KEY (comment_id) REFERENCES public.content_comments(id)
+);
+CREATE TABLE public.content_comments (
+  id bigint NOT NULL DEFAULT nextval('content_comments_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  content_id integer NOT NULL,
+  content_type text NOT NULL CHECK (content_type = ANY (ARRAY['article'::text, 'paper'::text, 'video'::text, 'podcast'::text])),
+  content text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT content_comments_pkey PRIMARY KEY (id),
+  CONSTRAINT content_comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.content_likes (
+  user_id uuid NOT NULL,
+  content_id integer NOT NULL,
+  content_type text NOT NULL CHECK (content_type = ANY (ARRAY['article'::text, 'paper'::text, 'video'::text, 'podcast'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT content_likes_pkey PRIMARY KEY (user_id, content_id, content_type),
+  CONSTRAINT content_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.content_saves (
+  user_id uuid NOT NULL,
+  content_id integer NOT NULL,
+  content_type text NOT NULL CHECK (content_type = ANY (ARRAY['article'::text, 'paper'::text, 'video'::text, 'podcast'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT content_saves_pkey PRIMARY KEY (user_id, content_id, content_type),
+  CONSTRAINT content_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
 CREATE TABLE public.content_slides (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   content_id integer NOT NULL,
-  content_type text NOT NULL CHECK (content_type = ANY (ARRAY['article'::text, 'paper'::text])),
+  content_type text NOT NULL CHECK (content_type = ANY (ARRAY['article'::text, 'paper'::text, 'video'::text, 'podcast'::text])),
   slides_text ARRAY NOT NULL,
   slides_titles ARRAY NOT NULL,
   slides_images ARRAY,
@@ -902,6 +938,15 @@ CREATE TABLE public.user_achievements (
   CONSTRAINT user_achievements_achievement_id_fkey FOREIGN KEY (achievement_id) REFERENCES public.achievements(id),
   CONSTRAINT user_achievements_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
+CREATE TABLE public.user_blocks (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  blocker_id uuid NOT NULL,
+  blocked_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_blocks_pkey PRIMARY KEY (id),
+  CONSTRAINT user_blocks_blocker_id_fkey FOREIGN KEY (blocker_id) REFERENCES auth.users(id),
+  CONSTRAINT user_blocks_blocked_id_fkey FOREIGN KEY (blocked_id) REFERENCES auth.users(id)
+);
 CREATE TABLE public.user_certifications (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
@@ -1207,6 +1252,21 @@ CREATE TABLE public.user_referrals (
   CONSTRAINT user_referrals_pkey PRIMARY KEY (id),
   CONSTRAINT user_referrals_referrer_id_fkey FOREIGN KEY (referrer_id) REFERENCES public.profiles(id),
   CONSTRAINT user_referrals_referred_user_id_fkey FOREIGN KEY (referred_user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.user_reports (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  reporter_id uuid NOT NULL,
+  reported_user_id uuid NOT NULL,
+  content_type text NOT NULL CHECK (content_type = ANY (ARRAY['insight'::text, 'comment'::text, 'profile'::text])),
+  content_id text,
+  reason text NOT NULL CHECK (reason = ANY (ARRAY['spam'::text, 'harassment'::text, 'inappropriate'::text, 'misinformation'::text, 'other'::text])),
+  details text,
+  status text NOT NULL DEFAULT 'pending'::text CHECK (status = ANY (ARRAY['pending'::text, 'reviewed'::text, 'resolved'::text, 'dismissed'::text])),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_reports_pkey PRIMARY KEY (id),
+  CONSTRAINT user_reports_reporter_id_fkey FOREIGN KEY (reporter_id) REFERENCES auth.users(id),
+  CONSTRAINT user_reports_reported_user_id_fkey FOREIGN KEY (reported_user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.user_skill_endorsements (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

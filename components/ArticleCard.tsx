@@ -4,6 +4,8 @@ import { Feather, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons
 import { useRouter } from 'expo-router';
 import type { Article } from '../types';
 import { StaticVisual } from './StaticVisual';
+import { WebViewVisual } from './WebViewVisual';
+import { SimpleWebViewPoC } from './SimpleWebViewPoC';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -26,6 +28,7 @@ interface ArticleCardProps {
   onOpenComments?: (articleId: number) => void;
   onUserInteraction?: (articleId: number, action: 'like' | 'save' | 'unlike' | 'unsave') => void;
   isInVault?: boolean; // When true, reduces bottom padding for vault context
+  preload?: boolean;
 }
 
 const getTableNames = () => ({
@@ -56,13 +59,29 @@ const formatDate = (dateString: string): string => {
   }
 };
 
-export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, showBackButton, backTo, onOpenComments, onUserInteraction, isInVault = false }) => {
+import { SpecialArticleCard } from './SpecialArticleCard';
+
+export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, showBackButton, backTo, onOpenComments, onUserInteraction, isInVault = false, preload = false }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { allIndustries } = useIndustries();
   const router = useRouter();
   const { visualHeight, totalHeight, fontSizes } = useResponsiveLayout();
+
+  if (article.special) {
+    return (
+      <SpecialArticleCard
+        article={article}
+        showBackButton={showBackButton}
+        backTo={backTo}
+        onOpenComments={onOpenComments}
+        onUserInteraction={onUserInteraction}
+        isInVault={isInVault}
+        preload={preload}
+      />
+    );
+  }
 
   // Debug logging for article received by ArticleCard
   console.log(`🎯 ArticleCard: Received article ${article.id}:`, {
@@ -71,15 +90,17 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
     summary_length: article.summary?.length || 0,
     longer_summary_length: article.longer_summary?.length || 0,
     hasLongerSummary: !!article.longer_summary,
-    longer_summary_preview: article.longer_summary ? `${article.longer_summary.substring(0, 50)}...` : 'NOT PRESENT'
+    longer_summary_preview: article.longer_summary ? `${article.longer_summary.substring(0, 50)}...` : 'NOT PRESENT',
+    special: article.special
   });
-  
+
   const [likes, setLikes] = useState(article.likes_count || 0);
   const [hasLiked, setHasLiked] = useState(false);
   const [saves, setSaves] = useState(article.saves_count || 0);
   const [hasSaved, setHasSaved] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [webViewError, setWebViewError] = useState(false);
 
   const tableNames = useMemo(() => getTableNames(), []);
 
@@ -100,10 +121,22 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
     return article.author ? 7 : 8;
   }, [isTablet, isLandscape, article.author]);
 
+  const shouldUseWebView = useMemo(() => {
+    const result = !!(article.animation_code && !webViewError);
+    console.log(`🎬 ArticleCard ${article.id} - shouldUseWebView:`, {
+      result,
+      hasAnimationCode: !!article.animation_code,
+      animationCodeLength: article.animation_code?.length || 0,
+      webViewError,
+      animationCodePreview: article.animation_code?.substring(0, 100)
+    });
+    return result;
+  }, [article.animation_code, webViewError, article.id]);
+
   useEffect(() => {
     const fetchStatus = async () => {
       if (!user) return;
-      
+
       const { data: likeData } = await supabase
         .from(tableNames.likes)
         .select('user_id')
@@ -151,7 +184,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
         .from(tableNames.likes)
         .select('*', { count: 'exact', head: true })
         .eq(tableNames.idField, article.id);
-      
+
       if (countError) throw countError;
 
       if (typeof count === 'number') {
@@ -239,7 +272,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
             .update({ comments_count: article.comments_count })
             .eq('id', article.id);
         }
-      } catch {}
+      } catch { }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [article.comments_count]);
@@ -252,7 +285,9 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
       width: '100%',
     },
     visualSection: {
-      height: visualHeight * getStaticVisualHeightMultiplier(deviceInfo),
+      height: article.special
+        ? totalHeight * 0.7 // Special mode: 65% of total card height
+        : visualHeight * getStaticVisualHeightMultiplier(deviceInfo), // Normal mode
       width: '100%',
       position: 'relative',
     },
@@ -290,11 +325,11 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
       flex: 1,
       backgroundColor: colors.background,
       paddingHorizontal: 16,
-      paddingTop: deviceInfo.isSmallScreenWithHomeButton ? 56 : 40, // Extra padding only for iPhone SE
+      paddingTop: article.special ? 24 : (deviceInfo.isSmallScreenWithHomeButton ? 56 : 40), // Reduced top padding for special mode
       paddingBottom: isInVault ? 60 : insets.bottom + 60 + getContentBottomPadding(deviceInfo),
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
-      marginTop: deviceInfo.isSmallScreenWithHomeButton ? 0 : -60, // Remove negative margin to prevent overlap with StaticVisual
+      marginTop: article.special ? -20 : (deviceInfo.isSmallScreenWithHomeButton ? 0 : -60), // Less negative margin for special
       // Remove shadow and border to keep a clean aesthetic
       shadowColor: 'transparent',
       shadowOffset: { width: 0, height: 0 },
@@ -318,9 +353,9 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
       marginBottom: 12,
     },
     metadataRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 4,
     },
     contentScrollView: { flex: 1 },
     contentContainer: { flexGrow: 1, paddingBottom: 16 },
@@ -341,9 +376,9 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
       lineHeight: 26,
     },
     authorContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginBottom: 12,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: 12,
     },
     authorTag: {
       backgroundColor: colors.accent + '20',
@@ -394,7 +429,25 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
     <>
       <View style={dynamicStyles.container}>
         <View style={dynamicStyles.visualSection}>
-          <StaticVisual industry={article.industry_id} postId={article.id} />
+          {shouldUseWebView ? (
+            <SimpleWebViewPoC
+              height={article.special
+                ? totalHeight * 0.65
+                : visualHeight * getStaticVisualHeightMultiplier(deviceInfo)
+              }
+              htmlContent={article.animation_code || ''}
+              preload={preload}
+            />
+          ) : (
+            <StaticVisual
+              industry={article.industry_id}
+              postId={article.id}
+            // StaticVisual might interpret height differently, so for now we leave it alone or pass a prop if needed.
+            // Assuming StaticVisual adjusts to container or passed height if updated. 
+            // For safety, let's keep StaticVisual logic mostly intact unless requested, 
+            // BUT the container height (style.visualSection) is already forcing it.
+            />
+          )}
           {showBackButton && (
             <TouchableOpacity
               style={dynamicStyles.backButton}
@@ -425,49 +478,53 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
                 <View style={dynamicStyles.metadataRow}>
                   {article.site_name && (
                     <View style={dynamicStyles.typeContainer}>
-                      <Feather name="globe" size={12} color={colors.textSecondary} style={{marginRight: 4}}/>
+                      <Feather name="globe" size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
                       <Text style={dynamicStyles.metadataText}>{getSiteName(article.site_name)}</Text>
                     </View>
                   )}
                   {article.site_name && industryName && <Text style={dynamicStyles.metadataDot}>•</Text>}
                   {industryName && (
                     <View style={dynamicStyles.typeContainer}>
-                      <Feather name="briefcase" size={12} color={colors.textSecondary} style={{marginRight: 4}}/>
+                      <Feather name="briefcase" size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
                       <Text style={dynamicStyles.metadataText}>{industryName}</Text>
                     </View>
                   )}
                 </View>
                 <View style={dynamicStyles.metadataRow}>
+                  <View style={dynamicStyles.typeContainer}>
+                    <Feather name="file-text" size={16} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                    <Text style={dynamicStyles.typeText}>{article.type}</Text>
+                  </View>
+                  {article.created_at && <Text style={dynamicStyles.metadataDot}>•</Text>}
+                  {(article.date || article.created_at) && (
                     <View style={dynamicStyles.typeContainer}>
-                      <Feather name="file-text" size={16} color={colors.textSecondary} style={{ marginRight: 4 }} />
-                      <Text style={dynamicStyles.typeText}>{article.type}</Text>
+                      <Feather name="calendar" size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                      <Text style={dynamicStyles.metadataText}>{formatDate(article.date || article.created_at)}</Text>
                     </View>
-                    {article.created_at && <Text style={dynamicStyles.metadataDot}>•</Text>}
-                    {(article.date || article.created_at) && (
-                      <View style={dynamicStyles.typeContainer}>
-                         <Feather name="calendar" size={12} color={colors.textSecondary} style={{marginRight: 4}}/>
-                         <Text style={dynamicStyles.metadataText}>{formatDate(article.date || article.created_at)}</Text>
-                      </View>
-                    )}
+                  )}
                 </View>
               </View>
-              <TouchableOpacity onPress={handleToggleExpand} activeOpacity={0.7}>
-                <Text style={dynamicStyles.title} numberOfLines={2}>
-                  {removeHtmlTags(article.title)}
-                </Text>
-              </TouchableOpacity>
+              {!article.special && (
+                <TouchableOpacity onPress={handleToggleExpand} activeOpacity={0.7}>
+                  <Text style={dynamicStyles.title} numberOfLines={2}>
+                    {removeHtmlTags(article.title)}
+                  </Text>
+                </TouchableOpacity>
+              )}
               {article.author && (
                 <View style={dynamicStyles.authorContainer}>
-                    <View style={dynamicStyles.authorTag}>
-                      <Text style={dynamicStyles.authorText}>{article.author}</Text>
-                    </View>
+                  <View style={dynamicStyles.authorTag}>
+                    <Text style={dynamicStyles.authorText}>{article.author}</Text>
+                  </View>
                 </View>
               )}
-              <TouchableOpacity onPress={handleToggleExpand}>
-                <Text style={dynamicStyles.contentText} numberOfLines={dynamicTextLines}>
-                  {article.summary}
-                </Text>
-              </TouchableOpacity>
+              {!article.special && (
+                <TouchableOpacity onPress={handleToggleExpand}>
+                  <Text style={dynamicStyles.contentText} numberOfLines={dynamicTextLines}>
+                    {article.summary}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
             <View style={dynamicStyles.actionsRow}>
               <View style={dynamicStyles.actionGroup}>

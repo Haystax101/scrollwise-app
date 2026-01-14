@@ -87,36 +87,39 @@ export class FeedManager {
   }
 
   /**
-   * Fetch fresh content with simple deduplication
-   * PRIORITY: Content with slides first, then regular content
+   * Fetch fresh content with articles prioritized at the top
+   * PRIORITY: Articles first, then papers and insights shuffled together
    */
   async fetchContent(targetCount: number = 10): Promise<FeedItem[]> {
     try {
       const allContent: FeedItem[] = [];
 
-      // STEP 1: Prioritize content with slides
-      const contentWithSlides = await this.fetchContentWithSlides(targetCount);
-      allContent.push(...contentWithSlides);
+      // STEP 1: Fetch ARTICLES FIRST (40% of target)
+      const articlesCount = Math.ceil(targetCount * 0.4);
+      const articles = await this.fetchContentByType('article', articlesCount);
+      allContent.push(...articles);
 
-      // STEP 2: If we don't have enough items, fetch regular content
-      const remainingCount = targetCount - allContent.length;
+      // STEP 2: Fetch other content types
+      const remainingCount = targetCount - articles.length;
       if (remainingCount > 0) {
-        const distribution = [
-          { type: 'article' as const, count: Math.ceil(remainingCount * 0.4) },
-          { type: 'paper' as const, count: Math.ceil(remainingCount * 0.3) },
-          { type: 'insight' as const, count: Math.ceil(remainingCount * 0.3) }
-        ];
+        const otherContent: FeedItem[] = [];
 
-        for (const { type, count } of distribution) {
-          const items = await this.fetchContentByType(type, count);
-          // Filter out items that already have slides to prevent duplicates
-          const itemsWithoutSlides = items.filter(item => !(item as any).hasSlides);
-          allContent.push(...itemsWithoutSlides);
-        }
+        // Fetch papers (50% of remaining ≈ 30% of original)
+        const papersCount = Math.ceil(remainingCount * 0.5);
+        const papers = await this.fetchContentByType('paper', papersCount);
+        otherContent.push(...papers);
+
+        // Fetch insights (remainder ≈ 30% of original)
+        const insightsCount = remainingCount - papers.length;
+        const insights = await this.fetchContentByType('insight', insightsCount);
+        otherContent.push(...insights);
+
+        // SHUFFLE only non-article content
+        const shuffledOthers = this.shuffleArray(otherContent);
+        allContent.push(...shuffledOthers);
       }
 
-      const shuffled = this.shuffleArray(allContent);
-      return shuffled.slice(0, targetCount);
+      return allContent.slice(0, targetCount);
     } catch (error) {
       console.error('FeedManager: Error in fetchContent:', error);
       return [];
@@ -201,6 +204,13 @@ export class FeedManager {
     count: number
   ): Promise<FeedItem[]> {
     try {
+      // TEMPORARY: Always use fallback method to get all fields including animation_code
+      // This ensures we get animation_code field for testing
+      console.log(`🔧 FeedManager: Using fallback method for ${contentType} to ensure animation_code is fetched`);
+      return await this.fetchContentByTypeOriginal(contentType, count);
+
+      // Original RPC logic (commented out for testing)
+      /*
       // For insights, always use the original method to ensure proper profile joins
       // The RPC function may not properly join with profiles table
       if (contentType === 'insight') {
@@ -252,6 +262,7 @@ export class FeedManager {
       });
 
       return feedItems;
+      */
     } catch (error) {
       console.error(`FeedManager: Exception in fetchContentByType for ${contentType}:`, error);
       return [];
@@ -284,14 +295,24 @@ export class FeedManager {
           .limit(count * 5); // Get more to account for filtering
       } else {
         const tableName = contentType === 'paper' ? 'papers' :
-                         contentType === 'book' ? 'books' : 'articles';
+          contentType === 'book' ? 'books' : 'articles';
 
-        query = supabase
-          .from(tableName)
-          .select('*')
-          .in('industry_id', this.userIndustries)
-          .order('created_at', { ascending: false })
-          .limit(count * 5);
+        // TEMPORARY: For articles, limit to 4 most recent regardless of industry
+        if (contentType === 'article') {
+          console.log('🔧 FeedManager: Fetching 4 most recent articles (ignoring viewed status for testing)');
+          query = supabase
+            .from(tableName)
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(4);
+        } else {
+          query = supabase
+            .from(tableName)
+            .select('*')
+            .in('industry_id', this.userIndustries)
+            .order('created_at', { ascending: false })
+            .limit(count * 5);
+        }
       }
 
       const { data, error } = await query;
@@ -301,7 +322,26 @@ export class FeedManager {
         return [];
       }
 
-      // Filter out viewed content client-side
+      console.log(`🔧 FeedManager: Fetched ${data.length} ${contentType} items from database`);
+      if (contentType === 'article' && data.length > 0) {
+        console.log(`🔧 FeedManager: First article has animation_code:`, {
+          id: data[0].id,
+          hasAnimationCode: !!data[0].animation_code,
+          animationCodeLength: data[0].animation_code?.length || 0,
+          animationCodePreview: data[0].animation_code?.substring(0, 100)
+        });
+      }
+
+      // TEMPORARY: Skip viewed content filtering for articles during testing
+      if (contentType === 'article') {
+        const feedItems = data.map((item: any) =>
+          this.convertToFeedItem(item, contentType)
+        );
+        console.log(`🔧 FeedManager: Returning ${feedItems.length} articles without filtering viewed content`);
+        return feedItems;
+      }
+
+      // Filter out viewed content client-side for other content types
       const viewedKeys = Array.from(this.viewedContentIds);
 
       const unviewedData = data.filter((item: any) => {
@@ -342,15 +382,30 @@ export class FeedManager {
 
     switch (type) {
       case 'article':
-        return {
+        const article = {
           ...baseItem,
           title: data.title || '',
           summary: data.summary || '',
           longer_summary: data.longer_summary,
           author: data.author || '',
           date: data.date,
-          site_name: data.site_name
+          site_name: data.site_name,
+          animation_code: data.animation_code,
+          storyboard: data.storyboard,
+          special: data.special,
+          narrative_code: data.narrative_code
         } as Article;
+
+        console.log(`🔧 FeedManager: Converted article ${data.id} to FeedItem:`, {
+          id: article.id,
+          hasAnimationCode: !!article.animation_code,
+          hasNarrativeCode: !!article.narrative_code,
+          narrativeCodeCount: article.narrative_code?.length || 0,
+          animationCodeLength: article.animation_code?.length || 0,
+          animationCodePreview: article.animation_code?.substring(0, 100)
+        });
+
+        return article;
 
       case 'paper':
         return {
@@ -445,8 +500,8 @@ export class FeedManager {
   async fetchSpecificContent(contentId: string | number, contentType: 'article' | 'paper' | 'book' | 'insight'): Promise<FeedItem | null> {
     try {
       const tableName = contentType === 'paper' ? 'papers' :
-                       contentType === 'book' ? 'books' :
-                       contentType === 'insight' ? 'insights' : 'articles';
+        contentType === 'book' ? 'books' :
+          contentType === 'insight' ? 'insights' : 'articles';
 
       let query: any;
 
@@ -486,8 +541,8 @@ export class FeedManager {
       const savesTable = contentType === 'insight' ? 'user_insights_saves' : `user_${contentType}_saves`;
       const commentsTable = contentType === 'insight' ? 'user_insights_comments' : `user_${contentType}_comments`;
       const idField = contentType === 'paper' ? 'paper_id' :
-                     contentType === 'book' ? 'book_id' :
-                     contentType === 'insight' ? 'insight_id' : 'article_id';
+        contentType === 'book' ? 'book_id' :
+          contentType === 'insight' ? 'insight_id' : 'article_id';
 
       const [likesCountRes, savesCountRes, commentsCountRes] = await Promise.all([
         supabase.from(likesTable).select('*', { count: 'exact', head: true }).eq(idField, contentId),

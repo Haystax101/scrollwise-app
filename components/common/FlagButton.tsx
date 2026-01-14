@@ -12,6 +12,7 @@ interface FlagButtonProps {
   style?: ViewStyle;
   initialFlagged?: boolean;
   onFlagToggle?: (isFlagged: boolean, flagCount: number) => void;
+  iconColor?: string;
 }
 
 export const FlagButton: React.FC<FlagButtonProps> = ({
@@ -20,7 +21,8 @@ export const FlagButton: React.FC<FlagButtonProps> = ({
   size = 24,
   style,
   initialFlagged = false,
-  onFlagToggle
+  onFlagToggle,
+  iconColor: customIconColor
 }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -39,7 +41,7 @@ export const FlagButton: React.FC<FlagButtonProps> = ({
       // Simple direct query to check if user has flagged this content
       // Convert content ID to string format for consistency
       const processedContentId = String(contentId);
-      
+
       const { data, error } = await supabase
         .from('user_content_flags')
         .select('id')
@@ -101,7 +103,7 @@ export const FlagButton: React.FC<FlagButtonProps> = ({
     try {
       // Convert content ID to string format for RPC function (handles both numeric and UUID)
       const processedContentId = String(contentId);
-      
+
       const { data, error } = await supabase.rpc('toggle_content_flag', {
         p_user_id: user!.id,
         p_content_id: processedContentId,
@@ -123,7 +125,7 @@ export const FlagButton: React.FC<FlagButtonProps> = ({
         const newFlagCount = data.flag_count;
 
         setIsFlagged(newFlaggedState);
-        
+
         // Call callback if provided
         if (onFlagToggle) {
           onFlagToggle(newFlaggedState, newFlagCount);
@@ -147,9 +149,9 @@ export const FlagButton: React.FC<FlagButtonProps> = ({
     }
   };
 
-  const iconColor = isFlagged 
+  const iconColor = isFlagged
     ? '#EF4444' // Red when flagged
-    : colors.textSecondary; // Secondary text color when not flagged
+    : (customIconColor || colors.textSecondary); // Custom or Secondary text color when not flagged
 
   const iconOpacity = isLoading ? 0.5 : 1;
 
