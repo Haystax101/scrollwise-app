@@ -65,11 +65,17 @@ export const profileImageService = {
         if (avatarUrl.startsWith('http://') || avatarUrl.startsWith('https://')) {
           return avatarUrl;
         }
-        
+
+        // Reject local file paths (invalid data from previous uploads)
+        if (avatarUrl.startsWith('file://')) {
+          console.warn('Found local file path in avatar_url, treating as invalid:', avatarUrl);
+          return null;
+        }
+
         // Assuming avatarUrl is a path in Supabase storage
         const { data } = supabase.storage.from('avatars').getPublicUrl(avatarUrl);
         const url = data?.publicUrl;
-        
+
         if (url) {
           console.log('Generated profile image URL:', url);
           return url;
@@ -120,23 +126,23 @@ export const profileImageService = {
       console.log('Compressing profile image...');
       const compressedUri = await compressImage(imageUri);
       console.log('Using compressed image URI:', compressedUri);
-      
+
       // Get file extension from URI (always use jpg after compression)
       const fileExt = 'jpg'; // JPEG format after compression
       const finalFileName = fileName || `${userId}-${Date.now()}.${fileExt}`;
-      
+
       console.log('Generated filename:', finalFileName);
-      
+
       // Convert compressed image URI to ArrayBuffer
       console.log('Converting compressed image URI to ArrayBuffer...');
       const arrayBuffer = await fetch(compressedUri).then((res) => res.arrayBuffer());
-      
+
       console.log('ArrayBuffer size:', arrayBuffer.byteLength, 'bytes');
-      
+
       if (arrayBuffer.byteLength === 0) {
         throw new Error('Image file is empty or could not be read');
       }
-      
+
       // Upload to Supabase Storage using ArrayBuffer
       console.log('Uploading to Supabase storage bucket: avatars');
       const { data, error } = await supabase.storage
@@ -192,17 +198,17 @@ export const profileImageService = {
       // Generate public URL
       console.log('Generating public URL for uploaded image...');
       const publicUrl = this.getProfileImageUrl(data.path);
-      
+
       console.log('Profile image upload completed successfully:', {
         path: data.path,
         publicUrl: publicUrl,
         fileSize: arrayBuffer.byteLength
       });
-      
-      return { 
-        url: publicUrl, 
-        path: data.path, 
-        error: null 
+
+      return {
+        url: publicUrl,
+        path: data.path,
+        error: null
       };
     } catch (error) {
       console.error('Exception during profile image upload:', error);

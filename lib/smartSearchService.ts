@@ -29,6 +29,18 @@ export interface SearchResult {
   vectorRank?: number;
 }
 
+export interface SearchResultV2 {
+  id: string;
+  type: 'article' | 'paper' | 'book' | 'video' | 'podcast';
+  title: string;
+  subtitle: string;
+  image_url?: string;
+  colour?: string;
+  date?: string;
+  special?: boolean;
+  match_score?: number;
+}
+
 export interface SearchResponse {
   results: SearchResult[];
   searchType: 'keyword' | 'progressive' | 'recent';
@@ -87,8 +99,8 @@ export async function immediateKeywordSearch(
 ): Promise<SearchResponse> {
   try {
     const { data, error } = await supabase.functions.invoke('smart-search', {
-      body: { 
-        query, 
+      body: {
+        query,
         searchType: 'keyword',
         industry_id: industryId || null,
         content_type: contentType || null
@@ -97,12 +109,12 @@ export async function immediateKeywordSearch(
 
     if (error) {
       console.error('Immediate keyword search error:', error);
-      return { 
-        results: [], 
-        searchType: 'keyword', 
-        hasMore: false, 
+      return {
+        results: [],
+        searchType: 'keyword',
+        hasMore: false,
         isProFeature: false,
-        error: error.message 
+        error: error.message
       };
     }
 
@@ -112,18 +124,18 @@ export async function immediateKeywordSearch(
       results: processSearchResults(data.results || [])
     };
 
-    console.log(`🔍 Search: Fixed ${processedData.results.length} results with correct types:`, 
+    console.log(`🔍 Search: Fixed ${processedData.results.length} results with correct types:`,
       processedData.results.map((r: SearchResult) => `${r.type}:${r.id}`).join(', '));
 
     return processedData;
   } catch (error) {
     console.error('Immediate keyword search exception:', error);
-    return { 
-      results: [], 
-      searchType: 'keyword', 
-      hasMore: false, 
+    return {
+      results: [],
+      searchType: 'keyword',
+      hasMore: false,
       isProFeature: false,
-      error: 'Search failed. Please try again.' 
+      error: 'Search failed. Please try again.'
     };
   }
 }
@@ -140,8 +152,8 @@ export async function progressiveSearch(
 ): Promise<SearchResponse> {
   try {
     const { data, error } = await supabase.functions.invoke('smart-search', {
-      body: { 
-        query, 
+      body: {
+        query,
         searchType: 'progressive',
         match_threshold,
         industry_id: industryId || null,
@@ -151,12 +163,12 @@ export async function progressiveSearch(
 
     if (error) {
       console.error('Progressive search error:', error);
-      return { 
-        results: [], 
-        searchType: 'keyword', 
-        hasMore: false, 
+      return {
+        results: [],
+        searchType: 'keyword',
+        hasMore: false,
         isProFeature: false,
-        error: error.message 
+        error: error.message
       };
     }
 
@@ -166,18 +178,18 @@ export async function progressiveSearch(
       results: processSearchResults(data.results || [])
     };
 
-    console.log(`🔍 Progressive Search: Fixed ${processedData.results.length} results with correct types:`, 
+    console.log(`🔍 Progressive Search: Fixed ${processedData.results.length} results with correct types:`,
       processedData.results.map((r: SearchResult) => `${r.type}:${r.id}`).join(', '));
 
     return processedData;
   } catch (error) {
     console.error('Progressive search exception:', error);
-    return { 
-      results: [], 
-      searchType: 'keyword', 
-      hasMore: false, 
+    return {
+      results: [],
+      searchType: 'keyword',
+      hasMore: false,
       isProFeature: false,
-      error: 'Search failed. Please try again.' 
+      error: 'Search failed. Please try again.'
     };
   }
 }
@@ -188,20 +200,20 @@ export async function progressiveSearch(
 export async function getRecentContent(): Promise<SearchResponse> {
   try {
     const { data, error } = await supabase.functions.invoke('smart-search', {
-      body: { 
-        query: '', 
-        searchType: 'keyword' 
+      body: {
+        query: '',
+        searchType: 'keyword'
       },
     });
 
     if (error) {
       console.error('Recent content error:', error);
-      return { 
-        results: [], 
-        searchType: 'recent', 
-        hasMore: false, 
+      return {
+        results: [],
+        searchType: 'recent',
+        hasMore: false,
         isProFeature: false,
-        error: error.message 
+        error: error.message
       };
     }
 
@@ -211,18 +223,18 @@ export async function getRecentContent(): Promise<SearchResponse> {
       results: processSearchResults(data.results || [])
     };
 
-    console.log(`🔍 Recent Content: Fixed ${processedData.results.length} results with correct types:`, 
+    console.log(`🔍 Recent Content: Fixed ${processedData.results.length} results with correct types:`,
       processedData.results.map((r: SearchResult) => `${r.type}:${r.id}`).join(', '));
 
     return processedData;
   } catch (error) {
     console.error('Recent content exception:', error);
-    return { 
-      results: [], 
-      searchType: 'recent', 
-      hasMore: false, 
+    return {
+      results: [],
+      searchType: 'recent',
+      hasMore: false,
       isProFeature: false,
-      error: 'Failed to load content.' 
+      error: 'Failed to load content.'
     };
   }
 }
@@ -251,20 +263,40 @@ export async function checkProPlan(): Promise<boolean> {
 // Utility function to highlight search terms in results
 export function highlightSearchTerms(text: string, searchQuery: string): string {
   if (!searchQuery.trim()) return text;
-  
+
   const terms = searchQuery.split(' ').filter(term => term.length > 2);
   let highlightedText = text;
-  
+
   terms.forEach(term => {
     const regex = new RegExp(`(${term})`, 'gi');
     highlightedText = highlightedText.replace(regex, '<mark>$1</mark>');
   });
-  
+
   return highlightedText;
 }
 
-// Utility function to format score as percentage
 export function formatScore(score?: number): string {
   if (!score) return '0%';
   return `${Math.round(score)}%`;
+}
+
+/**
+ * Search V2 - Uses Postgres RPC 'search_content_v2'
+ */
+export async function searchContentV2(query: string): Promise<SearchResultV2[]> {
+  try {
+    const { data, error } = await supabase.rpc('search_content_v2', {
+      query_text: query
+    });
+
+    if (error) {
+      console.error('Search V2 Error:', error);
+      return [];
+    }
+
+    return data as SearchResultV2[];
+  } catch (err) {
+    console.error('Search V2 Exception:', err);
+    return [];
+  }
 }

@@ -303,6 +303,7 @@ export class FeedManager {
           query = supabase
             .from(tableName)
             .select('*')
+            .eq('special', true)
             .order('created_at', { ascending: false })
             .limit(4);
         } else {
@@ -393,7 +394,9 @@ export class FeedManager {
           animation_code: data.animation_code,
           storyboard: data.storyboard,
           special: data.special,
-          narrative_code: data.narrative_code
+          narrative_code: data.narrative_code,
+          image_url: data.image_url,
+          colour: data.colour
         } as Article;
 
         console.log(`🔧 FeedManager: Converted article ${data.id} to FeedItem:`, {

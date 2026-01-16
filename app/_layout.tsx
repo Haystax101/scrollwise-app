@@ -6,7 +6,6 @@ import { NotificationProvider } from '../context/NotificationContext';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import AppHeader from '../components/AppHeader';
 import { PostHogProvider } from 'posthog-react-native';
 import { posthog } from '../lib/posthog';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -64,83 +63,101 @@ export default function RootLayout() {
                   <BottomSheetModalProvider>
                     <IndustriesProvider>
                       <DeepLinkWrapper>
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen
-                    name="feed" 
-                    options={({ route }) => ({
-                      animation: (route.params as any)?.animationDirection === 'left' 
-                        ? 'slide_from_left' 
-                        : 'slide_from_right',
-                    })}
-                  />
-                  <Stack.Screen
-                    name="vault"
-                    options={({ route }) => ({
-                      animation: (route.params as any)?.animationDirection === 'left'
-                        ? 'slide_from_left'
-                        : 'slide_from_right',
-                    })}
-                  />
-                  <Stack.Screen
-                    name="people"
-                    options={({ route }) => ({
-                      animation: (route.params as any)?.animationDirection === 'left'
-                        ? 'slide_from_left'
-                        : 'slide_from_right',
-                    })}
-                  />
-                  <Stack.Screen
-                    name="chats"
-                    options={({ route }) => ({
-                      animation: (route.params as any)?.animationDirection === 'left' 
-                        ? 'slide_from_left' 
-                        : 'slide_from_right',
-                    })}
-                  />
-                  <Stack.Screen 
-                    name="profile"
-                    options={({ route }) => ({
-                      animation: (route.params as any)?.animationDirection === 'left' 
-                        ? 'slide_from_left' 
-                        : 'slide_from_right',
-                    })}
-                  />
-                  <Stack.Screen 
-                    name="saved-feed"
-                    options={({ route }) => ({
-                      animation: (route.params as any)?.animationDirection === 'left' 
-                        ? 'slide_from_left' 
-                        : 'slide_from_right',
-                    })}
-                  />
-                  <Stack.Screen
-                    name="chat/[id]"
-                    options={{
-                      presentation: 'modal',
-                      headerShown: false,
-                    }}
-                  />
-                  <Stack.Screen
-                    name="reset-password-request"
-                    options={{
-                      headerShown: false,
-                    }}
-                  />
-                  <Stack.Screen
-                    name="update-password"
-                    options={{
-                      headerShown: false,
-                    }}
-                  />
-                  <Stack.Screen
-                    name="shared"
-                    options={{
-                      headerShown: false,
-                      animation: 'none',
-                    }}
-                  />
-                </Stack>
-                    <AppHeader />
+                        <Stack screenOptions={{ headerShown: false }}>
+                          {/* Main Tab Navigation */}
+                          <Stack.Screen
+                            name="(tabs)"
+                            options={{
+                              headerShown: false,
+                              animation: 'fade', // Smooth transition to tabs
+                            }}
+                          />
+
+                          {/* Auxiliary Screens */}
+                          <Stack.Screen
+                            name="vault"
+                            options={({ route }) => ({
+                              animation: (route.params as any)?.animationDirection === 'left'
+                                ? 'slide_from_left'
+                                : 'slide_from_right',
+                            })}
+                          />
+                          <Stack.Screen
+                            name="people"
+                            options={({ route }) => ({
+                              animation: (route.params as any)?.animationDirection === 'left'
+                                ? 'slide_from_left'
+                                : 'slide_from_right',
+                            })}
+                          />
+                          <Stack.Screen
+                            name="chats"
+                            options={({ route }) => ({
+                              animation: (route.params as any)?.animationDirection === 'left'
+                                ? 'slide_from_left'
+                                : 'slide_from_right',
+                            })}
+                          />
+
+                          {/* Saved Feed - Kept as separate stack for focus */}
+                          <Stack.Screen
+                            name="saved-feed"
+                            options={({ route }) => ({
+                              animation: (route.params as any)?.animationDirection === 'left'
+                                ? 'slide_from_left'
+                                : 'slide_from_right',
+                            })}
+                          />
+
+                          {/* Modals & Flows */}
+                          <Stack.Screen
+                            name="chat/[id]"
+                            options={{
+                              presentation: 'modal',
+                              headerShown: false,
+                            }}
+                          />
+                          <Stack.Screen
+                            name="create-insight"
+                            options={{
+                              presentation: 'modal',
+                              headerShown: false,
+                            }}
+                          />
+                          <Stack.Screen
+                            name="create-timelapse"
+                            options={{
+                              presentation: 'modal',
+                              headerShown: false,
+                            }}
+                          />
+                          <Stack.Screen
+                            name="reset-password-request"
+                            options={{
+                              headerShown: false,
+                            }}
+                          />
+                          <Stack.Screen
+                            name="update-password"
+                            options={{
+                              headerShown: false,
+                            }}
+                          />
+                          <Stack.Screen
+                            name="shared"
+                            options={{
+                              headerShown: false,
+                              animation: 'none',
+                            }}
+                          />
+                          <Stack.Screen
+                            name="onboarding"
+                            options={{
+                              headerShown: false,
+                              animation: 'fade',
+                            }}
+                          />
+                        </Stack>
                       </DeepLinkWrapper>
                     </IndustriesProvider>
                   </BottomSheetModalProvider>

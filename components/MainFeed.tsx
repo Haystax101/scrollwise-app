@@ -465,6 +465,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   // Memoized render functions
   const renderItem = useCallback(({ item, index }: { item: FeedItem; index: number }) => {
     const isActive = index === currentIndex;
+    // console.log(`MainFeed: renderItem index ${index}, current ${currentIndex}, isActive ${isActive}`);
 
     switch (item.type) {
       case 'article':
@@ -529,7 +530,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
               authors={paper.authors}
               likesCount={paper.likes_count}
               commentsCount={paper.comments_count}
-              savesCount={paper.saves_count}
+              savesCount={(paper as any).saves_count}
               onOpenComments={handleOpenComments}
               onUserInteraction={handleUserInteraction}
             />
@@ -540,8 +541,6 @@ export const MainFeed: React.FC<MainFeedProps> = ({
           <PaperCard
             paper={paper}
             isActive={isActive}
-            showBackButton={showBackButton}
-            backTo={backTo}
             onOpenComments={handleOpenComments}
             onUserInteraction={handleUserInteraction}
           />
@@ -570,14 +569,12 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         return (
           <BookCard
             book={item as Book}
-            showBackButton={showBackButton}
-            backTo={backTo}
             onOpenComments={handleOpenComments}
             onUserInteraction={handleUserInteraction}
           />
         );
       case 'insight':
-        return <InsightCard insight={item as Insight} showBackButton={showBackButton} backTo={backTo} />;
+        return <InsightCard insight={item as Insight} />;
       default:
         console.warn(`📱 MainFeed: Unknown content type: ${(item as any).type}`);
         return null;
@@ -665,6 +662,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     <>
       <FlatList
         data={feedItems}
+        extraData={currentIndex}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         pagingEnabled

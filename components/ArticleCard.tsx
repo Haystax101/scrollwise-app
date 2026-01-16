@@ -60,8 +60,10 @@ const formatDate = (dateString: string): string => {
 };
 
 import { SpecialArticleCard } from './SpecialArticleCard';
+import { useContentTracking } from '../hooks/useContentTracking';
 
 export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, showBackButton, backTo, onOpenComments, onUserInteraction, isInVault = false, preload = false }) => {
+  // console.log(`ArticleCard ${article.id} rendering`);
   const { user } = useAuth();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -133,6 +135,11 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
     return result;
   }, [article.animation_code, webViewError, article.id]);
 
+  const { updateScrollDepth } = useContentTracking({
+    contentId: article.id,
+    contentType: 'article'
+  });
+
   useEffect(() => {
     const fetchStatus = async () => {
       if (!user) return;
@@ -157,7 +164,10 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
     fetchStatus();
   }, [user, article.id, tableNames]);
 
-  const handleToggleExpand = () => setIsExpanded(!isExpanded);
+  const handleToggleExpand = () => {
+    if (!isExpanded) markComplete();
+    setIsExpanded(!isExpanded);
+  };
 
   const toggleLike = useCallback(async (isLiking: boolean) => {
     if (!user) return;
@@ -561,19 +571,10 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
         visible={isExpanded}
         onClose={handleToggleExpand}
         title={article.title}
-        content={(() => {
-          const content = article.longer_summary || article.summary;
-          console.log(`🔍 ArticleCard: ExpandedTextModal content for article ${article.id}:`, {
-            longer_summary_available: !!article.longer_summary,
-            longer_summary_length: article.longer_summary?.length || 0,
-            summary_length: article.summary?.length || 0,
-            using_longer_summary: !!article.longer_summary,
-            content_preview: content?.substring(0, 100) + '...'
-          });
-          return content;
-        })()}
+        content={article.longer_summary || article.summary}
         externalLink={article.link}
         contentType="article"
+        onScrollDepthChange={updateScrollDepth}
       />
       <FeedbackBoardModal
         visible={showFeedbackModal}
@@ -581,4 +582,4 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
       />
     </>
   );
-}); 
+});

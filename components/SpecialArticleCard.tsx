@@ -15,15 +15,19 @@ import { ShareService } from '../lib/shareService';
 import { useIndustries } from '../context/IndustriesContext';
 import { FlagButton } from './common/FlagButton';
 import { FeedbackBoardModal } from './feedback/FeedbackBoardModal';
+import { NativeStorySlide } from './NativeStorySlide';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withSpring,
+    withTiming,
     interpolate
 } from 'react-native-reanimated';
+import { useContentTracking } from '../hooks/useContentTracking';
 
 interface SpecialArticleCardProps {
     article: Article;
+    isActive: boolean; // Added isActive
     showBackButton?: boolean;
     backTo?: string | null;
     onOpenComments?: (articleId: number) => void;
@@ -97,6 +101,7 @@ const getTypeIcon = (type: string): string => {
 
 export const SpecialArticleCard: React.FC<SpecialArticleCardProps> = ({
     article,
+    // isActive, // Removed as it is now unused
     showBackButton,
     backTo,
     onOpenComments,
@@ -111,16 +116,64 @@ export const SpecialArticleCard: React.FC<SpecialArticleCardProps> = ({
     const { totalHeight } = useResponsiveLayout();
     const { allIndustries } = useIndustries();
 
+    // const { updateProgress, markComplete } = useContentTracking({
+    //    contentId: article.id,
+    //    contentType: 'article',
+    //    isActive
+    // });
+
     const [likes, setLikes] = useState(article.likes_count || 0);
     const [hasLiked, setHasLiked] = useState(false);
     const [saves, setSaves] = useState(article.saves_count || 0);
     const [hasSaved, setHasSaved] = useState(false);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
+
+
+    // ... (existing imports)
+
     // Narrative State
     const [activeIndex, setActiveIndex] = useState(0);
-    const narrativeSlides = useMemo(() => article.narrative_code ? article.narrative_code : [], [article.narrative_code]);
-    const totalSlides = 1 + narrativeSlides.length;
+
+    // DEBUG LOGGING
+    useEffect(() => {
+        console.log('--- SpecialArticleCard Debug ---');
+        console.log('Article ID:', article.id);
+        console.log('Narrative Code Length:', article.narrative_code?.length);
+        if (article.narrative_code?.[0]) console.log('First Slide Raw:', article.narrative_code[0]);
+    }, [article]);
+
+    const isJsonLike = (str: string) => typeof str === 'string' && (str.trim().startsWith('{') || str.trim().startsWith('['));
+
+    // The user confirmed that `narrative_code` contains the JSON strings.
+    // We prioritize checking `narrative_code` for this specific JSON format.
+    const effectiveNativeSlides = useMemo(() => {
+        // 1. Check if narrative_code exists and is an array
+        if (article.narrative_code && Array.isArray(article.narrative_code) && article.narrative_code.length > 0) {
+            // Check if the first item is a JSON-like string
+            if (isJsonLike(article.narrative_code[0])) {
+                return article.narrative_code;
+            }
+        }
+        // 2. Fallback to narrative_text if it exists (future proofing)
+        if (article.narrative_text && article.narrative_text.length > 0) {
+            return article.narrative_text;
+        }
+
+        return [];
+    }, [article.narrative_code, article.narrative_text]);
+
+    const hasNativeSlides = effectiveNativeSlides.length > 0;
+
+    // If we are NOT using native slides, we might be using legacy web slides (HTML code).
+    // But `effectiveNativeSlides` captures the JSON format. 
+    // If effectiveNativeSlides is empty, we check if narrative_code exists and is NOT JSON.
+    const webSlides = useMemo(() => {
+        if (hasNativeSlides) return [];
+        return article.narrative_code || [];
+    }, [article.narrative_code, hasNativeSlides]);
+
+    const totalSlides = 1 + (hasNativeSlides ? effectiveNativeSlides.length : webSlides.length);
 
     // Menu State
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -221,6 +274,15 @@ export const SpecialArticleCard: React.FC<SpecialArticleCardProps> = ({
         type: 'article', id: String(article.id), title: article.title, summary: article.summary
     });
 
+    // The new totalSlides calculation based on article.slides
+    // const totalSlides = 1 + (article.slides?.length || 0); // Removed duplicate
+
+    const { trackSlideView, markComplete } = useContentTracking({
+        contentId: article.id,
+        contentType: 'article',
+        totalSlides
+    });
+
     const handleVote = async (preference: boolean) => {
         if (!user) return;
 
@@ -241,7 +303,15 @@ export const SpecialArticleCard: React.FC<SpecialArticleCardProps> = ({
     const goToSlide = (index: number) => {
         if (index >= 0 && index < totalSlides) {
             setActiveIndex(index);
-            flipRotation.value = withSpring(index * 180, { damping: 20, stiffness: 90 });
+            // Switched to withTiming to prevent spring oscillation/glitching
+            flipRotation.value = withTiming(index * 180, { duration: 600 });
+
+            // Track Progress
+            trackSlideView(index);
+
+            if (index === totalSlides - 1) {
+                markComplete();
+            }
         }
     };
 
@@ -253,12 +323,51 @@ export const SpecialArticleCard: React.FC<SpecialArticleCardProps> = ({
         if (activeIndex < totalSlides - 1) goToSlide(activeIndex + 1);
     };
 
-    const getHtmlForIndex = (index: number) => {
-        if (index === 0) return (article.animation_code || '') + commonCss;
-        if (index > 0 && index <= narrativeSlides.length) {
-            return (narrativeSlides[index - 1] || '') + commonCss;
+    const renderSlideContent = (index: number) => {
+        // Cover Slide (Always WebView for now, using front_cover_code or animation_code)
+        if (index === 0) {
+            const html = (article.front_cover_code || article.animation_code || '') + commonCss;
+            return <SimpleWebViewPoC height={totalHeight} htmlContent={html} preload={preload} />;
         }
-        return '';
+
+        // Narrative Slides
+        const slideIndex = index - 1;
+
+        if (hasNativeSlides) {
+            const rawContent = effectiveNativeSlides[slideIndex] || '';
+
+            let chapterTitle: string | undefined = undefined;
+            let slideText = rawContent;
+
+            // Try to parse if it's JSON
+            if (isJsonLike(rawContent)) {
+                try {
+                    const parsed = JSON.parse(rawContent);
+                    if (parsed.context) {
+                        slideText = parsed.context;
+                    }
+                    if (parsed.title) {
+                        chapterTitle = parsed.title;
+                    }
+                } catch (e) {
+                    console.log('Failed to parse JSON slide:', e);
+                }
+            }
+
+            return (
+                <NativeStorySlide
+                    title={article.title}
+                    chapterTitle={chapterTitle}
+                    text={slideText}
+                    imageUrl={article.image_url}
+                    colour={article.colour}
+                />
+            );
+        } else {
+            // Legacy Web Slides
+            const html = (webSlides[slideIndex] || '') + commonCss;
+            return <SimpleWebViewPoC height={totalHeight} htmlContent={html} preload={preload} />;
+        }
     };
 
     const frontAnimatedStyle = useAnimatedStyle(() => {
@@ -268,7 +377,6 @@ export const SpecialArticleCard: React.FC<SpecialArticleCardProps> = ({
                 { perspective: 1000 },
                 { rotateY: `${rotateValue}deg` }
             ],
-            zIndex: (rotateValue % 360) > 90 && (rotateValue % 360) < 270 ? 0 : 1,
         };
     });
 
@@ -279,26 +387,24 @@ export const SpecialArticleCard: React.FC<SpecialArticleCardProps> = ({
                 { perspective: 1000 },
                 { rotateY: `${rotateValue}deg` }
             ],
-            zIndex: (rotateValue % 360) > 90 && (rotateValue % 360) < 270 ? 0 : 1,
         };
     });
 
     const [renderedFrontIndex, setRenderedFrontIndex] = useState(0);
     const [renderedBackIndex, setRenderedBackIndex] = useState(1);
 
+    // Optimized rendering logic to prevent premature content updates
     useEffect(() => {
+        // Only update the face that is being flipped TO (the target).
+        // Leave the OTHER face alone so it persists during the transition.
         if (activeIndex % 2 === 0) {
+            // Target is Front (Even)
             setRenderedFrontIndex(activeIndex);
-            if (activeIndex + 1 < totalSlides) {
-                setRenderedBackIndex(activeIndex + 1);
-            }
         } else {
+            // Target is Back (Odd)
             setRenderedBackIndex(activeIndex);
-            if (activeIndex + 1 < totalSlides) {
-                setRenderedFrontIndex(activeIndex + 1);
-            }
         }
-    }, [activeIndex, totalSlides]);
+    }, [activeIndex]);
 
     const renderMetadata = () => {
         const containerStyle = styles.bottomContent;
@@ -339,8 +445,12 @@ export const SpecialArticleCard: React.FC<SpecialArticleCardProps> = ({
     return (
         <View style={[styles.container, { height: totalHeight }]}>
             <View style={StyleSheet.absoluteFill}>
-                <Animated.View style={[styles.face, frontAnimatedStyle]}>
-                    <SimpleWebViewPoC height={totalHeight} htmlContent={getHtmlForIndex(renderedFrontIndex)} preload={preload} />
+                <Animated.View
+                    style={[styles.face, frontAnimatedStyle]}
+                    shouldRasterizeIOS={true} // rasterize to prevent BlurView glitches during 3D transform
+                    renderToHardwareTextureAndroid={true}
+                >
+                    {renderSlideContent(renderedFrontIndex)}
                     {renderedFrontIndex === 0 && (
                         <>
                             <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']} style={styles.gradientOverlay} pointerEvents="none" />
@@ -348,8 +458,12 @@ export const SpecialArticleCard: React.FC<SpecialArticleCardProps> = ({
                         </>
                     )}
                 </Animated.View>
-                <Animated.View style={[styles.face, backAnimatedStyle]}>
-                    <SimpleWebViewPoC height={totalHeight} htmlContent={getHtmlForIndex(renderedBackIndex)} preload={preload} />
+                <Animated.View
+                    style={[styles.face, backAnimatedStyle]}
+                    shouldRasterizeIOS={true} // rasterize to prevent BlurView glitches during 3D transform
+                    renderToHardwareTextureAndroid={true}
+                >
+                    {renderSlideContent(renderedBackIndex)}
                     {renderedBackIndex === 0 && (
                         <>
                             <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']} style={styles.gradientOverlay} pointerEvents="none" />

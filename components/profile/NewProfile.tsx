@@ -3,25 +3,17 @@ import { View, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-nati
 import { useTheme } from '../../context/ThemeContext';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { NewProfileHeader } from './NewProfileHeader';
-import { AnimatedLevelProgressBar } from './AnimatedLevelProgressBar';
-import { LearningStatsGrid } from './LearningStatsGrid';
-import { AchievementsBelt } from './AchievementsBelt';
-import { CareerGoalCard } from './CareerGoalCard';
-import { IndustryInterestsCard } from './IndustryInterestsCard';
-import { ProfilePassionsCard } from './ProfilePassionsCard';
-import { ProfileWorkingOnCard } from './ProfileWorkingOnCard';
 import { TaglineEditModal } from './TaglineEditModal';
 import { IndustrySelectionPage } from './IndustrySelectionPage';
 import { AllAchievementsPage } from './AllAchievementsPage';
 import { CareerGoalEditModal } from './CareerGoalEditModal';
 import { PhotoUploadModal } from './PhotoUploadModal';
-import { StreakDisplay } from './StreakDisplay';
-import { OnboardingProgressCard } from '../onboarding/OnboardingProgressCard';
+import { SocialProfileHeader } from './SocialProfileHeader';
+import { UGCArchiveGrid } from './UGCArchiveGrid'; // [NEW]
 import SettingsModal from '../SettingsModal';
 import { supabase } from '../../lib/supabase';
 import { voltzService } from '../../lib/voltzService';
-import { AchievementService, UserAchievement } from '../../services/achievementService';
+import { streakService, StreakInfo } from '../../services/streakService';
 import { onboardingService } from '../../services/onboardingService';
 import { profileImageService } from '../../services/profileImageService';
 import { useIndustries } from '../../context/IndustriesContext';
@@ -67,7 +59,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const { colors } = useTheme();
   const { refreshIndustries } = useIndustries();
   const { openSettings } = useLocalSearchParams();
-  
+
   // Core profile data
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [fullName, setFullName] = useState<string>('');
@@ -79,14 +71,14 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [voltzForCurrentLevel, setVoltzForCurrentLevel] = useState<number>(0);
   const [voltzForNextLevel, setVoltzForNextLevel] = useState<number>(100);
   const [isLevelled, setIsLevelled] = useState<boolean>(false);
-  
+
   // Track previous values for level-up animations
   const [previousLevel, setPreviousLevel] = useState<number | undefined>(undefined);
   const [previousVoltz, setPreviousVoltz] = useState<number | undefined>(undefined);
-  
+
   // Refs to track component lifecycle
   const isMountedRef = useRef(true);
-  
+
   // Component data states
   const [careerGoal, setCareerGoal] = useState<CareerGoal | null>(null);
   const [industries, setIndustries] = useState<Industry[]>([]);
@@ -99,7 +91,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [profileData, setProfileData] = useState<ProfileData>({});
   const [profilePassions, setProfilePassions] = useState<ProfilePassion | null>(null);
   const [userTagline, setUserTagline] = useState<string | null>(null);
-  
+
   // UI states
   const [loading, setLoading] = useState(true);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
@@ -108,7 +100,42 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [showCareerGoalModal, setShowCareerGoalModal] = useState(false);
   const [showTaglineModal, setShowTaglineModal] = useState(false);
   const [showPhotoUploadModal, setShowPhotoUploadModal] = useState(false);
-  
+  const [streakInfo, setStreakInfo] = useState<StreakInfo | null>(null);
+  const [isClockedIn, setIsClockedIn] = useState(false);
+
+  // Fetch streak info on load
+  const loadStreakInfo = async () => {
+    if (!currentUser?.id) return;
+    try {
+      const info = await streakService.getStreakInfo(currentUser.id);
+      setStreakInfo(info);
+      // Simple logic for MVP: check if last_activity_date is today
+      if (info.last_activity_date) {
+        const lastDate = new Date(info.last_activity_date).toDateString();
+        const today = new Date().toDateString();
+        setIsClockedIn(lastDate === today);
+      }
+    } catch (e) {
+      console.error('Streak load error', e);
+    }
+  };
+
+  useEffect(() => {
+    if (currentUser) loadStreakInfo();
+  }, [currentUser]);
+
+  const handleClockIn = async () => {
+    if (!currentUser?.id) return;
+    try {
+      await streakService.updateStreak(currentUser.id);
+      await loadStreakInfo(); // Refresh UI
+      setIsClockedIn(true);
+      alert("Clocked In! Streak maintained.");
+    } catch (e) {
+      console.error("Clock In failed", e);
+    }
+  };
+
   // Component lifecycle management
   useEffect(() => {
     isMountedRef.current = true;
@@ -131,7 +158,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       setCurrentUser(userProp || null);
     }
   }, [userProp]);
-  
+
   // Fetch all profile data
   const fetchProfileData = useCallback(async () => {
     if (!currentUser || !isMountedRef.current) return;
@@ -224,13 +251,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           }
 
           const companies = companiesData?.map((c: any) => c.companies?.name).filter(Boolean) || [];
-          
+
           setCareerGoal({
             goal: goalData.goal || '',
             timeframe: goalData.timeframe || '',
             companies: companies.length > 0 ? companies : undefined
           });
-          
+
           console.log('✅ Career goal loaded successfully:', goalData.goal);
         } else {
           console.log('📝 No career goal found for user');
@@ -267,28 +294,28 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       const [articleLikesRes, articleSavesRes, articleCommentsRes,
         paperLikesRes, paperSavesRes, paperCommentsRes, bookLikesRes, bookSavesRes,
         bookCommentsRes, insightLikesRes, insightSavesRes, insightCommentsRes] = await Promise.all([
-        supabase.from('article_likes').select('article_id').eq('user_id', currentUser.id),
-        supabase.from('article_saves').select('article_id').eq('user_id', currentUser.id),
-        supabase.from('comments').select('article_id').eq('user_id', currentUser.id),
-        supabase.from('paper_likes').select('paper_id').eq('user_id', currentUser.id),
-        supabase.from('paper_saves').select('paper_id').eq('user_id', currentUser.id),
-        supabase.from('paper_comments').select('paper_id').eq('user_id', currentUser.id),
-        supabase.from('book_likes').select('book_id').eq('user_id', currentUser.id),
-        supabase.from('book_saves').select('book_id').eq('user_id', currentUser.id),
-        supabase.from('book_comments').select('book_id').eq('user_id', currentUser.id),
-        supabase.from('insight_likes').select('insight_id').eq('user_id', currentUser.id),
-        supabase.from('insight_saves').select('insight_id').eq('user_id', currentUser.id),
-        supabase.from('insight_comments').select('insight_id').eq('user_id', currentUser.id)
-      ]);
+          supabase.from('article_likes').select('article_id').eq('user_id', currentUser.id),
+          supabase.from('article_saves').select('article_id').eq('user_id', currentUser.id),
+          supabase.from('comments').select('article_id').eq('user_id', currentUser.id),
+          supabase.from('paper_likes').select('paper_id').eq('user_id', currentUser.id),
+          supabase.from('paper_saves').select('paper_id').eq('user_id', currentUser.id),
+          supabase.from('paper_comments').select('paper_id').eq('user_id', currentUser.id),
+          supabase.from('book_likes').select('book_id').eq('user_id', currentUser.id),
+          supabase.from('book_saves').select('book_id').eq('user_id', currentUser.id),
+          supabase.from('book_comments').select('book_id').eq('user_id', currentUser.id),
+          supabase.from('insight_likes').select('insight_id').eq('user_id', currentUser.id),
+          supabase.from('insight_saves').select('insight_id').eq('user_id', currentUser.id),
+          supabase.from('insight_comments').select('insight_id').eq('user_id', currentUser.id)
+        ]);
 
-      const totalInteractions = (articleLikesRes.data?.length || 0) + 
-                               (articleSavesRes.data?.length || 0) + (articleCommentsRes.data?.length || 0) +
-                               (paperLikesRes.data?.length || 0) + 
-                               (paperSavesRes.data?.length || 0) + (paperCommentsRes.data?.length || 0) +
-                               (bookLikesRes.data?.length || 0) + 
-                               (bookSavesRes.data?.length || 0) + (bookCommentsRes.data?.length || 0) +
-                               (insightLikesRes.data?.length || 0) + 
-                               (insightSavesRes.data?.length || 0) + (insightCommentsRes.data?.length || 0);
+      const totalInteractions = (articleLikesRes.data?.length || 0) +
+        (articleSavesRes.data?.length || 0) + (articleCommentsRes.data?.length || 0) +
+        (paperLikesRes.data?.length || 0) +
+        (paperSavesRes.data?.length || 0) + (paperCommentsRes.data?.length || 0) +
+        (bookLikesRes.data?.length || 0) +
+        (bookSavesRes.data?.length || 0) + (bookCommentsRes.data?.length || 0) +
+        (insightLikesRes.data?.length || 0) +
+        (insightSavesRes.data?.length || 0) + (insightCommentsRes.data?.length || 0);
 
       const { data: achievementsCountData } = await supabase
         .from('user_achievements')
@@ -346,7 +373,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
   useEffect(() => {
     fetchProfileData();
-    
+
     // Track profile view (analytics temporarily disabled)
     if (currentUser?.id) {
       console.log('📊 Profile viewed by user:', currentUser.id);
@@ -408,7 +435,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
   const handleIndustrySave = async (selectedIndustries: any[]) => {
     if (!isMountedRef.current) return;
-    
+
     try {
       const formattedIndustries = selectedIndustries.map(industry => ({
         id: industry.id || industry.name,
@@ -417,11 +444,11 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       }));
       setIndustries(formattedIndustries);
       setShowIndustrySelection(false);
-      
+
       console.log('🔄 Profile: Refreshing industries context after industry update...');
       await refreshIndustries();
       console.log('✅ Profile: Industries context refreshed successfully');
-      
+
       // TODO: AsyncStorage operations disabled due to potential native build crash
       // try {
       //   const AsyncStorage = await import('@react-native-async-storage/async-storage');
@@ -432,7 +459,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       //   console.warn('⚠️ Profile: Failed to clear viewed content cache:', cacheError);
       // }
       console.log('⚠️ AsyncStorage cache clearing disabled for crash testing');
-      
+
     } catch (error) {
       console.error('❌ Profile: Error in handleIndustrySave:', error);
     }
@@ -495,103 +522,33 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <View
-          style={[styles.gradientHeader, { backgroundColor: colors.background }]}
-        >
-          <TouchableOpacity
-            style={styles.settingsButton}
-            onPress={() => setIsSettingsModalVisible(true)}
-          >
-            <Feather name="settings" size={24} color={colors.text} />
-          </TouchableOpacity>
-
-          <NewProfileHeader
+        <View style={{ backgroundColor: colors.background }}>
+          <SocialProfileHeader
+            user={currentUser}
             fullName={fullName}
             avatarUrl={avatarUrl}
-            userLevel={userLevel}
             tagline={userTagline}
-            onAvatarPress={handleAvatarPress}
-            onTaglinePress={handleTaglinePress}
+            level={userLevel}
+            voltz={totalVoltzEarned}
+            streak={streakInfo?.current_streak || 0}
+            isClockedIn={isClockedIn}
+            onClockIn={handleClockIn}
+            onSettings={() => setIsSettingsModalVisible(true)}
+            onEditProfile={() => setShowTaglineModal(true)} // Double as quick edit for MVP
+            onShareProfile={() => { }}
           />
         </View>
-        
-        {showOnboardingProgress && currentUser && (
-          <OnboardingProgressCard
-            userId={currentUser.id}
-            onStepPress={(step) => {
-              console.log('User wants to complete onboarding step:', step);
-            }}
-          />
-        )}
 
-        <AnimatedLevelProgressBar
-          level={userLevel}
-          currentVoltz={totalVoltzEarned}
-          spendableVoltz={spendableVoltz}
-          levelProgress={levelProgress}
-          voltzForCurrentLevel={voltzForCurrentLevel}
-          voltzForNextLevel={voltzForNextLevel}
-          previousLevel={previousLevel}
-          previousVoltz={previousVoltz}
-          triggerLevelUpAnimation={isLevelled}
-          onLevelUpAnimationComplete={async () => {
-            if (currentUser?.id) {
-              console.log('🎬 Level-up animation complete, resetting flag...');
-              await voltzService.resetLevelUpFlag(currentUser.id);
-              setIsLevelled(false);
-            }
-          }}
-        />
-
-        <LearningStatsGrid
-          stats={learningStats}
-          loading={loading}
-        />
-
-        <StreakDisplay
-          userId={currentUser?.id || ''}
-          onRefresh={fetchProfileData}
-        />
-
-        <AchievementsBelt
-          userId={currentUser?.id || ''}
-          loading={loading}
-          onSeeAll={handleShowAllAchievements}
-        />
-
-        <CareerGoalCard
-          goalData={careerGoal}
-          onEditPress={handleEditCareerGoal}
-          loading={loading}
-        />
-
-        <IndustryInterestsCard
-          industries={industries}
-          onEditPress={handleEditIndustries}
-          loading={loading}
-        />
-
-        <ProfilePassionsCard
-          passions={profilePassions}
-          userId={currentUser?.id || ''}
-          loading={loading}
-          onRefresh={fetchProfileData}
-        />
-
-        <ProfileWorkingOnCard
-          passions={profilePassions}
-          userId={currentUser?.id || ''}
-          loading={loading}
-          onRefresh={fetchProfileData}
-        />
+        {/* UGC Grid */}
+        <UGCArchiveGrid userId={currentUser?.id} />
       </ScrollView>
 
       <SettingsModal
         visible={isSettingsModalVisible}
         onClose={() => setIsSettingsModalVisible(false)}
-        navigateTo={navigateTo || (() => {})}
-        signOut={signOut || (async () => {})}
-        deleteAccount={deleteAccount || (async () => {})}
+        navigateTo={navigateTo || (() => { })}
+        signOut={signOut || (async () => { })}
+        deleteAccount={deleteAccount || (async () => { })}
       />
 
       <CareerGoalEditModal

@@ -151,9 +151,9 @@ export const voltzService = {
       if (reason.includes('supercharg') && subjectId && subjectType === 'insight') {
         const { error: updateError } = await supabase
           .from('insights')
-          .update({ 
+          .update({
             supercharged: true,
-            voltz_spent: amount 
+            voltz_spent: amount
           })
           .eq('id', subjectId);
 
@@ -215,6 +215,26 @@ export const voltzService = {
       return data || [];
     } catch (error) {
       console.error('Exception fetching transaction history:', error);
+      return [];
+    }
+  },
+  // Get global leaderboard
+  async getLeaderboard(limit: number = 50): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, total_voltz_earned, level')
+        .order('total_voltz_earned', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('Error fetching leaderboard:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Exception fetching leaderboard:', error);
       return [];
     }
   },

@@ -92,6 +92,10 @@ CREATE TABLE public.articles (
   longer_summary text,
   animation_code text,
   storyboard text,
+  special boolean NOT NULL DEFAULT false,
+  narrative_code ARRAY,
+  colour text NOT NULL DEFAULT '''blue''::text'::text,
+  image_url text,
   CONSTRAINT articles_pkey PRIMARY KEY (id),
   CONSTRAINT articles_industry_id_fkey FOREIGN KEY (industry_id) REFERENCES public.industries(id)
 );
@@ -524,6 +528,10 @@ CREATE TABLE public.learning_sessions_2025_08 (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  max_scroll_depth integer DEFAULT 0 CHECK (max_scroll_depth >= 0 AND max_scroll_depth <= 100),
+  slides_viewed integer DEFAULT 0 CHECK (slides_viewed >= 0),
+  total_slides integer DEFAULT 0 CHECK (total_slides >= 0),
+  session_id uuid,
   CONSTRAINT learning_sessions_2025_08_pkey PRIMARY KEY (id, session_start_time),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -547,6 +555,10 @@ CREATE TABLE public.learning_sessions_2025_09 (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  max_scroll_depth integer DEFAULT 0 CHECK (max_scroll_depth >= 0 AND max_scroll_depth <= 100),
+  slides_viewed integer DEFAULT 0 CHECK (slides_viewed >= 0),
+  total_slides integer DEFAULT 0 CHECK (total_slides >= 0),
+  session_id uuid,
   CONSTRAINT learning_sessions_2025_09_pkey PRIMARY KEY (id, session_start_time),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
@@ -570,7 +582,92 @@ CREATE TABLE public.learning_sessions_2025_10 (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  max_scroll_depth integer DEFAULT 0 CHECK (max_scroll_depth >= 0 AND max_scroll_depth <= 100),
+  slides_viewed integer DEFAULT 0 CHECK (slides_viewed >= 0),
+  total_slides integer DEFAULT 0 CHECK (total_slides >= 0),
+  session_id uuid,
   CONSTRAINT learning_sessions_2025_10_pkey PRIMARY KEY (id, session_start_time),
+  CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.learning_sessions_2026_01 (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  content_type text NOT NULL CHECK (content_type = ANY (ARRAY['article'::text, 'paper'::text, 'book'::text, 'insight'::text, 'quiz'::text, 'video'::text])),
+  content_id bigint NOT NULL,
+  session_start_time timestamp with time zone NOT NULL DEFAULT now(),
+  session_end_time timestamp with time zone,
+  duration_seconds integer CHECK (duration_seconds >= 0),
+  interaction_events jsonb DEFAULT '[]'::jsonb,
+  completion_percentage numeric DEFAULT 0 CHECK (completion_percentage >= 0::numeric AND completion_percentage <= 100::numeric),
+  engagement_score numeric DEFAULT 0 CHECK (engagement_score >= 0::numeric AND engagement_score <= 10::numeric),
+  session_quality_score integer CHECK (session_quality_score >= 1 AND session_quality_score <= 10),
+  device_type text,
+  referrer_source text,
+  notes text,
+  bookmarks jsonb DEFAULT '[]'::jsonb,
+  quiz_score integer CHECK (quiz_score >= 0 AND quiz_score <= 100),
+  is_completed boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  max_scroll_depth integer DEFAULT 0 CHECK (max_scroll_depth >= 0 AND max_scroll_depth <= 100),
+  slides_viewed integer DEFAULT 0 CHECK (slides_viewed >= 0),
+  total_slides integer DEFAULT 0 CHECK (total_slides >= 0),
+  session_id uuid,
+  CONSTRAINT learning_sessions_2026_01_pkey PRIMARY KEY (id, session_start_time),
+  CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.learning_sessions_2026_02 (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  content_type text NOT NULL CHECK (content_type = ANY (ARRAY['article'::text, 'paper'::text, 'book'::text, 'insight'::text, 'quiz'::text, 'video'::text])),
+  content_id bigint NOT NULL,
+  session_start_time timestamp with time zone NOT NULL DEFAULT now(),
+  session_end_time timestamp with time zone,
+  duration_seconds integer CHECK (duration_seconds >= 0),
+  interaction_events jsonb DEFAULT '[]'::jsonb,
+  completion_percentage numeric DEFAULT 0 CHECK (completion_percentage >= 0::numeric AND completion_percentage <= 100::numeric),
+  engagement_score numeric DEFAULT 0 CHECK (engagement_score >= 0::numeric AND engagement_score <= 10::numeric),
+  session_quality_score integer CHECK (session_quality_score >= 1 AND session_quality_score <= 10),
+  device_type text,
+  referrer_source text,
+  notes text,
+  bookmarks jsonb DEFAULT '[]'::jsonb,
+  quiz_score integer CHECK (quiz_score >= 0 AND quiz_score <= 100),
+  is_completed boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  max_scroll_depth integer DEFAULT 0 CHECK (max_scroll_depth >= 0 AND max_scroll_depth <= 100),
+  slides_viewed integer DEFAULT 0 CHECK (slides_viewed >= 0),
+  total_slides integer DEFAULT 0 CHECK (total_slides >= 0),
+  session_id uuid,
+  CONSTRAINT learning_sessions_2026_02_pkey PRIMARY KEY (id, session_start_time),
+  CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.learning_sessions_2026_03 (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  content_type text NOT NULL CHECK (content_type = ANY (ARRAY['article'::text, 'paper'::text, 'book'::text, 'insight'::text, 'quiz'::text, 'video'::text])),
+  content_id bigint NOT NULL,
+  session_start_time timestamp with time zone NOT NULL DEFAULT now(),
+  session_end_time timestamp with time zone,
+  duration_seconds integer CHECK (duration_seconds >= 0),
+  interaction_events jsonb DEFAULT '[]'::jsonb,
+  completion_percentage numeric DEFAULT 0 CHECK (completion_percentage >= 0::numeric AND completion_percentage <= 100::numeric),
+  engagement_score numeric DEFAULT 0 CHECK (engagement_score >= 0::numeric AND engagement_score <= 10::numeric),
+  session_quality_score integer CHECK (session_quality_score >= 1 AND session_quality_score <= 10),
+  device_type text,
+  referrer_source text,
+  notes text,
+  bookmarks jsonb DEFAULT '[]'::jsonb,
+  quiz_score integer CHECK (quiz_score >= 0 AND quiz_score <= 100),
+  is_completed boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  max_scroll_depth integer DEFAULT 0 CHECK (max_scroll_depth >= 0 AND max_scroll_depth <= 100),
+  slides_viewed integer DEFAULT 0 CHECK (slides_viewed >= 0),
+  total_slides integer DEFAULT 0 CHECK (total_slides >= 0),
+  session_id uuid,
+  CONSTRAINT learning_sessions_2026_03_pkey PRIMARY KEY (id, session_start_time),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.learning_sessions_partitioned (
@@ -593,8 +690,19 @@ CREATE TABLE public.learning_sessions_partitioned (
   is_completed boolean DEFAULT false,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  max_scroll_depth integer DEFAULT 0 CHECK (max_scroll_depth >= 0 AND max_scroll_depth <= 100),
+  slides_viewed integer DEFAULT 0 CHECK (slides_viewed >= 0),
+  total_slides integer DEFAULT 0 CHECK (total_slides >= 0),
+  session_id uuid,
   CONSTRAINT learning_sessions_partitioned_pkey PRIMARY KEY (id, session_start_time),
   CONSTRAINT learning_sessions_partitioned_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.new_format_concensus (
+  user_id uuid NOT NULL,
+  preference boolean NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT new_format_concensus_pkey PRIMARY KEY (user_id),
+  CONSTRAINT new_format_concensus_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.notification_batches (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

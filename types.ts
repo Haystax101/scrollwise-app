@@ -76,6 +76,10 @@ export interface Article extends BaseContent {
   hasSlides?: boolean; // Whether this article has story-driven slides
   animation_code?: string; // HTML/JS code for WebView animations
   narrative_code?: string[]; // Array of HTML/JS code for subsequent narrative slides
+  image_url?: string; // Background image for native slides
+  colour?: string; // Theme colour (hex) for native slides
+  narrative_text?: string[]; // JSON array of text for native slides
+  front_cover_code?: string; // HTML/JS for the cover slide (WebView)
   storyboard?: string; // Reserved for future use
   special?: boolean; // Triggers 65% height animation layout w/o title/summary
 }

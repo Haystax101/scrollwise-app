@@ -3,14 +3,14 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Index() {
   const { user, loading } = useAuth();
-  
+
   if (loading) {
     return null;
   }
-  
+
   if (user) {
-    return <Redirect href="/feed" />;
+    return <Redirect href="/(tabs)" />;
   }
-  
+
   return <Redirect href="/onboarding" />;
 }

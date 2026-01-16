@@ -11,15 +11,30 @@ interface ExpandedTextModalProps {
   content: string | React.ReactNode;
   externalLink?: string;
   contentType: 'article' | 'paper' | 'book' | 'insight';
+  onScrollDepthChange?: (depthPercentage: number) => void;
 }
 
-export const ExpandedTextModal: React.FC<ExpandedTextModalProps> = ({ visible, onClose, title, content, externalLink, contentType }) => {
+export const ExpandedTextModal: React.FC<ExpandedTextModalProps> = ({ visible, onClose, title, content, externalLink, contentType, onScrollDepthChange }) => {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
   const handleReadFull = () => {
     if (externalLink) {
       Linking.openURL(externalLink);
+    }
+  };
+
+  const handleScroll = (event: any) => {
+    if (!onScrollDepthChange) return;
+
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const scrollDepth = contentOffset.y + layoutMeasurement.height;
+    const totalHeight = contentSize.height;
+
+    if (totalHeight > 0) {
+      const percentage = Math.round((scrollDepth / totalHeight) * 100);
+      // Ensure we don't send > 100 due to overscroll or bounce
+      onScrollDepthChange(Math.min(percentage, 100));
     }
   };
 
@@ -37,7 +52,11 @@ export const ExpandedTextModal: React.FC<ExpandedTextModalProps> = ({ visible, o
             <Feather name="x" size={28} color={colors.text} />
           </TouchableOpacity>
         </View>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={100} // Fire every 100ms
+        >
           {typeof content === 'string' ? (
             <Text style={[styles.contentText, { color: colors.text }]}>{content}</Text>
           ) : (
@@ -46,7 +65,7 @@ export const ExpandedTextModal: React.FC<ExpandedTextModalProps> = ({ visible, o
         </ScrollView>
         {externalLink && (
           <View style={styles.footer}>
-            <TouchableOpacity style={[styles.readFullButton, { 
+            <TouchableOpacity style={[styles.readFullButton, {
               backgroundColor: 'transparent',
               borderColor: colors.primary,
               borderWidth: 1
