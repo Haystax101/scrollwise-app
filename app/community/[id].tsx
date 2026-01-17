@@ -67,9 +67,10 @@ export default function CommunityDetailScreen() {
     };
 
     const handleCreatePost = () => {
-        // Open Create Post Modal
-        // For MVP, router.push('/create-post') or modal
-        console.log('Open Create Post Modal');
+        router.push({
+            pathname: '/create-community-post',
+            params: { communityId }
+        });
     };
 
     return (

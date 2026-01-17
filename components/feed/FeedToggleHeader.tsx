@@ -14,15 +14,28 @@ import { useRouter } from 'expo-router';
 
 export type FeedType = 'learning' | 'community';
 
+// ... imports
+import { Feather } from '@expo/vector-icons';
+
+const BUTTON_WIDTH = 140; // Widened from 120
+const BUTTON_HEIGHT = 40;
+
 interface FeedToggleHeaderProps {
     activeFeed: FeedType;
     onToggle: (feed: FeedType) => void;
+    // New Props for Community Dropdown
+    activeCommunity: any | null;
+    onToggleDropdown: () => void;
+    isDropdownOpen: boolean;
 }
 
-const BUTTON_WIDTH = 120;
-const BUTTON_HEIGHT = 40;
-
-export const FeedToggleHeader: React.FC<FeedToggleHeaderProps> = ({ activeFeed, onToggle }) => {
+export const FeedToggleHeader: React.FC<FeedToggleHeaderProps> = ({
+    activeFeed,
+    onToggle,
+    activeCommunity,
+    onToggleDropdown,
+    isDropdownOpen
+}) => {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const translateX = useSharedValue(0);
@@ -38,11 +51,20 @@ export const FeedToggleHeader: React.FC<FeedToggleHeaderProps> = ({ activeFeed, 
         transform: [{ translateX: translateX.value }]
     }));
 
+    const handleCommunityPress = () => {
+        if (activeFeed === 'community') {
+            // Already active? Toggle Dropdown
+            onToggleDropdown();
+        } else {
+            // Switch to Community Feed
+            onToggle('community');
+        }
+    };
+
     return (
         <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
             <BlurView intensity={80} tint="dark" style={styles.glassContainer}>
-
-                {/* Animated Highlight Background */}
+                {/* Highlight */}
                 <Animated.View style={[styles.highlight, highlightStyle]} />
 
                 <View style={styles.buttonRow}>
@@ -56,13 +78,28 @@ export const FeedToggleHeader: React.FC<FeedToggleHeaderProps> = ({ activeFeed, 
 
                     <TouchableOpacity
                         style={styles.button}
-                        onPress={() => onToggle('community')}
+                        onPress={handleCommunityPress}
                         activeOpacity={0.8}
                     >
-                        <Text style={[styles.text, activeFeed === 'community' && styles.activeText]}>Community</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, width: '100%' }}>
+                            <Text
+                                style={[styles.text, activeFeed === 'community' && styles.activeText, { flexShrink: 1, textAlign: 'center' }]}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                            >
+                                {activeCommunity ? activeCommunity.name : 'Community'}
+                            </Text>
+                            {activeFeed === 'community' && (
+                                <Feather
+                                    name={isDropdownOpen ? "chevron-up" : "chevron-down"}
+                                    size={14}
+                                    color="white"
+                                    style={{ marginLeft: 4, flexShrink: 0 }}
+                                />
+                            )}
+                        </View>
                     </TouchableOpacity>
                 </View>
-
             </BlurView>
 
             {/* Right Search Icon */}
@@ -85,8 +122,9 @@ const styles = StyleSheet.create({
         top: 0,
         left: 0,
         right: 0,
-        alignItems: 'center',
-        zIndex: 100, // Ensure it sits on top of feed
+        alignItems: 'flex-start', // Left align
+        paddingLeft: 20, // Add padding
+        zIndex: 100,
     },
     glassContainer: {
         flexDirection: 'row',

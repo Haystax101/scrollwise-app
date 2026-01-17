@@ -1,4 +1,6 @@
 import { supabase } from './supabase';
+import { decode } from 'base64-arraybuffer';
+import * as FileSystem from 'expo-file-system';
 
 export interface FeedItem {
     id: string;
@@ -10,9 +12,27 @@ export interface FeedItem {
     created_at: string;
     author_name: string;
     author_avatar: string;
+    community_id?: string;
+    community_name?: string;
+    community_avatar?: string;
 }
 
 export const communityService = {
+    // Fetch General Feed (FYP)
+    async getGeneralFeed(limit = 50, offset = 0): Promise<FeedItem[]> {
+        const { data, error } = await supabase.rpc('get_general_community_feed', {
+            limit_count: limit,
+            offset_count: offset
+        });
+
+        if (error) {
+            console.error('Error fetching general feed:', error);
+            return [];
+        }
+
+        return data || [];
+    },
+
     // Fetch unified feed (Posts + Messages)
     async getCommunityFeed(communityId: string, limit = 50, offset = 0): Promise<FeedItem[]> {
         const { data, error } = await supabase.rpc('get_community_feed', {
@@ -78,5 +98,38 @@ export const communityService = {
             return [];
         }
         return data || [];
+    },
+
+    // Upload Update
+    async uploadCommunityImage(uri: string): Promise<string | null> {
+        try {
+            const base64 = await FileSystem.readAsStringAsync(uri, {
+                encoding: 'base64',
+            });
+
+            const fileName = `post-${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
+            const filePath = `${fileName}`;
+
+            const { data, error } = await supabase.storage
+                .from('community-media')
+                .upload(filePath, decode(base64), {
+                    contentType: 'image/jpeg',
+                });
+
+            if (error) {
+                console.error('Error uploading image:', error);
+                return null;
+            }
+
+            // Get Public URL
+            const { data: publicUrlData } = supabase.storage
+                .from('community-media')
+                .getPublicUrl(filePath);
+
+            return publicUrlData.publicUrl;
+        } catch (e) {
+            console.error('Error in uploadCommunityImage:', e);
+            return null;
+        }
     }
 };

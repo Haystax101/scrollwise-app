@@ -26,6 +26,20 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, currentUserId, onPress
 
     // RENDER MESSAGE (Chat Bubble)
     if (item.type === 'message') {
+        const bubbleStyle = isOwner
+            ? {
+                backgroundColor: 'rgba(255, 215, 0, 0.1)', // Gold accent glass
+                borderColor: 'rgba(255, 215, 0, 0.3)',
+                borderWidth: 1,
+                borderBottomRightRadius: 2,
+            }
+            : {
+                backgroundColor: 'rgba(255, 255, 255, 0.05)', // Glassy dark
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                borderWidth: 1,
+                borderTopLeftRadius: 2,
+            };
+
         return (
             <View style={[
                 styles.messageContainer,
@@ -37,18 +51,18 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, currentUserId, onPress
 
                 <View style={[
                     styles.messageBubble,
-                    isOwner ? { backgroundColor: colors.primary } : { backgroundColor: colors.card },
+                    bubbleStyle
                 ]}>
-                    {!isOwner && <Text style={[styles.messageAuthor, { color: colors.primary }]}>{item.author_name}</Text>}
+                    {!isOwner && <Text style={[styles.messageAuthor, { color: colors.text }]}>{item.author_name}</Text>}
                     <Text style={[
                         styles.messageText,
-                        { color: isOwner ? 'white' : colors.text }
+                        { color: colors.text } // Text always light/default
                     ]}>
                         {item.content}
                     </Text>
                     <Text style={[
                         styles.messageTime,
-                        { color: isOwner ? 'rgba(255,255,255,0.7)' : colors.textSecondary }
+                        { color: colors.textSecondary }
                     ]}>
                         {timeAgo}
                     </Text>

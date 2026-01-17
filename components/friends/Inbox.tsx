@@ -36,7 +36,7 @@ interface NotificationItem {
   content_id?: string;
 }
 
-export function Inbox() {
+export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
@@ -523,15 +523,17 @@ export function Inbox() {
   return (
     <SafeAreaView style={dynamicStyles.container}>
       {/* Header */}
-      <View style={dynamicStyles.header}>
-        <TouchableOpacity
-          style={dynamicStyles.backButton}
-          onPress={() => router.back()}
-        >
-          <Feather name="arrow-left" size={20} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={dynamicStyles.headerTitle}>Inbox</Text>
-      </View>
+      {showHeader && (
+        <View style={dynamicStyles.header}>
+          <TouchableOpacity
+            style={dynamicStyles.backButton}
+            onPress={() => router.back()}
+          >
+            <Feather name="arrow-left" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={dynamicStyles.headerTitle}>Inbox</Text>
+        </View>
+      )}
 
       {/* Tabs */}
       <View style={dynamicStyles.tabs}>
