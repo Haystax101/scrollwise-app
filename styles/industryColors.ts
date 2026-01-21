@@ -54,7 +54,7 @@ export const INDUSTRY_COLORS: Record<string, Omit<IndustryColor, 'id' | 'name'>>
     text: '#FFFFFF'
   },
 
-  // Creative Industries and the Arts
+  // Law
   creative: {
     primary: '#880E4F', // Pink
     background: '#880E4F33',
@@ -103,15 +103,15 @@ export const getIndustryColors = (industryIdentifier: string): Omit<IndustryColo
   if (!industryIdentifier) {
     return INDUSTRY_COLORS.default;
   }
-  
+
   // Normalize the identifier: lowercase, remove spaces and special chars
   const normalized = industryIdentifier.toLowerCase().replace(/[^a-z0-9]/g, '');
-  
+
   // Direct match
   if (INDUSTRY_COLORS[normalized]) {
     return INDUSTRY_COLORS[normalized];
   }
-  
+
   // Fuzzy matching for common variations
   const fuzzyMatches: Record<string, string> = {
     // Finance variations
@@ -176,19 +176,19 @@ export const getIndustryColors = (industryIdentifier: string): Omit<IndustryColo
     'university': 'education',
     'school': 'education'
   };
-  
+
   // Check fuzzy matches
   if (fuzzyMatches[normalized]) {
     return INDUSTRY_COLORS[fuzzyMatches[normalized]];
   }
-  
+
   // Check if the normalized identifier contains any of our industry keys
   for (const industryKey of Object.keys(INDUSTRY_COLORS)) {
     if (normalized.includes(industryKey) || industryKey.includes(normalized)) {
       return INDUSTRY_COLORS[industryKey];
     }
   }
-  
+
   // Return default if no match found
   return INDUSTRY_COLORS.default;
 };
@@ -213,16 +213,16 @@ export const generateIndustryColor = (industryIdentifier: string): Omit<Industry
     '#3E2723', // Brown
     '#424242', // Gray
   ];
-  
+
   // Generate hash from industry identifier
   const hash = industryIdentifier.split('').reduce((a, b) => {
     a = ((a << 5) - a) + b.charCodeAt(0);
     return a & a;
   }, 0);
-  
+
   const colorIndex = Math.abs(hash) % hashColors.length;
   const primaryColor = hashColors[colorIndex];
-  
+
   return {
     primary: primaryColor,
     background: primaryColor + '33', // 20% opacity
@@ -238,12 +238,12 @@ export const generateIndustryColor = (industryIdentifier: string): Omit<Industry
 export const getIndustryColorScheme = (industryIdentifier: string): Omit<IndustryColor, 'id' | 'name'> => {
   // First try to get predefined colors
   const predefinedColors = getIndustryColors(industryIdentifier);
-  
+
   // If it's the default color and we have a specific identifier, try hash-based generation
   if (predefinedColors === INDUSTRY_COLORS.default && industryIdentifier && industryIdentifier.toLowerCase() !== 'default') {
     return generateIndustryColor(industryIdentifier);
   }
-  
+
   return predefinedColors;
 };
 
@@ -258,15 +258,15 @@ export const GOLDEN_PRIMARY = '#EAB308';
 export const needsDarkText = (hexColor: string): boolean => {
   // Remove # if present
   const color = hexColor.replace('#', '');
-  
+
   // Convert to RGB
   const r = parseInt(color.substr(0, 2), 16);
   const g = parseInt(color.substr(2, 2), 16);
   const b = parseInt(color.substr(4, 2), 16);
-  
+
   // Calculate luminance
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  
+
   // Return true if the color is light (needs dark text)
   return luminance > 0.6;
 };

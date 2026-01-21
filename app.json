@@ -3,7 +3,7 @@
     "name": "Supercharged",
     "slug": "supercharged",
     "scheme": "supercharged",
-    "version": "1.0.4",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -24,7 +24,7 @@
       "associatedDomains": [
         "applinks:learningsupercharged.com"
       ],
-      "buildNumber": "15"
+      "buildNumber": "18"
     },
     "android": {
       "adaptiveIcon": {
@@ -62,7 +62,7 @@
     "updates": {
       "url": "https://u.expo.dev/75912aaa-18b2-4f42-89ca-8e8bc19698db"
     },
-    "runtimeVersion": "1.0.4",
+    "runtimeVersion": "2.0.0",
     "extra": {
       "router": {},
       "eas": {

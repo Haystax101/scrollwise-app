@@ -22,7 +22,11 @@ import { FeedbackBoardModal } from '../feedback/FeedbackBoardModal';
 import { NotificationService } from '../../lib/notificationService';
 import type { FriendProfile, LeaderboardEntry, FriendSuggestion, FriendsListItem } from '../../types/friends';
 
-export function People() {
+interface PeopleProps {
+  initialUserId?: string;
+}
+
+export function People({ initialUserId }: PeopleProps) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
@@ -34,11 +38,19 @@ export function People() {
   const [friends, setFriends] = useState<FriendsListItem[]>([]);
   const [, setLoading] = useState(true);
   const [requestsCount, setRequestsCount] = useState(0);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [showUserModal, setShowUserModal] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(initialUserId || null);
+  const [showUserModal, setShowUserModal] = useState(!!initialUserId);
   const [addedUsers, setAddedUsers] = useState<Set<string>>(new Set());
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  useEffect(() => {
+    if (initialUserId) {
+      console.log('🔗 People Component: Opening profile for:', initialUserId);
+      setSelectedUserId(initialUserId);
+      setShowUserModal(true);
+    }
+  }, [initialUserId]);
 
   useEffect(() => {
     if (user) {

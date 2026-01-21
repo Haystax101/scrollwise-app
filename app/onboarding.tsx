@@ -10,23 +10,23 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const params = useSearchParams();
   const tutorialOnly = params.get('tutorialOnly') === 'true';
-  
+
   const onComplete = () => {
     router.replace('/profile');
   };
-  
+
   const onSignIn = () => {
-    router.replace('/feed');
+    router.replace('/(tabs)');
   };
-  
+
   if (loading) {
     return null;
   }
-  
-  return <NewOnboarding 
-    onComplete={onComplete} 
-    onSignIn={onSignIn} 
-    tutorialOnly={tutorialOnly} 
-    refreshMainFeed={refreshIndustries} 
+
+  return <NewOnboarding
+    onComplete={onComplete}
+    onSignIn={onSignIn}
+    tutorialOnly={tutorialOnly}
+    refreshMainFeed={refreshIndustries}
   />;
 }

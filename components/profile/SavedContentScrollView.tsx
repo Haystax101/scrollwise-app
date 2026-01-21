@@ -22,25 +22,25 @@ const getIndustryColor = (industryId: string): string => {
     '#311B92', // Purple
     '#004D40', // Teal
   ];
-  
+
   // Use industryId as seed for consistent color assignment
   const hash = industryId.split('').reduce((a, b) => {
     a = ((a << 5) - a) + b.charCodeAt(0);
     return a & a;
   }, 0);
-  
+
   return colors[Math.abs(hash) % colors.length];
 };
 
 interface SavedContent {
-  id: number;
+  id: number | string; // Changed to allow UUIDs for insights
   title: string;
-  type: 'article' | 'paper' | 'book';
+  type: 'article' | 'paper' | 'book' | 'insight' | 'video';
   summary?: string;
   author?: string;
   authors?: string[];
   created_at: string;
-  industry_id: string;
+  industry_id?: string; // Optional for some types
   saved_at: string;
 }
 
@@ -72,9 +72,9 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
       if (isMountedRef.current) {
         setLoading(true);
       }
-      
-      // Fetch saved articles, papers, and books in parallel
-      const [articlesRes, papersRes, booksRes] = await Promise.all([
+
+      // Fetch saved articles, papers, books, insights, and generic content (videos) in parallel
+      const [articlesRes, papersRes, booksRes, insightsRes, videosRes] = await Promise.all([
         supabase
           .from('article_saves')
           .select(`
@@ -86,7 +86,7 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(10),
-        
+
         supabase
           .from('paper_saves')
           .select(`
@@ -98,7 +98,7 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(10),
-        
+
         supabase
           .from('book_saves')
           .select(`
@@ -109,8 +109,32 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
+          .limit(10),
+
+        supabase
+          .from('insight_saves')
+          .select(`
+            created_at,
+            insights (
+              id, content, created_at, author_id
+            )
+          `)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(10),
+
+        // Fetch saved videos from content_saves
+        supabase
+          .from('content_saves')
+          .select('content_id, created_at')
+          .eq('user_id', user.id)
+          .eq('content_type', 'video')
+          .order('created_at', { ascending: false })
           .limit(10)
       ]);
+
+      console.log('Fetched Articles:', articlesRes.data?.length, articlesRes.error);
+      if (articlesRes.error) console.error('Article Fetch Error:', articlesRes.error);
 
       const allSavedContent: SavedContent[] = [];
 
@@ -168,9 +192,52 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
         });
       }
 
+      // Process insights
+      if (insightsRes.data) {
+        insightsRes.data.forEach((item: any) => {
+          if (item.insights) {
+            // Simplified handling for insights - might need author fetch if critical
+            allSavedContent.push({
+              id: item.insights.id,
+              title: 'Insight', // Insights often lack titles, using generic or content snippet
+              type: 'insight',
+              summary: item.insights.content?.substring(0, 100),
+              created_at: item.insights.created_at,
+              saved_at: item.created_at
+            });
+          }
+        });
+      }
+
+      // Process videos (Requires hydration since content_saves doesn't join automatically depending on setup)
+      if (videosRes.data && videosRes.data.length > 0) {
+        const videoIds = videosRes.data.map((v: any) => v.content_id);
+        const { data: videos } = await supabase
+          .from('videos')
+          .select('id, title, site_name, created_at, industry_id')
+          .in('id', videoIds);
+
+        if (videos) {
+          videosRes.data.forEach((item: any) => {
+            const videoData = videos.find((v: any) => v.id === item.content_id);
+            if (videoData) {
+              allSavedContent.push({
+                id: videoData.id,
+                title: videoData.title,
+                type: 'video',
+                summary: videoData.site_name, // Using site name as mock summary/subtitle
+                created_at: videoData.created_at,
+                industry_id: videoData.industry_id,
+                saved_at: item.created_at
+              });
+            }
+          });
+        }
+      }
+
       // Sort by saved date and limit to 8 most recent items
       allSavedContent.sort((a, b) => new Date(b.saved_at).getTime() - new Date(a.saved_at).getTime());
-      
+
       if (isMountedRef.current) {
         setSavedContent(allSavedContent.slice(0, 8));
       }
@@ -186,7 +253,7 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
 
   useEffect(() => {
     fetchSavedContent();
-    
+
     // Cleanup function for component unmount
     return () => {
       isMountedRef.current = false;
@@ -201,6 +268,10 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
         return <MaterialCommunityIcons name="file-document-outline" size={14} color={colors.textSecondary} />;
       case 'book':
         return <FontAwesome name="book" size={14} color={colors.textSecondary} />;
+      case 'insight':
+        return <Feather name="zap" size={14} color={colors.textSecondary} />;
+      case 'video':
+        return <Feather name="video" size={14} color={colors.textSecondary} />;
       default:
         return <Feather name="bookmark" size={14} color={colors.textSecondary} />;
     }
@@ -211,11 +282,11 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
     if (!isMountedRef.current) {
       return;
     }
-    
+
     // Navigate to the appropriate content view in the feed
     router.push({
       pathname: '/feed',
-      params: { 
+      params: {
         contentId: content.id.toString(),
         contentType: content.type
       }
@@ -225,8 +296,12 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
   const renderSavedContentItem = ({ item: content }: { item: SavedContent }) => {
     const industryName = allIndustries.find(ind => ind.id === content.industry_id)?.name;
     const optimizedIndustryName = industryName ? optimizeIndustryName(industryName) : undefined;
-    const industryColor = getIndustryColor(content.industry_id);
+    const industryColor = getIndustryColor(content.industry_id || 'default');
     const displayAuthor = content.type === 'paper' && content.authors ? content.authors[0] : content.author;
+
+    if (content.type === 'article') {
+      // console.log('Render article:', content.title, content.id);
+    }
 
     return (
       <TouchableOpacity
@@ -247,17 +322,17 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
             </>
           )}
         </View>
-        
+
         <Text style={[styles.savedItemTitle, { color: colors.text }]} numberOfLines={2}>
           {removeHtmlTags(content.title)}
         </Text>
-        
+
         {displayAuthor && (
           <Text style={[styles.savedItemAuthor, { color: colors.textSecondary }]} numberOfLines={1}>
             {displayAuthor}
           </Text>
         )}
-        
+
         {content.summary && (
           <Text style={[styles.savedItemSummary, { color: colors.text }]} numberOfLines={3}>
             {content.summary}
@@ -269,10 +344,10 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
 
   if (parentLoading || loading) {
     return (
-      <View style={[styles.container, { 
+      <View style={[styles.container, {
         backgroundColor: colors.surface,
         borderWidth: isDark ? 0 : 1,
-        borderColor: isDark ? 'transparent' : colors.border 
+        borderColor: isDark ? 'transparent' : colors.border
       }]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>Saved Content</Text>
@@ -286,10 +361,10 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
 
   if (savedContent.length === 0) {
     return (
-      <View style={[styles.container, { 
+      <View style={[styles.container, {
         backgroundColor: colors.surface,
         borderWidth: isDark ? 0 : 1,
-        borderColor: isDark ? 'transparent' : colors.border 
+        borderColor: isDark ? 'transparent' : colors.border
       }]}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>Saved Content</Text>
@@ -308,10 +383,10 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
   }
 
   return (
-    <View style={[styles.container, { 
+    <View style={[styles.container, {
       backgroundColor: colors.surface,
       borderWidth: isDark ? 0 : 1,
-      borderColor: isDark ? 'transparent' : colors.border 
+      borderColor: isDark ? 'transparent' : colors.border
     }]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Saved Content</Text>
@@ -319,7 +394,7 @@ export const SavedContentScrollView: React.FC<SavedContentScrollViewProps> = ({ 
           <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
         </TouchableOpacity>
       </View>
-      
+
       <FlatList
         horizontal
         data={savedContent}

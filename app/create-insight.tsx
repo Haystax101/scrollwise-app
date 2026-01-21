@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { XMarkIcon, PhotoIcon } from 'react-native-heroicons/outline';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase';
 import { BlurView } from 'expo-blur';
-import { File } from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
+import { File as ExpoFile } from 'expo-file-system';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 export default function CreateInsightScreen() {
-    const { colors, theme } = useTheme();
+    const { colors } = useTheme();
     const router = useRouter();
+    const params = useLocalSearchParams();
 
-    const [title, setTitle] = useState('');
+    const [title, setTitle] = useState((params.initialTitle as string) || '');
     const [content, setContent] = useState('');
     const [image, setImage] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,16 +43,18 @@ export default function CreateInsightScreen() {
                 { compress: 0.5, format: SaveFormat.JPEG }
             );
 
-            // FIXED: FileSystem.readAsStringAsync deprecated -> File class
-            const file = new File(manipResult.uri);
-            const base64 = await file.base64();
+            // Read file using new File API
+            const file = new ExpoFile(manipResult.uri);
+            const arrayBuffer = await file.arrayBuffer();
+            // No need to decode base64, we have the buffer directly
+            const uploadBody = arrayBuffer;
 
             const filename = `insight-${Date.now()}.jpg`;
             const contentType = 'image/jpeg';
 
-            const { data, error } = await supabase.storage
+            const { error } = await supabase.storage
                 .from('content-images')
-                .upload(filename, decode(base64), {
+                .upload(filename, uploadBody, {
                     contentType: contentType,
                     upsert: true
                 });

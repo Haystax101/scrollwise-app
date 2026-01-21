@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, Share } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
+// import { Feather } from '@expo/vector-icons';
 import { TaglineEditModal } from './TaglineEditModal';
 import { IndustrySelectionPage } from './IndustrySelectionPage';
 import { AllAchievementsPage } from './AllAchievementsPage';
@@ -10,16 +10,18 @@ import { CareerGoalEditModal } from './CareerGoalEditModal';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { SocialProfileHeader } from './SocialProfileHeader';
 import { UGCArchiveGrid } from './UGCArchiveGrid'; // [NEW]
+import { NetworkModal } from './NetworkModal';
 import SettingsModal from '../SettingsModal';
 import { supabase } from '../../lib/supabase';
 import { voltzService } from '../../lib/voltzService';
 import { streakService, StreakInfo } from '../../services/streakService';
-import { onboardingService } from '../../services/onboardingService';
+// import { onboardingService } from '../../services/onboardingService';
 import { profileImageService } from '../../services/profileImageService';
 import { useIndustries } from '../../context/IndustriesContext';
 import type { Industry } from '../../types';
 
 // Define types locally to avoid import issues
+/*
 interface LearningStats {
   connectionsCount: number;
   totalInteractions: number;
@@ -34,6 +36,7 @@ interface ProfilePassion {
   passionate_about: string | null;
   working_on: string | null;
 }
+*/
 
 interface CareerGoal {
   goal: string;
@@ -66,15 +69,15 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [totalVoltzEarned, setTotalVoltzEarned] = useState<number>(0);
   const [userLevel, setUserLevel] = useState<number>(1);
-  const [spendableVoltz, setSpendableVoltz] = useState<number>(0);
-  const [levelProgress, setLevelProgress] = useState<number>(0);
-  const [voltzForCurrentLevel, setVoltzForCurrentLevel] = useState<number>(0);
-  const [voltzForNextLevel, setVoltzForNextLevel] = useState<number>(100);
-  const [isLevelled, setIsLevelled] = useState<boolean>(false);
+  // const [spendableVoltz, setSpendableVoltz] = useState<number>(0);
+  // const [levelProgress, setLevelProgress] = useState<number>(0);
+  // const [voltzForCurrentLevel, setVoltzForCurrentLevel] = useState<number>(0);
+  // const [voltzForNextLevel, setVoltzForNextLevel] = useState<number>(100);
+  // const [isLevelled, setIsLevelled] = useState<boolean>(false);
 
   // Track previous values for level-up animations
-  const [previousLevel, setPreviousLevel] = useState<number | undefined>(undefined);
-  const [previousVoltz, setPreviousVoltz] = useState<number | undefined>(undefined);
+  // const [previousLevel, setPreviousLevel] = useState<number | undefined>(undefined);
+  // const [previousVoltz, setPreviousVoltz] = useState<number | undefined>(undefined);
 
   // Refs to track component lifecycle
   const isMountedRef = useRef(true);
@@ -82,18 +85,18 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   // Component data states
   const [careerGoal, setCareerGoal] = useState<CareerGoal | null>(null);
   const [industries, setIndustries] = useState<Industry[]>([]);
-  const [showOnboardingProgress, setShowOnboardingProgress] = useState<boolean>(false);
-  const [learningStats, setLearningStats] = useState<LearningStats>({
-    connectionsCount: 0,
-    totalInteractions: 0,
-    achievementsCount: 0
-  });
-  const [profileData, setProfileData] = useState<ProfileData>({});
-  const [profilePassions, setProfilePassions] = useState<ProfilePassion | null>(null);
+  // const [showOnboardingProgress, setShowOnboardingProgress] = useState<boolean>(false);
+  // const [learningStats, setLearningStats] = useState<LearningStats>({
+  //   connectionsCount: 0,
+  //   totalInteractions: 0,
+  //   achievementsCount: 0
+  // });
+  // const [profileData, setProfileData] = useState<ProfileData>({});
+  // const [profilePassions, setProfilePassions] = useState<ProfilePassion | null>(null);
   const [userTagline, setUserTagline] = useState<string | null>(null);
 
   // UI states
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [showIndustrySelection, setShowIndustrySelection] = useState(false);
   const [showAllAchievements, setShowAllAchievements] = useState(false);
@@ -103,6 +106,12 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [streakInfo, setStreakInfo] = useState<StreakInfo | null>(null);
   const [isClockedIn, setIsClockedIn] = useState(false);
 
+  // Social Graph State
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [showNetworkModal, setShowNetworkModal] = useState(false);
+  const [networkModalTab, setNetworkModalTab] = useState<'followers' | 'following'>('followers');
+
   // Fetch streak info on load
   const loadStreakInfo = async () => {
     if (!currentUser?.id) return;
@@ -110,7 +119,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       const info = await streakService.getStreakInfo(currentUser.id);
       setStreakInfo(info);
       // Simple logic for MVP: check if last_activity_date is today
-      if (info.last_activity_date) {
+      if (info && info.last_activity_date) {
         const lastDate = new Date(info.last_activity_date).toDateString();
         const today = new Date().toDateString();
         setIsClockedIn(lastDate === today);
@@ -127,7 +136,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const handleClockIn = async () => {
     if (!currentUser?.id) return;
     try {
-      await streakService.updateStreak(currentUser.id);
+      await streakService.logDailyActivity(currentUser.id, ['clock_in']);
       await loadStreakInfo(); // Refresh UI
       setIsClockedIn(true);
       alert("Clocked In! Streak maintained.");
@@ -163,9 +172,11 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const fetchProfileData = useCallback(async () => {
     if (!currentUser || !isMountedRef.current) return;
 
+    /*
     if (isMountedRef.current) {
       setLoading(true);
     }
+    */
     try {
       // Fetch basic profile info including tagline
       const { data: profileData, error: profileError } = await supabase
@@ -186,17 +197,17 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       const voltzStats = await voltzService.getVoltzStats(currentUser.id);
       if (isMountedRef.current) {
         // Store previous values for debugging
-        setPreviousLevel(userLevel);
-        setPreviousVoltz(totalVoltzEarned);
+        // setPreviousLevel(userLevel);
+        // setPreviousVoltz(totalVoltzEarned);
 
         // Update all voltz and level data
         setTotalVoltzEarned(voltzStats.totalVoltzEarned);
         setUserLevel(voltzStats.level);
-        setSpendableVoltz(voltzStats.spendableVoltz);
-        setLevelProgress(voltzStats.levelProgress);
-        setVoltzForCurrentLevel(voltzStats.voltzForCurrentLevel);
-        setVoltzForNextLevel(voltzStats.voltzForNextLevel);
-        setIsLevelled(voltzStats.isLevelled);
+        // setSpendableVoltz(voltzStats.spendableVoltz);
+        // setLevelProgress(voltzStats.levelProgress);
+        // setVoltzForCurrentLevel(voltzStats.voltzForCurrentLevel);
+        // setVoltzForNextLevel(voltzStats.voltzForNextLevel);
+        // setIsLevelled(voltzStats.isLevelled);
 
         console.log('📊 Profile loaded - isLevelled:', voltzStats.isLevelled, 'Level:', voltzStats.level);
       }
@@ -210,6 +221,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       }
 
       // Step 2: Check onboarding progress based on achievements
+      /*
       try {
         const onboardingProgress = await onboardingService.getProgress(currentUser.id);
         await onboardingService.checkAndAwardCompletion(currentUser.id);
@@ -227,6 +239,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           setShowOnboardingProgress(true);
         }
       }
+      */
 
       // Fetch career goals using direct table queries (no RPC)
       try {
@@ -284,44 +297,47 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       }
 
       // Fetch connections count
-      const { count: connectionsCount } = await supabase
-        .from('friendships')
-        .select('*', { count: 'exact', head: true })
-        .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`)
-        .eq('status', 'accepted');
+      /*
+       const { count: connectionsCount } = await supabase
+         .from('friendships')
+         .select('*', { count: 'exact', head: true })
+         .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`)
+         .eq('status', 'accepted');
+ 
+       // Calculate engagement stats
+       const [articleLikesRes, articleSavesRes, articleCommentsRes,
+         paperLikesRes, paperSavesRes, paperCommentsRes, bookLikesRes, bookSavesRes,
+         bookCommentsRes, insightLikesRes, insightSavesRes, insightCommentsRes] = await Promise.all([
+           supabase.from('article_likes').select('article_id').eq('user_id', currentUser.id),
+           supabase.from('article_saves').select('article_id').eq('user_id', currentUser.id),
+           supabase.from('comments').select('article_id').eq('user_id', currentUser.id),
+           supabase.from('paper_likes').select('paper_id').eq('user_id', currentUser.id),
+           supabase.from('paper_saves').select('paper_id').eq('user_id', currentUser.id),
+           supabase.from('paper_comments').select('paper_id').eq('user_id', currentUser.id),
+           supabase.from('book_likes').select('book_id').eq('user_id', currentUser.id),
+           supabase.from('book_saves').select('book_id').eq('user_id', currentUser.id),
+           supabase.from('book_comments').select('book_id').eq('user_id', currentUser.id),
+           supabase.from('insight_likes').select('insight_id').eq('user_id', currentUser.id),
+           supabase.from('insight_saves').select('insight_id').eq('user_id', currentUser.id),
+           supabase.from('insight_comments').select('insight_id').eq('user_id', currentUser.id)
+         ]);
+ 
+       const totalInteractions = (articleLikesRes.data?.length || 0) +
+         (articleSavesRes.data?.length || 0) + (articleCommentsRes.data?.length || 0) +
+         (paperLikesRes.data?.length || 0) +
+         (paperSavesRes.data?.length || 0) + (paperCommentsRes.data?.length || 0) +
+         (bookLikesRes.data?.length || 0) +
+         (bookSavesRes.data?.length || 0) + (bookCommentsRes.data?.length || 0) +
+         (insightLikesRes.data?.length || 0) +
+         (insightSavesRes.data?.length || 0) + (insightCommentsRes.data?.length || 0);
+ 
+       const { data: achievementsCountData } = await supabase
+         .from('user_achievements')
+         .select('id')
+         .eq('user_id', currentUser.id);
+       */
 
-      // Calculate engagement stats
-      const [articleLikesRes, articleSavesRes, articleCommentsRes,
-        paperLikesRes, paperSavesRes, paperCommentsRes, bookLikesRes, bookSavesRes,
-        bookCommentsRes, insightLikesRes, insightSavesRes, insightCommentsRes] = await Promise.all([
-          supabase.from('article_likes').select('article_id').eq('user_id', currentUser.id),
-          supabase.from('article_saves').select('article_id').eq('user_id', currentUser.id),
-          supabase.from('comments').select('article_id').eq('user_id', currentUser.id),
-          supabase.from('paper_likes').select('paper_id').eq('user_id', currentUser.id),
-          supabase.from('paper_saves').select('paper_id').eq('user_id', currentUser.id),
-          supabase.from('paper_comments').select('paper_id').eq('user_id', currentUser.id),
-          supabase.from('book_likes').select('book_id').eq('user_id', currentUser.id),
-          supabase.from('book_saves').select('book_id').eq('user_id', currentUser.id),
-          supabase.from('book_comments').select('book_id').eq('user_id', currentUser.id),
-          supabase.from('insight_likes').select('insight_id').eq('user_id', currentUser.id),
-          supabase.from('insight_saves').select('insight_id').eq('user_id', currentUser.id),
-          supabase.from('insight_comments').select('insight_id').eq('user_id', currentUser.id)
-        ]);
-
-      const totalInteractions = (articleLikesRes.data?.length || 0) +
-        (articleSavesRes.data?.length || 0) + (articleCommentsRes.data?.length || 0) +
-        (paperLikesRes.data?.length || 0) +
-        (paperSavesRes.data?.length || 0) + (paperCommentsRes.data?.length || 0) +
-        (bookLikesRes.data?.length || 0) +
-        (bookSavesRes.data?.length || 0) + (bookCommentsRes.data?.length || 0) +
-        (insightLikesRes.data?.length || 0) +
-        (insightSavesRes.data?.length || 0) + (insightCommentsRes.data?.length || 0);
-
-      const { data: achievementsCountData } = await supabase
-        .from('user_achievements')
-        .select('id')
-        .eq('user_id', currentUser.id);
-
+      /*
       if (isMountedRef.current) {
         setLearningStats({
           connectionsCount: connectionsCount || 0,
@@ -329,8 +345,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
           achievementsCount: achievementsCountData?.length || 0
         });
       }
+      */
 
       // Fetch profile passions data
+      /*
       const { data: passionsData, error: passionsError } = await supabase
         .from('profile_passions')
         .select('passionate_about, working_on')
@@ -339,8 +357,23 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
       if (passionsError && passionsError.code !== 'PGRST116') {
         console.error('Error fetching profile passions:', passionsError);
-      } else if (isMountedRef.current) {
+      } 
+      */
+      /*
+      else if (isMountedRef.current) {
         setProfilePassions(passionsData);
+      }
+      */
+
+      // Fetch Follow Counts
+      try {
+        const { data: followCounts, error: followError } = await supabase.rpc('get_follow_counts', { target_user_id: currentUser.id });
+        if (!followError && followCounts && isMountedRef.current) {
+          setFollowersCount(followCounts.followers || 0);
+          setFollowingCount(followCounts.following || 0);
+        }
+      } catch (e) {
+        console.error('Error fetching follow counts', e);
       }
 
       // Fetch basic profile sections (summary only)
@@ -358,17 +391,22 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         });
       }
 
+      /*
       if (isMountedRef.current) {
         setProfileData(sectionMap);
       }
+      */
 
     } catch (error) {
       console.error('Error fetching profile data:', error);
-    } finally {
+    }
+    /*
+    finally {
       if (isMountedRef.current) {
         setLoading(false);
       }
     }
+    */
   }, [currentUser]);
 
   useEffect(() => {
@@ -381,11 +419,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   }, [currentUser?.id]);
 
   // Event handlers
+  /*
   const handleEditCareerGoal = () => {
     if (isMountedRef.current) {
       setShowCareerGoalModal(true);
     }
   };
+  */
 
   const handleCareerGoalSave = (goalData: CareerGoal) => {
     if (isMountedRef.current) {
@@ -426,11 +466,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     }
   };
 
+  /*
   const handleShowAllAchievements = () => {
     if (isMountedRef.current) {
       setShowAllAchievements(true);
     }
   };
+  */
 
 
   const handleIndustrySave = async (selectedIndustries: any[]) => {
@@ -534,14 +576,53 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             isClockedIn={isClockedIn}
             onClockIn={handleClockIn}
             onSettings={() => setIsSettingsModalVisible(true)}
-            onEditProfile={() => setShowTaglineModal(true)} // Double as quick edit for MVP
-            onShareProfile={() => { }}
+            onEditAvatar={handleAvatarPress}
+            onEditTagline={handleTaglinePress}
+            onEditIndustries={handleEditIndustries}
+            onOpenNetwork={(tab) => {
+              setNetworkModalTab(tab);
+              setShowNetworkModal(true);
+            }}
+            followersCount={followersCount}
+            followingCount={followingCount}
+            onShareProfile={async () => {
+              try {
+                const profileLink = `supercharged://profile/${currentUser?.id}`;
+                const message = `Check out my profile on Supercharged! ${profileLink}`;
+
+                const result = await Share.share({
+                  message: message,
+                  url: profileLink, // iOS often uses this field
+                  title: 'Share Profile'
+                });
+
+                if (result.action === Share.sharedAction) {
+                  if (result.activityType) {
+                    // shared with activity type of result.activityType
+                  } else {
+                    // shared
+                  }
+                } else if (result.action === Share.dismissedAction) {
+                  // dismissed
+                }
+              } catch (error) {
+                console.error('Error sharing profile:', error);
+              }
+            }}
           />
         </View>
 
         {/* UGC Grid */}
         <UGCArchiveGrid userId={currentUser?.id} />
       </ScrollView>
+
+      {/* Modals */}
+      <NetworkModal
+        visible={showNetworkModal}
+        onClose={() => setShowNetworkModal(false)}
+        userId={currentUser?.id || ''}
+        initialTab={networkModalTab}
+      />
 
       <SettingsModal
         visible={isSettingsModalVisible}

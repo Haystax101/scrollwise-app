@@ -11,16 +11,16 @@ export interface ThemeColors {
   surface: string;
   card: string;
   overlay: string;
-  
+
   // Text
   text: string;
   textSecondary: string;
   textTertiary: string;
-  
+
   // Borders & Separators  
   border: string;
   separator: string;
-  
+
   // Interactive elements
   primary: string;
   primaryText: string;
@@ -28,23 +28,23 @@ export interface ThemeColors {
   accent: string;
   likeColor: string;
   error: string;
-  
+
   // Book cover text colors
   bookTitle: string;
   bookMeta: string;
   bookSummary: string;
   bookSwipeHint: string;
-  
+
   // Status bar
   statusBarStyle: 'light-content' | 'dark-content';
   statusBarBackground: string;
-  
+
   // Navigation
   navigationBackground: string;
   navigationBorder: string;
   navigationActive: string;
   navigationInactive: string;
-  
+
   // Input fields
   inputBackground: string;
   inputBorder: string;
@@ -57,34 +57,34 @@ const lightTheme: ThemeColors = {
   surface: '#FFFFFF',
   card: '#FFFFFF',
   overlay: 'rgba(0,0,0,0.1)',
-  
+
   text: '#1F2937',
   textSecondary: '#6B7280',
   textTertiary: '#9CA3AF',
-  
+
   border: '#E5E7EB',
   separator: '#F3F4F6',
-  
+
   primary: '#EAB308',
   primaryText: '#000000',
   readButtonText: '#000000',
   accent: '#EAB308',
   likeColor: '#EF4444',
   error: '#EF4444',
-  
+
   bookTitle: '#FFFFFF',
   bookMeta: 'rgba(255,255,255,0.9)',
   bookSummary: 'rgba(255,255,255,0.9)',
   bookSwipeHint: 'rgba(255,255,255,0.8)',
-  
+
   statusBarStyle: 'dark-content',
   statusBarBackground: '#F9FAFB',
-  
+
   navigationBackground: '#FFFFFF',
   navigationBorder: '#E5E7EB',
   navigationActive: '#EAB308',
   navigationInactive: '#6B7280',
-  
+
   inputBackground: '#F3F4F6',
   inputBorder: '#E5E7EB',
   inputText: '#1F2937',
@@ -110,20 +110,20 @@ const darkTheme: ThemeColors = {
   accent: '#EAB308',
   likeColor: '#EF4444',
   error: '#EF4444',
-  
+
   bookTitle: '#FFFFFF',
   bookMeta: 'rgba(255,255,255,0.9)',
   bookSummary: 'rgba(255,255,255,0.9)',
   bookSwipeHint: 'rgba(255,255,255,0.8)',
-  
+
   statusBarStyle: 'light-content',
   statusBarBackground: '#0A0B1E',
-  
+
   navigationBackground: '#0A0B1E',
   navigationBorder: '#2D2D3A',
   navigationActive: '#EAB308',
   navigationInactive: '#71717A',
-  
+
   inputBackground: '#1A1B2E',
   inputBorder: '#2D2D3A',
   inputText: '#FFFFFF',
@@ -151,74 +151,52 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const [themeMode, setThemeModeState] = useState<ThemeMode>('dark');
 
-  // Determine active theme based on mode
-  const activeTheme: ActiveTheme = themeMode;
+  // Force dark theme
+  const activeTheme: ActiveTheme = 'dark';
 
-  const isDark = activeTheme === 'dark';
-  const colors = isDark ? darkTheme : lightTheme;
+  const isDark = true;
+  const colors = darkTheme;
 
   // Helper function to get appropriate text color for cards
   const getCardTextColor = (): string => {
-    return isDark ? '#FFFFFF' : '#1F2937';
+    return '#FFFFFF';
   };
 
   // Helper function to get secondary text color for cards
   const getCardSecondaryTextColor = (): string => {
-    return isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(31, 41, 55, 0.7)';
+    return 'rgba(255, 255, 255, 0.7)';
   };
 
   // Helper function to get tertiary text color for cards  
   const getCardTertiaryTextColor = (): string => {
-    return isDark ? 'rgba(255, 255, 255, 0.6)' : 'rgba(31, 41, 55, 0.6)';
+    return 'rgba(255, 255, 255, 0.6)';
   };
 
   // Load theme preference from Supabase when user is available
   useEffect(() => {
     const loadThemePreference = async () => {
-      if (!user?.id) {
-        console.log('🎨 ThemeContext: No user ID available, skipping theme load');
-        return;
-      }
+      if (!user?.id) return;
 
-      console.log('🎨 ThemeContext: Loading theme preference for user:', user.id);
+      // Always force state to dark
+      setThemeModeState('dark');
 
       try {
+        // Check DB to ensure it's also set to dark (for consistency across devices/sessions)
         const { data, error } = await supabase
           .from('profiles')
           .select('theme_preference')
           .eq('id', user.id)
           .single();
 
-        if (error) {
-          console.error('🎨 ThemeContext: Error loading theme preference:', error);
-          return;
-        }
-
-        console.log('🎨 ThemeContext: Database returned theme_preference:', data?.theme_preference);
-        console.log('🎨 ThemeContext: Data type of theme_preference:', typeof data?.theme_preference);
-
-        if (data?.theme_preference && (data.theme_preference === 'light' || data.theme_preference === 'dark')) {
-          console.log('🎨 ThemeContext: Setting theme to:', data.theme_preference);
-          setThemeModeState(data.theme_preference as ThemeMode);
-        } else {
-          // If no theme preference or invalid value (like 'system'), default to dark and save it
-          console.log('🎨 ThemeContext: Invalid or missing theme preference, defaulting to dark. Current value:', data?.theme_preference);
-          setThemeModeState('dark');
-
-          console.log('🎨 ThemeContext: Updating database to set theme_preference to dark...');
-          const { error: updateError } = await supabase
+        if (data?.theme_preference !== 'dark') {
+          console.log('🎨 ThemeContext: Enforcing dark mode in database...');
+          await supabase
             .from('profiles')
             .update({ theme_preference: 'dark' })
             .eq('id', user.id);
-
-          if (updateError) {
-            console.error('🎨 ThemeContext: Error updating theme preference to dark:', updateError);
-          } else {
-            console.log('🎨 ThemeContext: Successfully updated theme preference to dark');
-          }
         }
       } catch (error) {
-        console.error('🎨 ThemeContext: Exception loading theme preference:', error);
+        console.warn('🎨 ThemeContext: Error enforcing dark mode:', error);
       }
     };
 

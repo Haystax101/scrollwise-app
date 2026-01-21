@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, Image, StyleSheet, SafeAreaView, TouchableOpacity, FlatList, Dimensions } from 'react-native';
+import { OnboardingStyles } from './onboarding/styles';
 
 const { width } = Dimensions.get('window');
 
@@ -15,27 +16,27 @@ const Hero2Image = require('../assets/hero2.png');
 
 // Create stable image components to prevent re-rendering
 const WelcomeHeroImageComponent = React.memo(() => (
-  <Image 
-    source={WelcomeHeroImage} 
-    style={styles.slideImage} 
+  <Image
+    source={WelcomeHeroImage}
+    style={styles.slideImage}
     resizeMode="contain"
     fadeDuration={0}
   />
 ));
 
 const HeroImageComponent = React.memo(() => (
-  <Image 
-    source={HeroImage} 
-    style={styles.slideImage} 
+  <Image
+    source={HeroImage}
+    style={styles.slideImage}
     resizeMode="contain"
     fadeDuration={0}
   />
 ));
 
 const Hero2ImageComponent = React.memo(() => (
-  <Image 
-    source={Hero2Image} 
-    style={styles.slideImage} 
+  <Image
+    source={Hero2Image}
+    style={styles.slideImage}
     resizeMode="contain"
     fadeDuration={0}
   />
@@ -148,13 +149,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSi
             />
           ))}
         </View>
-        
+
         {/* Buttons - Always Present */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.primaryButton} onPress={onGetStarted}>
             <Text style={styles.primaryButtonText}>Get Started</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.secondaryButton} onPress={onSignIn}>
             <Text style={styles.secondaryButtonText}>Log In</Text>
           </TouchableOpacity>
@@ -167,7 +168,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSi
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFBF0',
+    backgroundColor: OnboardingStyles.backgroundColor,
   },
   content: {
     flex: 1,
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
   slideTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: OnboardingStyles.textPrimary,
     textAlign: 'center',
     marginBottom: 16,
     lineHeight: 36,
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
   },
   slideDescription: {
     fontSize: 16,
-    color: '#6B7280',
+    color: OnboardingStyles.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 16,
@@ -231,11 +232,11 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: OnboardingStyles.textTertiary,
     marginHorizontal: 4,
   },
   progressDotActive: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: OnboardingStyles.accent,
   },
   buttonContainer: {
     paddingHorizontal: 32,
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     width: '100%',
     height: 48,
-    backgroundColor: '#F59E0B',
+    backgroundColor: OnboardingStyles.accent,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -252,14 +253,14 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: OnboardingStyles.buttonTextColor,
   },
   secondaryButton: {
     width: '100%',
     height: 48,
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#F59E0B',
+    borderColor: OnboardingStyles.accent,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -267,6 +268,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#F59E0B',
+    color: OnboardingStyles.accent,
   },
 });

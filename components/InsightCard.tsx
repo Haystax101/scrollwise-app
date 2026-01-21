@@ -146,6 +146,13 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       lineHeight: 24,
       color: colors.text,
     },
+    insightImage: {
+      width: '100%',
+      height: 200,
+      borderRadius: 12,
+      marginTop: 12,
+      backgroundColor: colors.surface,
+    },
     // Views section (above separator)
     viewsSection: {
       paddingHorizontal: 16,
@@ -360,14 +367,14 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       marginLeft: 8,
     },
     // Expandable details (kept from original)
-    expandedDetails: { 
-      backgroundColor: colors.surface, 
-      borderRadius: 12, 
-      padding: 12, 
+    expandedDetails: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 12,
       marginHorizontal: 16,
-      marginTop: 12, 
-      borderWidth: 1, 
-      borderColor: colors.border 
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.border
     },
     detailRow: {
       flexDirection: 'row',
@@ -439,7 +446,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       .eq('insight_id', insight.id)
       .maybeSingle();
     setHasLiked(!!likeRow);
-    
+
     const { data: saveRow } = await supabase
       .from('insight_saves')
       .select('user_id')
@@ -447,7 +454,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       .eq('insight_id', insight.id)
       .maybeSingle();
     setHasSaved(!!saveRow);
-    
+
     // Check if this insight is supercharged
     try {
       const { data: superchargeRow } = await supabase
@@ -455,7 +462,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         .select('supercharged')
         .eq('id', insight.id)
         .maybeSingle();
-        setIsSupercharged(!!superchargeRow?.supercharged);
+      setIsSupercharged(!!superchargeRow?.supercharged);
     }
     catch (error) {
       console.error('Error checking supercharged status:', error);
@@ -499,7 +506,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         };
         setTopComment(comment);
         setCommentLikes(data.likes_count || 0);
-        
+
         // Check if current user has liked this comment
         if (user && data.id) {
           const { data: likeData } = await supabase
@@ -586,28 +593,28 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       console.log('No user - cannot save');
       return;
     }
-    
-    console.log('toggleSave called:', { 
-      adding: !hasSaved, 
-      userId: user.id, 
+
+    console.log('toggleSave called:', {
+      adding: !hasSaved,
+      userId: user.id,
       insightId: insight.id,
       currentSaves: saves
     });
-    
+
     const adding = !hasSaved;
-    
+
     // Optimistic update
     setHasSaved(adding);
     const originalSaves = saves;
     setSaves(prev => adding ? prev + 1 : Math.max(0, prev - 1));
-    
+
     try {
       if (adding) {
         console.log('Attempting to insert save...');
         const { data, error } = await supabase
           .from('insight_saves')
           .insert({ user_id: user.id, insight_id: insight.id });
-        
+
         if (error) {
           console.error('Error inserting save:', error);
           // Revert optimistic update
@@ -615,9 +622,9 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           setSaves(originalSaves);
           return;
         }
-        
+
         console.log('Save inserted successfully:', data);
-        
+
         // Grant XP to author for save (idempotent via DB)
         try {
           const ensuredAuthorId = authorId || (await supabase.from('insights').select('author_id').eq('id', insight.id).maybeSingle()).data?.author_id;
@@ -638,7 +645,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           .from('insight_saves')
           .delete()
           .match({ user_id: user.id, insight_id: insight.id });
-          
+
         if (error) {
           console.error('Error deleting save:', error);
           // Revert optimistic update
@@ -646,30 +653,30 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           setSaves(originalSaves);
           return;
         }
-        
+
         console.log('Save deleted successfully');
       }
-      
+
       // Update the count from database
       console.log('Fetching updated save count...');
       const { count, error: countError } = await supabase
         .from('insight_saves')
         .select('*', { count: 'exact', head: true })
         .eq('insight_id', insight.id);
-        
+
       if (countError) {
         console.error('Error fetching save count:', countError);
       } else {
         console.log('Save count from DB:', count);
         if (typeof count === 'number') {
           setSaves(count);
-          
+
           // Update the insight's save count in the insights table
           const { error: updateError } = await supabase
             .from('insights')
             .update({ saves_count: count })
             .eq('id', insight.id);
-            
+
           if (updateError) {
             console.error('Error updating insight saves_count:', updateError);
           } else {
@@ -677,7 +684,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           }
         }
       }
-      
+
     } catch (error) {
       console.error('Unexpected error in toggleSave:', error);
       // Revert optimistic updates
@@ -692,7 +699,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
+
     if (diffInMinutes < 60) {
       return `${diffInMinutes}m`;
     } else if (diffInMinutes < 1440) {
@@ -706,11 +713,11 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     // Level thresholds: 100, 300, 600, 1000, 1500, 2100, 2800, 3600, etc.
     // Pattern: each level adds 100 more than the previous gap
     // Level 1: 0-99, Level 2: 100-299, Level 3: 300-599, Level 4: 600-999, Level 5: 1000-1499, etc.
-    
+
     let level = 1;
     let threshold = 100;
     let increment = 200; // starts at 200 for level 3 (300-100=200)
-    
+
     while (totalVoltz >= threshold) {
       level++;
       if (level === 2) {
@@ -724,13 +731,13 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         increment += 100; // increment grows by 100 each level
       }
     }
-    
+
     return level;
   };
 
   const toggleCommentLike = useCallback(async () => {
     if (!user || !topComment) return;
-    
+
     const wasLiked = commentLiked;
     // Optimistic update
     setCommentLiked(!wasLiked);
@@ -903,10 +910,10 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
                   <Text style={dynamicStyles.commentText}>{topComment.content}</Text>
                   <View style={dynamicStyles.commentActions}>
                     <TouchableOpacity style={dynamicStyles.commentActionButton} onPress={toggleCommentLike}>
-                      <Ionicons 
-                        name={commentLiked ? "heart" : "heart-outline"} 
-                        size={14} 
-                        color={commentLiked ? "#FDE047" : colors.text} 
+                      <Ionicons
+                        name={commentLiked ? "heart" : "heart-outline"}
+                        size={14}
+                        color={commentLiked ? "#FDE047" : colors.text}
                       />
                       <Text style={[dynamicStyles.commentActionText, commentLiked && { color: "#FDE047" }]}>
                         {String(commentLikes || 0)}
@@ -919,7 +926,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
                 </View>
               </View>
             </View>
-            
+
             <View style={dynamicStyles.joinDiscussionSection}>
               <TouchableOpacity style={dynamicStyles.joinDiscussionButton} onPress={() => setCommentsOpen(true)}>
                 <Ionicons name="chatbubble-outline" size={16} color={colors.text} />

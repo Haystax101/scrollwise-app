@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
 import { View, Text, StyleSheet, Image, Pressable, ScrollView } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
@@ -26,7 +27,8 @@ interface RecentItem {
 // and then fetch details. For MVP, let's fetch raw and fetch details on mount.
 
 export const RecentReadsList = () => {
-    const { colors, theme } = useTheme();
+    const { colors, isDark } = useTheme();
+    const router = useRouter();
     const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
 
     useEffect(() => {
@@ -66,6 +68,27 @@ export const RecentReadsList = () => {
                     title = video.title;
                     subtitle = video.site_name || 'Video';
                 }
+            } else if (session.content_type === 'book') {
+                const { data: book } = await supabase.from('books').select('title, author').eq('id', session.content_id).single();
+                if (book) {
+                    title = book.title;
+                    subtitle = book.author || 'Book';
+                }
+            } else if (session.content_type === 'paper') {
+                const { data: paper } = await supabase.from('papers').select('title, site_name').eq('id', session.content_id).single();
+                if (paper) {
+                    title = paper.title;
+                    subtitle = paper.site_name || 'Paper';
+                }
+            } else if (session.content_type === 'insight') {
+                // Insights rely on UUIDs which might not be compatible with the bigint content_id in learning_sessions
+                // Ideally we'd fetch the content, but for now we'll label it.
+                title = `Insight`;
+                subtitle = 'My Insight';
+
+                // If content_id comes back as a string or can be used, we could try:
+                // const { data: insight } = await supabase.from('insights').select('content').eq('id', session.content_id).single();
+                // if (insight) { title = insight.content.substring(0, 30) + '...'; } 
             }
 
             return {
@@ -82,9 +105,6 @@ export const RecentReadsList = () => {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={[styles.heading, { color: colors.text }]}>Recent Knowledge</Text>
-                <Pressable>
-                    <Text style={{ color: colors.primary, fontSize: 14 }}>View All</Text>
-                </Pressable>
             </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
@@ -92,7 +112,7 @@ export const RecentReadsList = () => {
                     <BlurView
                         key={item.id || index}
                         intensity={20}
-                        tint={theme === 'dark' ? 'dark' : 'light'}
+                        tint={isDark ? 'dark' : 'light'}
                         style={[styles.card, { borderColor: colors.border }]}
                     >
                         {/* Simplified Content: Title, Source, Action */}
@@ -105,7 +125,15 @@ export const RecentReadsList = () => {
                             </Text>
                         </View>
 
-                        <Pressable style={[styles.consolidateButton, { backgroundColor: colors.card }]}>
+                        <Pressable
+                            style={[styles.consolidateButton, { backgroundColor: colors.card }]}
+                            onPress={() => router.push({
+                                pathname: '/create-insight',
+                                params: {
+                                    initialTitle: item.title
+                                }
+                            })}
+                        >
                             <Text style={[styles.buttonText, { color: colors.primary }]}>Consolidate</Text>
                             <ArrowRightIcon size={12} color={colors.primary} />
                         </Pressable>

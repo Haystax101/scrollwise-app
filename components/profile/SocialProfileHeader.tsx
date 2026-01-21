@@ -13,10 +13,15 @@ interface SocialProfileHeaderProps {
     level: number;
     voltz: number;
     streak: number;
+    followersCount: number;
+    followingCount: number;
     isClockedIn: boolean;
     onClockIn: () => void;
     onSettings: () => void;
-    onEditProfile: () => void;
+    onEditAvatar: () => void;
+    onEditTagline: () => void;
+    onOpenNetwork: (tab: 'followers' | 'following') => void;
+    onEditIndustries: () => void;
     onShareProfile: () => void;
 }
 
@@ -28,10 +33,15 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
     level,
     voltz,
     streak,
+    followersCount,
+    followingCount,
     isClockedIn,
     onClockIn,
     onSettings,
-    onEditProfile,
+    onEditAvatar,
+    onEditTagline,
+    onOpenNetwork,
+    onEditIndustries,
     onShareProfile
 }) => {
     const { colors, theme } = useTheme();
@@ -47,41 +57,72 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
                 end={{ x: 0.5, y: 1 }}
             />
 
-            {/* Top Row: Settings & Share (Visual Balance) */}
+            {/* Top Row: Settings Only */}
             <View style={styles.topRow}>
+                <View />
                 <TouchableOpacity onPress={onSettings} style={[styles.iconButton, { backgroundColor: colors.card }]}>
                     <Feather name="settings" size={20} color={colors.text} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={onShareProfile} style={[styles.iconButton, { backgroundColor: colors.card }]}>
-                    <Feather name="share" size={20} color={colors.text} />
-                </TouchableOpacity>
             </View>
 
-            {/* Main Identity Section */}
+            {/* Identity Section - Instagram Style */}
             <View style={styles.identitySection}>
-                <TouchableOpacity onPress={onEditProfile} style={styles.avatarWrapper}>
-                    <Image
-                        source={avatarUrl ? { uri: avatarUrl } : require('../../assets/profileIconDefault.png')}
-                        style={[styles.avatar, { borderColor: colors.primary }]}
-                    />
-                    <View style={[styles.editBadge, { backgroundColor: colors.card }]}>
-                        <Feather name="camera" size={12} color={colors.text} />
-                    </View>
-                </TouchableOpacity>
-
-                <Text style={[styles.name, { color: colors.text }]}>{fullName}</Text>
-                <Text style={[styles.handle, { color: colors.text + '80' }]}>@{fullName.toLowerCase().replace(/\s+/g, '')}</Text>
-
-                {tagline ? (
-                    <Text style={[styles.tagline, { color: colors.textSecondary }]}>{tagline}</Text>
-                ) : (
-                    <TouchableOpacity onPress={onEditProfile}>
-                        <Text style={[styles.tagline, { color: colors.primary }]}>+ Add Tagline</Text>
+                <View style={styles.profileTopContainer}>
+                    {/* Avatar */}
+                    <TouchableOpacity onPress={onEditAvatar} style={styles.avatarWrapper}>
+                        <Image
+                            source={avatarUrl ? { uri: avatarUrl } : require('../../assets/profileIconDefault.png')}
+                            style={[styles.avatar, { borderColor: colors.primary }]}
+                        />
+                        <View style={[styles.editBadge, { backgroundColor: colors.card }]}>
+                            <Feather name="camera" size={12} color={colors.text} />
+                        </View>
                     </TouchableOpacity>
-                )}
+
+                    {/* Stats & Counts */}
+                    <View style={styles.socialStatsContainer}>
+                        <View style={styles.statGroup}>
+                            <TouchableOpacity onPress={() => onOpenNetwork('followers')}>
+                                <Text style={[styles.socialStatValue, { color: colors.text }]}>{followersCount}</Text>
+                                <Text style={[styles.socialStatLabel, { color: colors.textSecondary }]}>Followers</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.statGroup}>
+                            <TouchableOpacity onPress={() => onOpenNetwork('following')}>
+                                <Text style={[styles.socialStatValue, { color: colors.text }]}>{followingCount}</Text>
+                                <Text style={[styles.socialStatLabel, { color: colors.textSecondary }]}>Following</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Name & Bio */}
+                <View style={styles.bioContainer}>
+                    <Text style={[styles.name, { color: colors.text }]}>{fullName}</Text>
+
+                    {tagline ? (
+                        <TouchableOpacity onPress={onEditTagline}>
+                            <Text style={[styles.tagline, { color: colors.textSecondary }]}>{tagline}</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity onPress={onEditTagline}>
+                            <Text style={[styles.tagline, { color: colors.primary }]}>+ Add Tagline</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    <View style={styles.bioActionsRow}>
+                        <TouchableOpacity onPress={onEditIndustries}>
+                            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Edit Industries</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity onPress={onShareProfile} style={styles.shareIconSmall}>
+                            <Feather name="share" size={16} color={colors.text} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
 
-            {/* Stats Grid */}
+            {/* Stats Grid (Gamification) */}
             <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
                     <Text style={[styles.statValue, { color: colors.text }]}>{level}</Text>
@@ -146,37 +187,65 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    // Updated Styles
     identitySection: {
+        marginTop: 10,
+        paddingHorizontal: 24,
+    },
+    profileTopContainer: {
+        flexDirection: 'row',
         alignItems: 'center',
-        marginTop: -10,
+        marginBottom: 16,
     },
     avatarWrapper: {
-        marginBottom: 12,
+        marginRight: 24,
         position: 'relative',
     },
     avatar: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        borderWidth: 3,
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        borderWidth: 2,
     },
     editBadge: {
         position: 'absolute',
         bottom: 0,
         right: 0,
-        width: 28,
-        height: 28,
-        borderRadius: 14,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: 'transparent', // adapt
+        borderColor: 'transparent',
+    },
+    socialStatsContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+    },
+    statGroup: {
+        alignItems: 'center',
+    },
+    socialStatValue: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    socialStatLabel: {
+        fontSize: 12,
+        fontWeight: '500',
+        textAlign: 'center',
+    },
+    bioContainer: {
+        marginBottom: 16,
     },
     name: {
-        fontSize: 24,
+        fontSize: 18,
         fontWeight: 'bold',
         fontFamily: 'Montserrat_700Bold',
-        marginBottom: 2,
+        marginBottom: 4,
     },
     handle: {
         fontSize: 14,
@@ -185,16 +254,19 @@ const styles = StyleSheet.create({
     },
     tagline: {
         fontSize: 14,
-        fontStyle: 'italic',
-        textAlign: 'center',
-        paddingHorizontal: 40,
+        lineHeight: 20,
     },
     statsGrid: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 24,
+        marginTop: 10,
         gap: 24,
+        paddingVertical: 16,
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)', // Subtle separator
+        marginHorizontal: 20,
     },
     statItem: {
         alignItems: 'center',
@@ -231,4 +303,13 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontFamily: 'Montserrat_600SemiBold',
     },
+    bioActionsRow: {
+        marginTop: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    shareIconSmall: {
+        padding: 8,
+    }
 });

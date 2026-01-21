@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, { useAnimatedStyle, withSpring, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,27 +14,17 @@ import { useRouter } from 'expo-router';
 
 export type FeedType = 'learning' | 'community';
 
-// ... imports
-import { Feather } from '@expo/vector-icons';
-
 const BUTTON_WIDTH = 140; // Widened from 120
 const BUTTON_HEIGHT = 40;
 
 interface FeedToggleHeaderProps {
     activeFeed: FeedType;
     onToggle: (feed: FeedType) => void;
-    // New Props for Community Dropdown
-    activeCommunity: any | null;
-    onToggleDropdown: () => void;
-    isDropdownOpen: boolean;
 }
 
 export const FeedToggleHeader: React.FC<FeedToggleHeaderProps> = ({
     activeFeed,
-    onToggle,
-    activeCommunity,
-    onToggleDropdown,
-    isDropdownOpen
+    onToggle
 }) => {
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -50,16 +40,6 @@ export const FeedToggleHeader: React.FC<FeedToggleHeaderProps> = ({
     const highlightStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: translateX.value }]
     }));
-
-    const handleCommunityPress = () => {
-        if (activeFeed === 'community') {
-            // Already active? Toggle Dropdown
-            onToggleDropdown();
-        } else {
-            // Switch to Community Feed
-            onToggle('community');
-        }
-    };
 
     return (
         <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
@@ -78,26 +58,10 @@ export const FeedToggleHeader: React.FC<FeedToggleHeaderProps> = ({
 
                     <TouchableOpacity
                         style={styles.button}
-                        onPress={handleCommunityPress}
+                        onPress={() => onToggle('community')}
                         activeOpacity={0.8}
                     >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, width: '100%' }}>
-                            <Text
-                                style={[styles.text, activeFeed === 'community' && styles.activeText, { flexShrink: 1, textAlign: 'center' }]}
-                                numberOfLines={1}
-                                ellipsizeMode="tail"
-                            >
-                                {activeCommunity ? activeCommunity.name : 'Community'}
-                            </Text>
-                            {activeFeed === 'community' && (
-                                <Feather
-                                    name={isDropdownOpen ? "chevron-up" : "chevron-down"}
-                                    size={14}
-                                    color="white"
-                                    style={{ marginLeft: 4, flexShrink: 0 }}
-                                />
-                            )}
-                        </View>
+                        <Text style={[styles.text, activeFeed === 'community' && styles.activeText]}>Community</Text>
                     </TouchableOpacity>
                 </View>
             </BlurView>

@@ -110,9 +110,10 @@ export class FeedManager {
         otherContent.push(...papers);
 
         // Fetch insights (remainder ≈ 30% of original)
-        const insightsCount = remainingCount - papers.length;
-        const insights = await this.fetchContentByType('insight', insightsCount);
-        otherContent.push(...insights);
+        // REMOVED: Insights now only appear in Community Feed
+        // const insightsCount = remainingCount - papers.length;
+        // const insights = await this.fetchContentByType('insight', insightsCount);
+        // otherContent.push(...insights);
 
         // SHUFFLE only non-article content
         const shuffledOthers = this.shuffleArray(otherContent);
@@ -204,65 +205,8 @@ export class FeedManager {
     count: number
   ): Promise<FeedItem[]> {
     try {
-      // TEMPORARY: Always use fallback method to get all fields including animation_code
-      // This ensures we get animation_code field for testing
-      console.log(`🔧 FeedManager: Using fallback method for ${contentType} to ensure animation_code is fetched`);
+      // Use fallback method to get all fields including animation_code
       return await this.fetchContentByTypeOriginal(contentType, count);
-
-      // Original RPC logic (commented out for testing)
-      /*
-      // For insights, always use the original method to ensure proper profile joins
-      // The RPC function may not properly join with profiles table
-      if (contentType === 'insight') {
-        return await this.fetchContentByTypeOriginal(contentType, count);
-      }
-
-      // Use RPC function for other content types
-      const { data, error } = await supabase.rpc('get_unviewed_content_by_type', {
-        p_user_id: this.userId,
-        p_content_type: contentType,
-        p_industry_ids: this.userIndustries,
-        p_limit: count * 3 // Get extra in case some fail conversion
-      });
-
-      if (error) {
-        console.error(`FeedManager: RPC error for ${contentType}:`, error);
-        // Fallback to original method if RPC doesn't exist yet
-        return this.fetchContentByTypeOriginal(contentType, count);
-      }
-
-      if (!data || data.length === 0) {
-        return [];
-      }
-
-      // Check which content has slides
-      // Convert IDs to integers since content_slides.content_id is integer type
-      const contentIds = data.map((item: any) => parseInt(item.id, 10));
-
-      const { data: slidesData, error: slidesError } = await supabase
-        .from('content_slides')
-        .select('content_id')
-        .eq('content_type', contentType)
-        .in('content_id', contentIds);
-
-      if (slidesError) {
-        console.error(`FeedManager: Error fetching slides:`, slidesError);
-      }
-
-      const contentWithSlidesIds = new Set(slidesData?.map(s => s.content_id) || []);
-
-      // Convert to FeedItem format - no client-side filtering needed since DB already filtered
-      const feedItems = data.slice(0, count).map((item: any) => {
-        const feedItem = this.convertToFeedItem(item, contentType);
-        // Mark if this item has slides (compare as integer)
-        if (contentType === 'article' || contentType === 'paper') {
-          (feedItem as any).hasSlides = contentWithSlidesIds.has(parseInt(item.id, 10));
-        }
-        return feedItem;
-      });
-
-      return feedItems;
-      */
     } catch (error) {
       console.error(`FeedManager: Exception in fetchContentByType for ${contentType}:`, error);
       return [];
@@ -290,6 +234,7 @@ export class FeedManager {
               avatar_url
             )
           `)
+          // Filter out own insights for Community Feed
           .neq('author_id', this.userId)
           .order('created_at', { ascending: false })
           .limit(count * 5); // Get more to account for filtering
@@ -297,23 +242,12 @@ export class FeedManager {
         const tableName = contentType === 'paper' ? 'papers' :
           contentType === 'book' ? 'books' : 'articles';
 
-        // TEMPORARY: For articles, limit to 4 most recent regardless of industry
-        if (contentType === 'article') {
-          console.log('🔧 FeedManager: Fetching 4 most recent articles (ignoring viewed status for testing)');
-          query = supabase
-            .from(tableName)
-            .select('*')
-            .eq('special', true)
-            .order('created_at', { ascending: false })
-            .limit(4);
-        } else {
-          query = supabase
-            .from(tableName)
-            .select('*')
-            .in('industry_id', this.userIndustries)
-            .order('created_at', { ascending: false })
-            .limit(count * 5);
-        }
+        query = supabase
+          .from(tableName)
+          .select('*')
+          .in('industry_id', this.userIndustries)
+          .order('created_at', { ascending: false })
+          .limit(count * 5);
       }
 
       const { data, error } = await query;
@@ -324,35 +258,33 @@ export class FeedManager {
       }
 
       console.log(`🔧 FeedManager: Fetched ${data.length} ${contentType} items from database`);
-      if (contentType === 'article' && data.length > 0) {
-        console.log(`🔧 FeedManager: First article has animation_code:`, {
-          id: data[0].id,
-          hasAnimationCode: !!data[0].animation_code,
-          animationCodeLength: data[0].animation_code?.length || 0,
-          animationCodePreview: data[0].animation_code?.substring(0, 100)
-        });
-      }
 
-      // TEMPORARY: Skip viewed content filtering for articles during testing
-      if (contentType === 'article') {
-        const feedItems = data.map((item: any) =>
-          this.convertToFeedItem(item, contentType)
-        );
-        console.log(`🔧 FeedManager: Returning ${feedItems.length} articles without filtering viewed content`);
-        return feedItems;
-      }
-
-      // Filter out viewed content client-side for other content types
+      // Filter out viewed content client-side for all content types
       const viewedKeys = Array.from(this.viewedContentIds);
 
       const unviewedData = data.filter((item: any) => {
         const itemKey = `${contentType}-${item.id}`;
         // Filter out viewed content
-        if (viewedKeys.includes(itemKey)) return false;
+        if (viewedKeys.includes(itemKey)) {
+          console.log(`🔧 FeedManager: Filtering out viewed content: ${itemKey}`);
+          return false;
+        }
         // Filter out blocked users for insights
         if (contentType === 'insight' && this.blockedUserIds.has(item.author_id)) return false;
+
+        // Debug logging for insight filtering
+        if (contentType === 'insight' && item.author_id === this.userId) {
+          console.log(`🔧 FeedManager: Filtering out OWN insight: ${item.id} (author: ${item.author_id})`);
+          return false;
+        } else if (contentType === 'insight' && item.author_id === this.userId) {
+          // Case where it slipped through via some other equality check failure?
+          console.error(`🔧 FeedManager: OWN insight slipped through preliminary filter: ${item.id}`);
+        }
+
         return true;
       });
+
+      console.log(`🔧 FeedManager: Returning ${unviewedData.length} unique ${contentType} items after filtering`);
 
       const feedItems = unviewedData.slice(0, count).map((item: any) =>
         this.convertToFeedItem(item, contentType)
@@ -447,6 +379,7 @@ export class FeedManager {
           type: 'insight',
           content: data.content || '',
           title: data.content ? data.content.substring(0, 50) + '...' : '',
+          image_url: data.image_url, // Map image_url
           author: {
             name: authorName,
             handle: `@${authorName.toLowerCase().replace(/\s+/g, '')}`,

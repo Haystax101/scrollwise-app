@@ -157,9 +157,7 @@ export default function ChatScreen() {
                     styles.inputContainer,
                     { backgroundColor: colors.card, borderTopColor: colors.border, paddingBottom: insets.bottom + 8 }
                 ]}>
-                    <TouchableOpacity style={styles.attachButton}>
-                        <Feather name="plus" size={24} color={colors.primary} />
-                    </TouchableOpacity>
+
 
                     <TextInput
                         style={[styles.input, { backgroundColor: colors.background, color: colors.text }]}

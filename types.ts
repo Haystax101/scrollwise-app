@@ -51,6 +51,7 @@ export interface Insight {
   views_count?: number;
   created_at?: string;
   link?: string;
+  image_url?: string; // Optional image handling
 }
 
 // Base interface for all content types

@@ -1,22 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { InputField } from './InputField';
-import { OnboardingPage } from './OnboardingPage';
+import { OnboardingStepContent } from './OnboardingStepContent';
+import { OnboardingStyles } from './styles';
 
 interface PasswordSetupProps {
   onNext: (data: { password: string }) => void;
-  onBack: () => void;
+  onBack?: () => void;
+  isLoading?: boolean;
 }
 
-export const PasswordSetup: React.FC<PasswordSetupProps> = ({ onNext, onBack }) => {
+export const PasswordSetup: React.FC<PasswordSetupProps> = ({ onNext, onBack, isLoading = false }) => {
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleNext = () => {
     if (password && isValidPassword && !isLoading) {
-      setIsLoading(true);
       onNext({ password });
-      setTimeout(() => setIsLoading(false), 2000);
     }
   };
 
@@ -28,13 +27,12 @@ export const PasswordSetup: React.FC<PasswordSetupProps> = ({ onNext, onBack }) 
   const canContinue = isValidPassword;
 
   return (
-    <OnboardingPage
+    <OnboardingStepContent
       title="Create a password"
       subtitle="Choose a strong password to keep your account secure"
-      onBack={onBack}
       onNext={handleNext}
-      buttonText={isLoading ? "Creating account..." : "Continue"}
-      buttonDisabled={!canContinue || isLoading}
+      buttonText={isLoading ? "Creating Account..." : "Continue"}
+      buttonDisabled={!canContinue || isLoading} // Reverted to original logic as new validation vars are undefined
     >
       <View style={styles.container}>
         <InputField
@@ -43,7 +41,7 @@ export const PasswordSetup: React.FC<PasswordSetupProps> = ({ onNext, onBack }) 
           onChangeText={setPassword}
           secureTextEntry
         />
-        
+
         {password.length > 0 && (
           <View style={styles.validationContainer}>
             {!hasMinLength && (
@@ -58,7 +56,7 @@ export const PasswordSetup: React.FC<PasswordSetupProps> = ({ onNext, onBack }) 
           </View>
         )}
       </View>
-    </OnboardingPage>
+    </OnboardingStepContent>
   );
 };
 
@@ -66,7 +64,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-start',
-    paddingTop: 20,
+    paddingTop: 0,
   },
   validationContainer: {
     marginTop: 16,
@@ -74,7 +72,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   errorText: {
-    color: '#EF4444',
+    color: OnboardingStyles.error,
     fontSize: 14,
     marginTop: 4,
     lineHeight: 20,

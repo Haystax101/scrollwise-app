@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { FeedItem } from '../../components/communities/FeedItem';
+import { ViewTracking } from '../../lib/viewTracking';
+import InsightCard from '../InsightCard';
 
 interface CommunityFeedProps {
     selectedCommunity: any | null;
@@ -21,6 +23,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
     // Data State
     const [feed, setFeed] = useState<FeedItemType[]>([]);
     const [loading, setLoading] = useState(true);
+    const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
 
     // UI State
     const [messageText, setMessageText] = useState('');
@@ -37,16 +40,39 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
     }, [selectedCommunity]);
 
     const fetchFeed = async () => {
-        setLoading(true);
+        // Only show loading indicator on initial load, not background refresh
+        if (feed.length === 0) setLoading(true);
+
         try {
             if (selectedCommunity) {
                 // Specific Community Feed (Chat + Posts)
                 const data = await communityService.getCommunityFeed(selectedCommunity.id);
                 setFeed(data);
             } else {
-                // General FYP (Posts Only)
-                const data = await communityService.getGeneralFeed();
-                setFeed(data);
+                // General FYP (Posts + Insights)
+                if (!session?.user) return;
+
+                // Load viewed content first
+                const viewed = await ViewTracking.loadViewedContent(session.user.id);
+                setViewedIds(viewed);
+
+                const [posts, insights] = await Promise.all([
+                    communityService.getGeneralFeed(50, 0, session.user.id),
+                    communityService.getInsights(20, session.user.id)
+                ]);
+
+                // Filter insights
+                const filteredInsights = insights.filter((item: any) => {
+                    const viewKey = `insight-${item.id}`;
+                    return !viewed.has(viewKey);
+                });
+
+                // Merge and Sort
+                const merged = [...posts, ...filteredInsights].sort((a, b) =>
+                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                );
+
+                setFeed(merged);
             }
         } catch (e) {
             console.error(e);
@@ -55,6 +81,18 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
             setRefreshing(false);
         }
     };
+
+    const handleViewableItemsChanged = useCallback(({ viewableItems }: any) => {
+        if (!session?.user) return;
+
+        viewableItems.forEach(async (viewToken: any) => {
+            const item = viewToken.item;
+            if (item.type === 'insight') {
+                const newViewed = await ViewTracking.markAsViewed(session.user.id, item.id, 'insight', viewedIds);
+                setViewedIds(newViewed);
+            }
+        });
+    }, [session?.user, viewedIds]);
 
     const handleSendMessage = async () => {
         if (!messageText.trim() || !selectedCommunity || !session?.user) return;
@@ -87,6 +125,13 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
         }
     };
 
+    const renderItem = ({ item }: { item: any }) => {
+        if (item.type === 'insight') {
+            return <InsightCard insight={item} />;
+        }
+        return <FeedItem item={item} currentUserId={session?.user?.id || ''} />;
+    };
+
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
 
@@ -95,8 +140,10 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
             {/* Feed List */}
             <FlatList
                 data={feed}
-                renderItem={({ item }) => <FeedItem item={item} currentUserId={session?.user?.id || ''} />}
+                renderItem={renderItem}
                 keyExtractor={(item) => item.id}
+                onViewableItemsChanged={handleViewableItemsChanged}
+                viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
                 contentContainerStyle={{
                     // Inverted List:
                     // paddingTop = Space at visual BOTTOM (Input area)
@@ -106,7 +153,6 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
                     paddingHorizontal: 0
                 }}
                 inverted={!!selectedCommunity} // Specific groups are chat-like (bottom up), General is Feed (top down)? 
-
 
                 refreshing={refreshing}
                 onRefresh={fetchFeed}

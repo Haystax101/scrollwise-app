@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome } from '@expo/vector-icons';
-import { Button } from './Button';
+import { OnboardingStepContent } from './OnboardingStepContent';
 import { OnboardingStyles } from './styles';
-import { getIndustryIcon, getIndustryColor, LEGACY_INDUSTRY_MAPPING } from '../../utils/industryIcons';
+import { getIndustryIcon, getIndustryColor } from '../../utils/industryIcons';
 import * as Haptics from 'expo-haptics';
 
 const industries = [
@@ -12,7 +12,7 @@ const industries = [
   { id: 'entrepreneurship', name: 'Entrepreneurship and Startups' },
   { id: 'technology', name: 'Technology and AI' },
   { id: 'energy', name: 'Energy, Sustainability and Climate Innovation' },
-  { id: 'creative', name: 'Creative Industries and the Arts' },
+  { id: 'law', name: 'Law' },
   { id: 'engineering', name: 'Engineering and Automotive' },
   { id: 'healthcare', name: 'Medicine and Healthcare' },
   { id: 'education', name: 'Education' },
@@ -23,7 +23,9 @@ interface IndustrySelectionProps {
 }
 
 const getIndustryIconColor = (industryId: string, isSelected: boolean): string => {
-  return getIndustryColor(industryId, isSelected);
+  // Use explicit colours for dark mode visibility
+  if (isSelected) return '#000000'; // Black icon on gold background
+  return OnboardingStyles.accent; // Gold icon on dark background
 };
 
 export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext }) => {
@@ -56,54 +58,56 @@ export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext }) 
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Select your industry</Text>
-      </View>
-
+    <OnboardingStepContent
+      title="Select your industry"
+      subtitle="Pick the topics you want to explore"
+      onNext={handleNext}
+      buttonText={isLoading ? "Saving..." : `Continue (${selectedIndustries.length} selected)`}
+      buttonDisabled={selectedIndustries.length === 0 || isLoading}
+    // Custom children container style to allow scrolling the list within the step content
+    >
       {/* Search Bar */}
       <View style={styles.searchContainerWrapper}>
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#6B7280" style={styles.searchIcon} />
+          <Ionicons name="search" size={20} color={OnboardingStyles.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search industries..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={OnboardingStyles.textTertiary}
             value={searchText}
             onChangeText={setSearchText}
-            selectionColor="#F59E0B"
+            selectionColor={OnboardingStyles.accent}
           />
         </View>
       </View>
 
       {/* Industries List */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.industriesWrapper}>
-          {filteredIndustries.map((industry) => {
-            const isSelected = selectedIndustries.some(selected => selected.id === industry.id);
-            return (
-              <TouchableOpacity
-                key={industry.id}
-                style={[
-                  styles.industryItem,
-                  isSelected && styles.industryItemSelected
-                ]}
-                onPress={() => handleIndustryToggle(industry)}
-              >
+      <View style={styles.industriesWrapper}>
+        {filteredIndustries.map((industry) => {
+          const isSelected = selectedIndustries.some(selected => selected.id === industry.id);
+          return (
+            <TouchableOpacity
+              key={industry.id}
+              style={[
+                styles.industryItem,
+                isSelected && styles.industryItemSelected
+              ]}
+              onPress={() => handleIndustryToggle(industry)}
+              activeOpacity={0.8}
+            >
               <View style={[
                 styles.industryIcon,
                 isSelected && styles.industryIconSelected
               ]}>
                 {(() => {
                   const iconConfig = getIndustryIcon(industry.id);
-                  const IconComponent = iconConfig.family === 'MaterialIcons' ? MaterialIcons : 
-                                      iconConfig.family === 'FontAwesome' ? FontAwesome : Ionicons;
+                  const IconComponent = iconConfig.family === 'MaterialIcons' ? MaterialIcons :
+                    iconConfig.family === 'FontAwesome' ? FontAwesome : Ionicons;
                   return (
-                    <IconComponent 
-                      name={iconConfig.name as any} 
-                      size={24} 
-                      color={getIndustryIconColor(industry.id, isSelected)} 
+                    <IconComponent
+                      name={iconConfig.name as any}
+                      size={24}
+                      color={getIndustryIconColor(industry.id, isSelected)}
                     />
                   );
                 })()}
@@ -115,127 +119,74 @@ export const IndustrySelection: React.FC<IndustrySelectionProps> = ({ onNext }) 
                 {industry.name}
               </Text>
               {isSelected && (
-                <Ionicons name="checkmark-circle" size={24} color="#F59E0B" />
+                <Ionicons name="checkmark-circle" size={24} color={OnboardingStyles.buttonTextColor} />
               )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Button
-          onPress={handleNext}
-          disabled={selectedIndustries.length === 0 || isLoading}
-        >
-          {isLoading ? "Saving..." : `Continue (${selectedIndustries.length} selected)`}
-        </Button>
+            </TouchableOpacity>
+          );
+        })}
       </View>
-    </SafeAreaView>
+    </OnboardingStepContent>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: OnboardingStyles.backgroundColor,
-    paddingHorizontal: OnboardingStyles.containerPaddingHorizontal,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingTop: 120, // Move down to accommodate progress bar overlay (60px top + 60px progress bar area)
-    marginBottom: OnboardingStyles.contentMarginBottom,
-    height: OnboardingStyles.headerHeight + 104, // Increase height for extra padding
-    paddingHorizontal: OnboardingStyles.textPaddingHorizontal, // Added text padding
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: OnboardingStyles.textPrimary,
-  },
   searchContainerWrapper: {
-    paddingHorizontal: 16,
     marginBottom: 24,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: OnboardingStyles.inputBackground,
+    borderRadius: OnboardingStyles.inputBorderRadius,
     paddingHorizontal: 16,
-    height: 48,
+    height: OnboardingStyles.inputHeight,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: 'rgba(0, 0, 0, 0.05)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: OnboardingStyles.borderColor,
   },
   searchIcon: {
     marginRight: 12,
   },
   searchInput: {
     flex: 1,
-    color: '#1F2937',
+    color: OnboardingStyles.textPrimary,
     fontSize: 16,
-    letterSpacing: 0,
-  },
-  content: {
-    flex: 1,
-    maxHeight: '60%', // Limit content height to make room for moved header
   },
   industriesWrapper: {
-    paddingHorizontal: 16,
+    paddingBottom: 20,
   },
   industryItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    shadowColor: 'rgba(0, 0, 0, 0.05)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 2,
+    padding: 16,
+    backgroundColor: OnboardingStyles.cardBackground,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: OnboardingStyles.borderColor,
   },
   industryItemSelected: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#F59E0B',
-    borderWidth: 2,
+    backgroundColor: OnboardingStyles.accent,
+    borderColor: OnboardingStyles.accent,
   },
   industryIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(234, 179, 8, 0.1)', // customized dark mode bubble
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   industryIconSelected: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   industryName: {
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: OnboardingStyles.textPrimary,
   },
   industryNameSelected: {
-    color: '#1F2937',
-  },
-  footer: {
-    paddingVertical: OnboardingStyles.footerPaddingVertical,
-    paddingHorizontal: OnboardingStyles.footerPaddingHorizontal,
-    alignItems: 'center',
+    color: OnboardingStyles.buttonTextColor,
   },
 });

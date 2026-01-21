@@ -496,37 +496,24 @@ export const SpecialArticleCard: React.FC<SpecialArticleCardProps> = ({
             </View>
 
             {(isMenuOpen) && (
-                <Animated.View style={[styles.topControls, { top: insets.top + 10, gap: 8 }]}>
-                    {showBackButton && (
-                        <TouchableOpacity style={styles.iconButton} onPress={handleBackPress}>
-                            <Feather name="arrow-left" size={24} color="white" />
-                        </TouchableOpacity>
-                    )}
+                <Animated.View style={[styles.topControls, { bottom: insets.bottom + BOTTOM_NAV_HEIGHT + 75, gap: 12 }]}>
+                    {/* Items are reversed due to column-reverse */}
+
+                    <TouchableOpacity style={styles.iconButton} onPress={() => setShowFeedbackModal(true)}>
+                        <Feather name="message-square" size={20} color="white" />
+                    </TouchableOpacity>
+
+                    <FlagButton contentId={article.id} contentType="article" size={20} style={{ marginRight: 0 }} iconColor="white" />
+
+                    <View style={styles.pill}>
+                        <Feather name={getTypeIcon(article.type) as any} size={16} color="white" />
+                    </View>
 
                     {article.industry_id && (
                         <View style={styles.pill}>
                             <Feather name={((allIndustries.find(i => i.id === article.industry_id) as any)?.icon_name || 'briefcase')} size={16} color="white" />
                         </View>
                     )}
-
-                    <View style={styles.pill}>
-                        <Feather name={getTypeIcon(article.type) as any} size={16} color="white" />
-                    </View>
-
-                    {article.author && (
-                        <View style={styles.pill}>
-                            <Text style={styles.pillText}>
-                                {article.author.length > 15
-                                    ? article.author.substring(0, 15) + '...'
-                                    : article.author}
-                            </Text>
-                        </View>
-                    )}
-                    <View style={{ flex: 1 }} />
-                    <FlagButton contentId={article.id} contentType="article" size={20} style={{ marginRight: 10 }} iconColor="white" />
-                    <TouchableOpacity style={styles.iconButton} onPress={() => setShowFeedbackModal(true)}>
-                        <Feather name="message-square" size={20} color="white" />
-                    </TouchableOpacity>
                 </Animated.View>
             )}
 
@@ -591,14 +578,13 @@ const styles = StyleSheet.create({
     },
     topControls: {
         position: 'absolute',
-        left: 0,
-        right: 0,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        zIndex: 100,      // High zIndex to stay above 3D flip
-        elevation: 100,   // High elevation for Android
-        transform: [{ matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 200, 1] }], // Push forward in Z-space using matrix
+        right: 20, // Align with menu button
+        // Bottom will be calculated dynamically based on button position
+        flexDirection: 'column-reverse', // Stack upwards
+        alignItems: 'flex-end', // Align right
+        zIndex: 100,
+        elevation: 100,
+        transform: [{ matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 200, 1] }],
     },
     iconButton: {
         width: 40,

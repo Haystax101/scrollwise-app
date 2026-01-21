@@ -11,25 +11,13 @@ import {
   Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { profileImageService } from '../../services/profileImageService';
-import { SavedInsightsList } from '../insights/SavedInsightsList';
-
-interface SavedInsight {
-  id: string;
-  content: string;
-  created_at: string;
-  likes_count: number;
-  comments_count: number;
-  views_count: number;
-  author_id?: string;
-  author?: {
-    full_name: string;
-    avatar_url?: string;
-  };
-}
+import { UGCArchiveGrid } from './UGCArchiveGrid';
 
 interface UserProfile {
   id: string;
@@ -38,26 +26,24 @@ interface UserProfile {
   tagline?: string | null;
   total_voltz_earned: number;
   level: number;
-  // Career goal
-  career_goal?: string | null;
-  career_timeframe?: string | null;
-  career_companies?: string[];
+  // Stats
+  followers_count: number;
+  following_count: number;
+  streak?: number;
   // Industries
   industries?: Array<{ id: string; name: string; stage: string }>;
   // Profile passions
   passionate_about?: string | null;
   working_on?: string | null;
   // Connection info
-  is_friend?: boolean;
-  friend_request_sent?: boolean;
-  friend_request_received?: boolean;
+  is_following?: boolean;
 }
 
 interface UserDetailModalProps {
   visible: boolean;
   onClose: () => void;
   userId: string;
-  currentUserId?: string; // For friendship status checks
+  currentUserId?: string;
 }
 
 export const UserDetailModal: React.FC<UserDetailModalProps> = ({
@@ -67,13 +53,13 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
   currentUserId,
 }) => {
   const { colors, isDark } = useTheme();
-  const router = useRouter();
+  // const router = useRouter(); // Removed to prevent accidental navigation
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [insights, setInsights] = useState<SavedInsight[]>([]);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
     if (visible && userId) {
@@ -100,25 +86,6 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         throw profileError;
       }
 
-      // Fetch career goal
-      const { data: careerData } = await supabase
-        .from('user_goals')
-        .select('goal, timeframe')
-        .eq('user_id', userId)
-        .eq('goal_type', 'career')
-        .maybeSingle();
-
-      // Fetch career goal companies
-      let careerCompanies: string[] = [];
-      if (careerData) {
-        const { data: companiesData } = await supabase
-          .from('user_goal_companies')
-          .select('companies(name)')
-          .eq('user_id', userId);
-
-        careerCompanies = companiesData?.map((c: any) => c.companies?.name).filter(Boolean) || [];
-      }
-
       // Fetch industries
       const { data: industriesData } = await supabase
         .from('user_industries')
@@ -138,30 +105,18 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         .eq('user_id', userId)
         .maybeSingle();
 
-      // Check friendship status if current user is provided
-      let friendshipInfo = {
-        is_friend: false,
-        friend_request_sent: false,
-        friend_request_received: false,
-      };
+      // Check follow status if current user is provided
+      let isFollowing = false;
 
       if (currentUserId && currentUserId !== userId) {
-        const { data: friendshipData } = await supabase
-          .from('friendships')
-          .select('status, requester_id, addressee_id')
-          .or(`and(requester_id.eq.${currentUserId},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${currentUserId})`)
+        const { data: followData } = await supabase
+          .from('follows')
+          .select('follower_id') // We only care if a record exists
+          .match({ follower_id: currentUserId, following_id: userId })
           .maybeSingle();
 
-        if (friendshipData) {
-          if (friendshipData.status === 'accepted') {
-            friendshipInfo.is_friend = true;
-          } else if (friendshipData.status === 'pending') {
-            if (friendshipData.requester_id === currentUserId) {
-              friendshipInfo.friend_request_sent = true;
-            } else {
-              friendshipInfo.friend_request_received = true;
-            }
-          }
+        if (followData) {
+          isFollowing = true;
         }
 
         // Check if user is blocked
@@ -171,6 +126,14 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         setIsBlocked(blockData || false);
       }
 
+      // Fetch stats (followers/following)
+      const { data: statsData } = await supabase.rpc('get_follow_counts', {
+        target_user_id: userId
+      });
+
+      // Calculate streak
+      const userStreak = 0; // Default for now
+
       const completeProfile: UserProfile = {
         id: profileData.id,
         full_name: profileData.full_name,
@@ -178,59 +141,17 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         tagline: profileData.tagline,
         total_voltz_earned: profileData.total_voltz_earned || 0,
         level: profileData.level || 1,
-        career_goal: careerData?.goal,
-        career_timeframe: careerData?.timeframe,
-        career_companies: careerCompanies,
+        followers_count: statsData?.followers || 0,
+        following_count: statsData?.following || 0,
+        streak: userStreak,
         industries,
         passionate_about: passionsData?.passionate_about,
         working_on: passionsData?.working_on,
-        ...friendshipInfo,
+        is_following: isFollowing,
       };
 
-      console.log('✅ UserDetailModal: Profile fetched successfully:', {
-        name: completeProfile.full_name,
-        hasTagline: !!completeProfile.tagline,
-        hasCareerGoal: !!completeProfile.career_goal,
-        industriesCount: industries.length,
-        voltz: completeProfile.total_voltz_earned,
-        level: completeProfile.level,
-      });
-
+      console.log('✅ UserDetailModal: Profile fetched successfully');
       setProfile(completeProfile);
-
-      // Fetch insights if they're friends
-      if (friendshipInfo.is_friend) {
-        console.log('🔍 UserDetailModal: User is a friend, fetching insights');
-        const { data: insightsData, error: insightsError } = await supabase
-          .from('insights')
-          .select('id, content, created_at, likes_count, comments_count, views_count')
-          .eq('author_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(10);
-
-        if (insightsError) {
-          console.error('❌ UserDetailModal: Error fetching insights:', insightsError);
-        } else {
-          // Format insights to match SavedInsight type
-          const formattedInsights: SavedInsight[] = (insightsData || []).map(insight => ({
-            id: insight.id,
-            content: insight.content,
-            created_at: insight.created_at,
-            likes_count: insight.likes_count || 0,
-            comments_count: insight.comments_count || 0,
-            views_count: insight.views_count || 0,
-            author_id: userId,
-            author: {
-              full_name: completeProfile.full_name,
-              avatar_url: completeProfile.avatar_url || undefined
-            }
-          }));
-          setInsights(formattedInsights);
-          console.log('✅ UserDetailModal: Fetched', formattedInsights.length, 'insights');
-        }
-      } else {
-        setInsights([]);
-      }
 
     } catch (error) {
       console.error('❌ UserDetailModal: Error fetching user profile:', error);
@@ -240,32 +161,39 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     }
   };
 
-  const handleSendFriendRequest = async () => {
-    if (!currentUserId || !profile) return;
+  const handleToggleFollow = async () => {
+    if (!currentUserId || !profile || followLoading) return;
+    setFollowLoading(true);
 
     try {
-      const { error } = await supabase
-        .from('friendships')
-        .insert({
-          requester_id: currentUserId,
-          addressee_id: profile.id,
-          status: 'pending',
-        });
+      if (profile.is_following) {
+        // Unfollow
+        const { error } = await supabase
+          .from('follows')
+          .delete()
+          .match({ follower_id: currentUserId, following_id: profile.id });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // Update local state
-      setProfile(prev => prev ? {
-        ...prev,
-        friend_request_sent: true,
-        friend_request_received: false,
-      } : prev);
+        setProfile(prev => prev ? { ...prev, is_following: false, followers_count: Math.max(0, prev.followers_count - 1) } : null);
+      } else {
+        // Follow
+        const { error } = await supabase
+          .from('follows')
+          .insert({ follower_id: currentUserId, following_id: profile.id });
 
-      console.log('✅ Friend request sent successfully');
+        if (error) throw error;
+
+        setProfile(prev => prev ? { ...prev, is_following: true, followers_count: prev.followers_count + 1 } : null);
+      }
     } catch (error) {
-      console.error('❌ Error sending friend request:', error);
+      console.error('Error toggling follow:', error);
+      Alert.alert('Error', 'Failed to update follow status');
+    } finally {
+      setFollowLoading(false);
     }
   };
+
 
   const handleBlockToggle = async () => {
     if (!currentUserId || !profile) return;
@@ -327,23 +255,25 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
       paddingTop: 60,
       paddingHorizontal: 20,
       paddingBottom: 20,
-      backgroundColor: colors.background,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      // backgroundColor: 'transparent', // Let gradient show through
+      zIndex: 10,
     },
     title: {
-      fontSize: 20,
-      fontWeight: '700',
+      fontSize: 18,
+      fontWeight: '600',
       color: colors.text,
-      flex: 1,
-      textAlign: 'center',
-      marginHorizontal: 40,
+      fontFamily: 'Montserrat_600SemiBold',
     },
     closeButton: {
-      padding: 8,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.card,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     actionButton: {
-      padding: 8,
+      width: 40, // consistent spacing
     },
     content: {
       flex: 1,
@@ -352,7 +282,6 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      paddingVertical: 40,
     },
     errorContainer: {
       flex: 1,
@@ -361,10 +290,9 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
       paddingHorizontal: 20,
     },
     errorText: {
-      fontSize: 16,
       color: colors.textSecondary,
-      textAlign: 'center',
       marginBottom: 16,
+      textAlign: 'center',
     },
     retryButton: {
       backgroundColor: colors.primary,
@@ -374,94 +302,142 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     },
     retryButtonText: {
       color: 'white',
-      fontSize: 14,
       fontWeight: '600',
     },
-    profileHeader: {
+
+    // Identity Section (Matches SocialProfileHeader)
+    identitySection: {
+      paddingHorizontal: 24,
+      marginBottom: 24,
+    },
+    profileTopContainer: {
+      flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 24,
-      paddingHorizontal: 20,
+      marginBottom: 16,
+    },
+    avatarWrapper: {
+      marginRight: 24,
+      position: 'relative',
     },
     avatar: {
       width: 80,
       height: 80,
       borderRadius: 40,
+      borderWidth: 2,
+      borderColor: colors.primary,
       backgroundColor: colors.surface,
-      marginBottom: 12,
+    },
+    socialStatsContainer: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      alignItems: 'center',
+    },
+    statGroup: {
+      alignItems: 'center',
+    },
+    socialStatValue: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      textAlign: 'center',
+      color: colors.text,
+    },
+    socialStatLabel: {
+      fontSize: 12,
+      fontWeight: '500',
+      textAlign: 'center',
+      color: colors.textSecondary,
+    },
+    bioContainer: {
+      marginBottom: 8,
     },
     name: {
-      fontSize: 24,
-      fontWeight: '700',
-      color: colors.text,
-      textAlign: 'center',
+      fontSize: 22, // Slightly larger
+      fontWeight: 'bold',
+      fontFamily: 'Montserrat_700Bold',
       marginBottom: 4,
+      color: colors.text,
     },
     tagline: {
       fontSize: 14,
+      lineHeight: 20,
       color: colors.textSecondary,
-      textAlign: 'center',
       fontStyle: 'italic',
-      marginBottom: 12,
-      paddingHorizontal: 20,
     },
-    levelBadge: {
-      backgroundColor: '#EAB308',
+
+    // Action Buttons Row (Connect / Block)
+    actionRow: {
       flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
-      marginBottom: 16,
+      gap: 12,
+      marginTop: 16,
     },
-    levelText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: '#000000',
-      marginLeft: 4,
-    },
-    connectButton: {
+    primaryActionButton: {
+      flex: 1,
       backgroundColor: colors.primary,
-      paddingHorizontal: 20,
       paddingVertical: 10,
-      borderRadius: 8,
-    },
-    connectButtonDisabled: {
-      backgroundColor: colors.surface,
-    },
-    connectButtonText: {
-      color: 'white',
-      fontSize: 14,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-    connectButtonTextDisabled: {
-      color: colors.textSecondary,
-    },
-    blockButton: {
-      flexDirection: 'row',
+      borderRadius: 20, // Rounded pill style
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 8,
-      marginTop: 12,
+    },
+    primaryActionButtonOutline: {
+      backgroundColor: 'transparent',
       borderWidth: 1,
-      borderColor: '#dc2626',
+      borderColor: colors.text,
     },
-    blockButtonBlocked: {
-      borderColor: colors.border,
-    },
-    blockButtonText: {
-      color: '#dc2626',
+    primaryActionText: {
+      color: 'white',
+      fontWeight: '600',
       fontSize: 14,
-      fontWeight: '500',
-      marginLeft: 6,
     },
-    blockButtonTextBlocked: {
+    secondaryActionButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.card,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    // Stats Grid
+    statsGrid: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 24,
+      paddingVertical: 16,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: colors.border,
+      marginHorizontal: 20,
+      marginBottom: 24,
+      backgroundColor: colors.card + '40', // Slight tint
+      borderRadius: 12,
+    },
+    statItem: {
+      alignItems: 'center',
+    },
+    statValue: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      fontFamily: 'Oswald_700Bold',
+    },
+    statLabel: {
+      fontSize: 12,
+      fontWeight: '500',
+      textTransform: 'uppercase',
       color: colors.textSecondary,
     },
+    statDivider: {
+      width: 1,
+      height: 24,
+      backgroundColor: colors.border,
+    },
+
+    // Content Sections
     scrollContent: {
-      paddingBottom: 40,
+      paddingBottom: 60,
     },
     section: {
       backgroundColor: colors.surface,
@@ -475,19 +451,20 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
       fontWeight: '600',
       color: colors.text,
       marginBottom: 12,
+      fontFamily: 'Montserrat_600SemiBold',
     },
     sectionContent: {
       fontSize: 14,
       color: colors.text,
-      lineHeight: 20,
+      lineHeight: 22,
     },
     industriesContainer: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      marginTop: 8,
+      marginTop: 4,
     },
     industryTag: {
-      backgroundColor: isDark ? colors.border : colors.surface,
+      backgroundColor: colors.card,
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 16,
@@ -501,33 +478,11 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
       color: colors.primary,
       fontWeight: '500',
     },
-    companiesContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginTop: 8,
-    },
-    companyTag: {
-      backgroundColor: isDark ? colors.border : colors.surface,
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      borderRadius: 16,
-      marginRight: 8,
-      marginBottom: 4,
-    },
-    companyText: {
-      fontSize: 12,
-      color: colors.primary,
-      fontWeight: '500',
-    },
-    voltzText: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: colors.primary,
-    },
-    insightsSection: {
-      marginVertical: 8,
-      paddingLeft: 20,
-    },
+
+    // Grid Section
+    gridSection: {
+      marginTop: 24,
+    }
   });
 
   if (!visible) return null;
@@ -562,105 +517,105 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         ) : profile ? (
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.scrollContent}>
-              {/* Profile Header */}
-              <View style={styles.profileHeader}>
-                <Image
-                  source={
-                    profile.avatar_url
-                      ? { uri: profileImageService.getProfileImageUrl(profile.avatar_url) }
-                      : require('../../assets/profileIconDefault.png')
-                  }
-                  style={styles.avatar}
-                />
-                <Text style={styles.name}>{profile.full_name}</Text>
-                {profile.tagline && (
-                  <Text style={styles.tagline}>{profile.tagline}</Text>
-                )}
-                <View style={styles.levelBadge}>
-                  <Feather name="zap" size={16} color="#000000" />
-                  <Text style={styles.levelText}>Level {profile.level}</Text>
+              {/* Identity Section - Instagram Style Split */}
+              <View style={styles.identitySection}>
+                <View style={styles.profileTopContainer}>
+                  {/* Avatar (Left) */}
+                  <View style={styles.avatarWrapper}>
+                    <Image
+                      source={
+                        profile.avatar_url
+                          ? { uri: profileImageService.getProfileImageUrl(profile.avatar_url) }
+                          : require('../../assets/profileIconDefault.png')
+                      }
+                      style={styles.avatar}
+                    />
+                  </View>
+
+                  {/* Stats (Right) */}
+                  <View style={styles.socialStatsContainer}>
+                    <View style={styles.statGroup}>
+                      <Text style={styles.socialStatValue}>{profile.followers_count}</Text>
+                      <Text style={styles.socialStatLabel}>Followers</Text>
+                    </View>
+                    <View style={styles.statGroup}>
+                      <Text style={styles.socialStatValue}>{profile.following_count}</Text>
+                      <Text style={styles.socialStatLabel}>Following</Text>
+                    </View>
+                  </View>
                 </View>
 
-                {/* Connection Button */}
+                {/* Name & Bio */}
+                <View style={styles.bioContainer}>
+                  <Text style={styles.name}>{profile.full_name}</Text>
+                  {profile.tagline && (
+                    <Text style={styles.tagline}>{profile.tagline}</Text>
+                  )}
+                </View>
+
+                {/* Actions Row */}
                 {currentUserId && currentUserId !== profile.id && (
-                  <>
+                  <View style={styles.actionRow}>
                     <TouchableOpacity
                       style={[
-                        styles.connectButton,
-                        (profile.is_friend || profile.friend_request_sent || profile.friend_request_received) &&
-                        styles.connectButtonDisabled
+                        styles.primaryActionButton,
+                        profile.is_following && styles.primaryActionButtonOutline
                       ]}
-                      onPress={handleSendFriendRequest}
-                      disabled={profile.is_friend || profile.friend_request_sent || profile.friend_request_received}
+                      onPress={handleToggleFollow}
+                      disabled={followLoading}
                     >
-                      <Text style={[
-                        styles.connectButtonText,
-                        (profile.is_friend || profile.friend_request_sent || profile.friend_request_received) &&
-                        styles.connectButtonTextDisabled
-                      ]}>
-                        {profile.is_friend ? 'Connected' :
-                         profile.friend_request_sent ? 'Request Sent' :
-                         profile.friend_request_received ? 'Request Received' :
-                         'Connect'}
-                      </Text>
+                      {followLoading ? (
+                        <ActivityIndicator size="small" color={profile.is_following ? colors.text : 'white'} />
+                      ) : (
+                        <Text style={[
+                          styles.primaryActionText,
+                          profile.is_following && { color: colors.text }
+                        ]}>
+                          {profile.is_following ? 'Following' : 'Follow'}
+                        </Text>
+                      )}
                     </TouchableOpacity>
 
-                    {/* Block/Unblock Button */}
+                    {/* Block Button (Small Icon) */}
                     <TouchableOpacity
                       style={[
-                        styles.blockButton,
-                        isBlocked && styles.blockButtonBlocked
+                        styles.secondaryActionButton,
+                        isBlocked && { borderColor: '#dc2626', backgroundColor: '#dc2626' + '10' }
                       ]}
                       onPress={handleBlockToggle}
                       disabled={blockLoading}
                     >
                       {blockLoading ? (
-                        <ActivityIndicator size="small" color={isBlocked ? colors.textSecondary : '#dc2626'} />
+                        <ActivityIndicator size="small" color={colors.text} />
                       ) : (
-                        <>
-                          <Feather
-                            name={isBlocked ? 'user-check' : 'user-x'}
-                            size={16}
-                            color={isBlocked ? colors.textSecondary : '#dc2626'}
-                          />
-                          <Text style={[
-                            styles.blockButtonText,
-                            isBlocked && styles.blockButtonTextBlocked
-                          ]}>
-                            {isBlocked ? 'Unblock User' : 'Block User'}
-                          </Text>
-                        </>
+                        <Feather
+                          name={isBlocked ? 'user-check' : 'slash'}
+                          size={20}
+                          color={isBlocked ? '#dc2626' : colors.text}
+                        />
                       )}
                     </TouchableOpacity>
-                  </>
+                  </View>
                 )}
               </View>
 
-              {/* Voltz */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Total Voltz Earned</Text>
-                <Text style={styles.voltzText}>{profile.total_voltz_earned.toLocaleString()}</Text>
-              </View>
-
-              {/* Career Goal */}
-              {profile.career_goal && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Career Goal</Text>
-                  <Text style={styles.sectionContent}>
-                    {profile.career_goal}
-                    {profile.career_timeframe && ` • ${profile.career_timeframe}`}
-                  </Text>
-                  {profile.career_companies && profile.career_companies.length > 0 && (
-                    <View style={styles.companiesContainer}>
-                      {profile.career_companies.map((company, index) => (
-                        <View key={index} style={styles.companyTag}>
-                          <Text style={styles.companyText}>{company}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
+              {/* Gamification Stats Grid */}
+              <View style={styles.statsGrid}>
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, { color: colors.text }]}>{profile.level}</Text>
+                  <Text style={styles.statLabel}>Level</Text>
                 </View>
-              )}
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, { color: '#EAB308' }]}>{profile.total_voltz_earned}</Text>
+                  <Text style={styles.statLabel}>Voltz</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, { color: '#F43F5E' }]}>{profile.streak || 0}</Text>
+                  <Text style={styles.statLabel}>Streak</Text>
+                </View>
+              </View>
 
               {/* Industries */}
               {profile.industries && profile.industries.length > 0 && (
@@ -692,25 +647,10 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
                 </View>
               )}
 
-              {/* Friend's Insights */}
-              {profile.is_friend && insights.length > 0 && (
-                <View style={styles.insightsSection}>
-                  <Text style={styles.sectionTitle}>Recent Insights</Text>
-                  <SavedInsightsList
-                    savedInsights={insights}
-                    loading={false}
-                    onInsightPress={(insight) => {
-                      onClose(); // Close the modal first
-                      setTimeout(() => {
-                        router.push({
-                          pathname: `/insight/${insight.id}`,
-                          params: { showBackButton: 'true' }
-                        });
-                      }, 100);
-                    }}
-                  />
-                </View>
-              )}
+              {/* User Content Grid */}
+              <View style={styles.gridSection}>
+                <UGCArchiveGrid userId={userId} />
+              </View>
             </View>
           </ScrollView>
         ) : null}

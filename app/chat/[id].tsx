@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, TextInput, FlatList, StyleSheet, Image, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { Feather } from '@expo/vector-icons';
+import { UserDetailModal } from '../../components/profile/UserDetailModal';
 
 const dummyMessages = [
   { id: '1', text: 'Hey, how are you?', sender: 'John Doe', timestamp: '10:00 AM' },
@@ -16,6 +18,14 @@ const ChatDetailScreen = () => {
   const { id } = useLocalSearchParams();
   const { colors, isDark } = useTheme();
   const router = useRouter();
+  const navigation = useNavigation();
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+      title: '', // fallback
+    });
+  }, [navigation]);
 
   const styles = StyleSheet.create({
     container: {
@@ -113,19 +123,34 @@ const ChatDetailScreen = () => {
     },
   });
 
+  const [showProfileModal, setShowProfileModal] = React.useState(false);
+  const { user } = useAuth(); // Need current user for modal
+
+  const handleHeaderPress = () => {
+    setShowProfileModal(true);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -500}
       >
+        <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Feather name="chevron-down" size={28} color={colors.text} />
+            <Feather name="chevron-left" size={28} color={colors.text} />
           </TouchableOpacity>
-          <Image source={{ uri: `https://randomuser.me/api/portraits/men/${id}.jpg` }} style={styles.avatar} />
-          <Text style={styles.userName}>John Doe</Text>
+
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+            onPress={handleHeaderPress}
+            activeOpacity={0.7}
+          >
+            <Image source={{ uri: 'https://i.pravatar.cc/150?u=' + id }} style={[styles.avatar, { backgroundColor: colors.border }]} />
+            <Text style={styles.userName}>John Doe</Text>
+          </TouchableOpacity>
         </View>
         <FlatList
           data={dummyMessages}
@@ -162,6 +187,13 @@ const ChatDetailScreen = () => {
             <Feather name="send" size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>
+
+        <UserDetailModal
+          visible={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          userId={id as string} // In real app this would be the actual user ID
+          currentUserId={user?.id}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

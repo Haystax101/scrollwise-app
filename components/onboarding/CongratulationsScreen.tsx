@@ -10,11 +10,11 @@ const { height: screenHeight } = Dimensions.get('window');
 
 const CheckIcon = () => (
   <Svg width="96" height="96" viewBox="0 0 24 24" fill="none">
-    <Path 
-      d="M20 6L9 17L4 12" 
-      stroke="#F59E0B" 
-      strokeWidth="2.5" 
-      strokeLinecap="round" 
+    <Path
+      d="M20 6L9 17L4 12"
+      stroke="#F59E0B"
+      strokeWidth="2.5"
+      strokeLinecap="round"
       strokeLinejoin="round"
     />
   </Svg>
@@ -32,12 +32,11 @@ const industryMessages: Record<string, string> = {
   'Politics and International Relations': "Powerful choice! You understand that knowledge shapes nations. You're about to dive into the insights that influence global decisions and diplomatic breakthroughs.",
   'Medicine and Healthcare': "Incredible! You're part of the heroes advancing human health. Every insight you discover here could spark the next medical breakthrough that changes lives.",
   'Education': "Perfect! You're with the knowledge architects building brighter futures. Every lesson learned here multiplies into countless minds you'll inspire and transform.",
-  'Creative Industries and the Arts': "Inspiring choice! You know that creativity changes everything. You're about to discover the ideas that will fuel your next masterpiece and cultural breakthrough.",
-  'Arts and Creative Industries': "Inspiring choice! You know that creativity changes everything. You're about to discover the ideas that will fuel your next masterpiece and cultural breakthrough.",
-  'Entrepreneurship and Startups': "Fantastic! You see opportunities where others see obstacles. You're about to discover the insights that turn bold visions into the next unicorn success story.",
+  'Energy, Sustainability and Climate Innovation': "You're at the forefront of the most critical challenge of our time. Get ready for insights that power the planet and protect our future.",
+  'Law': "Justice, strategy, and precision. You're entering a world where words shape reality. Prepare for insights that sharpen your mind and your arguments.",
   'Engineering and Automotive': "Outstanding! You're joining the builders of tomorrow's mobility. From electric vehicles to autonomous systems, you're about to master the innovations driving our future.",
-  'Energy, Sustainability and Climate Innovation': "Amazing choice! You're joining the planet's champions powering a sustainable future. From clean energy to climate solutions, your knowledge here could help solve the greatest challenge of our time.",
-  'Energy, Sustainability and Climate Tech': "Amazing choice! You're joining the planet's champions powering a sustainable future. From clean energy to climate solutions, your knowledge here could help solve the greatest challenge of our time."
+  'Entrepreneurship and Startups': "Fantastic! You see opportunities where others see obstacles. You're about to discover the insights that turn bold visions into the next unicorn success story.",
+  'Creative Industries and the Arts': "Inspiring choice! You know that creativity changes everything. You're about to discover the ideas that will fuel your next masterpiece and cultural breakthrough.",
 };
 
 const multipleIndustriesTitle = "Incredible!";
@@ -60,7 +59,7 @@ const extractTitleAndBody = (message: string): { title: string; body: string } =
 export const CongratulationsScreen: React.FC<CongratulationsScreenProps> = ({ onNext, onBack }) => {
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
   const { user } = useAuth();
-  
+
   // State management
   const [loading, setLoading] = useState(true);
   const [congratulationsMessage, setCongratulationsMessage] = useState(generalBackupMessage);
@@ -93,7 +92,7 @@ export const CongratulationsScreen: React.FC<CongratulationsScreenProps> = ({ on
         const industryNames = userIndustries
           .map((ui: any) => ui.industries?.name)
           .filter((name: string | undefined): name is string => name !== undefined && name !== null);
-        
+
         if (industryNames.length === 1) {
           // Single industry selected
           const industryName = industryNames[0];
@@ -113,7 +112,7 @@ export const CongratulationsScreen: React.FC<CongratulationsScreenProps> = ({ on
     } catch (error) {
       console.error('Error in fetchUserIndustries:', error);
     }
-    
+
     setLoading(false);
   };
 
@@ -124,13 +123,13 @@ export const CongratulationsScreen: React.FC<CongratulationsScreenProps> = ({ on
       duration: 500,
       useNativeDriver: true,
     }).start();
-    
+
     // Fetch user industries
     fetchUserIndustries();
   }, [user?.id]);
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
         styles.animatedContainer,
         {
@@ -139,24 +138,24 @@ export const CongratulationsScreen: React.FC<CongratulationsScreenProps> = ({ on
       ]}
     >
       <SafeAreaView style={styles.container}>
-      {/* Content */}
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <CheckIcon />
-        </View>
-        
-        <Text style={styles.title}>{title}</Text>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#F59E0B" />
-            <Text style={styles.loadingText}>Personalizing your experience...</Text>
+        {/* Content */}
+        <View style={styles.content}>
+          <View style={styles.iconContainer}>
+            <CheckIcon />
           </View>
-        ) : (
-          <Text style={styles.description}>
-            {congratulationsMessage}
-          </Text>
-        )}
-      </View>
+
+          <Text style={styles.title}>{title}</Text>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#F59E0B" />
+              <Text style={styles.loadingText}>Personalizing your experience...</Text>
+            </View>
+          ) : (
+            <Text style={styles.description}>
+              {congratulationsMessage}
+            </Text>
+          )}
+        </View>
 
         {/* Footer */}
         <View style={styles.footer}>

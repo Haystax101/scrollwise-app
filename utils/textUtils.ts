@@ -38,16 +38,16 @@ export const calculateDynamicTextLines = (options: DynamicTextOptions): number =
   // Calculate space used by fixed elements
   const titleHeight = titleLines * 26; // Title line height is typically 26
   const fixedElementsHeight = metadataHeight + titleHeight + authorHeight + actionsHeight + padding;
-  
+
   // Calculate available space for content text
   const availableHeight = containerHeight - fixedElementsHeight;
-  
+
   // Calculate maximum lines that fit
   const maxLines = Math.floor(availableHeight / lineHeight);
-  
+
   // Use all available space with small buffer to prevent overflow
   const optimalLines = Math.max(maxLines - 1, 3); // Just subtract 1 for safety buffer, no artificial caps
-  
+
   // Ensure minimum of 3 lines for readability
   return Math.max(optimalLines, 3);
 };
@@ -56,15 +56,8 @@ export const calculateDynamicTextLines = (options: DynamicTextOptions): number =
  * Optimizes industry name display for space efficiency
  */
 export const optimizeIndustryName = (industryName: string): string => {
-  // Special case for Creative Industries and the Arts
-  if (industryName.toLowerCase().includes('creative industries and the arts')) {
-    return 'Creative and the Arts';
-  }
-  
-  // Future optimizations can be added here for other long industry names
-  // For example:
-  // if (industryName.includes('Technology and AI')) return 'Tech & AI';
-  
+  // Modifications for long industry names can be added here
+
   return industryName;
 };
 
@@ -73,7 +66,7 @@ export const optimizeIndustryName = (industryName: string): string => {
  */
 export const removeHtmlTags = (text: string): string => {
   if (!text) return '';
-  
+
   // Remove anything enclosed in < >
   return text.replace(/<[^>]*>/g, '').trim();
 };

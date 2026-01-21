@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ImageBackground, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,6 +42,10 @@ export const NativeStorySlide: React.FC<NativeStorySlideProps> = ({
     // Kept subtle black overlay for readability
     const borderColor = getOverlayColor(safeColour, 0.5);
 
+    // Calculate max height for the card to ensure it doesn't overlap bottom nav
+    // Screen height - Top Inset - Top Padding (80) - Header (approx 40) - Bottom Inset - Bottom Nav (approx 60) - Buffer (20)
+    const maxCardHeight = height - insets.top - 80 - 40 - insets.bottom - 80 - 20;
+
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             {/* Background Image */}
@@ -69,13 +73,30 @@ export const NativeStorySlide: React.FC<NativeStorySlideProps> = ({
                     <Text style={[styles.title, { color: safeColour }]}>{title.toUpperCase()}</Text>
                 </View>
 
-                <BlurView intensity={30} tint="dark" style={[styles.glassCard, { borderColor: borderColor }]}>
-                    {chapterTitle && (
-                        <Text style={[styles.chapterTitle, { marginBottom: 16 }]}>
-                            {chapterTitle}
-                        </Text>
-                    )}
-                    <Text style={styles.text}>{text}</Text>
+                <BlurView
+                    intensity={30}
+                    tint="dark"
+                    style={[
+                        styles.glassCard,
+                        {
+                            borderColor: borderColor,
+                            maxHeight: maxCardHeight // Limit height
+                        }
+                    ]}
+                >
+                    <ScrollView
+                        showsVerticalScrollIndicator={true}
+                        contentContainerStyle={{ paddingBottom: 10 }}
+                        indicatorStyle="white"
+                        nestedScrollEnabled={true}
+                    >
+                        {chapterTitle && (
+                            <Text style={[styles.chapterTitle, { marginBottom: 16 }]}>
+                                {chapterTitle}
+                            </Text>
+                        )}
+                        <Text style={styles.text}>{text}</Text>
+                    </ScrollView>
                 </BlurView>
             </View>
         </View>
@@ -118,7 +139,7 @@ const styles = StyleSheet.create({
     },
     title: {
         fontFamily: 'Oswald_500Medium',
-        fontSize: 14,
+        fontSize: 12, // Reduced from 14
         // color set dynamically
         textTransform: 'uppercase',
         letterSpacing: 1.5,
@@ -128,16 +149,16 @@ const styles = StyleSheet.create({
     },
     cardContainer: {
         flex: 1,
-        justifyContent: 'flex-start', // Moved from center to start
+        justifyContent: 'flex-start',
         alignItems: 'center',
         width: '100%',
         paddingHorizontal: 20,
-        paddingTop: '40%', // Push down from top (adjusts vertical position)
+        paddingTop: 80, // Moved up from 40%
     },
     glassCard: {
         width: '100%',
         maxWidth: 400, // Max width for tablet look
-        padding: 32,
+        padding: 24, // Reduced padding from 32
         borderRadius: 24,
         overflow: 'hidden',
         borderWidth: 1.5,
@@ -145,16 +166,16 @@ const styles = StyleSheet.create({
     },
     text: {
         fontFamily: 'Montserrat_400Regular',
-        fontSize: 19,
-        color: '#E0E0E0', // Slightly off-white for readability
-        lineHeight: 28,
+        fontSize: 16, // Reduced from 19
+        color: '#E0E0E0',
+        lineHeight: 24, // Reduced from 28
         textAlign: 'left',
     },
     chapterTitle: {
         fontFamily: 'Montserrat_700Bold',
-        fontSize: 26,
+        fontSize: 22, // Reduced from 26
         color: 'white',
-        lineHeight: 30,
+        lineHeight: 26, // Reduced from 30
         textAlign: 'left',
     },
 });

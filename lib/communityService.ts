@@ -19,7 +19,7 @@ export interface FeedItem {
 
 export const communityService = {
     // Fetch General Feed (FYP)
-    async getGeneralFeed(limit = 50, offset = 0): Promise<FeedItem[]> {
+    async getGeneralFeed(limit = 50, offset = 0, userId?: string): Promise<FeedItem[]> {
         const { data, error } = await supabase.rpc('get_general_community_feed', {
             limit_count: limit,
             offset_count: offset
@@ -30,7 +30,14 @@ export const communityService = {
             return [];
         }
 
-        return data || [];
+        let feedParams = data || [];
+
+        // Client-side filter for now since RPC modification requires migration
+        if (userId) {
+            feedParams = feedParams.filter((item: FeedItem) => item.user_id !== userId);
+        }
+
+        return feedParams;
     },
 
     // Fetch unified feed (Posts + Messages)
@@ -131,5 +138,58 @@ export const communityService = {
             console.error('Error in uploadCommunityImage:', e);
             return null;
         }
+    },
+
+    // Fetch Insights for Community Feed
+    async getInsights(limit = 20, userId: string): Promise<FeedItem[]> {
+        const { data, error } = await supabase
+            .from('insights')
+            .select(`
+                *,
+                profiles:author_id (
+                  full_name,
+                  avatar_url,
+                  tagline
+                )
+            `)
+            .neq('author_id', userId) // Filter own insights
+            .order('created_at', { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            console.error('Error fetching insights:', error);
+            return [];
+        }
+
+        return (data || []).map((item: any) => ({
+            id: String(item.id),
+            type: 'insight' as const,
+            content: item.content || '',
+            title: item.title,
+            user_id: item.author_id,
+            created_at: item.created_at,
+            // Construct nested author object for InsightCard
+            author: {
+                name: item.profiles?.full_name || 'User',
+                avatar: item.profiles?.avatar_url || '',
+                handle: '',
+                role: item.profiles?.tagline || '', // Use tagline as role fallback
+                company: '',
+                industry: '',
+                location: '',
+                currentProject: '',
+                projectTags: []
+            },
+            // Keep flat fields if needed for other components, but author object is primary for InsightCard
+            author_name: item.profiles?.full_name || 'User',
+            author_avatar: item.profiles?.avatar_url || '',
+
+            image_url: item.image_url, // For InsightCard
+            media_urls: item.image_url ? [item.image_url] : [],
+            likes_count: item.likes_count,
+            comments_count: item.comments_count,
+            saves_count: item.saves_count,
+            views_count: item.views_count
+        } as any));
     }
 };

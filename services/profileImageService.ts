@@ -77,10 +77,10 @@ export const profileImageService = {
         const url = data?.publicUrl;
 
         if (url) {
-          console.log('Generated profile image URL:', url);
+          // console.log('Generated profile image URL:', url);
           return url;
         } else {
-          console.warn('Failed to generate public URL for avatar path:', avatarUrl);
+          // console.warn('Failed to generate public URL for avatar path:', avatarUrl);
           return null;
         }
       } catch (error) {
@@ -213,8 +213,8 @@ export const profileImageService = {
     } catch (error) {
       console.error('Exception during profile image upload:', error);
       console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
         imageUri
       });
       return { url: null, path: null, error: error as Error };

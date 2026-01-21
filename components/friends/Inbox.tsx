@@ -8,7 +8,10 @@ import {
   SafeAreaView,
   Image,
   Alert,
-  RefreshControl
+  RefreshControl,
+  LayoutAnimation,
+  Platform,
+  UIManager
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -19,6 +22,12 @@ import { NotificationService } from '../../lib/notificationService';
 import { UserDetailModal } from '../profile/UserDetailModal';
 import { profileImageService } from '../../services/profileImageService';
 import type { FriendRequest, Notification } from '../../types/friends';
+
+if (Platform.OS === 'android') {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
 
 interface NotificationItem {
   id: string;
@@ -41,14 +50,13 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
   const { colors } = useTheme();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'received' | 'sent' | 'notifications'>('received');
   const [receivedRequests, setReceivedRequests] = useState<FriendRequest[]>([]);
-  const [sentRequests, setSentRequests] = useState<FriendRequest[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [requestsExpanded, setRequestsExpanded] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -63,29 +71,22 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
       // Load friend requests
       const requests = await FriendsService.getFriendRequests();
       setReceivedRequests(requests.incoming);
-      setSentRequests(requests.outgoing);
 
       // Load real notifications
       const notificationsData = await NotificationService.getNotifications(user!.id, 50);
       setNotifications(notificationsData as NotificationItem[]);
 
+      // Mark notifications as read implicitly when loading? 
+      // User requested "single inbox". Often "Activity" tabs auto-mark read.
+      // Let's do it if we are viewing it.
+      if (notificationsData && notificationsData.length > 0) {
+        NotificationService.markAllAsRead(user!.id).catch(console.error);
+      }
+
     } catch (error) {
       console.error('Error loading inbox data:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Mark all notifications as read when user views the notifications tab
-  const markNotificationsAsRead = async () => {
-    if (!user?.id) return;
-
-    try {
-      await NotificationService.markAllAsRead(user.id);
-      // Update local state to reflect read status
-      setNotifications(prev => prev.map(notif => ({ ...notif, is_read: true })));
-    } catch (error) {
-      console.error('Error marking notifications as read:', error);
     }
   };
 
@@ -98,7 +99,7 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
   const handleAcceptRequest = async (requestId: string) => {
     try {
       await FriendsService.acceptFriendRequest(requestId);
-      Alert.alert('Success', 'Friend request accepted!');
+      Alert.alert('Success', 'Request accepted!');
       loadData();
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to accept request');
@@ -108,20 +109,9 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
   const handleRejectRequest = async (requestId: string) => {
     try {
       await FriendsService.declineFriendRequest(requestId);
-      Alert.alert('Request rejected');
       loadData();
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to reject request');
-    }
-  };
-
-  const handleCancelRequest = async (requestId: string) => {
-    try {
-      await FriendsService.cancelFriendRequest(requestId);
-      Alert.alert('Request cancelled');
-      loadData();
-    } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to cancel request');
     }
   };
 
@@ -133,6 +123,11 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
   const handleCloseUserModal = () => {
     setSelectedUserId(null);
     setShowUserModal(false);
+  };
+
+  const toggleRequests = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setRequestsExpanded(!requestsExpanded);
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -176,50 +171,69 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
       color: colors.text,
       flex: 1,
     },
-    tabs: {
-      flexDirection: 'row',
-      margin: 16,
-      backgroundColor: colors.border + '20',
-      borderRadius: 12,
-      padding: 4,
-    },
-    tab: {
-      flex: 1,
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderRadius: 8,
-      alignItems: 'center',
-    },
-    activeTab: {
-      backgroundColor: colors.primary,
-    },
-    tabText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.textSecondary,
-    },
-    activeTabText: {
-      color: 'white',
-    },
     content: {
       flex: 1,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 12,
+      marginTop: 24,
       paddingHorizontal: 16,
     },
+    // Requests Header Row
+    requestsHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 16,
+      backgroundColor: colors.surface,
+      borderBottomWidth: requestsExpanded ? 1 : 0, // Separator when expanded
+      borderBottomColor: colors.border,
+      // If separate section:
+      marginBottom: requestsExpanded ? 0 : 8,
+    },
+    requestsTitleContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    requestsTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+      marginRight: 8,
+    },
+    requestsBadge: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 12,
+    },
+    requestsBadgeText: {
+      color: 'white',
+      fontSize: 12,
+      fontWeight: 'bold',
+    },
+    requestsList: {
+      backgroundColor: colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+
+    // Request Item
     requestItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 16,
+      paddingVertical: 12,
       paddingHorizontal: 16,
-      backgroundColor: colors.surface,
-      borderRadius: 12,
-      marginBottom: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border + '40',
     },
     avatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: colors.border,
       marginRight: 12,
     },
@@ -227,298 +241,104 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
       flex: 1,
     },
     requestName: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '600',
       color: colors.text,
       marginBottom: 2,
     },
     requestMessage: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      marginBottom: 4,
-    },
-    requestTime: {
-      fontSize: 12,
+      fontSize: 13,
       color: colors.textSecondary,
     },
     requestActions: {
       flexDirection: 'row',
       gap: 8,
+      marginLeft: 8,
     },
     acceptButton: {
       backgroundColor: colors.primary,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
       borderRadius: 8,
     },
     rejectButton: {
       backgroundColor: colors.border,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 8,
-    },
-    cancelButton: {
-      backgroundColor: colors.textSecondary,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
       borderRadius: 8,
     },
     actionButtonText: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '600',
       color: 'white',
     },
     rejectButtonText: {
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: '600',
       color: colors.text,
     },
+
+    // Notification Item
     notificationItem: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: 'center', // Center vertically for cleaner look
       paddingVertical: 16,
       paddingHorizontal: 16,
-      backgroundColor: colors.surface,
-      borderRadius: 12,
-      marginBottom: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
+      backgroundColor: colors.background, // Transparent/background
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border + '40',
     },
     unreadNotification: {
-      backgroundColor: colors.primary + '10',
-      borderColor: colors.primary + '30',
+      backgroundColor: colors.primary + '05', // Very subtle tint
     },
     notificationIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.primary + '20',
+      position: 'absolute',
+      bottom: -2,
+      right: -2,
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      width: 20,
+      height: 20,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 12,
+      borderWidth: 2,
+      borderColor: colors.background, // Match container bg
+    },
+    notificationAvatarContainer: {
+      marginRight: 14,
+      position: 'relative',
+    },
+    notificationAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
     },
     notificationContent: {
       flex: 1,
     },
     notificationText: {
-      fontSize: 14,
+      fontSize: 15, // Slightly bigger
       color: colors.text,
       marginBottom: 4,
+      lineHeight: 20,
     },
     notificationTime: {
       fontSize: 12,
       color: colors.textSecondary,
     },
+
+    // Empty state
     emptyState: {
-      flex: 1,
-      justifyContent: 'center',
+      padding: 40,
       alignItems: 'center',
-      paddingHorizontal: 32,
     },
-    emptyIcon: {
-      marginBottom: 16,
-    },
-    emptyTitle: {
-      fontSize: 20,
-      fontWeight: '600',
-      color: colors.text,
-      marginBottom: 8,
-      textAlign: 'center',
-    },
-    emptySubtitle: {
-      fontSize: 16,
+    emptyText: {
       color: colors.textSecondary,
+      fontSize: 16,
       textAlign: 'center',
-      lineHeight: 22,
-    },
-  });
-
-  const renderReceivedRequests = () => (
-    <ScrollView
-      style={dynamicStyles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      showsVerticalScrollIndicator={false}
-    >
-      {receivedRequests.length === 0 ? (
-        <View style={dynamicStyles.emptyState}>
-          <Feather name="inbox" size={48} color={colors.textSecondary} style={dynamicStyles.emptyIcon} />
-          <Text style={dynamicStyles.emptyTitle}>No pending requests</Text>
-          <Text style={dynamicStyles.emptySubtitle}>
-            When someone sends you a friend request, it will appear here.
-          </Text>
-        </View>
-      ) : (
-        receivedRequests.map((request) => (
-          <View key={request.id} style={dynamicStyles.requestItem}>
-            <TouchableOpacity
-              onPress={() => handleUserPress(request.requester.id)}
-              activeOpacity={0.7}
-            >
-              <Image
-                source={
-                  request.requester?.avatar_url
-                    ? { uri: profileImageService.getProfileImageUrl(request.requester.avatar_url) }
-                    : require('../../assets/profileIconDefault.png')
-                }
-                style={dynamicStyles.avatar}
-                defaultSource={require('../../assets/profileIconDefault.png')}
-              />
-            </TouchableOpacity>
-            <View style={dynamicStyles.requestInfo}>
-              <TouchableOpacity
-                onPress={() => handleUserPress(request.requester.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={dynamicStyles.requestName}>
-                  {request.requester?.full_name}
-                </Text>
-              </TouchableOpacity>
-              <Text style={dynamicStyles.requestMessage}>
-                Sent you a friend request
-              </Text>
-              <Text style={dynamicStyles.requestTime}>
-                {formatTimeAgo(request.created_at)}
-              </Text>
-            </View>
-            <View style={dynamicStyles.requestActions}>
-              <TouchableOpacity
-                style={dynamicStyles.acceptButton}
-                onPress={() => handleAcceptRequest(request.id)}
-              >
-                <Text style={dynamicStyles.actionButtonText}>Accept</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={dynamicStyles.rejectButton}
-                onPress={() => handleRejectRequest(request.id)}
-              >
-                <Text style={dynamicStyles.rejectButtonText}>Decline</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))
-      )}
-    </ScrollView>
-  );
-
-  const renderSentRequests = () => (
-    <ScrollView
-      style={dynamicStyles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      showsVerticalScrollIndicator={false}
-    >
-      {sentRequests.length === 0 ? (
-        <View style={dynamicStyles.emptyState}>
-          <Feather name="send" size={48} color={colors.textSecondary} style={dynamicStyles.emptyIcon} />
-          <Text style={dynamicStyles.emptyTitle}>No sent requests</Text>
-          <Text style={dynamicStyles.emptySubtitle}>
-            Friend requests you send will appear here while pending.
-          </Text>
-        </View>
-      ) : (
-        sentRequests.map((request) => (
-          <View key={request.id} style={dynamicStyles.requestItem}>
-            <TouchableOpacity
-              onPress={() => handleUserPress(request.addressee.id)}
-              activeOpacity={0.7}
-            >
-              <Image
-                source={
-                  request.addressee?.avatar_url
-                    ? { uri: profileImageService.getProfileImageUrl(request.addressee.avatar_url) }
-                    : require('../../assets/profileIconDefault.png')
-                }
-                style={dynamicStyles.avatar}
-                defaultSource={require('../../assets/profileIconDefault.png')}
-              />
-            </TouchableOpacity>
-            <View style={dynamicStyles.requestInfo}>
-              <TouchableOpacity
-                onPress={() => handleUserPress(request.addressee.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={dynamicStyles.requestName}>
-                  {request.addressee?.full_name}
-                </Text>
-              </TouchableOpacity>
-              <Text style={dynamicStyles.requestMessage}>
-                Friend request sent
-              </Text>
-              <Text style={dynamicStyles.requestTime}>
-                {formatTimeAgo(request.created_at)}
-              </Text>
-            </View>
-            <View style={dynamicStyles.requestActions}>
-              <TouchableOpacity
-                style={dynamicStyles.cancelButton}
-                onPress={() => handleCancelRequest(request.id)}
-              >
-                <Text style={dynamicStyles.actionButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))
-      )}
-    </ScrollView>
-  );
-
-  const renderNotifications = () => (
-    <ScrollView
-      style={dynamicStyles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      showsVerticalScrollIndicator={false}
-    >
-      {notifications.length === 0 ? (
-        <View style={dynamicStyles.emptyState}>
-          <Feather name="bell" size={48} color={colors.textSecondary} style={dynamicStyles.emptyIcon} />
-          <Text style={dynamicStyles.emptyTitle}>No notifications</Text>
-          <Text style={dynamicStyles.emptySubtitle}>
-            You'll be notified when people like or comment on your insights.
-          </Text>
-        </View>
-      ) : (
-        notifications.map((notification) => (
-          <View
-            key={notification.id}
-            style={[
-              dynamicStyles.notificationItem,
-              !notification.is_read && dynamicStyles.unreadNotification
-            ]}
-          >
-            <View style={dynamicStyles.notificationIcon}>
-              <Feather
-                name={notification.type === 'like' ? 'heart' : 'message-circle'}
-                size={16}
-                color={colors.primary}
-              />
-            </View>
-            <View style={dynamicStyles.notificationContent}>
-              <Text style={dynamicStyles.notificationText}>
-                <Text style={{ fontWeight: '600' }}>{notification.source_user.full_name}</Text>
-                {' '}
-                {notification.message}
-              </Text>
-              <Text style={dynamicStyles.notificationTime}>
-                {formatTimeAgo(notification.created_at)}
-              </Text>
-            </View>
-          </View>
-        ))
-      )}
-    </ScrollView>
-  );
-
-  const renderActiveTab = () => {
-    switch (activeTab) {
-      case 'received':
-        return renderReceivedRequests();
-      case 'sent':
-        return renderSentRequests();
-      case 'notifications':
-        return renderNotifications();
-      default:
-        return renderReceivedRequests();
+      marginTop: 16,
     }
-  };
+  });
 
   return (
     <SafeAreaView style={dynamicStyles.container}>
@@ -531,43 +351,137 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
           >
             <Feather name="arrow-left" size={20} color={colors.text} />
           </TouchableOpacity>
-          <Text style={dynamicStyles.headerTitle}>Inbox</Text>
+          <Text style={dynamicStyles.headerTitle}>Activity</Text>
         </View>
       )}
 
-      {/* Tabs */}
-      <View style={dynamicStyles.tabs}>
-        <TouchableOpacity
-          style={[dynamicStyles.tab, activeTab === 'received' && dynamicStyles.activeTab]}
-          onPress={() => setActiveTab('received')}
-        >
-          <Text style={[dynamicStyles.tabText, activeTab === 'received' && dynamicStyles.activeTabText]}>
-            Received
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[dynamicStyles.tab, activeTab === 'sent' && dynamicStyles.activeTab]}
-          onPress={() => setActiveTab('sent')}
-        >
-          <Text style={[dynamicStyles.tabText, activeTab === 'sent' && dynamicStyles.activeTabText]}>
-            Sent
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[dynamicStyles.tab, activeTab === 'notifications' && dynamicStyles.activeTab]}
-          onPress={() => {
-            setActiveTab('notifications');
-            markNotificationsAsRead();
-          }}
-        >
-          <Text style={[dynamicStyles.tabText, activeTab === 'notifications' && dynamicStyles.activeTabText]}>
-            Activity
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <ScrollView
+        style={dynamicStyles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Friend/Follow Requests Section */}
+        {receivedRequests.length > 0 && (
+          <View>
+            <TouchableOpacity
+              style={dynamicStyles.requestsHeader}
+              onPress={toggleRequests}
+              activeOpacity={0.7}
+            >
+              <View style={dynamicStyles.requestsTitleContainer}>
+                <Text style={dynamicStyles.requestsTitle}>Follow Requests</Text>
+                <View style={dynamicStyles.requestsBadge}>
+                  <Text style={dynamicStyles.requestsBadgeText}>{receivedRequests.length}</Text>
+                </View>
+              </View>
+              <Feather
+                name={requestsExpanded ? "chevron-up" : "chevron-down"}
+                size={20}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
 
-      {/* Content */}
-      {renderActiveTab()}
+            {requestsExpanded && (
+              <View style={dynamicStyles.requestsList}>
+                {receivedRequests.map((request) => (
+                  <View key={request.id} style={dynamicStyles.requestItem}>
+                    <TouchableOpacity
+                      onPress={() => handleUserPress(request.requester.id)}
+                    >
+                      <Image
+                        source={
+                          request.requester?.avatar_url
+                            ? { uri: profileImageService.getProfileImageUrl(request.requester.avatar_url) }
+                            : require('../../assets/profileIconDefault.png')
+                        }
+                        style={dynamicStyles.avatar}
+                      />
+                    </TouchableOpacity>
+                    <View style={dynamicStyles.requestInfo}>
+                      <Text style={dynamicStyles.requestName}>
+                        {request.requester?.full_name}
+                      </Text>
+                      <Text style={dynamicStyles.requestMessage}>
+                        Requested to follow you
+                      </Text>
+                    </View>
+                    <View style={dynamicStyles.requestActions}>
+                      <TouchableOpacity
+                        style={dynamicStyles.acceptButton}
+                        onPress={() => handleAcceptRequest(request.id)}
+                      >
+                        <Text style={dynamicStyles.actionButtonText}>Confirm</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={dynamicStyles.rejectButton}
+                        onPress={() => handleRejectRequest(request.id)}
+                      >
+                        <Feather name="x" size={16} color={colors.text} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Notifications List */}
+        <View>
+          {/* If no notifications but requests exist, don't show empty state for whole page */}
+          {notifications.length === 0 ? (
+            <View style={dynamicStyles.emptyState}>
+              {receivedRequests.length === 0 && (
+                <>
+                  <Feather name="activity" size={48} color={colors.textSecondary} />
+                  <Text style={dynamicStyles.emptyText}>No recent activity</Text>
+                </>
+              )}
+            </View>
+          ) : (
+            notifications.map((notification) => (
+              <View
+                key={notification.id}
+                style={[
+                  dynamicStyles.notificationItem,
+                  !notification.is_read && dynamicStyles.unreadNotification
+                ]}
+              >
+                <View style={dynamicStyles.notificationAvatarContainer}>
+                  {/* Avatar */}
+                  <Image
+                    source={
+                      notification.source_user?.avatar_url
+                        ? { uri: profileImageService.getProfileImageUrl(notification.source_user.avatar_url) }
+                        : require('../../assets/profileIconDefault.png')
+                    }
+                    style={dynamicStyles.notificationAvatar}
+                  />
+                  {/* Icon Badge */}
+                  <View style={dynamicStyles.notificationIcon}>
+                    <Feather
+                      name={notification.type === 'like' ? 'heart' : 'message-circle'}
+                      size={10}
+                      color={colors.primary}
+                    />
+                  </View>
+                </View>
+
+                <View style={dynamicStyles.notificationContent}>
+                  <Text style={dynamicStyles.notificationText}>
+                    <Text style={{ fontWeight: '600' }}>{notification.source_user.full_name}</Text>
+                    {' '}
+                    {notification.message}
+                  </Text>
+                  <Text style={dynamicStyles.notificationTime}>
+                    {formatTimeAgo(notification.created_at)}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
 
       {/* User Detail Modal */}
       {selectedUserId && (

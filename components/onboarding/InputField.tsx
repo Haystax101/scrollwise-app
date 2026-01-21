@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { View, TextInput, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { TextInput, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { OnboardingStyles } from './styles';
 
 interface InputFieldProps {
   label: string;
@@ -75,7 +76,9 @@ export const InputField: React.FC<InputFieldProps> = ({
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
-        selectionColor="#F59E0B"
+        placeholderTextColor={OnboardingStyles.textTertiary}
+        selectionColor={OnboardingStyles.accent}
+        keyboardAppearance="dark"
       />
     </TouchableOpacity>
   );
@@ -87,24 +90,24 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   input: {
-    height: 56,
-    paddingHorizontal: 16,
+    height: OnboardingStyles.inputHeight,
+    paddingHorizontal: OnboardingStyles.inputPaddingHorizontal,
     paddingTop: 20,
     paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    backgroundColor: OnboardingStyles.inputBackground,
+    borderRadius: OnboardingStyles.inputBorderRadius,
     borderBottomWidth: 2,
-    borderBottomColor: '#E5E7EB',
-    color: '#1F2937',
+    borderBottomColor: OnboardingStyles.borderColor,
+    color: OnboardingStyles.textPrimary,
     fontSize: 16,
-    shadowColor: 'rgba(0, 0, 0, 0.05)',
+    shadowColor: OnboardingStyles.shadowColor,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 1,
     shadowRadius: 2,
     elevation: 1,
   },
   inputFocused: {
-    borderBottomColor: '#F59E0B',
+    borderBottomColor: OnboardingStyles.accent,
   },
   label: {
     position: 'absolute',

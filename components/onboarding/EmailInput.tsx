@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Keyboard } from 'react-native';
 import { InputField } from './InputField';
-import { OnboardingPage } from './OnboardingPage';
+import { OnboardingStepContent } from './OnboardingStepContent'; // Updated import
 import { supabase } from '../../lib/supabase';
+import { OnboardingStyles } from './styles'; // Use styles for colors
 
 interface EmailInputProps {
   onNext: (data: { email: string }) => void;
-  onBack: () => void;
+  // onBack removed as it's handled by OnboardingLayout
   emailExistsError: boolean;
   onGoToLogin: () => void;
 }
 
-export const EmailInput: React.FC<EmailInputProps> = ({ onNext, onBack, emailExistsError, onGoToLogin }) => {
+export const EmailInput: React.FC<EmailInputProps> = ({ onNext, emailExistsError, onGoToLogin }) => {
   const [email, setEmail] = useState('');
   const [emailExists, setEmailExists] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -72,10 +73,9 @@ export const EmailInput: React.FC<EmailInputProps> = ({ onNext, onBack, emailExi
   const isValidEmail = email.includes('@') && email.includes('.');
 
   return (
-    <OnboardingPage
+    <OnboardingStepContent
       title="What's your email?"
       subtitle="We'll use this to send you updates and keep your account secure"
-      onBack={onBack}
       onNext={handleNext}
       buttonText={isLoading ? "Sending code..." : "Continue"}
       buttonDisabled={!isValidEmail || emailExists || isLoading}
@@ -97,7 +97,7 @@ export const EmailInput: React.FC<EmailInputProps> = ({ onNext, onBack, emailExi
           </View>
         )}
       </View>
-    </OnboardingPage>
+    </OnboardingStepContent>
   );
 };
 
@@ -105,15 +105,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-start',
-    paddingTop: 20,
+    paddingTop: 0,
   },
   errorContainer: {
     marginTop: 16,
     padding: 12,
-    backgroundColor: '#371A1A',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)', // Red tint
     borderRadius: 8,
     borderLeftWidth: 4,
-    borderLeftColor: '#F87171',
+    borderLeftColor: OnboardingStyles.error,
   },
   errorText: {
     color: '#FCA5A5',
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   loginLink: {
-    color: '#FBBF24',
+    color: OnboardingStyles.accent,
     fontSize: 14,
     fontWeight: '600',
     textDecorationLine: 'underline',

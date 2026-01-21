@@ -131,6 +131,16 @@ export class DeepLinkHandler {
         };
       }
 
+      // Check for profile pattern: ['profile', '123']
+      if (pathParts.length >= 2 && pathParts[0] === 'profile') {
+        const userId = pathParts[1];
+        console.log('🔗 DeepLink: Extracted profile ID:', userId);
+        return {
+          screen: 'profile',
+          contentId: userId
+        };
+      }
+
       // Check for invite pattern: ['invite'] or just referral params
       if (pathParts.length === 0 || (pathParts.length === 1 && pathParts[0] === 'invite')) {
         const queryIndex = url.indexOf('?');
@@ -269,6 +279,12 @@ export class DeepLinkHandler {
       } else if (linkData.screen === 'invite') {
         console.log('🔗 DeepLink: Navigating to friends/invite screen');
         router.push('/friends');
+      } else if (linkData.screen === 'profile' && linkData.contentId) {
+        console.log(`🔗 DeepLink: Navigating to profile: ${linkData.contentId}`);
+        router.push({
+          pathname: '/people',
+          params: { userId: linkData.contentId }
+        });
       } else {
         console.warn('🔗 DeepLink: Unhandled link data structure:', linkData);
       }

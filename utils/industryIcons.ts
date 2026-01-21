@@ -5,7 +5,7 @@ export const INDUSTRY_ICON_MAP: { [key: string]: { name: string; family: string 
   'entrepreneurship': { name: 'rocket-launch', family: 'MaterialIcons' },
   'technology': { name: 'computer', family: 'MaterialIcons' },
   'energy': { name: 'bolt', family: 'MaterialIcons' },
-  'creative': { name: 'palette', family: 'MaterialIcons' },
+  'law': { name: 'gavel', family: 'MaterialIcons' },
   'engineering': { name: 'engineering', family: 'MaterialIcons' },
   'healthcare': { name: 'local-hospital', family: 'MaterialIcons' },
   'education': { name: 'school', family: 'MaterialIcons' },
@@ -18,7 +18,7 @@ export const INDUSTRY_COLOR_MAP: { [key: string]: string } = {
   'entrepreneurship': '#1565C0', // Blue
   'technology': '#1B5E20',       // Green
   'energy': '#5E35B1',           // Purple
-  'creative': '#880E4F',         // Pink
+  'law': '#880E4F',              // Keeping existing color or changing to distinct? Using dark red/maroon
   'engineering': '#C51162',      // Pink
   'healthcare': '#311B92',       // Purple
   'education': '#004D40',        // Teal
@@ -31,7 +31,7 @@ export const INDUSTRY_NAME_TO_KEY: { [key: string]: string } = {
   'Entrepreneurship and Startups': 'entrepreneurship',
   'Technology and AI': 'technology',
   'Energy, Sustainability and Climate Innovation': 'energy',
-  'Creative Industries and the Arts': 'creative',
+  'Law': 'law',
   'Engineering and Automotive': 'engineering',
   'Medicine and Healthcare': 'healthcare',
   'Education': 'education',
@@ -39,19 +39,19 @@ export const INDUSTRY_NAME_TO_KEY: { [key: string]: string } = {
 
 export const getIndustryIcon = (industryName: string): { name: string; family: string } => {
   const lowerName = industryName.toLowerCase();
-  
+
   // Direct match
   if (INDUSTRY_ICON_MAP[lowerName]) {
     return INDUSTRY_ICON_MAP[lowerName];
   }
-  
+
   // Partial match for compound names
   for (const [key, iconConfig] of Object.entries(INDUSTRY_ICON_MAP)) {
     if (lowerName.includes(key) || key.includes(lowerName)) {
       return iconConfig;
     }
   }
-  
+
   // Default icon
   return { name: 'business', family: 'MaterialIcons' };
 };
@@ -94,7 +94,7 @@ export const LEGACY_INDUSTRY_MAPPING: { [key: string]: { icon: { name: string; f
   'entrepreneurship': { icon: { name: 'rocket-launch', family: 'MaterialIcons' }, color: '#1565C0' },
   'technology': { icon: { name: 'computer', family: 'MaterialIcons' }, color: '#1B5E20' },
   'energy': { icon: { name: 'bolt', family: 'MaterialIcons' }, color: '#5E35B1' },
-  'creative': { icon: { name: 'palette', family: 'MaterialIcons' }, color: '#880E4F' },
+  'law': { icon: { name: 'gavel', family: 'MaterialIcons' }, color: '#880E4F' },
   'engineering': { icon: { name: 'engineering', family: 'MaterialIcons' }, color: '#C51162' },
   'healthcare': { icon: { name: 'local-hospital', family: 'MaterialIcons' }, color: '#311B92' },
   'education': { icon: { name: 'school', family: 'MaterialIcons' }, color: '#004D40' },

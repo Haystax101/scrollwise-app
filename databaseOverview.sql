@@ -192,14 +192,29 @@ CREATE TABLE public.chat_messages (
   sender_id uuid,
   content text NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
+  is_system_message boolean DEFAULT false,
+  media_url text,
   CONSTRAINT chat_messages_pkey PRIMARY KEY (id),
   CONSTRAINT chat_messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.profiles(id),
   CONSTRAINT chat_messages_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.chats(id)
 );
+CREATE TABLE public.chat_participants (
+  chat_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  joined_at timestamp with time zone DEFAULT now(),
+  last_read_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT chat_participants_pkey PRIMARY KEY (chat_id, user_id),
+  CONSTRAINT chat_participants_chat_id_fkey FOREIGN KEY (chat_id) REFERENCES public.chats(id),
+  CONSTRAINT chat_participants_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
 CREATE TABLE public.chats (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   created_at timestamp with time zone DEFAULT now(),
-  participant_ids ARRAY NOT NULL,
+  participant_ids ARRAY,
+  updated_at timestamp with time zone DEFAULT now(),
+  last_message_at timestamp with time zone DEFAULT now(),
+  is_group boolean DEFAULT false,
+  name text,
   CONSTRAINT chats_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.comments (
@@ -216,6 +231,55 @@ CREATE TABLE public.comments (
   CONSTRAINT comments_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.articles(id),
   CONSTRAINT comments_parent_comment_id_fkey FOREIGN KEY (parent_comment_id) REFERENCES public.comments(id),
   CONSTRAINT comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.communities (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name text NOT NULL,
+  description text,
+  avatar_url text,
+  banner_url text,
+  slug text UNIQUE,
+  privacy_level text DEFAULT 'public'::text CHECK (privacy_level = ANY (ARRAY['public'::text, 'private'::text, 'secret'::text])),
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT communities_pkey PRIMARY KEY (id),
+  CONSTRAINT communities_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
+);
+CREATE TABLE public.community_members (
+  community_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  role text DEFAULT 'member'::text CHECK (role = ANY (ARRAY['admin'::text, 'moderator'::text, 'member'::text])),
+  joined_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT community_members_pkey PRIMARY KEY (community_id, user_id),
+  CONSTRAINT community_members_community_id_fkey FOREIGN KEY (community_id) REFERENCES public.communities(id),
+  CONSTRAINT community_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.community_messages (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  community_id uuid,
+  user_id uuid,
+  content text NOT NULL,
+  reply_to_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT community_messages_pkey PRIMARY KEY (id),
+  CONSTRAINT community_messages_community_id_fkey FOREIGN KEY (community_id) REFERENCES public.communities(id),
+  CONSTRAINT community_messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT community_messages_reply_to_id_fkey FOREIGN KEY (reply_to_id) REFERENCES public.community_messages(id)
+);
+CREATE TABLE public.community_posts (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  community_id uuid,
+  user_id uuid,
+  title text,
+  content text,
+  media_urls ARRAY,
+  linked_insight_id uuid,
+  likes_count integer DEFAULT 0,
+  comments_count integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT community_posts_pkey PRIMARY KEY (id),
+  CONSTRAINT community_posts_community_id_fkey FOREIGN KEY (community_id) REFERENCES public.communities(id),
+  CONSTRAINT community_posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.companies (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -351,6 +415,15 @@ CREATE TABLE public.finance_books_catalogue (
   used boolean DEFAULT false,
   CONSTRAINT finance_books_catalogue_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.follows (
+  follower_id uuid NOT NULL,
+  following_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  status text DEFAULT 'accepted'::text,
+  CONSTRAINT follows_pkey PRIMARY KEY (follower_id, following_id),
+  CONSTRAINT follows_follower_id_fkey FOREIGN KEY (follower_id) REFERENCES public.profiles(id),
+  CONSTRAINT follows_following_id_fkey FOREIGN KEY (following_id) REFERENCES public.profiles(id)
+);
 CREATE TABLE public.friend_suggestions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
@@ -474,6 +547,8 @@ CREATE TABLE public.insights (
   voltz_spent integer DEFAULT 0,
   views_count bigint NOT NULL DEFAULT 0,
   flag smallint NOT NULL DEFAULT '0'::smallint,
+  title text DEFAULT 'Untitled Insight'::text,
+  image_url text,
   CONSTRAINT insights_pkey PRIMARY KEY (id),
   CONSTRAINT insights_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.profiles(id)
 );
@@ -852,6 +927,24 @@ CREATE TABLE public.personal_development_books_catalogue (
   used boolean DEFAULT false,
   CONSTRAINT personal_development_books_catalogue_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.podcasts (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  title text NOT NULL,
+  summary text,
+  audio_url text NOT NULL,
+  image_url text,
+  site_name text,
+  date date DEFAULT CURRENT_DATE,
+  industry_id uuid,
+  search_vector tsvector,
+  created_at timestamp with time zone DEFAULT now(),
+  likes_count bigint DEFAULT 0,
+  saves_count bigint DEFAULT 0,
+  views_count bigint DEFAULT 0,
+  duration_seconds integer,
+  CONSTRAINT podcasts_pkey PRIMARY KEY (id),
+  CONSTRAINT podcasts_industry_id_fkey FOREIGN KEY (industry_id) REFERENCES public.industries(id)
+);
 CREATE TABLE public.politics_books_catalogue (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL,
@@ -907,6 +1000,7 @@ CREATE TABLE public.profiles (
   discoverable boolean DEFAULT true,
   referral_code character varying UNIQUE,
   privacy_settings jsonb DEFAULT '{"discoverable": true, "public_friend_list": false, "show_in_suggestions": true, "show_mutual_friends": true, "allow_friend_requests": true}'::jsonb,
+  is_private boolean DEFAULT false,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
@@ -1007,6 +1101,19 @@ CREATE TABLE public.technology_books_catalogue (
   created_at timestamp with time zone DEFAULT now(),
   used boolean DEFAULT false,
   CONSTRAINT technology_books_catalogue_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.timelapse_sessions (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  start_time timestamp with time zone DEFAULT now(),
+  end_time timestamp with time zone,
+  duration_seconds integer DEFAULT 0,
+  photos_count integer DEFAULT 0,
+  storage_path text,
+  voltz_earned integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT timelapse_sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT timelapse_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 CREATE TABLE public.universities (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -1417,6 +1524,24 @@ CREATE TABLE public.user_streaks (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT user_streaks_pkey PRIMARY KEY (id),
   CONSTRAINT user_streaks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.videos (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  title text NOT NULL,
+  summary text,
+  video_url text NOT NULL,
+  image_url text,
+  site_name text,
+  date date DEFAULT CURRENT_DATE,
+  industry_id uuid,
+  search_vector tsvector,
+  created_at timestamp with time zone DEFAULT now(),
+  likes_count bigint DEFAULT 0,
+  saves_count bigint DEFAULT 0,
+  views_count bigint DEFAULT 0,
+  duration_seconds integer,
+  CONSTRAINT videos_pkey PRIMARY KEY (id),
+  CONSTRAINT videos_industry_id_fkey FOREIGN KEY (industry_id) REFERENCES public.industries(id)
 );
 CREATE TABLE public.xp_ledger (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

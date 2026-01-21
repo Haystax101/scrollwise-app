@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { OnboardingStyles } from './styles';
 import * as Haptics from 'expo-haptics';
 
@@ -10,6 +10,7 @@ interface ButtonProps {
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'outline';
   style?: ViewStyle;
+  textStyle?: TextStyle;
   disableHaptics?: boolean;
 }
 
@@ -20,6 +21,7 @@ export const Button: React.FC<ButtonProps> = ({
   disabled = false,
   variant = 'primary',
   style,
+  textStyle,
   disableHaptics = false
 }) => {
   const buttonText = title || children;
@@ -48,7 +50,8 @@ export const Button: React.FC<ButtonProps> = ({
       <Text style={[
         styles.text,
         variant === 'secondary' && styles.secondaryText,
-        variant === 'outline' && styles.outlineText
+        variant === 'outline' && styles.outlineText,
+        textStyle
       ]}>
         {buttonText}
       </Text>

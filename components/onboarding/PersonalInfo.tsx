@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { InputField } from './InputField';
-import { OnboardingPage } from './OnboardingPage';
+import { OnboardingStepContent } from './OnboardingStepContent';
 
 interface PersonalInfoProps {
   onNext: (data: { firstName: string; lastName: string }) => void;
-  onBack: () => void;
+  // onBack removed
   isLoading?: boolean;
 }
 
-export const PersonalInfo: React.FC<PersonalInfoProps> = ({ onNext, onBack, isLoading = false }) => {
+export const PersonalInfo: React.FC<PersonalInfoProps> = ({ onNext, isLoading = false }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
 
   const handleNext = () => {
     if (firstName.trim() && lastName.trim()) {
-      onNext({ 
-        firstName: firstName.trim(), 
-        lastName: lastName.trim() 
+      onNext({
+        firstName: firstName.trim(),
+        lastName: lastName.trim()
       });
     }
   };
@@ -25,10 +25,9 @@ export const PersonalInfo: React.FC<PersonalInfoProps> = ({ onNext, onBack, isLo
   const canContinue = firstName.trim().length > 0 && lastName.trim().length > 0;
 
   return (
-    <OnboardingPage
+    <OnboardingStepContent
       title="Tell us about yourself"
       subtitle="Help us personalize your experience"
-      onBack={onBack}
       onNext={handleNext}
       buttonText={isLoading ? 'Creating Account...' : 'Continue'}
       buttonDisabled={!canContinue || isLoading}
@@ -45,7 +44,7 @@ export const PersonalInfo: React.FC<PersonalInfoProps> = ({ onNext, onBack, isLo
           onChangeText={setLastName}
         />
       </View>
-    </OnboardingPage>
+    </OnboardingStepContent>
   );
 };
 
@@ -53,6 +52,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-start',
-    paddingTop: 20, // Add some space from the title
+    paddingTop: 0,
   },
 });
