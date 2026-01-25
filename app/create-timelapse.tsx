@@ -1,16 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, StatusBar, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, StatusBar, Alert, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { XMarkIcon, PlayIcon, StopIcon, ArrowPathIcon } from 'react-native-heroicons/outline';
 import { useTheme } from '../context/ThemeContext';
 import { BlurView } from 'expo-blur';
-import { File } from 'expo-file-system';
+
 import { decode } from 'base64-arraybuffer';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system';
+import { timelapseService } from '../lib/timelapseService';
 import { supabase } from '../lib/supabase';
 
 const { width, height } = Dimensions.get('window');
+
+// Keep specific frames based on logic
+// 0-20 mins: 1 frame/sec (keep all)
+// 20-60 mins: 1 frame every 4 seconds
+// >60 mins: 1 frame every 8 seconds
+// NOTE: With hybrid batch (3s interval), we are capturing ~20/min always. 
+// Server side can decimate if needed, but 3s is already sparse.
+const getKeepInterval = (durationSeconds: number) => {
+    if (durationSeconds <= 1200) return 1; // 20 mins
+    if (durationSeconds <= 3600) return 4; // 60 mins
+    return 8;
+};
 
 export default function TimelapseScreen() {
     const [permission, requestPermission] = useCameraPermissions();
@@ -19,13 +33,18 @@ export default function TimelapseScreen() {
     const { colors } = useTheme();
 
     const [isRecording, setIsRecording] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [seconds, setSeconds] = useState(0);
-    const [photosTaken, setPhotosTaken] = useState(0);
+    const [photosCaptured, setPhotosCaptured] = useState(0);
+    const [photosKept, setPhotosKept] = useState(0); // For progress UI
     const [facing, setFacing] = useState<'front' | 'back'>('front');
     const [sessionId, setSessionId] = useState<string | null>(null);
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const captureIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Store frames locally: { uri: string, timestamp: number }
+    const framesRef = useRef<{ uri: string; timestamp: number }[]>([]);
 
     // Initial permission request
     useEffect(() => {
@@ -41,8 +60,8 @@ export default function TimelapseScreen() {
                 setSeconds(s => s + 1);
             }, 1000);
 
-            // Capture photo every 30 seconds
-            captureIntervalRef.current = setInterval(captureFrame, 30000);
+            // Capture photo every 3 seconds (3000ms)
+            captureIntervalRef.current = setInterval(captureFrame, 3000);
         } else {
             if (timerRef.current) clearInterval(timerRef.current);
             if (captureIntervalRef.current) clearInterval(captureIntervalRef.current);
@@ -71,7 +90,7 @@ export default function TimelapseScreen() {
                 .insert({
                     user_id: user.id,
                     start_time: new Date().toISOString(),
-                    storage_path: `${user.id}/temp_session` // Will update with real ID if needed, or just use ID
+                    storage_path: `${user.id}/temp_session`
                 })
                 .select()
                 .single();
@@ -80,11 +99,12 @@ export default function TimelapseScreen() {
 
             setSessionId(data.id);
             setSeconds(0);
-            setPhotosTaken(0);
+            setPhotosCaptured(0);
+            framesRef.current = []; // Reset frames
             setIsRecording(true);
 
             // Capture first frame immediately
-            setTimeout(captureFrame, 500);
+            setTimeout(captureFrame, 200);
 
         } catch (e) {
             console.error("Failed to start session:", e);
@@ -99,20 +119,17 @@ export default function TimelapseScreen() {
                 const photo = await cameraRef.current.takePictureAsync({
                     quality: 0.5,
                     skipProcessing: true,
+                    shutterSound: false,
                 });
 
                 if (!photo) return;
-                setPhotosTaken(prev => prev + 1);
 
-                // 2. Process (Compress/Resize) - Background-ish
-                const manipResult = await manipulateAsync(
-                    photo.uri,
-                    [{ resize: { width: 1080 } }],
-                    { compress: 0.5, format: SaveFormat.JPEG }
-                );
-
-                // 3. Upload to Supabase (Fire and forget promise for MVP to avoid lag)
-                uploadFrame(manipResult.uri);
+                // 2. Buffer locally using Service (which handles batching & zipping)
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    await timelapseService.addToBuffer(photo.uri, sessionId, user.id);
+                    setPhotosCaptured(prev => prev + 1);
+                }
 
             } catch (e) {
                 console.log('Frame capture failed', e);
@@ -120,29 +137,7 @@ export default function TimelapseScreen() {
         }
     };
 
-    const uploadFrame = async (uri: string) => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user || !sessionId) return;
 
-            const file = new File(uri);
-            const base64 = await file.base64();
-            const timestamp = Date.now();
-            const filename = `${user.id}/${sessionId}/${timestamp}.jpg`;
-
-            await supabase.storage
-                .from('timelapse-images')
-                .upload(filename, decode(base64), {
-                    contentType: 'image/jpeg',
-                    upsert: true
-                });
-
-            // Optional: Delete local temp file to save space?
-            // FileSystem.deleteAsync(uri, { idempotent: true });
-        } catch (e) {
-            console.error("Frame upload failed:", e);
-        }
-    };
 
     const toggleCamera = () => {
         setFacing(current => (current === 'back' ? 'front' : 'back'));
@@ -155,27 +150,54 @@ export default function TimelapseScreen() {
     };
 
     const handleStop = async () => {
+        // Stop recording immediately
         clearTimers();
         setIsRecording(false);
-        const earnedVoltz = Math.floor(seconds / 60) * 10;
+        setIsProcessing(true); // Show loading UI
 
-        // Update Session record
-        if (sessionId) {
+        const totalSeconds = seconds;
+        const earnedVoltz = Math.floor(totalSeconds / 60) * 10;
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user || !sessionId) throw new Error("No user or session");
+
+            // 1. Flush any remaining frames in buffer
+            await timelapseService.flushBuffer(sessionId, user.id);
+
+            // 2. Wait for upload queue to drain? 
+            // In a real app we might background this or show a progress bar. 
+            // For now, we update the session status and let the user leave. 
+            // The service continues uploading in background (as long as app is open).
+
+            // 3. Update Session Record
             await supabase.from('timelapse_sessions')
                 .update({
                     end_time: new Date().toISOString(),
-                    duration_seconds: seconds,
-                    photos_count: photosTaken,
-                    voltz_earned: earnedVoltz
+                    duration_seconds: totalSeconds,
+                    photos_count: photosCaptured, // Total captured
+                    voltz_earned: earnedVoltz,
+                    status: 'processing' // New status field?
                 })
                 .eq('id', sessionId);
-        }
 
-        Alert.alert(
-            "Focus Session Complete!",
-            `Time: ${formatTime(seconds)}\nPhotos: ${photosTaken}\nVoltz Earned: ${earnedVoltz}`,
-            [{ text: "OK", onPress: () => router.back() }]
-        );
+            setIsProcessing(false);
+
+            Alert.alert(
+                "Focus Session Complete!",
+                `Time: ${formatTime(totalSeconds)}\nVoltz Earned: ${earnedVoltz}\n\nYour timelapse is processing in the cloud.`,
+                [{ text: "OK", onPress: () => router.back() }]
+            );
+
+            // Trigger finalize (this should technically happen after uploads finish)
+            // Ideally the service tracks this. For MVP, we assume uploads eventual consistency 
+            // or the Edge Function can just wait/poll.
+
+        } catch (e) {
+            console.error("Stop session error:", e);
+            setIsProcessing(false);
+            Alert.alert("Error", "Failed to save session properly. Some data may be lost.");
+        }
     };
 
     if (!permission) return <View />;
@@ -200,7 +222,7 @@ export default function TimelapseScreen() {
                 ref={cameraRef}
             />
 
-            {!isRecording && (
+            {!isRecording && !isProcessing && (
                 <SafeAreaView style={styles.overlay}>
                     <View style={styles.header}>
                         <TouchableOpacity onPress={router.back} style={styles.iconButton}>
@@ -220,20 +242,29 @@ export default function TimelapseScreen() {
                 </SafeAreaView>
             )}
 
-            {isRecording && (
+            {(isRecording || isProcessing) && (
                 <View style={[styles.focusOverlay, { backgroundColor: '#000000' }]}>
                     <SafeAreaView style={styles.focusContent}>
                         <View style={styles.timerContainer}>
-                            <Text style={styles.focusLabel}>FOCUS MODE</Text>
+                            <Text style={styles.focusLabel}>{isProcessing ? 'PROCESSING...' : 'FOCUS MODE'}</Text>
                             <Text style={styles.timerText}>{formatTime(seconds)}</Text>
-                            <Text style={styles.statsText}>{photosTaken} frames captured</Text>
+                            <Text style={styles.statsText}>
+                                {isProcessing
+                                    ? `Saving frames: ${photosKept}...`
+                                    : `${photosCaptured} frames buffer`}
+                            </Text>
                         </View>
 
-                        <View style={styles.breathingLight} />
-
-                        <TouchableOpacity onPress={handleStop} style={styles.stopButton}>
-                            <View style={styles.stopInner} />
-                        </TouchableOpacity>
+                        {isProcessing ? (
+                            <ActivityIndicator size="large" color="#E11D48" style={{ marginBottom: 50 }} />
+                        ) : (
+                            <>
+                                <View style={styles.breathingLight} />
+                                <TouchableOpacity onPress={handleStop} style={styles.stopButton}>
+                                    <View style={styles.stopInner} />
+                                </TouchableOpacity>
+                            </>
+                        )}
                     </SafeAreaView>
                 </View>
             )}

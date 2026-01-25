@@ -12,6 +12,11 @@ interface UGCDetailModalProps {
 
 const { width } = Dimensions.get('window');
 
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { supabase } from '../../lib/supabase';
+
+// ... imports
+
 export const UGCDetailModal: React.FC<UGCDetailModalProps> = ({
     visible,
     onClose,
@@ -19,20 +24,33 @@ export const UGCDetailModal: React.FC<UGCDetailModalProps> = ({
 }) => {
     const { colors } = useTheme();
 
+    // Video Player Support
+    const videoSource = item?.video_url
+        ? (item.video_url.startsWith('http')
+            ? item.video_url
+            : supabase.storage.from('timelapses').getPublicUrl(item.video_url).data.publicUrl)
+        : null;
+
+    const player = useVideoPlayer(videoSource, player => {
+        if (item?.video_url) {
+            player.loop = true;
+            player.play();
+        }
+    });
+
     React.useEffect(() => {
         if (item) {
             console.log('🖼️ UGCDetailModal mounting with item:', {
                 id: item.id,
-                has_image_url: !!item.image_url,
-                image_url_length: item.image_url?.length,
-                full_url: item.image_url
+                has_image: !!item.image_url,
+                has_video: !!item.video_url
             });
         }
     }, [item]);
 
-    // Moved check after hooks to avoid "Rendered fewer hooks than expected" error
     if (!item || !visible) return null;
 
+    // ... styles ...
     const styles = StyleSheet.create({
         container: {
             flex: 1,
@@ -55,10 +73,20 @@ export const UGCDetailModal: React.FC<UGCDetailModalProps> = ({
         contentContainer: {
             flex: 1,
         },
-        image: {
+        mediaContainer: {
             width: width,
-            height: width, // Square aspect ratio for now
-            backgroundColor: colors.card,
+            height: width, // Square
+            backgroundColor: 'black',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        image: {
+            width: '100%',
+            height: '100%',
+        },
+        video: {
+            width: '100%',
+            height: '100%',
         },
         textOnlyContainer: {
             padding: 30,
@@ -108,14 +136,23 @@ export const UGCDetailModal: React.FC<UGCDetailModalProps> = ({
                 </View>
 
                 <ScrollView style={styles.contentContainer} contentContainerStyle={{ paddingBottom: 40 }}>
-                    {item.image_url ? (
-                        <Image
-                            source={{ uri: item.image_url }}
-                            style={styles.image}
-                            resizeMode="cover"
-                            onError={(e) => console.log(`❌ Detail Modal Image Load Error [${item.id}]:`, e.nativeEvent.error, item.image_url)}
-                            onLoad={() => console.log(`✅ Detail Modal Image Loaded [${item.id}]`)}
-                        />
+                    {item.video_url ? (
+                        <View style={styles.mediaContainer}>
+                            <VideoView
+                                player={player}
+                                style={styles.video}
+                                contentFit="contain"
+                                nativeControls={true}
+                            />
+                        </View>
+                    ) : item.image_url ? (
+                        <View style={styles.mediaContainer}>
+                            <Image
+                                source={{ uri: item.image_url }}
+                                style={styles.image}
+                                resizeMode="cover"
+                            />
+                        </View>
                     ) : (
                         <View style={styles.textOnlyContainer}>
                             <Text style={styles.textContent}>{item.content}</Text>
@@ -133,8 +170,14 @@ export const UGCDetailModal: React.FC<UGCDetailModalProps> = ({
                             })}
                         </Text>
 
-                        {item.image_url && item.content && (
+                        {(item.content) && (
                             <Text style={styles.caption}>{item.content}</Text>
+                        )}
+                        {/* Show earned voltz if available (for timelapses) */}
+                        {item.voltz_earned !== undefined && (
+                            <Text style={[styles.caption, { fontWeight: 'bold', color: colors.primary, marginTop: 10 }]}>
+                                +{item.voltz_earned} Voltz
+                            </Text>
                         )}
                     </View>
                 </ScrollView>

@@ -3,7 +3,7 @@
     "name": "Supercharged",
     "slug": "supercharged",
     "scheme": "supercharged",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -24,7 +24,7 @@
       "associatedDomains": [
         "applinks:learningsupercharged.com"
       ],
-      "buildNumber": "18"
+      "buildNumber": "20"
     },
     "android": {
       "adaptiveIcon": {
@@ -54,15 +54,23 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to allow you to upload profile pictures.",
-          "cameraPermission": "The app accesses your camera to allow you to take profile pictures."
+          "photosPermission": "The app accesses your photos to allow you to upload profile pictures or post.",
+          "cameraPermission": "The app accesses your camera to allow you to take profile pictures or post."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.0"
+          }
         }
       ]
     ],
     "updates": {
       "url": "https://u.expo.dev/75912aaa-18b2-4f42-89ca-8e8bc19698db"
     },
-    "runtimeVersion": "2.0.0",
+    "runtimeVersion": "2.0.1",
     "extra": {
       "router": {},
       "eas": {

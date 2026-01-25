@@ -34,9 +34,6 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
 
     useEffect(() => {
         fetchFeed();
-        // MVP Polling
-        const interval = setInterval(fetchFeed, 10000);
-        return () => clearInterval(interval);
     }, [selectedCommunity]);
 
     const fetchFeed = async () => {

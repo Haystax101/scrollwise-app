@@ -84,7 +84,7 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
     const [loading, setLoading] = useState(false);
 
     // Viewer State
-    const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null);
+    const [selectedVideoUrl, setSelectedVideoUrl] = useState<any | null>(null); // Actually session object
     const [isViewerVisible, setIsViewerVisible] = useState(false);
 
     // Options Modal State
@@ -211,14 +211,9 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
     };
 
     const openTimelapseViewer = (item: any) => {
-        if (item.storage_path) {
-            const { data } = supabase.storage
-                .from('timelapses')
-                .getPublicUrl(item.storage_path);
-
-            setSelectedVideoUrl(data.publicUrl);
-            setIsViewerVisible(true);
-        }
+        // Pass the whole item as the session (it contains id and user_id)
+        setSelectedVideoUrl(item);
+        setIsViewerVisible(true);
     };
 
     const handleOptionView = () => {
@@ -286,11 +281,12 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
                             } else if (activeTab === 'timelapses') {
                                 try {
                                     // 1. Delete Video File
-                                    if (selectedOptionItem.storage_path) {
-                                        console.log('🗑️ Deleting timelapse video:', selectedOptionItem.storage_path);
+                                    // Use video_url which is the actual file path in 'timelapses' bucket
+                                    if (selectedOptionItem.video_url) {
+                                        console.log('🗑️ Deleting timelapse video:', selectedOptionItem.video_url);
                                         await supabase.storage
                                             .from('timelapses')
-                                            .remove([selectedOptionItem.storage_path]);
+                                            .remove([selectedOptionItem.video_url]);
                                     }
 
                                     // 2. Delete Thumbnails
@@ -412,38 +408,7 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
             );
         }
 
-        // SAVED ITEMS
-        if (activeTab === 'saved') {
-            return (
-                <TouchableOpacity
-                    style={[styles.gridItem, { borderColor: colors.background, backgroundColor: colors.card, justifyContent: 'center', alignItems: 'center', padding: 8 }]}
-                    onPress={() => handleItemPress(item)}
-                    activeOpacity={0.7}
-                >
-                    {item.image_url ? (
-                        <Image source={{ uri: item.image_url }} style={styles.image} resizeMode="cover" />
-                    ) : (
-                        <View style={{ alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                            {item.type === 'book' && <Feather name="book" size={24} color={colors.textSecondary} />}
-                            {item.type === 'article' && <Feather name="file-text" size={24} color={colors.textSecondary} />}
-                            {item.type === 'paper' && <Feather name="file" size={24} color={colors.textSecondary} />}
-                            {item.type === 'insight' && <Feather name="zap" size={24} color={colors.textSecondary} />}
-                            {item.type === 'video' && <Feather name="video" size={24} color={colors.textSecondary} />}
-                            <Text style={{ fontSize: 10, color: colors.textSecondary, marginTop: 4, textAlign: 'center' }} numberOfLines={3}>
-                                {item.title || item.content || 'Untitled'}
-                            </Text>
-                        </View>
-                    )}
-                    {item.image_url && (
-                        <View style={styles.statOverlay}>
-                            {item.type === 'book' && <Feather name="book" size={10} color="white" />}
-                            {item.type === 'article' && <Feather name="file-text" size={10} color="white" />}
-                            {item.type === 'video' && <Feather name="video" size={10} color="white" />}
-                        </View>
-                    )}
-                </TouchableOpacity>
-            );
-        }
+
 
         // IMAGE INSIGHT
         return (
@@ -513,7 +478,7 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
             {/* Timelapse Modal */}
             <TimelapseViewerModal
                 visible={isViewerVisible}
-                videoUrl={selectedVideoUrl}
+                session={selectedVideoUrl as any} // Reusing the state variable name for session to minimize churn, or better to rename. Let's rely on the updated logic below
                 onClose={() => {
                     setIsViewerVisible(false);
                     setSelectedVideoUrl(null);
