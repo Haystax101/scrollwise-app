@@ -42,62 +42,48 @@ export const NativeStorySlide: React.FC<NativeStorySlideProps> = ({
     // Kept subtle black overlay for readability
     const borderColor = getOverlayColor(safeColour, 0.5);
 
-    // Calculate max height for the card to ensure it doesn't overlap bottom nav
-    // Screen height - Top Inset - Top Padding (80) - Header (approx 40) - Bottom Inset - Bottom Nav (approx 60) - Buffer (20)
-    const maxCardHeight = height - insets.top - 80 - 40 - insets.bottom - 80 - 20;
+    // Calculate max height for the card
+    const maxCardHeight = height - insets.top - 80 - insets.bottom - 40;
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
             {/* Background Image */}
             {imageUrl ? (
                 <ImageBackground
                     source={{ uri: imageUrl }}
                     style={styles.background}
                     resizeMode="cover"
-                    blurRadius={15} // Added blur
+                    blurRadius={30} // Increased blur for better text visibility
                 >
                     {/* Darker black overlay for contrast */}
-                    <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]} />
+                    <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.8)' }]} />
                 </ImageBackground>
             ) : (
-                <View style={[styles.background, { backgroundColor: '#111' }]}>
+                <View style={[styles.background, { backgroundColor: '#000' }]}>
                 </View>
             )}
 
-            {/* Glass Card Container - Centered */}
+            {/* Content Container - No box look */}
             <View style={styles.cardContainer}>
 
-                {/* Title Section - Moved here to sit above card */}
+                {/* Title Reminder Header */}
                 <View style={styles.header}>
                     <View style={[styles.accentLine, { backgroundColor: safeColour }]} />
                     <Text style={[styles.title, { color: safeColour }]}>{title.toUpperCase()}</Text>
                 </View>
 
-                <BlurView
-                    intensity={30}
-                    tint="dark"
-                    style={[
-                        styles.glassCard,
-                        {
-                            borderColor: borderColor,
-                            maxHeight: maxCardHeight // Limit height
-                        }
-                    ]}
+                <ScrollView
+                    style={{ width: '100%' }}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 40 }}
                 >
-                    <ScrollView
-                        showsVerticalScrollIndicator={true}
-                        contentContainerStyle={{ paddingBottom: 10 }}
-                        indicatorStyle="white"
-                        nestedScrollEnabled={true}
-                    >
-                        {chapterTitle && (
-                            <Text style={[styles.chapterTitle, { marginBottom: 16 }]}>
-                                {chapterTitle}
-                            </Text>
-                        )}
-                        <Text style={styles.text}>{text}</Text>
-                    </ScrollView>
-                </BlurView>
+                    {chapterTitle && (
+                        <Text style={[styles.chapterTitle, { marginBottom: 12 }]}>
+                            {chapterTitle}
+                        </Text>
+                    )}
+                    <Text style={styles.text}>{text}</Text>
+                </ScrollView>
             </View>
         </View>
     );
@@ -110,7 +96,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 0,
         left: 0,
-        justifyContent: 'flex-start',
+        justifyContent: 'center', // Center content vertically
         alignItems: 'center',
         overflow: 'hidden',
     },
@@ -122,60 +108,51 @@ const styles = StyleSheet.create({
     overlay: {
         ...StyleSheet.absoluteFillObject,
     },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    cardContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'flex-start', // Left align text
+        width: '100%',
+        paddingHorizontal: 30, // More side padding since box is gone
+        paddingTop: 60,
+    },
     header: {
-        width: '100%', // Match card width
-        maxWidth: 400,
-        marginBottom: 15, // Space between title and card
+        width: '100%',
+        marginBottom: 20,
         flexDirection: 'row',
         alignItems: 'center',
-        zIndex: 10,
-        paddingHorizontal: 0, // Align with card edge if card has no outer margin, but cardContainer has padding.
     },
     accentLine: {
         width: 3,
-        height: 18,
+        height: 16,
         marginRight: 10,
         borderRadius: 1.5,
     },
     title: {
         fontFamily: 'Oswald_500Medium',
-        fontSize: 12, // Reduced from 14
-        // color set dynamically
+        fontSize: 12,
         textTransform: 'uppercase',
-        letterSpacing: 1.5,
-        textShadowColor: 'rgba(0,0,0,0.5)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
-    },
-    cardContainer: {
-        flex: 1,
-        justifyContent: 'flex-start',
-        alignItems: 'center',
-        width: '100%',
-        paddingHorizontal: 20,
-        paddingTop: 80, // Moved up from 40%
-    },
-    glassCard: {
-        width: '100%',
-        maxWidth: 400, // Max width for tablet look
-        padding: 24, // Reduced padding from 32
-        borderRadius: 24,
-        overflow: 'hidden',
-        borderWidth: 1.5,
-        backgroundColor: 'rgba(20,20,20,0.4)', // Slightly darker glass
+        letterSpacing: 2,
+        opacity: 0.9,
     },
     text: {
         fontFamily: 'Montserrat_400Regular',
-        fontSize: 16, // Reduced from 19
-        color: '#E0E0E0',
-        lineHeight: 24, // Reduced from 28
+        fontSize: 15, // Smaller font
+        color: '#F0F0F0', // Slightly brighter white
+        lineHeight: 24,
         textAlign: 'left',
     },
     chapterTitle: {
         fontFamily: 'Montserrat_700Bold',
-        fontSize: 22, // Reduced from 26
+        fontSize: 20, // Smaller font
         color: 'white',
-        lineHeight: 26, // Reduced from 30
+        lineHeight: 28,
         textAlign: 'left',
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
 });

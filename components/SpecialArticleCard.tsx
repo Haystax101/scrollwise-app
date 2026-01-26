@@ -475,7 +475,7 @@ export const SpecialArticleCard: React.FC<SpecialArticleCardProps> = ({
 
             {/* Preference Bar - Shows when top buttons are HIDDEN (!isMenuOpen) and user hasn't voted yet */}
             {(!isMenuOpen && hasVoted === false) && (
-                <Animated.View style={[styles.preferenceBar, { top: insets.top + 10 }]}>
+                <Animated.View style={[styles.preferenceBar, { top: insets.top + 70 }]}>
                     <Text style={styles.preferenceText}>Do you prefer this content?</Text>
                     <View style={styles.preferenceButtons}>
                         <TouchableOpacity style={[styles.prefButton, styles.prefButtonYes]} onPress={() => handleVote(true)}>
