@@ -145,8 +145,8 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
                     // Inverted List:
                     // paddingTop = Space at visual BOTTOM (Input area)
                     // paddingBottom = Space at visual TOP (Header area)
-                    paddingTop: selectedCommunity ? 180 : 120,
-                    paddingBottom: insets.top + 70,
+                    paddingTop: selectedCommunity ? 120 : insets.top + 60,
+                    paddingBottom: insets.bottom + 80,
                     paddingHorizontal: 0
                 }}
                 inverted={!!selectedCommunity} // Specific groups are chat-like (bottom up), General is Feed (top down)? 

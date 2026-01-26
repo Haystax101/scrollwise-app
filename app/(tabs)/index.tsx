@@ -71,11 +71,18 @@ export default function FeedScreen() {
             {/* Header Switcher */}
             <FeedToggleHeader
                 activeFeed={activeFeed}
-                onToggle={setActiveFeed}
+                onToggle={(newFeed) => {
+                    setActiveFeed(newFeed);
+                    // Clear params if switching feeds to ensure clean state
+                    if (contentId || contentType) {
+                        router.setParams({ contentId: undefined, contentType: undefined });
+                    }
+                }}
             />
 
             {/* Feeds */}
-            {activeFeed === 'learning' ? (
+            {/* Feeds */}
+            <View style={{ flex: 1, display: activeFeed === 'learning' ? 'flex' : 'none' }}>
                 <MainFeed
                     key={`learning-${refreshKey}`}
                     industries={industries}
@@ -87,11 +94,13 @@ export default function FeedScreen() {
                     trackInteraction={trackInteraction}
                     trackContentEngagement={trackContentEngagement}
                 />
-            ) : (
+            </View>
+
+            <View style={{ flex: 1, display: activeFeed === 'community' ? 'flex' : 'none' }}>
                 <CommunityFeed
                     selectedCommunity={selectedCommunity}
                 />
-            )}
+            </View>
         </View>
     );
 }

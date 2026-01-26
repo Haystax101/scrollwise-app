@@ -57,43 +57,39 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
 
   const dynamicStyles = StyleSheet.create({
     wrapper: {
-      height: screenHeight,
-      justifyContent: 'center',
+      marginBottom: 24, // Spacing between cards
+      width: '100%',
     },
     container: {
       backgroundColor: colors.card,
-      borderRadius: 12,
-      marginHorizontal: 16,
-      marginBottom: 16,
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.1,
-      position: 'relative',
-      shadowRadius: 8,
-      elevation: 4,
-      maxHeight: screenHeight * 0.85, // Constrain height to fit in feed container
-      justifyContent: 'center', // Center content vertically
+      borderRadius: 0, // Edge to edge feel or maintain rounds? Instagram is usually full width or slightly padded.
+      // Let's keep it card-like but simpler
+      // marginHorizontal: 0, // Full width for Instagram feel? Or keep padding? User said "Instagram like", usually full width images but padded text. 
+      // Let's stick to the card style but auto height.
+      marginHorizontal: 0,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: colors.border,
+      // shadow removed for cleaner flat look
+      // position: 'relative',
     },
     flagButton: {
       position: 'absolute',
-      top: 52, // Increased to avoid iPhone status bar/notch
+      top: 12,
       right: 12,
       zIndex: 10,
     },
     // User header section
     userHeader: {
       flexDirection: 'row',
-      padding: 16,
-      alignItems: 'flex-start',
+      padding: 12,
+      alignItems: 'center',
     },
     avatar: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      marginRight: 12,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      marginRight: 10,
     },
     userInfo: {
       flex: 1,
@@ -101,22 +97,21 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     headerRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'flex-start',
+      alignItems: 'center',
     },
     textContainer: {
       flex: 1,
     },
     name: {
-      fontSize: 18,
-      fontWeight: '700',
+      fontSize: 16,
+      fontWeight: '600',
       color: colors.text,
-      marginBottom: 2,
+      marginBottom: 0,
     },
     tagline: {
-      fontSize: 14,
+      fontSize: 12,
       color: colors.textSecondary,
-      fontStyle: 'italic',
-      marginBottom: 2,
+      marginTop: 2,
     },
     role: {
       fontSize: 16,
@@ -126,32 +121,36 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     timestampContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginTop: 4,
+      marginLeft: 6,
     },
     timestamp: {
       fontSize: 12,
       color: colors.textSecondary,
-      marginLeft: 4,
+      marginLeft: 2,
     },
     moreButton: {
       padding: 4,
     },
     // Content section
     contentSection: {
-      paddingHorizontal: 16,
+      paddingHorizontal: 12,
       paddingBottom: 12,
     },
     contentText: {
-      fontSize: 16,
-      lineHeight: 24,
+      fontSize: 15,
+      lineHeight: 22,
       color: colors.text,
     },
     insightImage: {
       width: '100%',
-      height: 200,
-      borderRadius: 12,
-      marginTop: 12,
+      aspectRatio: 1, // Square or 4:5 usually for insta, but let's do 16:9 or 4:3 if we can, or just width/height.
+      // If we don't know aspect ratio, width 100% height null with resizeMode covers.
+      // But standard feed usually has fixed aspect or variable.
+      // Let's try flexible height. 
+      height: 400, // Explicit height for now or aspect ratio?
+      // Let's use standard square for uniformity or 4:3
       backgroundColor: colors.surface,
+      marginBottom: 12,
     },
     // Views section (above separator)
     viewsSection: {
@@ -815,25 +814,35 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         </TouchableOpacity>
 
         {/* Content */}
-        <View style={dynamicStyles.contentSection}>
-          <Text
-            style={dynamicStyles.contentText}
-            numberOfLines={14}
-            onTextLayout={(e) => {
-              const { lines } = e.nativeEvent;
-              setIsTextTruncated(lines.length >= 14);
-            }}
-          >
-            {insight.content}
-          </Text>
-          {isTextTruncated && (
-            <TouchableOpacity
-              style={dynamicStyles.readMoreButton}
-              onPress={() => setShowReadMoreModal(true)}
-            >
-              <Text style={dynamicStyles.readMoreText}>Read More</Text>
-            </TouchableOpacity>
+        <View style={{ marginBottom: 12 }}>
+          {insight.image_url && (
+            <Image
+              source={{ uri: insight.image_url }}
+              style={{ width: '100%', height: 300, marginBottom: 12 }}
+              resizeMode="cover"
+            />
           )}
+
+          <View style={dynamicStyles.contentSection}>
+            <Text
+              style={dynamicStyles.contentText}
+              numberOfLines={14}
+              onTextLayout={(e) => {
+                const { lines } = e.nativeEvent;
+                setIsTextTruncated(lines.length >= 14);
+              }}
+            >
+              {insight.content}
+            </Text>
+            {isTextTruncated && (
+              <TouchableOpacity
+                style={dynamicStyles.readMoreButton}
+                onPress={() => setShowReadMoreModal(true)}
+              >
+                <Text style={dynamicStyles.readMoreText}>Read More</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Views Section - Above separator */}
