@@ -1102,6 +1102,34 @@ CREATE TABLE public.technology_books_catalogue (
   used boolean DEFAULT false,
   CONSTRAINT technology_books_catalogue_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.timelapse_comments (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  timelapse_id uuid NOT NULL,
+  content text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT timelapse_comments_pkey PRIMARY KEY (id),
+  CONSTRAINT timelapse_comments_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT timelapse_comments_timelapse_id_fkey FOREIGN KEY (timelapse_id) REFERENCES public.timelapse_sessions(id)
+);
+CREATE TABLE public.timelapse_likes (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  timelapse_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT timelapse_likes_pkey PRIMARY KEY (id),
+  CONSTRAINT timelapse_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT timelapse_likes_timelapse_id_fkey FOREIGN KEY (timelapse_id) REFERENCES public.timelapse_sessions(id)
+);
+CREATE TABLE public.timelapse_saves (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  timelapse_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT timelapse_saves_pkey PRIMARY KEY (id),
+  CONSTRAINT timelapse_saves_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT timelapse_saves_timelapse_id_fkey FOREIGN KEY (timelapse_id) REFERENCES public.timelapse_sessions(id)
+);
 CREATE TABLE public.timelapse_sessions (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   user_id uuid NOT NULL,
@@ -1112,8 +1140,17 @@ CREATE TABLE public.timelapse_sessions (
   storage_path text,
   voltz_earned integer DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
+  video_url text,
+  status text DEFAULT 'processing'::text,
+  likes_count integer DEFAULT 0,
+  comments_count integer DEFAULT 0,
+  saves_count integer DEFAULT 0,
+  views_count integer DEFAULT 0,
+  title text,
+  description text,
+  privacy_level text DEFAULT 'public'::text CHECK (privacy_level = ANY (ARRAY['public'::text, 'friends'::text, 'private'::text])),
   CONSTRAINT timelapse_sessions_pkey PRIMARY KEY (id),
-  CONSTRAINT timelapse_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+  CONSTRAINT timelapse_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
 );
 CREATE TABLE public.universities (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

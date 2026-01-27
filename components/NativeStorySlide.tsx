@@ -108,9 +108,6 @@ const styles = StyleSheet.create({
     overlay: {
         ...StyleSheet.absoluteFillObject,
     },
-    overlay: {
-        ...StyleSheet.absoluteFillObject,
-    },
     cardContainer: {
         flex: 1,
         justifyContent: 'center',

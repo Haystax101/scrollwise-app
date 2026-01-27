@@ -97,8 +97,8 @@ export const UGCOptionsModal: React.FC<UGCOptionsModalProps> = ({
                             </View>
 
                             <TouchableOpacity style={styles.option} onPress={onView}>
-                                <Feather name="eye" size={20} color={colors.text} />
-                                <Text style={styles.optionText}>View Details</Text>
+                                <Feather name="arrow-right-circle" size={20} color={colors.text} />
+                                <Text style={styles.optionText}>Go to Post</Text>
                             </TouchableOpacity>
 
                             {onEdit && (

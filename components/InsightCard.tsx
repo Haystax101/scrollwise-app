@@ -57,21 +57,16 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
 
   const dynamicStyles = StyleSheet.create({
     wrapper: {
-      marginBottom: 24, // Spacing between cards
+      marginBottom: 20, // Spacing between cards
       width: '100%',
     },
     container: {
-      backgroundColor: colors.card,
-      borderRadius: 0, // Edge to edge feel or maintain rounds? Instagram is usually full width or slightly padded.
-      // Let's keep it card-like but simpler
-      // marginHorizontal: 0, // Full width for Instagram feel? Or keep padding? User said "Instagram like", usually full width images but padded text. 
-      // Let's stick to the card style but auto height.
-      marginHorizontal: 0,
-      borderTopWidth: 1,
-      borderBottomWidth: 1,
-      borderColor: colors.border,
-      // shadow removed for cleaner flat look
-      // position: 'relative',
+      backgroundColor: 'rgba(30, 30, 30, 0.85)',
+      borderRadius: 24,
+      marginHorizontal: 16,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      overflow: 'hidden',
     },
     flagButton: {
       position: 'absolute',
@@ -344,16 +339,16 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     joinDiscussionSection: {
       paddingHorizontal: 16,
       paddingVertical: 12,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
       borderTopWidth: 1,
-      borderTopColor: colors.border,
+      borderTopColor: 'rgba(255, 255, 255, 0.1)',
     },
     joinDiscussionButton: {
-      backgroundColor: colors.card,
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
       borderWidth: 1,
-      borderColor: colors.text,
-      borderRadius: 8,
-      paddingVertical: 8,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      borderRadius: 12,
+      paddingVertical: 10,
       paddingHorizontal: 16,
       flexDirection: 'row',
       alignItems: 'center',
@@ -815,10 +810,10 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
 
         {/* Content */}
         <View style={{ marginBottom: 12 }}>
-          {insight.image_url && (
+          {(insight.image_url || insight.image) && (
             <Image
-              source={{ uri: insight.image_url }}
-              style={{ width: '100%', height: 300, marginBottom: 12 }}
+              source={{ uri: insight.image_url || insight.image || '' }}
+              style={{ width: '100%', height: 300, marginBottom: 12, borderRadius: 12 }}
               resizeMode="cover"
             />
           )}
@@ -895,67 +890,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           </View>
         </View>
 
-        {/* Top Comment Display */}
-        {topComment && (
-          <View style={dynamicStyles.commentSection}>
-            <View style={dynamicStyles.commentDisplay}>
-              <View style={dynamicStyles.commentHeader}>
-                <Image
-                  source={
-                    topComment.user?.photo
-                      ? { uri: profileImageService.getProfileImageUrl(topComment.user.photo) }
-                      : defaultProfileImage
-                  }
-                  style={dynamicStyles.commentAvatar}
-                />
-                <View style={dynamicStyles.commentContent}>
-                  <View style={dynamicStyles.commentUserRow}>
-                    <Text style={dynamicStyles.commentUserName}>{topComment.user?.name || 'User'}</Text>
-                    <Text style={dynamicStyles.commentTimestamp}>{formatTimestamp(topComment.created_at)}</Text>
-                  </View>
-                  {topComment.user?.tagline && (
-                    <Text style={dynamicStyles.commentTagline}>{topComment.user.tagline}</Text>
-                  )}
-                  <Text style={dynamicStyles.commentText}>{topComment.content}</Text>
-                  <View style={dynamicStyles.commentActions}>
-                    <TouchableOpacity style={dynamicStyles.commentActionButton} onPress={toggleCommentLike}>
-                      <Ionicons
-                        name={commentLiked ? "heart" : "heart-outline"}
-                        size={14}
-                        color={commentLiked ? "#FDE047" : colors.text}
-                      />
-                      <Text style={[dynamicStyles.commentActionText, commentLiked && { color: "#FDE047" }]}>
-                        {String(commentLikes || 0)}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={dynamicStyles.replyButton} onPress={() => setCommentsOpen(true)}>
-                      <Text style={dynamicStyles.replyText}>Reply</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            </View>
 
-            <View style={dynamicStyles.joinDiscussionSection}>
-              <TouchableOpacity style={dynamicStyles.joinDiscussionButton} onPress={() => setCommentsOpen(true)}>
-                <Ionicons name="chatbubble-outline" size={16} color={colors.text} />
-                <Text style={dynamicStyles.joinDiscussionText}>Join the discussion...</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* If no comments, still show join discussion button */}
-        {!topComment && comments === 0 ? (
-          <View style={dynamicStyles.commentSection}>
-            <View style={dynamicStyles.joinDiscussionSection}>
-              <TouchableOpacity style={dynamicStyles.joinDiscussionButton} onPress={() => setCommentsOpen(true)}>
-                <Ionicons name="chatbubble-outline" size={16} color={colors.text} />
-                <Text style={dynamicStyles.joinDiscussionText}>Join the discussion...</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : null}
 
         {/* Expandable profile details */}
         {showDetails && (
@@ -1094,4 +1029,4 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   );
 };
 
-export default InsightCard; 
+export default React.memo(InsightCard); 

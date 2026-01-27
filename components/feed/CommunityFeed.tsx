@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity, ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Animated, Dimensions } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { communityService, FeedItem as FeedItemType } from '../../lib/communityService';
@@ -9,12 +9,43 @@ import { Feather } from '@expo/vector-icons';
 import { FeedItem } from '../../components/communities/FeedItem';
 import { ViewTracking } from '../../lib/viewTracking';
 import InsightCard from '../InsightCard';
+import { TimelapseFeedCard } from './TimelapseFeedCard';
 
 interface CommunityFeedProps {
     selectedCommunity: any | null;
+    highlightId?: string | null;
+    highlightType?: 'timelapse' | 'insight' | 'post'; // Added type
 }
 
-export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity }) => {
+// Animated Wrapper for 3D Effect
+const AnimatedFeedItem = React.memo(({ children, isFocused, onLayout }: { children: React.ReactNode, isFocused: boolean, onLayout?: (event: any) => void }) => {
+    const opacity = useRef(new Animated.Value(isFocused ? 1 : 0.5)).current;
+
+    // Use stable scale animation too for extra "pop" if desired later
+
+    useEffect(() => {
+        Animated.timing(opacity, {
+            toValue: isFocused ? 1 : 0.5,
+            duration: 250,
+            useNativeDriver: true
+        }).start();
+    }, [isFocused]);
+
+    return (
+        <Animated.View
+            onLayout={onLayout}
+            style={{
+                opacity,
+                marginVertical: 12 // Consistent spacing
+            }}
+        >
+            {children}
+        </Animated.View>
+    );
+});
+
+export const CommunityFeed: React.FC<CommunityFeedProps> = (props) => {
+    const { selectedCommunity, highlightId, highlightType } = props;
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
     const { session } = useAuth();
@@ -23,20 +54,36 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
     // Data State
     const [feed, setFeed] = useState<FeedItemType[]>([]);
     const [loading, setLoading] = useState(true);
-    const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
+    const [viewCounts, setViewCounts] = useState<Map<string, number>>(new Map());
+
+    // Autoplay State
+    const [viewableItemIds, setViewableItemIds] = useState<string[]>([]);
+    const flatListRef = useRef<FlatList>(null);
 
     // UI State
     const [messageText, setMessageText] = useState('');
     const [sending, setSending] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
-    // Removed internal community fetching/dropdown logic in favor of props
-
     useEffect(() => {
         fetchFeed();
-    }, [selectedCommunity]);
+    }, [selectedCommunity, highlightId]);
+
+    // Scroll to highlight (effect)
+    useEffect(() => {
+        if (highlightId && feed.length > 0) {
+            const index = feed.findIndex(item => String(item.id) === String(highlightId));
+            if (index !== -1 && flatListRef.current) {
+                setTimeout(() => {
+                    flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+                }, 500); // Small delay for layout
+            }
+        }
+    }, [feed, highlightId]);
 
     const fetchFeed = async () => {
+        console.log("CommunityFeed: Fetching feed...", { highlightId, highlightType, hasSelectedCommunity: !!selectedCommunity });
+
         // Only show loading indicator on initial load, not background refresh
         if (feed.length === 0) setLoading(true);
 
@@ -46,30 +93,94 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
                 const data = await communityService.getCommunityFeed(selectedCommunity.id);
                 setFeed(data);
             } else {
-                // General FYP (Posts + Insights)
+                // General FYP (Posts + Insights + TIMELAPSES)
                 if (!session?.user) return;
 
-                // Load viewed content first
-                const viewed = await ViewTracking.loadViewedContent(session.user.id);
-                setViewedIds(viewed);
+                // Load view counts first
+                const counts = await ViewTracking.loadViewCounts(session.user.id);
+                setViewCounts(counts);
 
-                const [posts, insights] = await Promise.all([
+                const [posts, insights, timelapses] = await Promise.all([
                     communityService.getGeneralFeed(50, 0, session.user.id),
-                    communityService.getInsights(20, session.user.id)
+                    communityService.getInsights(20, session.user.id),
+                    communityService.getTimelapses(20, session.user.id) // New Fetch
                 ]);
 
-                // Filter insights
-                const filteredInsights = insights.filter((item: any) => {
-                    const viewKey = `insight-${item.id}`;
-                    return !viewed.has(viewKey);
+                // Merge and Filter/Sort Logic
+                let allCandidates = [...posts, ...insights, ...timelapses];
+
+                // CHECK FOR MISSING HIGHLIGHT
+                if (highlightId && highlightType) {
+                    const exists = allCandidates.some(item => String(item.id) === String(highlightId));
+                    if (!exists) {
+                        // Fetch explicitly
+                        let missingItem: FeedItemType | null = null;
+                        if (highlightType === 'timelapse') {
+                            missingItem = await communityService.getTimelapseById(highlightId);
+                        } else if (highlightType === 'insight') {
+                            missingItem = await communityService.getInsightById(highlightId);
+                        }
+
+                        if (missingItem) {
+                            console.log("Found missing highlighted item, appending:", highlightId);
+                            allCandidates.push(missingItem);
+                        }
+                    }
+                }
+
+                // Filtering Logic (3x for others, 1x for self)
+                let filtered = allCandidates.filter((item: any) => {
+                    // ALWAYS show highlighted item if present (ignoring view tracking limits)
+                    if (highlightId && String(item.id) === String(highlightId)) return true;
+
+                    const viewKey = `${item.type}-${item.id}`; // e.g., insight-123
+                    const count = counts.get(viewKey) || 0;
+
+                    if (item.user_id === session.user.id) {
+                        return count < 1;
+                    } else {
+                        return count < 3;
+                    }
                 });
 
-                // Merge and Sort
-                const merged = [...posts, ...filteredInsights].sort((a, b) =>
-                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                );
+                // Soft Fallback: If filtered list is too short (< 5), backfill with random "seen" items to maintain scroll feel
+                if (filtered.length < 5 && allCandidates.length > filtered.length) {
+                    console.log("Filtered feed sparse, backfilling with seen items");
+                    const existingIds = new Set(filtered.map(i => i.id));
 
-                setFeed(merged);
+                    // Simple shuffle/find loop to add items not already in filtered
+                    const seenItems = allCandidates.filter(i => !existingIds.has(i.id));
+
+                    // Add up to 10 more to guarantee scrollability
+                    const backfill = seenItems.slice(0, 10);
+                    filtered.push(...backfill);
+                }
+
+                // Sorting Logic
+                const sorted = filtered.sort((a, b) => {
+                    const keyA = `${a.type}-${a.id}`;
+                    const keyB = `${b.type}-${b.id}`;
+                    const countA = counts.get(keyA) || 0;
+                    const countB = counts.get(keyB) || 0;
+
+                    // Special Case: Friend Timelapses ALWAYS first. 
+                    // Assuming 'isFriend' property exists from getTimelapses, for others false.
+                    // We might need to enrich other types or just handle timelapse priority.
+
+                    // Check if *either* is a priority timelapse
+                    const isFriendTimeLapseA = (a.type === 'timelapse' && (a as any).isFriend);
+                    const isFriendTimeLapseB = (b.type === 'timelapse' && (b as any).isFriend);
+
+                    if (isFriendTimeLapseA && !isFriendTimeLapseB) return -1;
+                    if (!isFriendTimeLapseA && isFriendTimeLapseB) return 1;
+
+                    if (countA !== countB) {
+                        return countA - countB;
+                    }
+                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                });
+
+                setFeed(sorted);
             }
         } catch (e) {
             console.error(e);
@@ -79,17 +190,11 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
         }
     };
 
-    const handleViewableItemsChanged = useCallback(({ viewableItems }: any) => {
-        if (!session?.user) return;
-
-        viewableItems.forEach(async (viewToken: any) => {
-            const item = viewToken.item;
-            if (item.type === 'insight') {
-                const newViewed = await ViewTracking.markAsViewed(session.user.id, item.id, 'insight', viewedIds);
-                setViewedIds(newViewed);
-            }
-        });
-    }, [session?.user, viewedIds]);
+    // Viewability Config
+    const viewabilityConfig = useRef({
+        itemVisiblePercentThreshold: 60,
+        minimumViewTime: 50, // Reduced from 200 for instant 3D effect
+    }).current;
 
     const handleSendMessage = async () => {
         if (!messageText.trim() || !selectedCommunity || !session?.user) return;
@@ -122,11 +227,143 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
         }
     };
 
-    const renderItem = ({ item }: { item: any }) => {
-        if (item.type === 'insight') {
-            return <InsightCard insight={item} />;
+    // 3D Scroll Logic
+    const [focusedId, setFocusedId] = useState<string | null>(null);
+    const { height: screenHeight } = Dimensions.get('window');
+    const [containerHeight, setContainerHeight] = useState(screenHeight);
+
+    // Snapping Logic
+    const [snapOffsets, setSnapOffsets] = useState<number[]>([]);
+    const itemHeights = useRef(new Map<number, number>());
+    const updateSnapOffsetsTimeout = useRef<NodeJS.Timeout | null>(null);
+
+    const handleItemLayout = useCallback((index: number, event: any) => {
+        const { height } = event.nativeEvent.layout;
+        itemHeights.current.set(index, height);
+
+        // Debounce calculation to avoid thrashing
+        if (updateSnapOffsetsTimeout.current) clearTimeout(updateSnapOffsetsTimeout.current);
+
+        updateSnapOffsetsTimeout.current = setTimeout(() => {
+            const offsets: number[] = [];
+
+            // Use ACTUAL container height for precise centering
+            // If containerHeight is 0 (initial), fallback to screenHeight to avoid NaNs
+            const visibleHeight = containerHeight > 0 ? containerHeight : screenHeight;
+
+            // Layout Configuration
+            const PADDING_TOP = selectedCommunity ? 120 : visibleHeight * 0.35;
+            const ITEM_MARGIN = 24; // 12 top + 12 bottom
+
+            let currentY = PADDING_TOP;
+
+            const sortedIndices = Array.from(itemHeights.current.keys()).sort((a, b) => a - b);
+
+            if (sortedIndices.length === 0) return;
+            const maxIndex = sortedIndices[sortedIndices.length - 1];
+
+            for (let i = 0; i <= maxIndex; i++) {
+                const h = itemHeights.current.get(i) || 200;
+
+                // Center of this item relative to the scroll view content:
+                const itemStart = currentY + (ITEM_MARGIN / 2);
+                const itemCenter = itemStart + (h / 2);
+
+                // Snap Offset: The scroll position where this point is in the middle of screen.
+                // visibleHeight / 2 is the visual center relative to the top of the container.
+                const centerOffset = itemCenter - (visibleHeight / 2);
+                offsets.push(Math.max(0, centerOffset));
+
+                // Advance running Y
+                currentY += h + ITEM_MARGIN;
+            }
+
+            setSnapOffsets(offsets);
+        }, 100);
+    }, [containerHeight, screenHeight, selectedCommunity]);
+
+    const handleScroll = useCallback((event: any) => {
+        const offsetY = event.nativeEvent.contentOffset.y;
+
+        // Find closest snap offset
+        // We can optimize this binary search later if needed, but linear is fine for <100 items
+        let minDiff = Infinity;
+        let closestIndex = -1;
+
+        snapOffsets.forEach((snapOffset, index) => {
+            const diff = Math.abs(offsetY - snapOffset);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestIndex = index;
+            }
+        });
+
+        if (closestIndex !== -1 && feed[closestIndex]) {
+            setFocusedId(feed[closestIndex].id);
         }
-        return <FeedItem item={item} currentUserId={session?.user?.id || ''} />;
+    }, [snapOffsets, feed]);
+
+    const handleActionComment = useCallback((itemId: string) => {
+        console.log("Open comments for", itemId);
+    }, []);
+
+    const handleActionDelete = useCallback(() => {
+        fetchFeed();
+    }, []);
+
+    const handleActionProfile = useCallback((userId: string) => {
+        console.log("Open profile:", userId);
+    }, []);
+
+    const handleViewableItemsChanged = useCallback(({ viewableItems }: any) => {
+        if (!session?.user) return;
+
+        // Autoplay Logic - Keep this for video visibility
+        const visibleIds = viewableItems.map((v: any) => v.item.id);
+        setViewableItemIds(visibleIds);
+
+        // Track Views
+        viewableItems.forEach(async (viewToken: any) => {
+            const item = viewToken.item;
+            if (['insight', 'timelapse', 'post'].includes(item.type)) {
+                const newCounts = await ViewTracking.markAsViewed(session.user.id, item.id, item.type, viewCounts);
+                setViewCounts(newCounts);
+            }
+        });
+    }, [session?.user, viewCounts]);
+
+
+
+    const renderItem = ({ item, index }: { item: any, index: number }) => {
+        const isFocused = focusedId === item.id;
+
+        let content;
+        if (item.type === 'insight') {
+            content = <InsightCard insight={item} />;
+        } else if (item.type === 'timelapse') {
+            // Play only if FOCUSED (stricter than visible)
+            content = (
+                <TimelapseFeedCard
+                    item={item}
+                    currentUserId={session?.user?.id || ''}
+                    isVisible={isFocused}
+                    onCommentPress={() => handleActionComment(item.id)}
+                    onDelete={handleActionDelete}
+                    onProfilePress={() => handleActionProfile(item.user_id)}
+                />
+            );
+        } else {
+            content = <FeedItem item={item} currentUserId={session?.user?.id || ''} />;
+        }
+
+        return (
+            <AnimatedFeedItem
+                isFocused={isFocused}
+                onLayout={(e) => handleItemLayout(index, e)}
+            >
+                {content}
+            </AnimatedFeedItem>
+        );
     };
 
     return (
@@ -136,20 +373,44 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
 
             {/* Feed List */}
             <FlatList
+                ref={flatListRef}
                 data={feed}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id}
                 onViewableItemsChanged={handleViewableItemsChanged}
-                viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
+                viewabilityConfig={viewabilityConfig}
+
+                // Snap Props
+                snapToOffsets={snapOffsets}
+                snapToAlignment="start"
+                decelerationRate="fast"
+                disableIntervalMomentum={true} // Strict "One Item Per Scroll"
+
+                // Scroll Handling
+                onScroll={handleScroll}
+                scrollEventThrottle={16} // 60fps
+
+                // Optimization to prevent flickering
+                removeClippedSubviews={false} // Keep views mounted to avoid image reload flicker
+                windowSize={5} // Render more items ahead/behind
+                initialNumToRender={3}
+                maxToRenderPerBatch={3}
+                showsVerticalScrollIndicator={false}
+
+                onLayout={(e) => {
+                    const { height } = e.nativeEvent.layout;
+                    if (Math.abs(height - containerHeight) > 10) {
+                        setContainerHeight(height);
+                    }
+                }}
+
                 contentContainerStyle={{
-                    // Inverted List:
-                    // paddingTop = Space at visual BOTTOM (Input area)
-                    // paddingBottom = Space at visual TOP (Header area)
-                    paddingTop: selectedCommunity ? 120 : insets.top + 60,
-                    paddingBottom: insets.bottom + 80,
+                    // Inverted List for Chat:
+                    paddingTop: selectedCommunity ? 120 : containerHeight * 0.35,
+                    paddingBottom: containerHeight * 0.35,
                     paddingHorizontal: 0
                 }}
-                inverted={!!selectedCommunity} // Specific groups are chat-like (bottom up), General is Feed (top down)? 
+                inverted={!!selectedCommunity}
 
                 refreshing={refreshing}
                 onRefresh={fetchFeed}
@@ -207,77 +468,6 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({ selectedCommunity 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    selectorContainer: {
-        position: 'absolute',
-        left: 20,
-        right: 20,
-        height: 40,
-        justifyContent: 'center',
-    },
-    selectorButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 20,
-        borderWidth: 1,
-        elevation: 4,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-    },
-    selectorText: {
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
-    dropdownOverlay: {
-        position: 'absolute',
-        left: 20,
-        right: 20,
-        bottom: 0,
-        zIndex: 99,
-    },
-    dropdownMenu: {
-        borderRadius: 16,
-        borderWidth: 1,
-        paddingVertical: 8,
-        elevation: 5,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        maxHeight: 300,
-    },
-    dropdownItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-    },
-    dropdownText: {
-        fontSize: 16,
-        fontWeight: '500',
-    },
-    miniAvatar: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        marginRight: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        overflow: 'hidden',
-    },
-    miniAvatarImg: {
-        width: 24,
-        height: 24,
-    },
-    miniAvatarText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#888',
     },
     loadingOverlay: {
         position: 'absolute',

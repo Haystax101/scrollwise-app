@@ -35,13 +35,14 @@ interface MainFeedProps {
   trackScroll?: (scrollPercent: number) => void;
   trackInteraction?: (interactionType: string, data?: Record<string, any>) => void;
   trackContentEngagement?: (contentType: string, contentId: string, engagementType: string, data?: Record<string, any>) => void;
+  isVisible?: boolean;
 }
 
 
 /**
  * Custom hook for feed data management
  */
-function useFeedData(feedManager: FeedManager | null, initialContentId?: number | string, initialContentType?: string) {
+function useFeedData(feedManager: FeedManager | null, isVisible: boolean, initialContentId?: number | string, initialContentType?: string) {
   const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -52,9 +53,9 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
   const displayedIds = useMemo(() => new Set(feedItems.map(item => String(item.id))), [feedItems]);
 
   const loadInitialContent = useCallback(async () => {
-    console.log('📱 MainFeed: loadInitialContent called', { feedManager: !!feedManager });
-    if (!feedManager) {
-      console.log('📱 MainFeed: No feedManager, returning early');
+    console.log('📱 MainFeed: loadInitialContent called', { feedManager: !!feedManager, isVisible });
+    if (!feedManager || !isVisible) {
+      console.log('📱 MainFeed: No feedManager or not visible, returning early');
       return;
     }
 
@@ -112,7 +113,7 @@ function useFeedData(feedManager: FeedManager | null, initialContentId?: number 
       console.error('📱 MainFeed: Error loading initial content:', error);
       setIsLoading(false);
     }
-  }, [feedManager, initialContentId, initialContentType]);
+  }, [feedManager, initialContentId, initialContentType, isVisible]);
 
   const loadMoreContent = useCallback(async () => {
     console.log(`📱 MainFeed: loadMoreContent called - feedManager: ${!!feedManager}, isLoadingMore: ${isLoadingMore}, hasMore: ${hasMore}`);
@@ -312,7 +313,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   backTo,
   trackScroll,
   trackInteraction,
-  trackContentEngagement
+  trackContentEngagement,
+  isVisible
 }) => {
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -399,7 +401,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     loadMoreContent,
     refreshContent,
     updateFeedItem
-  } = useFeedData(feedManager, initialArticleId, initialContentType);
+  } = useFeedData(feedManager, !!isVisible, initialArticleId, initialContentType);
 
   // Handle comments count change after getting updateFeedItem from hook
   const handleCommentsCountChange = useCallback((newCount: number) => {
@@ -628,18 +630,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
   // Empty state - but don't show if we're refreshing
   if (feedItems.length === 0 && !isRefreshing) {
-    console.error('📱 MainFeed: SHOWING "No content available" screen');
-    console.error('📱 MainFeed: Current state - isLoading:', isLoading, 'isRefreshing:', isRefreshing, 'feedItems.length:', feedItems.length);
-    console.error('📱 MainFeed: Debug info:', {
-      feedManagerExists: !!feedManager,
-      userIndustries: industries.map(i => i.id),
-      allIndustriesCount: allIndustries.length,
-      hasUser: !!user
-    });
-
-    if (feedManager) {
-      console.error('📱 MainFeed: FeedManager debug info:', feedManager.getDebugInfo());
-    }
+    console.log('📱 MainFeed: SHOWING "No content available" screen');
+    // console.log('📱 MainFeed: Current state - isLoading:', isLoading, 'isRefreshing:', isRefreshing, 'feedItems.length:', feedItems.length);
 
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>

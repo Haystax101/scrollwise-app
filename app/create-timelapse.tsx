@@ -183,11 +183,13 @@ export default function TimelapseScreen() {
 
             setIsProcessing(false);
 
-            Alert.alert(
-                "Focus Session Complete!",
-                `Time: ${formatTime(totalSeconds)}\nVoltz Earned: ${earnedVoltz}\n\nYour timelapse is processing in the cloud.`,
-                [{ text: "OK", onPress: () => router.back() }]
-            );
+            setIsProcessing(false);
+
+            // Navigate to Publish Screen
+            router.replace({
+                pathname: '/publish-timelapse',
+                params: { sessionId: sessionId }
+            });
 
             // Trigger finalize (this should technically happen after uploads finish)
             // Ideally the service tracks this. For MVP, we assume uploads eventual consistency 

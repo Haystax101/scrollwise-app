@@ -52,6 +52,7 @@ export interface Insight {
   created_at?: string;
   link?: string;
   image_url?: string; // Optional image handling
+  image?: string | null; // For direct image content (e.g. uploaded posts)
 }
 
 // Base interface for all content types

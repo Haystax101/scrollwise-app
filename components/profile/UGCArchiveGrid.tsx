@@ -218,8 +218,19 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
 
     const handleOptionView = () => {
         setIsOptionModalVisible(false);
-        if (activeTab === 'timelapses') {
-            openTimelapseViewer(selectedOptionItem);
+
+        if (activeTab === 'timelapses' || activeTab === 'insights') {
+            const type = activeTab === 'timelapses' ? 'timelapse' : 'insight';
+            router.push({
+                pathname: '/(tabs)/',
+                params: {
+                    contentType: type,
+                    contentId: selectedOptionItem.id,
+                    animationDirection: 'left',
+                    showBackButton: 'true',
+                    backTo: 'profile'
+                }
+            });
         } else if (activeTab === 'saved') {
             router.push({
                 pathname: '/(tabs)/',
@@ -232,6 +243,7 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
                 }
             });
         } else {
+            // Fallback
             setIsDetailModalVisible(true);
         }
     };

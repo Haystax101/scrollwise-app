@@ -18,14 +18,23 @@ export default function FeedScreen() {
     const { colors } = useTheme();
     const params = useSearchParams();
 
-    // Feed State
-    const [activeFeed, setActiveFeed] = useState<FeedType>('learning');
-
     // Params for deep linking / specific content
     const contentId = params.get('contentId');
-    const contentType = params.get('contentType') as 'article' | 'paper' | 'book' | 'insight' | null;
+    const contentType = params.get('contentType') as 'article' | 'paper' | 'book' | 'insight' | 'timelapse' | null;
     const showBackButton = params.get('showBackButton') === 'true';
     const backTo = params.get('backTo');
+
+    // Feed State (Auto-switch if linking to UGC)
+    const initialFeed = (contentType === 'timelapse' || contentType === 'insight') ? 'community' : 'learning';
+    const [activeFeed, setActiveFeed] = useState<FeedType>(initialFeed);
+
+    // Ensure we switch feed if params change while mounted
+    useEffect(() => {
+        if (contentType === 'timelapse' || contentType === 'insight') {
+            setActiveFeed('community');
+        }
+    }, [contentType]);
+
     const [refreshKey, setRefreshKey] = useState(0);
 
     // Initialize screen tracking for main feed
@@ -86,6 +95,7 @@ export default function FeedScreen() {
                 <MainFeed
                     key={`learning-${refreshKey}`}
                     industries={industries}
+                    isVisible={activeFeed === 'learning'}
                     initialArticleId={contentId ? (contentType === 'insight' ? contentId : Number(contentId)) : undefined}
                     initialContentType={contentType ?? undefined}
                     showBackButton={showBackButton}
@@ -99,6 +109,8 @@ export default function FeedScreen() {
             <View style={{ flex: 1, display: activeFeed === 'community' ? 'flex' : 'none' }}>
                 <CommunityFeed
                     selectedCommunity={selectedCommunity}
+                    highlightId={contentType === 'timelapse' || contentType === 'insight' ? contentId : undefined}
+                    highlightType={contentType as 'timelapse' | 'insight' | undefined}
                 />
             </View>
         </View>

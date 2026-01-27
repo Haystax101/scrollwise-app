@@ -13,7 +13,7 @@ interface FeedItemProps {
     onPressImage?: (url: string) => void;
 }
 
-export const FeedItem: React.FC<FeedItemProps> = ({ item, currentUserId, onPressImage }) => {
+export const FeedItem = React.memo<FeedItemProps>(({ item, currentUserId, onPressImage }) => {
     const { colors } = useTheme();
     const isOwner = item.user_id === currentUserId;
 
@@ -108,7 +108,7 @@ export const FeedItem: React.FC<FeedItemProps> = ({ item, currentUserId, onPress
             </View>
         </View>
     );
-};
+});
 
 const styles = StyleSheet.create({
     // Message Styles

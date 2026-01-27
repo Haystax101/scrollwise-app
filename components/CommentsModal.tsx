@@ -166,7 +166,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     if (!vid) return;
     setLoading(true);
     const tableCfg = stableTableInfoRef.current;
-    
+
     try {
       if (contentType === 'insight') {
         // Use threaded comments function for insights
@@ -175,7 +175,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
           p_limit: 100,
           p_offset: 0
         });
-        
+
         if (error) {
           console.error('Error fetching threaded comments:', error);
           setComments([]);
@@ -225,7 +225,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
         }
 
         const { data, error } = await query.order('created_at', { ascending: true }); // Oldest first (first comment at top)
-        
+
         if (error) {
           setComments([]);
           onCommentsCountChange && onCommentsCountChange(0);
@@ -267,9 +267,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
   // Add comment or reply
   const handleAddComment = async () => {
     if (!user || !input.trim() || !videoId) return;
-    
+
     setSubmitting(true);
-    
+
     try {
       if (contentType === 'insight' && replyingTo) {
         // Use the SQL function for threaded replies
@@ -279,7 +279,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
           p_parent_comment_id: replyingTo.id,
           p_content: input.trim()
         });
-        
+
         // If the main function fails, try the backup function
         if (error) {
           console.warn('Primary add_comment_reply failed, trying backup function:', error);
@@ -291,14 +291,14 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
           data = backupResult.data;
           error = backupResult.error;
         }
-        
+
         if (error) {
           console.error('Error adding reply (both methods failed):', error);
           // Show user-friendly error message
           alert('Failed to add reply. Please check your connection and try again.');
           return;
         }
-        
+
         if (data) {
           // Add the new reply to the comments array instead of full refresh
           // This preserves optimistic like states and is more efficient
@@ -315,31 +315,31 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
             author_name: 'You',
             hasLiked: false
           };
-          
+
           // Insert reply after the parent comment in the correct position
           setComments(prev => {
             const parentIndex = prev.findIndex(c => c.id === replyingTo.id);
             if (parentIndex !== -1) {
               // Find the last reply to this parent
               let insertIndex = parentIndex + 1;
-              while (insertIndex < prev.length && 
-                     prev[insertIndex].parent_comment_id === replyingTo.id) {
+              while (insertIndex < prev.length &&
+                prev[insertIndex].parent_comment_id === replyingTo.id) {
                 insertIndex++;
               }
               const newComments = [...prev];
               newComments.splice(insertIndex, 0, newReply);
-              
+
               // Update parent's reply count optimistically
               newComments[parentIndex] = {
                 ...newComments[parentIndex],
                 reply_count: (newComments[parentIndex].reply_count || 0) + 1
               };
-              
+
               return newComments;
             }
             return [...prev, newReply];
           });
-          
+
           setInput('');
           setReplyingTo(null);
           // Dismiss keyboard only after successful submission
@@ -365,14 +365,14 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
           .insert(insertData)
           .select(`id, user_id, ${tableInfo.idField}, content, created_at${tableInfo.usesContentType ? ', content_type' : ''}`)
           .single();
-          
+
         if (error) {
           console.error('Error adding comment:', error);
           // Show user-friendly error message
           alert('Failed to add comment. Please check your connection and try again.');
           return;
         }
-        
+
         if (data) {
           const newComment: Comment = {
             id: (data as any).id,
@@ -390,7 +390,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
           // Dismiss keyboard only after successful submission
           Keyboard.dismiss();
           onCommentsCountChange && onCommentsCountChange(comments.length + 1);
-          
+
           // Update comments_count in content table
           let updateQuery = supabase
             .from(tableInfo.contentTable)
@@ -597,10 +597,10 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     const depthLevel = item.depth_level || 0;
     const indentWidth = depthLevel * 20; // 20px per level, max 3 levels = 60px max
     const isInsightComment = contentType === 'insight';
-    
+
     const content = (
       <View style={[
-        dynamicStyles.commentRow, 
+        dynamicStyles.commentRow,
         { marginLeft: indentWidth },
         ...(depthLevel > 0 ? [dynamicStyles.replyRow] : [])
       ]}>
@@ -612,18 +612,18 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
             </Text>
           </View>
           <Text style={dynamicStyles.commentText}>{item.content || 'No content'}</Text>
-          
+
           {/* Action buttons for insight comments */}
           {isInsightComment && (
             <View style={dynamicStyles.commentActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={dynamicStyles.commentActionButton}
                 onPress={() => toggleCommentLike(item)}
               >
-                <FontAwesome 
-                  name={item.hasLiked ? "heart" : "heart-o"} 
-                  size={12} 
-                  color={item.hasLiked ? "#FDE047" : colors.textSecondary} 
+                <FontAwesome
+                  name={item.hasLiked ? "heart" : "heart-o"}
+                  size={12}
+                  color={item.hasLiked ? "#FDE047" : colors.textSecondary}
                 />
                 <Text style={[
                   dynamicStyles.commentActionText,
@@ -632,9 +632,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                   {String(item.likes_count || 0)}
                 </Text>
               </TouchableOpacity>
-              
+
               {depthLevel < 2 && ( // Only allow replies up to 3 levels (0, 1, 2)
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={dynamicStyles.commentActionButton}
                   onPress={() => startReply(item)}
                 >
@@ -642,7 +642,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                   <Text style={dynamicStyles.commentActionText}>Reply</Text>
                 </TouchableOpacity>
               )}
-              
+
               {item.reply_count && item.reply_count > 0 ? (
                 <Text style={dynamicStyles.replyCount}>
                   {String(item.reply_count)} {item.reply_count === 1 ? 'reply' : 'replies'}
@@ -675,9 +675,11 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       justifyContent: 'flex-end',
     },
     modalContent: {
-      backgroundColor: colors.background,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      backgroundColor: 'rgba(20, 20, 20, 0.95)',
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(255, 255, 255, 0.1)',
       paddingTop: 16,
       paddingHorizontal: 16,
       paddingBottom: Math.max(keyboardHeight, 16),
@@ -691,7 +693,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       justifyContent: 'space-between',
       paddingBottom: 16,
       borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      borderBottomColor: 'rgba(255, 255, 255, 0.1)',
     },
     title: {
       fontSize: 18,
@@ -719,15 +721,15 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     },
     commentRow: {
       flexDirection: 'row',
-      paddingVertical: 10,
-      paddingHorizontal: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 12,
       alignItems: 'flex-start',
       marginHorizontal: 8,
       marginVertical: 6,
-      borderRadius: 12,
+      borderRadius: 16,
       borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      backgroundColor: 'rgba(255, 255, 255, 0.03)',
     },
     commentContent: {
       flex: 1,
@@ -856,8 +858,8 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       onRequestClose={onClose}
     >
       <GestureHandlerRootView style={dynamicStyles.modalContainer}>
-        <Pressable 
-          style={{ flex: 1 }} 
+        <Pressable
+          style={{ flex: 1 }}
           onPress={() => {
             // Dismiss keyboard when tapping outside the modal (in the overlay area)
             if (isTextInputFocused) {
@@ -866,9 +868,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
               // If keyboard is not focused, close the modal
               onClose();
             }
-          }} 
+          }}
         />
-        <Animated.View 
+        <Animated.View
           style={[
             dynamicStyles.modalContent,
             {
@@ -878,8 +880,8 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
         >
           <View style={dynamicStyles.header}>
             <Text style={dynamicStyles.title}>Comments</Text>
-            <TouchableOpacity 
-              onPress={onClose} 
+            <TouchableOpacity
+              onPress={onClose}
               style={dynamicStyles.closeButton}
               accessibilityLabel="Close comments"
               accessibilityRole="button"
@@ -945,10 +947,10 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
               accessibilityLabel="Send comment"
               accessibilityRole="button"
             >
-              <FontAwesome 
-                name="send" 
-                size={16} 
-                color={submitting || !input.trim() ? colors.textSecondary : colors.surface} 
+              <FontAwesome
+                name="send"
+                size={16}
+                color={submitting || !input.trim() ? colors.textSecondary : colors.surface}
               />
             </TouchableOpacity>
           </View>
