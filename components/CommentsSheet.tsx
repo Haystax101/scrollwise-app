@@ -3,6 +3,9 @@ import { View, Text, ActivityIndicator, StyleSheet, TouchableOpacity, Keyboard }
 import { BottomSheetModal, BottomSheetFlatList, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'expo-router';
+import { profileImageService } from '../services/profileImageService';
+import { Image } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 
 interface CommentsSheetProps {
@@ -22,6 +25,7 @@ interface Comment {
 
 export const CommentsSheet: React.FC<CommentsSheetProps> = ({ videoId, visible, onClose }) => {
   const { user } = useAuth();
+  const router = useRouter();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,7 +56,10 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ videoId, visible, 
     setLoading(true);
     const { data, error } = await supabase
       .from('comments')
-      .select('id, user_id, article_id, content, created_at')
+      .select(`
+        id, user_id, article_id, content, created_at,
+        profiles:user_id (full_name, avatar_url)
+      `)
       .eq('article_id', videoId)
       .order('created_at', { ascending: false });
     if (error) {
@@ -66,7 +73,7 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ videoId, visible, 
   // Add comment
   const handleAddComment = async () => {
     if (!user || !input.trim() || !videoId) return;
-    
+
     // Dismiss keyboard immediately when send button is pressed
     Keyboard.dismiss();
     setSubmitting(true);
@@ -78,8 +85,8 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ videoId, visible, 
     if (!error && data) {
       setComments((prev) => [data, ...prev]);
       setInput('');
-          // Update comments_count in articles table
-    await supabase.from('articles').update({ comments_count: comments.length + 1 }).eq('id', videoId);
+      // Update comments_count in articles table
+      await supabase.from('articles').update({ comments_count: comments.length + 1 }).eq('id', videoId);
     }
     setSubmitting(false);
   };
@@ -94,25 +101,46 @@ export const CommentsSheet: React.FC<CommentsSheetProps> = ({ videoId, visible, 
       .eq('user_id', user.id);
     if (!error) {
       setComments((prev) => prev.filter((c) => c.id !== commentId));
-          // Update comments_count in articles table
-    await supabase.from('articles').update({ comments_count: Math.max(comments.length - 1, 0) }).eq('id', videoId);
+      // Update comments_count in articles table
+      await supabase.from('articles').update({ comments_count: Math.max(comments.length - 1, 0) }).eq('id', videoId);
     }
   };
 
   // Render comment item
-  const renderItem = ({ item }: { item: Comment }) => (
-    <View style={styles.commentRow}>
-      <View style={styles.commentContent}>
-        <Text style={styles.commentText}>{item.content}</Text>
-        <Text style={styles.commentMeta}>{new Date(item.created_at).toLocaleString()}</Text>
-      </View>
-      {user && item.user_id === user.id && (
-        <TouchableOpacity onPress={() => handleDeleteComment(item.id)} accessibilityLabel="Delete comment" accessibilityRole="button">
-          <FontAwesome name="trash" size={18} color="#ef4444" />
+  const renderItem = ({ item }: { item: any }) => {
+    const profile = item.profiles;
+    const avatarUrl = profile?.avatar_url
+      ? profileImageService.getProfileImageUrl(profile.avatar_url)
+      : null;
+
+    return (
+      <View style={styles.commentRow}>
+        <TouchableOpacity onPress={() => {
+          onClose(); // Close sheet
+          router.push({ pathname: '/user-profile', params: { userId: item.user_id } });
+        }}>
+          <Image
+            source={avatarUrl ? { uri: avatarUrl } : require('../assets/profileIconDefault.png')}
+            style={styles.commentAvatar}
+          />
         </TouchableOpacity>
-      )}
-    </View>
-  );
+
+        <View style={styles.commentContent}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={styles.commentAuthor}>{profile?.full_name || 'User'}</Text>
+            <Text style={styles.commentMeta}>{new Date(item.created_at).toLocaleDateString()}</Text>
+          </View>
+          <Text style={styles.commentText}>{item.content}</Text>
+        </View>
+
+        {user && item.user_id === user.id && (
+          <TouchableOpacity onPress={() => handleDeleteComment(item.id)} style={{ padding: 4 }}>
+            <FontAwesome name="trash" size={14} color="#ef4444" />
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
 
   return (
     <BottomSheetModal
@@ -188,18 +216,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#23232b',
   },
+  commentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 10,
+    backgroundColor: '#333'
+  },
   commentContent: {
     flex: 1,
     marginRight: 12,
   },
-  commentText: {
+  commentAuthor: {
     color: '#fff',
-    fontSize: 15,
+    fontWeight: 'bold',
+    fontSize: 13,
+    marginBottom: 2,
+  },
+  commentText: {
+    color: '#ddd',
+    fontSize: 14,
   },
   commentMeta: {
-    color: '#888',
-    fontSize: 11,
-    marginTop: 2,
+    color: '#666',
+    fontSize: 10,
   },
   inputRow: {
     flexDirection: 'row',

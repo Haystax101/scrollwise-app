@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { supabase } from '../../lib/supabase';
 import { communityService } from '../../lib/communityService';
+import { PaperAirplaneIcon } from 'react-native-heroicons/outline';
 
 const { width } = Dimensions.get('window');
 
@@ -180,21 +181,21 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
             {/* Actions */}
             <View style={[styles.actions, { borderTopColor: colors.border }]}>
                 <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
-                    <Feather name="heart" size={20} color={liked ? "#E11D48" : colors.textSecondary} fill={liked ? "#E11D48" : "none"} />
+                    <Feather name="heart" size={24} color={liked ? "#E11D48" : colors.textSecondary} fill={liked ? "#E11D48" : "none"} />
                     <Text style={[styles.actionText, { color: colors.textSecondary }]}>{likeCount}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.actionButton} onPress={onCommentPress}>
-                    <Feather name="message-square" size={20} color={colors.textSecondary} />
+                    <Feather name="message-circle" size={24} color={colors.textSecondary} />
                     <Text style={[styles.actionText, { color: colors.textSecondary }]}>{item.comments_count || 0}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
-                    <Feather name="bookmark" size={20} color={saved ? colors.primary : colors.textSecondary} fill={saved ? colors.primary : "none"} />
+                <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+                    <PaperAirplaneIcon color={colors.textSecondary} size={24} style={{ transform: [{ rotate: '-30deg' }, { translateY: -2 }] }} />
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-                    <Feather name="share-2" size={20} color={colors.textSecondary} />
+                <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
+                    <Feather name="bookmark" size={24} color={saved ? colors.primary : colors.textSecondary} fill={saved ? colors.primary : "none"} />
                 </TouchableOpacity>
             </View>
         </View>

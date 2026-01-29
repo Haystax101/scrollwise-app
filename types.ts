@@ -53,6 +53,12 @@ export interface Insight {
   link?: string;
   image_url?: string; // Optional image handling
   image?: string | null; // For direct image content (e.g. uploaded posts)
+  social_context?: {
+    action: 'liked' | 'saved' | 'commented';
+    friend_name: string;
+    friend_id: string;
+    friend_avatar?: string;
+  };
 }
 
 // Base interface for all content types
@@ -68,6 +74,12 @@ export interface BaseContent {
   saves_count: number;
   comments_count: number;
   views_count: number;
+  social_context?: {
+    action: 'liked' | 'saved' | 'commented';
+    friend_name: string;
+    friend_id: string;
+    friend_avatar?: string;
+  };
 }
 
 export interface Article extends BaseContent {

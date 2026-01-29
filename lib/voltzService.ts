@@ -223,7 +223,7 @@ export const voltzService = {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, avatar_url, total_voltz_earned, level')
+        .select('id, full_name, avatar_url, total_voltz_earned, level, tagline, current_streak')
         .order('total_voltz_earned', { ascending: false })
         .limit(limit);
 

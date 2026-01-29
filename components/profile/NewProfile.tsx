@@ -4,6 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useLocalSearchParams } from 'expo-router';
 // import { Feather } from '@expo/vector-icons';
 import { TaglineEditModal } from './TaglineEditModal';
+import { BioEditModal } from './BioEditModal';
 import { IndustrySelectionPage } from './IndustrySelectionPage';
 import { AllAchievementsPage } from './AllAchievementsPage';
 import { CareerGoalEditModal } from './CareerGoalEditModal';
@@ -94,6 +95,8 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   // const [profileData, setProfileData] = useState<ProfileData>({});
   // const [profilePassions, setProfilePassions] = useState<ProfilePassion | null>(null);
   const [userTagline, setUserTagline] = useState<string | null>(null);
+  const [userBio, setUserBio] = useState<string | null>(null);
+  const [userLinks, setUserLinks] = useState<any>(null);
 
   // UI states
   // const [loading, setLoading] = useState(true);
@@ -102,6 +105,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [showAllAchievements, setShowAllAchievements] = useState(false);
   const [showCareerGoalModal, setShowCareerGoalModal] = useState(false);
   const [showTaglineModal, setShowTaglineModal] = useState(false);
+  const [showBioModal, setShowBioModal] = useState(false);
   const [showPhotoUploadModal, setShowPhotoUploadModal] = useState(false);
   const [streakInfo, setStreakInfo] = useState<StreakInfo | null>(null);
   const [isClockedIn, setIsClockedIn] = useState(false);
@@ -181,7 +185,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       // Fetch basic profile info including tagline
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('full_name, email, created_at, avatar_url, tagline')
+        .select('full_name, email, created_at, avatar_url, tagline, bio, links')
         .eq('id', currentUser.id)
         .single();
 
@@ -190,6 +194,8 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       } else if (profileData && isMountedRef.current) {
         setFullName(profileData.full_name || '');
         setUserTagline(profileData.tagline);
+        setUserBio(profileData.bio);
+        setUserLinks(profileData.links);
         setAvatarUrl(profileImageService.getProfileImageUrl(profileData.avatar_url));
       }
 
@@ -447,6 +453,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     }
   };
 
+  const handleBioSave = (newBio: string | null) => {
+    if (isMountedRef.current) {
+      setUserBio(newBio);
+      setShowBioModal(false);
+    }
+  };
+
   const handleAvatarPress = () => {
     if (isMountedRef.current) {
       setShowPhotoUploadModal(true);
@@ -585,6 +598,9 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             }}
             followersCount={followersCount}
             followingCount={followingCount}
+            bio={userBio}
+            links={userLinks}
+            onEditBio={() => setShowBioModal(true)}
             onShareProfile={async () => {
               try {
                 const profileLink = `supercharged://profile/${currentUser?.id}`;
@@ -646,6 +662,14 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         onSave={handleTaglineSave}
         userId={currentUser?.id || ''}
         currentTagline={userTagline}
+      />
+
+      <BioEditModal
+        visible={showBioModal}
+        onClose={() => setShowBioModal(false)}
+        onSave={handleBioSave}
+        userId={currentUser?.id || ''}
+        currentBio={userBio}
       />
 
       <PhotoUploadModal

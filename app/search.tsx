@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useRouter } from 'expo-router';
 import { ArrowLeftIcon, XMarkIcon, MagnifyingGlassIcon } from 'react-native-heroicons/outline';
 import { BlurView } from 'expo-blur';
-import { searchContentV2, SearchResultV2 } from '../lib/smartSearchService';
+import { searchContentV2, searchUsers, SearchResultV2 } from '../lib/smartSearchService';
 import { SearchResultItem } from '../components/SearchResultItem';
 import _ from 'lodash';
 
@@ -28,9 +28,18 @@ export default function SearchScreen() {
             }
 
             setIsLoading(true);
-            const data = await searchContentV2(text);
-            setResults(data);
-            setIsLoading(false);
+            try {
+                const [users, content] = await Promise.all([
+                    searchUsers(text),
+                    searchContentV2(text)
+                ]);
+                setResults([...users, ...content]);
+            } catch (e) {
+                console.error(e);
+                setResults([]);
+            } finally {
+                setIsLoading(false);
+            }
         }, 500),
         []
     );
@@ -47,6 +56,14 @@ export default function SearchScreen() {
     };
 
     const handlePressItem = (item: SearchResultV2) => {
+        if (item.type === 'user') {
+            router.push({
+                pathname: '/user-profile',
+                params: { userId: item.id }
+            });
+            return;
+        }
+
         // Navigate to content
         // Assuming feed handles these params or we have specific screens
         // For now, routing to feed with specific content might be best, or specialized screens if they exist

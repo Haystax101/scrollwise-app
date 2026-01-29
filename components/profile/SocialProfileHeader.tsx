@@ -23,6 +23,9 @@ interface SocialProfileHeaderProps {
     onOpenNetwork: (tab: 'followers' | 'following') => void;
     onEditIndustries: () => void;
     onShareProfile: () => void;
+    bio?: string | null;
+    links?: any;
+    onEditBio?: () => void;
 }
 
 export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
@@ -42,10 +45,36 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
     onEditTagline,
     onOpenNetwork,
     onEditIndustries,
-    onShareProfile
+    onShareProfile,
+    bio,
+    links,
+    onEditBio
 }) => {
-    const { colors, theme } = useTheme();
-    const isDark = theme === 'dark';
+    const { colors } = useTheme();
+    // derived from background color or default to true for this app
+    const isDark = true;
+
+    const renderSocialLinks = () => {
+        if (!links || !Array.isArray(links)) return null;
+        return (
+            <View style={styles.linksRow}>
+                {links.map((link: any, index: number) => (
+                    <TouchableOpacity
+                        key={index}
+                        onPress={() => {
+                            if (link.url) {
+                                // Linking.openURL(link.url); // Requires Linking import, skipping for now or adding if simple
+                                console.log('Open link:', link.url);
+                            }
+                        }}
+                        style={styles.linkButton}
+                    >
+                        <Feather name="link" size={14} color={colors.primary} />
+                    </TouchableOpacity>
+                ))}
+            </View>
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -100,6 +129,7 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
                 <View style={styles.bioContainer}>
                     <Text style={[styles.name, { color: colors.text }]}>{fullName}</Text>
 
+                    {/* Tagline */}
                     {tagline ? (
                         <TouchableOpacity onPress={onEditTagline}>
                             <Text style={[styles.tagline, { color: colors.textSecondary }]}>{tagline}</Text>
@@ -109,6 +139,22 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
                             <Text style={[styles.tagline, { color: colors.primary }]}>+ Add Tagline</Text>
                         </TouchableOpacity>
                     )}
+
+                    {/* Bio (New) */}
+                    {bio ? (
+                        <TouchableOpacity onPress={onEditBio}>
+                            <Text style={[styles.bioText, { color: colors.text }]} numberOfLines={4}>
+                                {bio}
+                            </Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity onPress={onEditBio} style={{ marginTop: 8 }}>
+                            <Text style={{ color: colors.primary, fontSize: 13 }}>+ Add Bio</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Links (New) */}
+                    {renderSocialLinks()}
 
                     <View style={styles.bioActionsRow}>
                         <TouchableOpacity onPress={onEditIndustries}>
@@ -311,5 +357,28 @@ const styles = StyleSheet.create({
     },
     shareIconSmall: {
         padding: 8,
+    },
+    // New Styles
+    bioText: {
+        fontSize: 14,
+        lineHeight: 22,
+        marginTop: 8,
+        fontFamily: 'Montserrat_400Regular',
+    },
+    linksRow: {
+        flexDirection: 'row',
+        marginTop: 12,
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    linkButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     }
 });

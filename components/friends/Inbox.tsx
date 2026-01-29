@@ -130,6 +130,50 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
     setRequestsExpanded(!requestsExpanded);
   };
 
+  const getCleanMessage = (notification: NotificationItem) => {
+    const name = notification.source_user.full_name;
+    const msg = notification.message;
+    if (msg.startsWith(name)) {
+      return msg.slice(name.length).trim();
+    }
+    return msg;
+  };
+
+  const handleNotificationPress = (notification: NotificationItem) => {
+    // If friend request or no specific content, go to profile
+    if (notification.type === 'friend_request' || !notification.content_id) {
+      // Use replace if we are already in a modal stack? 
+      // But Activity Tab is a main tab, so we push the profile modal.
+      router.push({
+        pathname: '/user-profile',
+        params: { userId: notification.source_user_id }
+      });
+      return;
+    }
+
+    // Determine content type param
+    // Notification types: insight, article, paper, book, timelapse (custom?)
+    // Our DB schema says content_type is text.
+    // UGCArchiveGrid uses: 'timelapse', 'insight', 'article', 'paper', 'book', 'video'
+
+    // We navigate to the FEED/Home tab with params to show the viewer
+    router.push({
+      pathname: '/(tabs)/',
+      params: {
+        contentType: notification.content_type || 'insight', // Fallback
+        contentId: notification.content_id,
+        animationDirection: 'left',
+        showBackButton: 'true',
+        backTo: 'activity' // Or just let them back naturally
+      }
+    });
+
+    // Alternatively, if we wanted to open the profile modal THEN the content?
+    // No, user wanted "navigate to its respective place".
+    // Since we are on a Tab page, we can just push to another Tab (which replaces the view) or push a Modal.
+    // The feed viewer logic (in index.tsx) handles these params to show a modal viewer.
+  };
+
   const formatTimeAgo = (dateString: string) => {
     const now = new Date();
     const date = new Date(dateString);
@@ -440,12 +484,14 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
             </View>
           ) : (
             notifications.map((notification) => (
-              <View
+              <TouchableOpacity
                 key={notification.id}
                 style={[
                   dynamicStyles.notificationItem,
                   !notification.is_read && dynamicStyles.unreadNotification
                 ]}
+                onPress={() => handleNotificationPress(notification)}
+                activeOpacity={0.7}
               >
                 <View style={dynamicStyles.notificationAvatarContainer}>
                   {/* Avatar */}
@@ -471,13 +517,13 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
                   <Text style={dynamicStyles.notificationText}>
                     <Text style={{ fontWeight: '600' }}>{notification.source_user.full_name}</Text>
                     {' '}
-                    {notification.message}
+                    {getCleanMessage(notification)}
                   </Text>
                   <Text style={dynamicStyles.notificationTime}>
                     {formatTimeAgo(notification.created_at)}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>

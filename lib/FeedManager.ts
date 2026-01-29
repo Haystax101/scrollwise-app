@@ -120,6 +120,9 @@ export class FeedManager {
         allContent.push(...shuffledOthers);
       }
 
+      // Fetch social context for all items
+      await this.fetchSocialContext(allContent);
+
       return allContent.slice(0, targetCount);
     } catch (error) {
       console.error('FeedManager: Error in fetchContent:', error);
@@ -530,6 +533,69 @@ export class FeedManager {
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     return shuffled;
+  }
+
+  /**
+   * Fetch social context (friend likes) for feed items
+   */
+  async fetchSocialContext(items: FeedItem[]): Promise<void> {
+    if (!items || items.length === 0) return;
+
+    const articleIds: number[] = [];
+    const paperIds: number[] = [];
+    const bookIds: number[] = [];
+    const insightIds: number[] = [];
+    const videoIds: number[] = [];
+    const podcastIds: number[] = [];
+
+    items.forEach(item => {
+      const id = typeof item.id === 'string' ? parseInt(item.id, 10) : item.id;
+      if (isNaN(id)) return;
+
+      switch (item.type) {
+        case 'article': articleIds.push(id); break;
+        case 'paper': paperIds.push(id); break;
+        case 'book': bookIds.push(id); break;
+        case 'insight': insightIds.push(id); break;
+        case 'video': videoIds.push(id); break;
+        case 'podcast': podcastIds.push(id); break;
+      }
+    });
+
+    try {
+      const { data, error } = await supabase.rpc('get_feed_social_context', {
+        p_user_id: this.userId,
+        p_article_ids: articleIds,
+        p_paper_ids: paperIds,
+        p_book_ids: bookIds,
+        p_insight_ids: insightIds,
+        p_video_ids: videoIds,
+        p_podcast_ids: podcastIds
+      });
+
+      if (error) {
+        console.error('FeedManager: Error fetching social context:', error);
+        return;
+      }
+
+      if (data && Array.isArray(data)) {
+        // Map context to items
+        data.forEach((context: any) => {
+          const item = items.find(i => String(i.id) === String(context.content_id) && i.type === context.content_type);
+          if (item) {
+            item.social_context = {
+              action: context.action,
+              friend_name: context.friend_name,
+              friend_id: context.friend_id,
+              friend_avatar: context.friend_avatar
+            };
+          }
+        });
+        console.log(`FeedManager: Added social context to ${data.length} items`);
+      }
+    } catch (error) {
+      console.error('FeedManager: Exception fetching social context:', error);
+    }
   }
 
   /**

@@ -132,6 +132,14 @@ export default function RootLayout() {
                             }}
                           />
                           <Stack.Screen
+                            name="user-profile"
+                            options={{
+                              presentation: 'modal', // Native modal feel
+                              headerShown: false,
+                              gestureEnabled: true, // Allow swipe down to dismiss
+                            }}
+                          />
+                          <Stack.Screen
                             name="reset-password-request"
                             options={{
                               headerShown: false,

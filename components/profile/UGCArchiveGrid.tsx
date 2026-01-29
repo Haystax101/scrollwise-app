@@ -219,33 +219,38 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
     const handleOptionView = () => {
         setIsOptionModalVisible(false);
 
-        if (activeTab === 'timelapses' || activeTab === 'insights') {
-            const type = activeTab === 'timelapses' ? 'timelapse' : 'insight';
-            router.push({
-                pathname: '/(tabs)/',
-                params: {
-                    contentType: type,
-                    contentId: selectedOptionItem.id,
-                    animationDirection: 'left',
-                    showBackButton: 'true',
-                    backTo: 'profile'
-                }
-            });
-        } else if (activeTab === 'saved') {
-            router.push({
-                pathname: '/(tabs)/',
-                params: {
-                    contentType: selectedOptionItem.type,
-                    contentId: selectedOptionItem.id,
-                    animationDirection: 'left',
-                    showBackButton: 'true',
-                    backTo: 'profile'
-                }
-            });
-        } else {
-            // Fallback
-            setIsDetailModalVisible(true);
+        // Close the profile modal first
+        if (router.canDismiss()) {
+            router.dismiss();
         }
+
+        // Use a slight delay to allow modal to close before pushing new screen
+        setTimeout(() => {
+            if (activeTab === 'timelapses' || activeTab === 'insights') {
+                const type = activeTab === 'timelapses' ? 'timelapse' : 'insight';
+                router.push({
+                    pathname: '/(tabs)/',
+                    params: {
+                        contentType: type,
+                        contentId: selectedOptionItem.id,
+                        animationDirection: 'left',
+                        showBackButton: 'true',
+                        backTo: 'profile'
+                    }
+                });
+            } else if (activeTab === 'saved') {
+                router.push({
+                    pathname: '/(tabs)/',
+                    params: {
+                        contentType: selectedOptionItem.type,
+                        contentId: selectedOptionItem.id,
+                        animationDirection: 'left',
+                        showBackButton: 'true',
+                        backTo: 'profile'
+                    }
+                });
+            }
+        }, 100);
     };
 
     const handleOptionEdit = () => {

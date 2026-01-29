@@ -4,23 +4,38 @@ import { BlurView } from 'expo-blur';
 
 export interface SearchResultItemProps {
     id: string;
-    type: 'article' | 'paper' | 'book';
+    type: 'article' | 'paper' | 'book' | 'video' | 'podcast' | 'user'; // added user
     title: string;
     subtitle: string;
-    imageUrl?: string; // Kept in interface but ignoring in UI as requested
+    imageUrl?: string;
     colour?: string;
     date?: string;
     special?: boolean;
     onPress: () => void;
 }
 
+import { Image } from 'react-native';
+import { profileImageService } from '../services/profileImageService';
+
 export const SearchResultItem: React.FC<SearchResultItemProps> = ({
-    type, title, subtitle, date, onPress
+    type, title, subtitle, date, imageUrl, onPress
 }) => {
+
+    const isUser = type === 'user';
+    const imageSource = isUser && imageUrl
+        ? { uri: profileImageService.getProfileImageUrl(imageUrl) || undefined }
+        : { uri: imageUrl };
 
     return (
         <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.container}>
             <BlurView intensity={40} tint="dark" style={styles.glass}>
+
+                {/* Avatar for Users */}
+                {isUser && imageUrl ? (
+                    <Image source={imageSource} style={styles.avatar} />
+                ) : isUser ? (
+                    <View style={styles.avatarPlaceholder} />
+                ) : null}
 
                 {/* Content */}
                 <View style={styles.content}>
@@ -28,7 +43,7 @@ export const SearchResultItem: React.FC<SearchResultItemProps> = ({
 
                     <View style={styles.metaRow}>
                         <Text style={styles.subtitle} numberOfLines={1}>
-                            {type.toUpperCase()} • {subtitle}
+                            {isUser ? (subtitle || 'No tagline') : `${type.toUpperCase()} • ${subtitle}`}
                         </Text>
                         {date && (
                             <Text style={styles.date}>{date}</Text>
@@ -82,5 +97,19 @@ const styles = StyleSheet.create({
         fontSize: 11,
         fontFamily: 'Montserrat_400Regular',
         marginLeft: 8,
+    },
+    avatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        marginRight: 12,
+        backgroundColor: '#333'
+    },
+    avatarPlaceholder: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        marginRight: 12,
+        backgroundColor: 'rgba(255,255,255,0.1)'
     }
 });

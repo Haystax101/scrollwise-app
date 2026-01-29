@@ -1,9 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions, Share } from 'react-native'; // Added Share
 import { useTheme } from '../../context/ThemeContext';
-import { FeedItem as FeedItemType } from '../../lib/communityService';
+import { FeedItem as FeedItemType, communityService } from '../../lib/communityService';
 import { profileImageService } from '../../services/profileImageService';
 import { formatDistanceToNow } from 'date-fns';
+import { Feather } from '@expo/vector-icons';
+import { PaperAirplaneIcon } from 'react-native-heroicons/outline';
+import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
 
@@ -11,11 +14,55 @@ interface FeedItemProps {
     item: FeedItemType;
     currentUserId: string;
     onPressImage?: (url: string) => void;
+    onCommentPress?: () => void; // Added prop
+    onProfilePress?: () => void;
 }
 
-export const FeedItem = React.memo<FeedItemProps>(({ item, currentUserId, onPressImage }) => {
+export const FeedItem = React.memo<FeedItemProps>(({ item, currentUserId, onPressImage, onCommentPress, onProfilePress }) => {
     const { colors } = useTheme();
     const isOwner = item.user_id === currentUserId;
+
+    // Interaction State
+    const [liked, setLiked] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const [likeCount, setLikeCount] = useState(item.likes_count || 0);
+
+    useEffect(() => {
+        checkStatus();
+    }, []);
+
+    const checkStatus = async () => {
+        if (!currentUserId) return;
+        // Check Like
+        // Assuming 'post_likes' table exists and follows standard pattern
+        const { data: likeData } = await supabase.from('post_likes').select('id').eq('post_id', item.id).eq('user_id', currentUserId).maybeSingle();
+        if (likeData) setLiked(true);
+
+        // Check Save
+        const { data: saveData } = await supabase.from('post_saves').select('id').eq('post_id', item.id).eq('user_id', currentUserId).maybeSingle();
+        if (saveData) setSaved(true);
+    };
+
+    const handleLike = async () => {
+        const newLiked = !liked;
+        setLiked(newLiked);
+        setLikeCount(prev => newLiked ? prev + 1 : prev - 1);
+        await communityService.toggleLike(item.id, 'post' as any, currentUserId);
+    };
+
+    const handleSave = async () => {
+        setSaved(!saved);
+        await communityService.toggleSave(item.id, 'post' as any, currentUserId);
+    };
+
+    const handleShare = async () => {
+        try {
+            await Share.share({
+                message: `Check out this post by ${item.author_name} on Supercharged!`,
+                // URL if applicable
+            });
+        } catch (error) { console.log(error); }
+    };
 
     // Resolve Avatar URL safely
     const avatarSource = profileImageService.getProfileImageUrl(item.author_avatar)
@@ -75,13 +122,13 @@ export const FeedItem = React.memo<FeedItemProps>(({ item, currentUserId, onPres
     return (
         <View style={[styles.postContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {/* Header */}
-            <View style={styles.postHeader}>
+            <TouchableOpacity style={styles.postHeader} onPress={onProfilePress}>
                 <Image source={avatarSource} style={styles.postAvatar} />
                 <View>
                     <Text style={[styles.postAuthor, { color: colors.text }]}>{item.author_name}</Text>
                     <Text style={[styles.postTime, { color: colors.textSecondary }]}>{timeAgo}</Text>
                 </View>
-            </View>
+            </TouchableOpacity>
 
             {/* Content */}
             {item.title && (
@@ -100,11 +147,25 @@ export const FeedItem = React.memo<FeedItemProps>(({ item, currentUserId, onPres
                 </View>
             )}
 
-            {/* Footer decoration */}
+            {/* Interaction Row */}
             <View style={[styles.postFooter, { borderTopColor: colors.border }]}>
-                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                    Read more ...
-                </Text>
+                <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+                    <Feather name="heart" size={24} color={liked ? "#E11D48" : colors.textSecondary} fill={liked ? "#E11D48" : "none"} />
+                    <Text style={[styles.actionText, { color: colors.textSecondary }]}>{likeCount}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.actionButton} onPress={onCommentPress}>
+                    <Feather name="message-circle" size={24} color={colors.textSecondary} />
+                    <Text style={[styles.actionText, { color: colors.textSecondary }]}>{item.comments_count || 0}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+                    <PaperAirplaneIcon color={colors.textSecondary} size={24} style={{ transform: [{ rotate: '-30deg' }, { translateY: -2 }] }} />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
+                    <Feather name="bookmark" size={24} color={saved ? colors.primary : colors.textSecondary} fill={saved ? colors.primary : "none"} />
+                </TouchableOpacity>
             </View>
         </View>
     );
@@ -202,5 +263,17 @@ const styles = StyleSheet.create({
         marginTop: 12,
         paddingTop: 12,
         borderTopWidth: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    actionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        minWidth: 40,
+    },
+    actionText: {
+        fontSize: 14,
     }
 });

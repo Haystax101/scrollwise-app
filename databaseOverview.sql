@@ -277,6 +277,7 @@ CREATE TABLE public.community_posts (
   likes_count integer DEFAULT 0,
   comments_count integer DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
+  views_count integer DEFAULT 0,
   CONSTRAINT community_posts_pkey PRIMARY KEY (id),
   CONSTRAINT community_posts_community_id_fkey FOREIGN KEY (community_id) REFERENCES public.communities(id),
   CONSTRAINT community_posts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
@@ -1001,6 +1002,9 @@ CREATE TABLE public.profiles (
   referral_code character varying UNIQUE,
   privacy_settings jsonb DEFAULT '{"discoverable": true, "public_friend_list": false, "show_in_suggestions": true, "show_mutual_friends": true, "allow_friend_requests": true}'::jsonb,
   is_private boolean DEFAULT false,
+  bio text,
+  links jsonb,
+  current_streak integer DEFAULT 0,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );

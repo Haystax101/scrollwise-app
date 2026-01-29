@@ -14,8 +14,8 @@ import { useRouter } from 'expo-router';
 
 export type FeedType = 'learning' | 'community';
 
-const BUTTON_WIDTH = 140; // Widened from 120
-const BUTTON_HEIGHT = 40;
+const BUTTON_WIDTH = 100; // Reduced from 140
+const BUTTON_HEIGHT = 32; // Reduced from 40
 
 interface FeedToggleHeaderProps {
     activeFeed: FeedType;
@@ -73,7 +73,7 @@ export const FeedToggleHeader: React.FC<FeedToggleHeaderProps> = ({
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
                 <BlurView intensity={80} tint="dark" style={styles.iconBlur}>
-                    <MagnifyingGlassIcon color="white" size={20} />
+                    <MagnifyingGlassIcon color="white" size={18} />
                 </BlurView>
             </TouchableOpacity>
         </View>
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     },
     glassContainer: {
         flexDirection: 'row',
-        borderRadius: 25,
+        borderRadius: BUTTON_HEIGHT / 2,
         overflow: 'hidden',
         backgroundColor: 'rgba(0,0,0,0.3)',
         borderWidth: 1,
@@ -118,17 +118,17 @@ const styles = StyleSheet.create({
         position: 'absolute',
         width: BUTTON_WIDTH,
         height: BUTTON_HEIGHT,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)', // Subtle highlight
-        borderRadius: 25,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)', // Subtle highlight
+        borderRadius: BUTTON_HEIGHT / 2,
     },
     text: {
         color: 'rgba(255,255,255,0.6)',
         fontWeight: '600',
-        fontSize: 14,
+        fontSize: 13,
         fontFamily: 'Montserrat_600SemiBold',
     },
     activeText: {
-        color: '#FFFFFF',
+        color: '#F4D03F', // Gold accent
         textShadowColor: 'rgba(0,0,0,0.5)',
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 2,
@@ -141,9 +141,9 @@ const styles = StyleSheet.create({
         // Top is dynamic
     },
     iconBlur: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',

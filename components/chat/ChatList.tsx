@@ -73,20 +73,22 @@ export const ChatList = () => {
                 onPress={() => handlePressChat(item.chat_id)}
                 activeOpacity={0.7}
             >
-                {/* Avatar */}
-                <View style={styles.avatarContainer}>
-                    <Image
-                        source={avatarUrl ? { uri: avatarUrl } : require('../../assets/profileIconDefault.png')}
-                        style={styles.avatar}
-                    />
-                    {item.unread_count > 0 && (
-                        <View style={[styles.unreadBadgeData, { backgroundColor: colors.notification }]}>
-                            <Text style={styles.unreadCountText}>
-                                {item.unread_count > 9 ? '9+' : item.unread_count}
-                            </Text>
-                        </View>
-                    )}
-                </View>
+                {/* Avatar - Clickable */}
+                <TouchableOpacity onPress={() => router.push({ pathname: '/user-profile', params: { userId: item.partner_id } })}>
+                    <View style={styles.avatarContainer}>
+                        <Image
+                            source={avatarUrl ? { uri: avatarUrl } : require('../../assets/profileIconDefault.png')}
+                            style={styles.avatar}
+                        />
+                        {item.unread_count > 0 && (
+                            <View style={[styles.unreadBadgeData, { backgroundColor: colors.error }]}>
+                                <Text style={styles.unreadCountText}>
+                                    {item.unread_count > 9 ? '9+' : item.unread_count}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                </TouchableOpacity>
 
                 {/* Content */}
                 <View style={styles.contentContainer}>

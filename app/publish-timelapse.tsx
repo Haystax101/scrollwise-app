@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Switch, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { Feather } from '@expo/vector-icons';
-import { useVideoPlayer, VideoView } from 'expo-video';
 
 export default function PublishTimelapseScreen() {
     const params = useLocalSearchParams();
@@ -16,39 +15,12 @@ export default function PublishTimelapseScreen() {
     const [description, setDescription] = useState('');
     const [privacy, setPrivacy] = useState<'public' | 'friends' | 'private'>('public');
     const [publishing, setPublishing] = useState(false);
-    const [videoUrl, setVideoUrl] = useState<string | null>(null);
 
-    // Initial Load
-    useEffect(() => {
-        if (sessionId) {
-            fetchSession();
-        }
-    }, [sessionId]);
 
-    const fetchSession = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('timelapse_sessions') // This is the single source of truth
-                .select('*')
-                .eq('id', sessionId)
-                .single();
-
-            if (data?.video_url) {
-                // Get Public URL for preview
-                const { data: urlData } = supabase.storage
-                    .from('timelapses')
-                    .getPublicUrl(data.video_url);
-                setVideoUrl(urlData.publicUrl);
-            }
-        } catch (e) {
-            console.error("Error fetching session:", e);
-        }
-    };
-
-    const player = useVideoPlayer(videoUrl, player => {
-        player.loop = true;
-        // player.play(); // Auto-play preview?
-    });
+    // Preview disabled
+    // const player = useVideoPlayer(videoUrl, player => {
+    //     player.loop = true;
+    // });
 
     const handlePublish = async () => {
         if (!sessionId) return;
@@ -69,7 +41,13 @@ export default function PublishTimelapseScreen() {
             if (error) throw error;
 
             Alert.alert("Success", "Your timelapse has been published!", [
-                { text: "OK", onPress: () => router.replace('/(tabs)/community') }
+                {
+                    text: "OK",
+                    onPress: () => router.replace({
+                        pathname: '/(tabs)/',
+                        params: { contentType: 'timelapse', refresh: 'true' }
+                    })
+                }
             ]);
 
         } catch (e) {
@@ -104,20 +82,7 @@ export default function PublishTimelapseScreen() {
 
             <ScrollView contentContainerStyle={styles.content}>
                 {/* Preview */}
-                <View style={styles.previewContainer}>
-                    {videoUrl ? (
-                        <VideoView
-                            style={styles.video}
-                            player={player}
-                            contentFit="contain"
-                            nativeControls={false} // Clean look
-                        />
-                    ) : (
-                        <View style={[styles.placeholder, { backgroundColor: colors.card }]}>
-                            <Text style={{ color: colors.textSecondary }}>Loading Preview...</Text>
-                        </View>
-                    )}
-                </View>
+
 
                 {/* Caption */}
                 <View style={styles.section}>
@@ -179,24 +144,7 @@ const styles = StyleSheet.create({
     content: {
         padding: 20,
     },
-    previewContainer: {
-        width: '100%',
-        aspectRatio: 16 / 9,
-        borderRadius: 12,
-        overflow: 'hidden',
-        marginBottom: 20,
-        backgroundColor: '#000',
-    },
-    video: {
-        flex: 1,
-        width: '100%',
-        height: '100%',
-    },
-    placeholder: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
+
     section: {
         marginBottom: 24,
     },

@@ -282,7 +282,7 @@ export class DeepLinkHandler {
       } else if (linkData.screen === 'profile' && linkData.contentId) {
         console.log(`🔗 DeepLink: Navigating to profile: ${linkData.contentId}`);
         router.push({
-          pathname: '/people',
+          pathname: '/user-profile',
           params: { userId: linkData.contentId }
         });
       } else {

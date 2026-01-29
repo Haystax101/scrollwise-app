@@ -112,17 +112,17 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
     createButtonContainer: {
-        top: -10, // Float slightly above
         alignItems: 'center',
         justifyContent: 'center',
+        top: Platform.OS === 'ios' ? 4 : 0, // Slight optical adjustment for icon centering
     },
     createButton: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: 44, // Slightly smaller
+        height: 44,
+        borderRadius: 22,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        // removed border
+        backgroundColor: '#FFD700', // Ensure this is handled in the component prop too if dynamic
     }
 });

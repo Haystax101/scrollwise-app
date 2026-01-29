@@ -70,8 +70,15 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ visible, onClose, us
         // Since PublicProfileModal is likely triggered by a route or global state, we'll try to push content.
         // Actually, existing code uses `router.push` or local modals. 
         // Let's assume we push to a public profile page:
-        router.push({
-            pathname: '/people', // or wherever public profiles are handled, maybe separate ID param
+        // For now, let's navigate to a hypothetical route or assume the parent handles it?
+        // The user request mentioned "Tapping on a user... should bring up this same modal" (PublicProfileModal).
+        // Since PublicProfileModal is likely triggered by a route or global state, we'll try to push content.
+        // Actually, existing code uses `router.push` or local modals. 
+        // Let's assume we push to a public profile page:
+        // Use replace to swap the current profile with the new one
+        // This prevents stacking multiple "User Profile" modals on top of each other
+        router.replace({
+            pathname: '/user-profile',
             params: { userId: targetUserId }
         });
         // Note: The user mentioned "We have in our codebase a modal for viewing people's profiles... tapping on their profile picture / name on a post".

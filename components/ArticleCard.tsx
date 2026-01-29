@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Feather, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { Article } from '../types';
@@ -19,6 +19,7 @@ import { ShareService } from '../lib/shareService';
 import { useDeviceOrientation, getResponsiveFontSize } from '../utils/deviceDetection';
 import { useDeviceInfo, getStaticVisualHeightMultiplier, getContentBottomPadding } from '../utils/deviceUtils';
 import { FeedbackBoardModal } from './feedback/FeedbackBoardModal';
+import { profileImageService } from '../services/profileImageService';
 
 interface ArticleCardProps {
   article: Article;
@@ -62,7 +63,7 @@ const formatDate = (dateString: string): string => {
 import { SpecialArticleCard } from './SpecialArticleCard';
 import { useContentTracking } from '../hooks/useContentTracking';
 
-export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, showBackButton, backTo, onOpenComments, onUserInteraction, isInVault = false, preload = false }) => {
+export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, isActive, showBackButton, backTo, onOpenComments, onUserInteraction, isInVault = false, preload = false }) => {
   // console.log(`ArticleCard ${article.id} rendering`);
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -75,6 +76,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
     return (
       <SpecialArticleCard
         article={article}
+        isActive={isActive}
         showBackButton={showBackButton}
         backTo={backTo}
         onOpenComments={onOpenComments}
@@ -125,13 +127,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
 
   const shouldUseWebView = useMemo(() => {
     const result = !!(article.animation_code && !webViewError);
-    console.log(`🎬 ArticleCard ${article.id} - shouldUseWebView:`, {
-      result,
-      hasAnimationCode: !!article.animation_code,
-      animationCodeLength: article.animation_code?.length || 0,
-      webViewError,
-      animationCodePreview: article.animation_code?.substring(0, 100)
-    });
+    // console.log(`🎬 ArticleCard ${article.id} - shouldUseWebView:`, { ... });
     return result;
   }, [article.animation_code, webViewError, article.id]);
 
@@ -165,7 +161,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
   }, [user, article.id, tableNames]);
 
   const handleToggleExpand = () => {
-    if (!isExpanded) markComplete();
+    // if (!isExpanded) markComplete(); // markComplete is undefined
     setIsExpanded(!isExpanded);
   };
 
@@ -484,6 +480,22 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, sh
         <View style={dynamicStyles.contentSection}>
           <View style={dynamicStyles.contentBody}>
             <View style={dynamicStyles.mainContent}>
+              {article.social_context && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  {article.social_context.friend_avatar ? (
+                    <Image
+                      source={{ uri: profileImageService.getProfileImageUrl(article.social_context.friend_avatar) || undefined }}
+                      style={{ width: 24, height: 24, borderRadius: 12, marginRight: 8 }}
+                    />
+                  ) : (
+                    <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.border, marginRight: 8 }} />
+                  )}
+                  <Text style={{ fontSize: 13, color: colors.textSecondary }}>
+                    <Text style={{ fontWeight: '600', color: colors.text }}>{article.social_context.friend_name}</Text>
+                    {article.social_context.action === 'liked' ? ' liked this' : ' saved this'}
+                  </Text>
+                </View>
+              )}
               <View style={dynamicStyles.metadata}>
                 <View style={dynamicStyles.metadataRow}>
                   {article.site_name && (

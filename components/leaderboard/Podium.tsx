@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +16,7 @@ interface PodiumProps {
 
 export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
     const { colors } = useTheme();
+    const router = useRouter();
 
     if (users.length === 0) return null;
 
@@ -46,7 +48,11 @@ export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
         const isCurrentUser = user.id === currentUserId;
 
         return (
-            <View style={[styles.stepContainer, { height: height + 80 }]}>
+            <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => router.push({ pathname: '/user-profile', params: { userId: user.id } })}
+                style={[styles.stepContainer, { height: height + 80 }]}
+            >
                 {/* Avatar Group */}
                 <View style={styles.avatarContainer}>
                     <View style={[styles.avatarRing, { borderColor: color }]}>
@@ -66,6 +72,14 @@ export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
                 <View style={styles.infoContainer}>
                     <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{user.full_name}</Text>
                     <Text style={[styles.voltz, { color: colors.primary }]}>{user.total_voltz_earned} V</Text>
+                    {user.current_streak > 0 && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                            <Feather name="zap" size={10} color="#F43F5E" />
+                            <Text style={{ color: '#F43F5E', fontSize: 10, fontWeight: 'bold', marginLeft: 2 }}>
+                                {user.current_streak}
+                            </Text>
+                        </View>
+                    )}
                 </View>
 
                 {/* The Pedestal */}
@@ -78,7 +92,7 @@ export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
                     {isCurrentUser && <Text style={{ color: 'white', fontSize: 10, marginTop: 10 }}>YOU</Text>}
                 </BlurView>
 
-            </View>
+            </TouchableOpacity>
         );
     };
 
