@@ -4,7 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { TimelapseViewerModal } from './TimelapseViewerModal';
+
 import { UGCOptionsModal } from './UGCOptionsModal';
 import { UGCDetailModal } from './UGCDetailModal';
 import { UGCEditModal } from './UGCEditModal';
@@ -83,9 +83,7 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
 
-    // Viewer State
-    const [selectedVideoUrl, setSelectedVideoUrl] = useState<any | null>(null); // Actually session object
-    const [isViewerVisible, setIsViewerVisible] = useState(false);
+
 
     // Options Modal State
     const [selectedOptionItem, setSelectedOptionItem] = useState<any>(null);
@@ -210,11 +208,7 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
         setIsOptionModalVisible(true);
     };
 
-    const openTimelapseViewer = (item: any) => {
-        // Pass the whole item as the session (it contains id and user_id)
-        setSelectedVideoUrl(item);
-        setIsViewerVisible(true);
-    };
+
 
     const handleOptionView = () => {
         setIsOptionModalVisible(false);
@@ -492,15 +486,7 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
                 />
             )}
 
-            {/* Timelapse Modal */}
-            <TimelapseViewerModal
-                visible={isViewerVisible}
-                session={selectedVideoUrl as any} // Reusing the state variable name for session to minimize churn, or better to rename. Let's rely on the updated logic below
-                onClose={() => {
-                    setIsViewerVisible(false);
-                    setSelectedVideoUrl(null);
-                }}
-            />
+
 
             {/* Options Modal */}
             <UGCOptionsModal
