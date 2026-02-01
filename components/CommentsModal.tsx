@@ -26,13 +26,13 @@ interface CommentsModalProps {
   visible: boolean;
   onClose: () => void;
   onCommentsCountChange?: (count: number) => void;
-  contentType?: 'article' | 'paper' | 'book' | 'insight' | 'video' | 'podcast';
+  contentType?: 'article' | 'paper' | 'book' | 'insight' | 'video' | 'podcast' | 'timelapse';
   useContentTables?: boolean; // true = use content_comments/content_slides, false = use legacy tables
 }
 
 // Helper function to get table names based on content type
 const getCommentTableInfo = (
-  contentType: 'article' | 'paper' | 'book' | 'insight' | 'video' | 'podcast' = 'article',
+  contentType: 'article' | 'paper' | 'book' | 'insight' | 'video' | 'podcast' | 'timelapse' = 'article',
   useContentTables: boolean = false
 ) => {
   // Use new unified content tables for ContentCard
@@ -70,6 +70,14 @@ const getCommentTableInfo = (
         commentLikesTable: 'book_comment_likes',
         contentTable: 'books',
         idField: 'book_id',
+        usesContentType: false,
+      };
+    case 'timelapse':
+      return {
+        commentTable: 'timelapse_comments',
+        commentLikesTable: 'timelapse_comment_likes', // Assuming this might exist or will fail gracefully if not needed/checked
+        contentTable: 'timelapse_sessions',
+        idField: 'timelapse_id',
         usesContentType: false,
       };
     case 'article':
@@ -216,7 +224,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
         // Use regular flat comments for other content types
         let query = supabase
           .from(tableCfg.commentTable)
-          .select(`id, user_id, ${tableCfg.idField}, content, created_at${tableCfg.usesContentType ? ', content_type' : ''}`)
+          .select(`id, user_id, ${tableCfg.idField}, content, created_at${tableCfg.usesContentType ? ', content_type' : ''}, profiles:user_id(full_name, avatar_url)`)
           .eq(tableCfg.idField, vid);
 
         // Add content_type filter if using content_comments table
@@ -243,9 +251,12 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
               hasLiked = !!likeData;
             }
 
+            const profile = c.profiles as any;
+
             return {
               ...c,
-              author_name: c.user_id === user?.id ? 'You' : 'User',
+              author_name: c.user_id === user?.id ? 'You' : (profile?.full_name || 'User'),
+              user_avatar: profile?.avatar_url,
               depth_level: 0,
               likes_count: 0,
               reply_count: 0,

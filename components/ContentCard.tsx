@@ -22,7 +22,7 @@ import { useDeviceInfo, getContentBottomPadding } from '../utils/deviceUtils';
 import { useIndustries } from '../context/IndustriesContext';
 import { optimizeIndustryName } from '../utils/textUtils';
 import { FeedbackBoardModal } from './feedback/FeedbackBoardModal';
-import { ShareService } from '../lib/shareService';
+import { ShareSheet } from './share/ShareSheet';
 
 const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
@@ -53,7 +53,7 @@ interface ContentSlides {
 
 interface VictoryChartConfig {
   chartType: 'Bar' | 'Line' | 'Area' | 'Pie' | 'Scatter';
-  data: Array<{x: number; y: number; label?: string}>;
+  data: Array<{ x: number; y: number; label?: string }>;
   style?: {
     data?: {
       fill?: string;
@@ -118,6 +118,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
   const [currentSlide, setCurrentSlide] = useState(0);
   const [menuVisible, setMenuVisible] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
 
   // Randomly determine layout variant based on contentId (consistent per content)
   const layoutVariant = useMemo(() => {
@@ -277,21 +278,9 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
     }
   };
 
-  const handleSharePress = useCallback(async () => {
-    try {
-      // Use the first slide's text as summary for sharing
-      const summary = slides?.slides_text?.[0] || '';
-
-      await ShareService.shareContent({
-        type: contentType,
-        id: String(contentId),
-        title: title,
-        summary: summary
-      });
-    } catch (error) {
-      console.error('Error sharing content:', error);
-    }
-  }, [contentId, contentType, title, slides?.slides_text]);
+  const handleSharePress = () => {
+    setShareSheetVisible(true);
+  };
 
   const handleReadMore = useCallback(async () => {
     if (!slides?.link) {
@@ -507,8 +496,8 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
           <View style={styles.typeBadge}>
             <Text style={styles.typeBadgeText}>
               {contentType === 'article' ? 'Article' :
-               contentType === 'paper' ? 'Paper' :
-               contentType === 'video' ? 'Video' : 'Podcast'}
+                contentType === 'paper' ? 'Paper' :
+                  contentType === 'video' ? 'Video' : 'Podcast'}
             </Text>
           </View>
 
@@ -644,6 +633,19 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
       <FeedbackBoardModal
         visible={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
+      />
+
+      <ShareSheet
+        visible={shareSheetVisible}
+        onClose={() => setShareSheetVisible(false)}
+        content={{
+          id: String(contentId),
+          type: contentType,
+          title: title,
+          summary: slides?.slides_text?.[0], // First slide as summary
+          image: slides?.slides_images?.[0] || undefined,
+          author: authors && authors.length > 0 ? { name: authors[0] } : undefined
+        }}
       />
     </View>
   );

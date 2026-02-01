@@ -23,6 +23,20 @@ export interface DirectMessage {
     media_url?: string;
     author_name?: string;
     author_avatar?: string;
+    shared_content?: SharedContent;
+}
+
+export interface SharedContent {
+    id: string;
+    type: 'article' | 'insight' | 'video' | 'timelapse' | 'paper' | 'podcast';
+    title: string;
+    summary?: string;
+    image?: string;
+    url?: string;
+    author?: {
+        name: string;
+        avatar?: string;
+    };
 }
 
 export const chatService = {
@@ -55,10 +69,11 @@ export const chatService = {
     /**
      * Sends a message to a chat.
      */
-    sendMessage: async (chatId: string, content: string): Promise<string> => {
+    sendMessage: async (chatId: string, content: string, sharedContent?: SharedContent): Promise<string> => {
         const { data, error } = await supabase.rpc('send_direct_message', {
             p_chat_id: chatId,
-            p_content: content
+            p_content: content,
+            p_shared_content: sharedContent || null
         });
         if (error) {
             console.error('Error sending message:', error);
@@ -124,5 +139,35 @@ export const chatService = {
                 callback
             )
             .subscribe();
+    },
+
+    getChatDetails: async (chatId: string): Promise<{ name: string; avatar: string | null } | null> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        const { data, error } = await supabase
+            .from('chat_participants')
+            .select(`
+                profiles (
+                    full_name,
+                    avatar_url
+                )
+            `)
+            .eq('chat_id', chatId)
+            .neq('user_id', user.id)
+            .maybeSingle();
+
+        if (error || !data || !data.profiles) return null;
+
+        // Handle array or single object return from join depending on relationship
+        // Typically it's a single object if 1:1, but select returns array unless...
+        // Actually Supabase returns object if relation is 1:1 or we use !inner maybe?
+        // Let's safe cast.
+        const profile = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles;
+
+        return {
+            name: profile?.full_name || 'User',
+            avatar: profile?.avatar_url || null
+        };
     }
 };

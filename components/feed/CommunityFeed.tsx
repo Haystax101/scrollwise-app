@@ -10,6 +10,7 @@ import { FeedItem } from '../../components/communities/FeedItem';
 import { ViewTracking } from '../../lib/viewTracking';
 import InsightCard from '../InsightCard';
 import { TimelapseFeedCard } from './TimelapseFeedCard';
+import { CommentsModal } from '../CommentsModal';
 
 interface CommunityFeedProps {
     selectedCommunity: any | null;
@@ -65,6 +66,9 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = (props) => {
     const [sending, setSending] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
+    // Comment Modal State
+    const [selectedCommentItem, setSelectedCommentItem] = useState<{ id: string, type: 'timelapse' | 'insight' | 'post' | 'article' | 'video' } | null>(null);
+
     useEffect(() => {
         fetchFeed();
     }, [selectedCommunity, highlightId]);
@@ -108,14 +112,13 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = (props) => {
                 const counts = await ViewTracking.loadViewCounts(session.user.id);
                 setViewCounts(counts);
 
-                const [posts, insights, timelapses] = await Promise.all([
-                    communityService.getGeneralFeed(50, 0, session.user.id),
+                const [insights, timelapses] = await Promise.all([
                     communityService.getInsights(20, session.user.id),
                     communityService.getTimelapses(20, session.user.id) // New Fetch
                 ]);
 
                 // Merge and Filter/Sort Logic
-                let allCandidates = [...posts, ...insights, ...timelapses];
+                let allCandidates = [...insights, ...timelapses];
 
                 // CHECK FOR MISSING HIGHLIGHT
                 if (highlightId && highlightType) {
@@ -327,8 +330,16 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = (props) => {
         }
     }, [snapOffsets, feed]);
 
-    const handleActionComment = useCallback((itemId: string) => {
-        console.log("Open comments for", itemId);
+    const handleActionComment = useCallback((itemId: string, type: string) => {
+        console.log("Open comments for", itemId, type);
+        // Map feed types to comment types
+        // 'post' in this context usually means 'insight' or 'timelapse' or 'article' if generalized
+        // But for now let's trust the item type. 
+        // Note: CommentsModal expects specific types.
+        let contentType: any = type;
+        if (type === 'post') contentType = 'article'; // Fallback mapping if needed
+
+        setSelectedCommentItem({ id: itemId, type: contentType });
     }, []);
 
     const handleActionDelete = useCallback(() => {
@@ -374,7 +385,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = (props) => {
                     item={item}
                     currentUserId={session?.user?.id || ''}
                     isVisible={isFocused}
-                    onCommentPress={() => handleActionComment(item.id)}
+                    onCommentPress={() => handleActionComment(item.id, 'timelapse')}
                     onDelete={handleActionDelete}
                     onProfilePress={() => handleActionProfile(item.user_id)}
                 />
@@ -384,7 +395,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = (props) => {
                 <FeedItem
                     item={item}
                     currentUserId={session?.user?.id || ''}
-                    onCommentPress={() => handleActionComment(item.id)}
+                    onCommentPress={() => handleActionComment(item.id, item.type || 'post')}
                     onProfilePress={() => handleActionProfile(item.user_id)}
                 />
             );
@@ -523,6 +534,25 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = (props) => {
                     </View>
                 </KeyboardAvoidingView>
             )}
+
+            {/* Comments Modal */}
+            <CommentsModal
+                visible={!!selectedCommentItem}
+                videoId={selectedCommentItem?.id || null}
+                contentType={selectedCommentItem?.type as any}
+                onClose={() => setSelectedCommentItem(null)}
+                onCommentsCountChange={(count) => {
+                    // Start simplified: Just rely on fetchFeed refresh or local manual update if critical
+                    // Implementing deep updateFrame logic here is complex for FlatList
+                    if (selectedCommentItem) {
+                        setFeed(current => current.map(item =>
+                            item.id === selectedCommentItem.id
+                                ? { ...item, comments_count: count }
+                                : item
+                        ));
+                    }
+                }}
+            />
         </View>
     );
 };

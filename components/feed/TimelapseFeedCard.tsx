@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Share, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Alert } from 'react-native';
+import { ShareSheet } from '../share/ShareSheet';
 import { useTheme } from '../../context/ThemeContext';
 import { Feather } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -25,6 +26,7 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
     const [likeCount, setLikeCount] = useState(item.likes_count || 0);
 
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [shareSheetVisible, setShareSheetVisible] = useState(false);
 
     // Prepare Player
     useEffect(() => {
@@ -74,13 +76,8 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
         await communityService.toggleSave(item.id, 'timelapse', currentUserId);
     };
 
-    const handleShare = async () => {
-        try {
-            await Share.share({
-                message: `Check out ${item.author_name}'s focus session on Supercharged!`,
-                url: videoUrl || ''
-            });
-        } catch (error) { console.log(error); }
+    const handleShare = () => {
+        setShareSheetVisible(true);
     };
 
     const handleOptionsPress = () => {
@@ -198,6 +195,22 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
                     <Feather name="bookmark" size={24} color={saved ? colors.primary : colors.textSecondary} fill={saved ? colors.primary : "none"} />
                 </TouchableOpacity>
             </View>
+            {/* Share Sheet */}
+            <ShareSheet
+                visible={shareSheetVisible}
+                onClose={() => setShareSheetVisible(false)}
+                content={{
+                    id: item.id,
+                    type: 'timelapse',
+                    title: `Timelapse by ${item.author_name}`,
+                    summary: item.content,
+                    url: videoUrl || undefined,
+                    author: {
+                        name: item.author_name,
+                        avatar: item.author_avatar
+                    }
+                }}
+            />
         </View>
     );
 });

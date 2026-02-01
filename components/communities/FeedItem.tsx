@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Feather } from '@expo/vector-icons';
 import { PaperAirplaneIcon } from 'react-native-heroicons/outline';
 import { supabase } from '../../lib/supabase';
+import { SharedContentPreview } from '../chat/SharedContentPreview';
 
 const { width } = Dimensions.get('window');
 
@@ -113,6 +114,12 @@ export const FeedItem = React.memo<FeedItemProps>(({ item, currentUserId, onPres
                     ]}>
                         {timeAgo}
                     </Text>
+
+                    {/* Shared Content Preview */}
+                    {/* Check if item has shared_content (need to cast or extend type potentially) */}
+                    {(item as any).shared_content && (
+                        <SharedContentPreview content={(item as any).shared_content} />
+                    )}
                 </View>
             </View>
         );

@@ -10,6 +10,7 @@ import { ReportButton } from './common/ReportButton';
 import { UserDetailModal } from './profile/UserDetailModal';
 import { formatNumber } from '../lib/utils';
 import { profileImageService } from '../services/profileImageService';
+import { ShareSheet } from './share/ShareSheet';
 const defaultProfileImage = require('../assets/profileIconDefault.png');
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -54,6 +55,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   const [commentLikes, setCommentLikes] = useState(0);
   const [isTextTruncated, setIsTextTruncated] = useState(false);
   const [showReadMoreModal, setShowReadMoreModal] = useState(false);
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
 
   const dynamicStyles = StyleSheet.create({
     wrapper: {
@@ -881,6 +883,13 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
               />
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={dynamicStyles.actionButton}
+              onPress={() => setShareSheetVisible(true)}
+            >
+              <Ionicons name="paper-plane-outline" size={20} color={colors.text} />
+            </TouchableOpacity>
+
             {isSupercharged && (
               <View style={[dynamicStyles.superchargeButton, dynamicStyles.superchargedButton]}>
                 <Text style={dynamicStyles.superchargeText}>Supercharged</Text>
@@ -1025,6 +1034,22 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      <ShareSheet
+        visible={shareSheetVisible}
+        onClose={() => setShareSheetVisible(false)}
+        content={{
+          id: insight.id,
+          type: 'insight',
+          title: insight.title || 'Insight',
+          summary: insight.content,
+          image_url: insight.image_url || insight.image || undefined,
+          author: {
+            name: insight.author.name,
+            avatar: insight.author.avatar
+          }
+        }}
+      />
     </View>
   );
 };

@@ -102,15 +102,27 @@ export default function ChatScreen() {
             created_at: item.created_at,
             author_name: item.author_name || 'User',
             author_avatar: item.author_avatar,
-            media_urls: item.media_url ? [item.media_url] : []
+            media_urls: item.media_url ? [item.media_url] : [],
+            shared_content: item.shared_content // Pass shared content data
         };
 
         return <FeedItem item={feedItem} currentUserId={session?.user?.id || ''} />;
     };
 
     // Correctly extracting name and avatar from params which could be strings or arrays
-    const partnerName = Array.isArray(params.name) ? params.name[0] : (params.name || 'Chat');
-    const partnerAvatar = Array.isArray(params.avatar) ? params.avatar[0] : params.avatar;
+    const [partnerName, setPartnerName] = useState(Array.isArray(params.name) ? params.name[0] : (params.name || 'Chat'));
+    const [partnerAvatar, setPartnerAvatar] = useState(Array.isArray(params.avatar) ? params.avatar[0] : params.avatar);
+
+    useEffect(() => {
+        if (!params.name && id) {
+            chatService.getChatDetails(id).then(details => {
+                if (details) {
+                    setPartnerName(details.name);
+                    setPartnerAvatar(details.avatar || undefined);
+                }
+            });
+        }
+    }, [id, params.name]);
 
 
     return (

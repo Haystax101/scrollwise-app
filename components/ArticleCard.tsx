@@ -15,11 +15,11 @@ import { ExpandedTextModal } from './ExpandedTextModal';
 import { FlagButton } from './common/FlagButton';
 import { optimizeIndustryName, removeHtmlTags } from '../utils/textUtils';
 import { useResponsiveLayout } from '../utils/screenUtils';
-import { ShareService } from '../lib/shareService';
 import { useDeviceOrientation, getResponsiveFontSize } from '../utils/deviceDetection';
 import { useDeviceInfo, getStaticVisualHeightMultiplier, getContentBottomPadding } from '../utils/deviceUtils';
 import { FeedbackBoardModal } from './feedback/FeedbackBoardModal';
 import { profileImageService } from '../services/profileImageService';
+import { ShareSheet } from './share/ShareSheet';
 
 interface ArticleCardProps {
   article: Article;
@@ -105,6 +105,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, is
   const [isExpanded, setIsExpanded] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [webViewError, setWebViewError] = useState(false);
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
 
   const tableNames = useMemo(() => getTableNames(), []);
 
@@ -252,18 +253,9 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, is
     }
   };
 
-  const handleSharePress = useCallback(async () => {
-    try {
-      await ShareService.shareContent({
-        type: 'article',
-        id: String(article.id),
-        title: article.title,
-        summary: article.summary
-      });
-    } catch (error) {
-      console.error('Error sharing article:', error);
-    }
-  }, [article.id, article.title, article.summary]);
+  const handleSharePress = () => {
+    setShareSheetVisible(true);
+  };
 
   // When modal updates comment count, also persist to articles table so future loads are correct
   useEffect(() => {
@@ -591,6 +583,18 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, is
       <FeedbackBoardModal
         visible={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
+      />
+      <ShareSheet
+        visible={shareSheetVisible}
+        onClose={() => setShareSheetVisible(false)}
+        content={{
+          id: String(article.id),
+          type: 'article',
+          title: article.title,
+          summary: article.summary,
+          image: article.image_url || undefined,
+          author: article.author ? { name: article.author } : undefined
+        }}
       />
     </>
   );
