@@ -26,9 +26,9 @@ export const LeaderboardList: React.FC<LeaderboardListProps> = ({ users, current
                 style={[
                     styles.itemContainer,
                     {
-                        backgroundColor: isCurrentUser ? 'rgba(79, 70, 229, 0.1)' : colors.card,
-                        borderColor: isCurrentUser ? colors.primary : 'transparent',
-                        borderWidth: isCurrentUser ? 1 : 0
+                        backgroundColor: isCurrentUser ? colors.glassBgStrong : colors.glassBg,
+                        borderColor: isCurrentUser ? colors.gold : colors.glassBorder,
+                        borderWidth: 1
                     }
                 ]}>
                 <View style={styles.leftSection}>

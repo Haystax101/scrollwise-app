@@ -14,8 +14,8 @@ import { useRouter } from 'expo-router';
 
 export type FeedType = 'learning' | 'community';
 
-const BUTTON_WIDTH = 100; // Reduced from 140
-const BUTTON_HEIGHT = 32; // Reduced from 40
+const BUTTON_WIDTH = 100;
+const BUTTON_HEIGHT = 42; // Slightly thicker
 
 interface FeedToggleHeaderProps {
     activeFeed: FeedType;
@@ -43,7 +43,7 @@ export const FeedToggleHeader: React.FC<FeedToggleHeaderProps> = ({
 
     return (
         <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
-            <BlurView intensity={80} tint="dark" style={styles.glassContainer}>
+            <BlurView intensity={90} tint="dark" style={styles.glassContainer}>
                 {/* Highlight */}
                 <Animated.View style={[styles.highlight, highlightStyle]} />
 
@@ -86,17 +86,17 @@ const styles = StyleSheet.create({
         top: 0,
         left: 0,
         right: 0,
-        alignItems: 'flex-start', // Left align
-        paddingLeft: 20, // Add padding
+        alignItems: 'center', // Center align
+        paddingLeft: 0,
         zIndex: 100,
     },
     glassContainer: {
         flexDirection: 'row',
-        borderRadius: BUTTON_HEIGHT / 2,
+        borderRadius: 14, // Less rounded, not pill
         overflow: 'hidden',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(30, 30, 30, 0.75)', // More evident glass background
+        borderWidth: 1.5, // Thicker border
+        borderColor: 'rgba(255,255,255,0.2)',
         height: BUTTON_HEIGHT,
         width: BUTTON_WIDTH * 2,
     },
@@ -118,8 +118,9 @@ const styles = StyleSheet.create({
         position: 'absolute',
         width: BUTTON_WIDTH,
         height: BUTTON_HEIGHT,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)', // Subtle highlight
-        borderRadius: BUTTON_HEIGHT / 2,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)', // Stronger highlight
+        borderRadius: 12, // Match container radius minus border
+        margin: 1, // Slight inset
     },
     text: {
         color: 'rgba(255,255,255,0.6)',

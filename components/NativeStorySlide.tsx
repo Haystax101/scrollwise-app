@@ -7,65 +7,47 @@ interface NativeStorySlideProps {
     imageUrl?: string;
     colour?: string; // Hex code
     title: string;
-    chapterTitle?: string; // New prop for the specific slide title
+    chapterTitle?: string;
     text: string;
+    width: number;
+    height: number;
 }
 
-const { width, height } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export const NativeStorySlide: React.FC<NativeStorySlideProps> = ({
     imageUrl,
     colour,
     title,
     chapterTitle,
-    text
+    text,
+    width,
+    height
 }) => {
-    const insets = useSafeAreaInsets();
+    // const insets = useSafeAreaInsets(); // Removed insets as we are inside a card now
 
     // Safety check for color
     const safeColour = (colour && typeof colour === 'string' && colour.startsWith('#')) ? colour : '#00FF00';
 
-    // Convert hex to rgba for overlay
-    const getOverlayColor = (hex: string, opacity: number) => {
-        try {
-            const r = parseInt(hex.slice(1, 3), 16);
-            const g = parseInt(hex.slice(3, 5), 16);
-            const b = parseInt(hex.slice(5, 7), 16);
-            if (isNaN(r) || isNaN(g) || isNaN(b)) return `rgba(0,0,0,${opacity})`;
-            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-        } catch (e) {
-            return `rgba(0,255,0,${opacity})`;
-        }
-    };
-
-    // Removed background overlay color as requested
-    // Kept subtle black overlay for readability
-    const borderColor = getOverlayColor(safeColour, 0.5);
-
-    // Calculate max height for the card
-    const maxCardHeight = height - insets.top - 80 - insets.bottom - 40;
-
     return (
-        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        <View style={[styles.container, { width, height }]}>
             {/* Background Image */}
             {imageUrl ? (
                 <ImageBackground
                     source={{ uri: imageUrl }}
                     style={styles.background}
                     resizeMode="cover"
-                    blurRadius={30} // Increased blur for better text visibility
+                    blurRadius={20} // Slightly reduced blur for smaller area
                 >
                     {/* Darker black overlay for contrast */}
                     <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.8)' }]} />
                 </ImageBackground>
             ) : (
-                <View style={[styles.background, { backgroundColor: '#000' }]}>
-                </View>
+                <View style={[styles.background, { backgroundColor: '#000' }]} />
             )}
 
-            {/* Content Container - No box look */}
+            {/* Content Container */}
             <View style={styles.cardContainer}>
-
                 {/* Title Reminder Header */}
                 <View style={styles.header}>
                     <View style={[styles.accentLine, { backgroundColor: safeColour }]} />
@@ -75,7 +57,7 @@ export const NativeStorySlide: React.FC<NativeStorySlideProps> = ({
                 <ScrollView
                     style={{ width: '100%' }}
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 40 }}
+                    contentContainerStyle={{ paddingBottom: 20 }}
                 >
                     {chapterTitle && (
                         <Text style={[styles.chapterTitle, { marginBottom: 12 }]}>
@@ -91,19 +73,15 @@ export const NativeStorySlide: React.FC<NativeStorySlideProps> = ({
 
 const styles = StyleSheet.create({
     container: {
-        width: width,
-        height: height,
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        justifyContent: 'center', // Center content vertically
+        justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
+        // BorderRadius handled by parent (SpecialArticleCard)
     },
     background: {
         ...StyleSheet.absoluteFillObject,
-        width: width,
-        height: height,
+        width: '100%',
+        height: '100%',
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
@@ -111,14 +89,15 @@ const styles = StyleSheet.create({
     cardContainer: {
         flex: 1,
         justifyContent: 'center',
-        alignItems: 'flex-start', // Left align text
+        alignItems: 'flex-start',
         width: '100%',
-        paddingHorizontal: 30, // More side padding since box is gone
-        paddingTop: 60,
+        paddingHorizontal: 24, // Reduced padding
+        paddingTop: 40,
+        paddingBottom: 20,
     },
     header: {
         width: '100%',
-        marginBottom: 20,
+        marginBottom: 16,
         flexDirection: 'row',
         alignItems: 'center',
     },
@@ -137,16 +116,16 @@ const styles = StyleSheet.create({
     },
     text: {
         fontFamily: 'Montserrat_400Regular',
-        fontSize: 15, // Smaller font
-        color: '#F0F0F0', // Slightly brighter white
-        lineHeight: 24,
+        fontSize: 16, // Readable font size
+        color: '#F0F0F0',
+        lineHeight: 26,
         textAlign: 'left',
     },
     chapterTitle: {
         fontFamily: 'Montserrat_700Bold',
-        fontSize: 20, // Smaller font
+        fontSize: 22,
         color: 'white',
-        lineHeight: 28,
+        lineHeight: 30,
         textAlign: 'left',
         textShadowColor: 'rgba(0,0,0,0.5)',
         textShadowOffset: { width: 0, height: 2 },

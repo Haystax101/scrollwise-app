@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, Modal, ScrollView } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import type { Insight } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -63,11 +63,11 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       width: '100%',
     },
     container: {
-      backgroundColor: 'rgba(30, 30, 30, 0.85)',
+      backgroundColor: colors.glassBg,
       borderRadius: 24,
       marginHorizontal: 16,
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      borderColor: colors.glassBorder,
       overflow: 'hidden',
     },
     flagButton: {
@@ -777,7 +777,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           <ReportButton
             contentId={insight.id}
             contentType="insight"
-            authorId={authorId || insight.author_id || ''}
+            authorId={authorId || (insight as any).author_id || ''}
             authorName={insight.author.name}
             size={20}
           />

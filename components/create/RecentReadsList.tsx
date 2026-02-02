@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { View, Text, StyleSheet, Image, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
-import { BlurView } from 'expo-blur';
-import { ArrowRightIcon, BookOpenIcon } from 'react-native-heroicons/outline';
-import { format } from 'date-fns';
+import { ArrowRightIcon } from 'react-native-heroicons/outline';
+import { GlassGlowingCard } from './GlassGlowingCard';
 
 interface RecentItem {
     id: string; // session_id
@@ -109,35 +108,30 @@ export const RecentReadsList = () => {
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>
                 {recentItems.map((item, index) => (
-                    <BlurView
+                    <GlassGlowingCard
                         key={item.id || index}
-                        intensity={20}
-                        tint={isDark ? 'dark' : 'light'}
-                        style={[styles.card, { borderColor: colors.border }]}
+                        style={{ width: 220, marginBottom: 0 }}
+                        glowColor={'#FFD700'} // Gold
+                        onPress={() => router.push({
+                            pathname: '/create-insight',
+                            params: { initialTitle: item.title }
+                        })}
                     >
-                        {/* Simplified Content: Title, Source, Action */}
+                        {/* Simplified Content */}
                         <View style={{ marginBottom: 16 }}>
                             <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
                                 {item.title}
                             </Text>
-                            <Text style={[styles.subtitle, { color: colors.text + '60' }]} numberOfLines={1}>
+                            <Text style={[styles.subtitle, { color: colors.text + '80' }]} numberOfLines={1}>
                                 {item.subtitle}
                             </Text>
                         </View>
 
-                        <Pressable
-                            style={[styles.consolidateButton, { backgroundColor: colors.card }]}
-                            onPress={() => router.push({
-                                pathname: '/create-insight',
-                                params: {
-                                    initialTitle: item.title
-                                }
-                            })}
-                        >
+                        <View style={[styles.consolidateButton, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
                             <Text style={[styles.buttonText, { color: colors.primary }]}>Consolidate</Text>
                             <ArrowRightIcon size={12} color={colors.primary} />
-                        </Pressable>
-                    </BlurView>
+                        </View>
+                    </GlassGlowingCard>
                 ))}
             </ScrollView>
         </View>

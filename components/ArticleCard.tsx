@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
-import { Feather, MaterialCommunityIcons, FontAwesome } from '@expo/vector-icons';
+import { Feather, FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { Article } from '../types';
 import { StaticVisual } from './StaticVisual';
-import { WebViewVisual } from './WebViewVisual';
 import { SimpleWebViewPoC } from './SimpleWebViewPoC';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -321,19 +320,23 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, is
     },
     contentSection: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: colors.glassBg, // Glassmorphic background
+      borderColor: colors.glassBorder,
+      borderTopWidth: 1,
+      borderLeftWidth: 1,
+      borderRightWidth: 1,
       paddingHorizontal: 16,
-      paddingTop: article.special ? 24 : (deviceInfo.isSmallScreenWithHomeButton ? 56 : 40), // Reduced top padding for special mode
+      paddingTop: article.special ? 24 : (deviceInfo.isSmallScreenWithHomeButton ? 56 : 40),
       paddingBottom: isInVault ? 60 : insets.bottom + 60 + getContentBottomPadding(deviceInfo),
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      marginTop: article.special ? -20 : (deviceInfo.isSmallScreenWithHomeButton ? 0 : -60), // Less negative margin for special
-      // Remove shadow and border to keep a clean aesthetic
-      shadowColor: 'transparent',
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0,
-      shadowRadius: 0,
-      elevation: 0,
+      borderTopLeftRadius: 32, // More rounded
+      borderTopRightRadius: 32,
+      marginTop: article.special ? -20 : (deviceInfo.isSmallScreenWithHomeButton ? 0 : -60),
+      // Glass glow effect
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 20,
+      elevation: 5,
     },
     contentBody: {
       flex: 1,
@@ -592,7 +595,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, is
           type: 'article',
           title: article.title,
           summary: article.summary,
-          image: article.image_url || undefined,
+          image_url: article.image_url || undefined,
           author: article.author ? { name: article.author } : undefined
         }}
       />

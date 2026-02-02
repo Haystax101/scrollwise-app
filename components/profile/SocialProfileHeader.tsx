@@ -2,11 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface SocialProfileHeaderProps {
-    user: any;
     fullName: string;
     avatarUrl?: string | null;
     tagline?: string | null;
@@ -29,7 +27,6 @@ interface SocialProfileHeaderProps {
 }
 
 export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
-    user,
     fullName,
     avatarUrl,
     tagline,
@@ -51,8 +48,7 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
     onEditBio
 }) => {
     const { colors } = useTheme();
-    // derived from background color or default to true for this app
-    const isDark = true;
+
 
     const renderSocialLinks = () => {
         if (!links || !Array.isArray(links)) return null;
@@ -94,35 +90,18 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
                 </TouchableOpacity>
             </View>
 
-            {/* Identity Section - Instagram Style */}
+            {/* Identity Section - Centered & Glassmorphic */}
             <View style={styles.identitySection}>
-                <View style={styles.profileTopContainer}>
-                    {/* Avatar */}
+                <View style={styles.avatarContainer}>
                     <TouchableOpacity onPress={onEditAvatar} style={styles.avatarWrapper}>
                         <Image
                             source={avatarUrl ? { uri: avatarUrl } : require('../../assets/profileIconDefault.png')}
-                            style={[styles.avatar, { borderColor: colors.primary }]}
+                            style={[styles.avatar, { borderColor: colors.gold }]}
                         />
                         <View style={[styles.editBadge, { backgroundColor: colors.card }]}>
                             <Feather name="camera" size={12} color={colors.text} />
                         </View>
                     </TouchableOpacity>
-
-                    {/* Stats & Counts */}
-                    <View style={styles.socialStatsContainer}>
-                        <View style={styles.statGroup}>
-                            <TouchableOpacity onPress={() => onOpenNetwork('followers')}>
-                                <Text style={[styles.socialStatValue, { color: colors.text }]}>{followersCount}</Text>
-                                <Text style={[styles.socialStatLabel, { color: colors.textSecondary }]}>Followers</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.statGroup}>
-                            <TouchableOpacity onPress={() => onOpenNetwork('following')}>
-                                <Text style={[styles.socialStatValue, { color: colors.text }]}>{followingCount}</Text>
-                                <Text style={[styles.socialStatLabel, { color: colors.textSecondary }]}>Following</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
                 </View>
 
                 {/* Name & Bio */}
@@ -136,9 +115,24 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
                         </TouchableOpacity>
                     ) : (
                         <TouchableOpacity onPress={onEditTagline}>
-                            <Text style={[styles.tagline, { color: colors.primary }]}>+ Add Tagline</Text>
+                            <Text style={[styles.tagline, { color: colors.gold }]}>+ Add Tagline</Text>
                         </TouchableOpacity>
                     )}
+
+                    {/* Follow Counts - Small & Subtle below tagline */}
+                    <View style={styles.followRow}>
+                        <TouchableOpacity onPress={() => onOpenNetwork('followers')}>
+                            <Text style={[styles.followText, { color: colors.textSecondary }]}>
+                                <Text style={{ color: colors.text, fontWeight: '700' }}>{followersCount}</Text> Followers
+                            </Text>
+                        </TouchableOpacity>
+                        <Text style={{ color: colors.textSecondary }}>•</Text>
+                        <TouchableOpacity onPress={() => onOpenNetwork('following')}>
+                            <Text style={[styles.followText, { color: colors.textSecondary }]}>
+                                <Text style={{ color: colors.text, fontWeight: '700' }}>{followingCount}</Text> Following
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
 
                     {/* Bio (New) */}
                     {bio ? (
@@ -149,7 +143,7 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
                         </TouchableOpacity>
                     ) : (
                         <TouchableOpacity onPress={onEditBio} style={{ marginTop: 8 }}>
-                            <Text style={{ color: colors.primary, fontSize: 13 }}>+ Add Bio</Text>
+                            <Text style={{ color: colors.gold, fontSize: 13 }}>+ Add Bio</Text>
                         </TouchableOpacity>
                     )}
 
@@ -158,7 +152,7 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
 
                     <View style={styles.bioActionsRow}>
                         <TouchableOpacity onPress={onEditIndustries}>
-                            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Edit Industries</Text>
+                            <Text style={{ color: colors.gold, fontSize: 13, fontWeight: '600' }}>Edit Industries</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={onShareProfile} style={styles.shareIconSmall}>
@@ -168,39 +162,51 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
                 </View>
             </View>
 
-            {/* Stats Grid (Gamification) */}
+            {/* Stats Grid (Glass Cards) */}
             <View style={styles.statsGrid}>
-                <View style={styles.statItem}>
+                {/* Level Card */}
+                <View style={[styles.glassStatCard, { backgroundColor: colors.glassBg, borderColor: colors.glassBorder }]}>
                     <Text style={[styles.statValue, { color: colors.text }]}>{level}</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Level</Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>LEVEL</Text>
                 </View>
-                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-                <View style={styles.statItem}>
-                    <Text style={[styles.statValue, { color: '#EAB308' }]}>{voltz}</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Voltz</Text>
+
+                {/* Voltz Card - Highlighted */}
+                <View style={[styles.glassStatCard, { backgroundColor: colors.glassBgStrong, borderColor: colors.gold }]}>
+                    <Text style={[styles.statValue, { color: colors.gold }]}>{voltz}</Text>
+                    <Text style={[styles.statLabel, { color: colors.gold }]}>VOLTZ</Text>
                 </View>
-                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-                <View style={styles.statItem}>
-                    <Text style={[styles.statValue, { color: '#F43F5E' }]}>{streak}</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Streak</Text>
+
+                {/* Streak Card */}
+                <View style={[styles.glassStatCard, { backgroundColor: colors.glassBg, borderColor: colors.glassBorder }]}>
+                    <Text style={[styles.statValue, { color: colors.text }]}>{streak}</Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>STREAK</Text>
                 </View>
             </View>
 
-            {/* Command Center Actions */}
+            {/* Command Center Actions - Neon Button */}
             <View style={styles.actionRow}>
                 <TouchableOpacity
                     style={[
                         styles.clockInButton,
-                        { backgroundColor: isClockedIn ? colors.card : colors.primary }
+                        {
+                            shadowColor: isClockedIn ? colors.primary : colors.gold,
+                            borderColor: isClockedIn ? colors.primary : colors.gold
+                        }
                     ]}
                     onPress={isClockedIn ? undefined : onClockIn}
                     disabled={isClockedIn}
                 >
-                    <BlurView intensity={20} tint={isDark ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
-                    <Feather name={isClockedIn ? "check-circle" : "clock"} size={20} color={isClockedIn ? colors.text : '#FFF'} />
+                    <LinearGradient
+                        colors={isClockedIn
+                            ? [colors.card, colors.card] // Muted when done
+                            : [colors.glassBg, 'rgba(253, 178, 2, 0.15)'] // Subtle gold gradient when active
+                        }
+                        style={StyleSheet.absoluteFill}
+                    />
+                    <Feather name={isClockedIn ? "check-circle" : "clock"} size={20} color={isClockedIn ? colors.textSecondary : colors.gold} />
                     <Text style={[
                         styles.clockInText,
-                        { color: isClockedIn ? colors.text : '#FFF' }
+                        { color: isClockedIn ? colors.textSecondary : colors.gold }
                     ]}>
                         {isClockedIn ? "Clocked In" : "Clock In"}
                     </Text>
@@ -234,106 +240,109 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     // Updated Styles
+    // Updated Styles
     identitySection: {
-        marginTop: 10,
+        marginTop: 0,
         paddingHorizontal: 24,
+        alignItems: 'center', // Centered Layout
     },
-    profileTopContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    avatarContainer: {
         marginBottom: 16,
+        alignItems: 'center',
     },
     avatarWrapper: {
-        marginRight: 24,
         position: 'relative',
+        // Centered by parent
     },
     avatar: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        borderWidth: 2,
+        width: 100, // Slightly Larger
+        height: 100,
+        borderRadius: 50,
+        borderWidth: 3, // Thicker Gold Ring
     },
     editBadge: {
         position: 'absolute',
-        bottom: 0,
-        right: 0,
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+        bottom: 4,
+        right: 4,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
         borderColor: 'transparent',
     },
-    socialStatsContainer: {
-        flex: 1,
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        alignItems: 'center',
-    },
-    statGroup: {
-        alignItems: 'center',
-    },
-    socialStatValue: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    socialStatLabel: {
-        fontSize: 12,
-        fontWeight: '500',
-        textAlign: 'center',
-    },
     bioContainer: {
         marginBottom: 16,
+        alignItems: 'center', // Center text
+        width: '100%',
     },
     name: {
-        fontSize: 18,
+        fontSize: 22, // Larger Name
         fontWeight: 'bold',
         fontFamily: 'Montserrat_700Bold',
         marginBottom: 4,
-    },
-    handle: {
-        fontSize: 14,
-        fontFamily: 'Montserrat_400Regular',
-        marginBottom: 8,
+        textAlign: 'center',
     },
     tagline: {
         fontSize: 14,
         lineHeight: 20,
+        textAlign: 'center',
+        marginBottom: 8,
     },
+    followRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 12,
+    },
+    followText: {
+        fontSize: 14,
+    },
+    bioText: {
+        fontSize: 14,
+        lineHeight: 22,
+        marginTop: 4,
+        textAlign: 'center',
+        fontFamily: 'Montserrat_400Regular',
+    },
+
+    // Stats Grid - Glass Cards
     statsGrid: {
         flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 10,
-        gap: 24,
-        paddingVertical: 16,
-        borderTopWidth: 1,
-        borderBottomWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)', // Subtle separator
-        marginHorizontal: 20,
+        justifyContent: 'center', // Center the cards
+        alignItems: 'stretch',
+        marginTop: 8,
+        gap: 12, // Space between cards
+        paddingHorizontal: 20,
+        marginBottom: 24,
     },
-    statItem: {
+    glassStatCard: {
+        flex: 1,
+        borderRadius: 16,
+        paddingVertical: 16,
         alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        // Glass effect simulated by bg color + border
     },
     statValue: {
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: 'bold',
         fontFamily: 'Oswald_700Bold',
+        marginBottom: 2,
     },
     statLabel: {
-        fontSize: 12,
-        fontWeight: '500',
+        fontSize: 10,
+        fontWeight: '600',
         textTransform: 'uppercase',
+        letterSpacing: 1,
     },
-    statDivider: {
-        width: 1,
-        height: 24,
-    },
+
+    // Action Row
     actionRow: {
-        marginTop: 24,
         paddingHorizontal: 40,
+        marginBottom: 10,
     },
     clockInButton: {
         flexDirection: 'row',
@@ -341,35 +350,39 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         height: 56,
         borderRadius: 28,
-        gap: 12,
-        overflow: 'hidden',
+        gap: 10,
+        borderWidth: 1,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: 15, // Neon Glow
+        elevation: 5,
+        overflow: 'hidden', // For gradient
     },
     clockInText: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
         fontFamily: 'Montserrat_600SemiBold',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
+
+    // Misc
     bioActionsRow: {
-        marginTop: 8,
+        marginTop: 12,
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
+        gap: 16,
     },
     shareIconSmall: {
-        padding: 8,
-    },
-    // New Styles
-    bioText: {
-        fontSize: 14,
-        lineHeight: 22,
-        marginTop: 8,
-        fontFamily: 'Montserrat_400Regular',
+        padding: 4,
     },
     linksRow: {
         flexDirection: 'row',
         marginTop: 12,
         flexWrap: 'wrap',
         gap: 8,
+        justifyContent: 'center',
     },
     linkButton: {
         width: 32,

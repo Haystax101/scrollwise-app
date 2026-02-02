@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { profileImageService } from '../../services/profileImageService';
@@ -29,20 +28,18 @@ export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
 
         const isFirst = rank === 1;
         const isSecond = rank === 2;
-        const isThird = rank === 3;
+        // removed unused isThird
 
         let height = 120; // Default (3rd)
         let color = '#CD7F32'; // Bronze
-        let label = '3rd';
+        // removed unused label
 
         if (isFirst) {
             height = 160;
-            color = '#EAB308'; // Gold
-            label = '1st';
+            color = colors.gold; // Use Theme Gold
         } else if (isSecond) {
             height = 140;
-            color = '#C0C0C0'; // Silver
-            label = '2nd';
+            color = '#E0E0E0'; // Platinum/Silver
         }
 
         const isCurrentUser = user.id === currentUserId;
@@ -51,11 +48,11 @@ export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
             <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => router.push({ pathname: '/user-profile', params: { userId: user.id } })}
-                style={[styles.stepContainer, { height: height + 80 }]}
+                style={[styles.stepContainer, { height: height + 90 }]} // Increased height for spacing
             >
                 {/* Avatar Group */}
                 <View style={styles.avatarContainer}>
-                    <View style={[styles.avatarRing, { borderColor: color }]}>
+                    <View style={[styles.avatarRing, { borderColor: color, shadowColor: color, shadowOpacity: 0.5, shadowRadius: 10 }]}>
                         <Image
                             source={profileImageService.getProfileImageUrl(user.avatar_url)
                                 ? { uri: profileImageService.getProfileImageUrl(user.avatar_url)! }
@@ -64,16 +61,16 @@ export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
                         />
                     </View>
                     <View style={[styles.rankBadge, { backgroundColor: color }]}>
-                        <Text style={styles.rankText}>{rank}</Text>
+                        <Text style={[styles.rankText, { color: isFirst ? 'black' : 'white' }]}>{rank}</Text>
                     </View>
                 </View>
 
                 {/* Name & Voltz */}
                 <View style={styles.infoContainer}>
                     <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{user.full_name}</Text>
-                    <Text style={[styles.voltz, { color: colors.primary }]}>{user.total_voltz_earned} V</Text>
+                    <Text style={[styles.voltz, { color: color }]}>{user.total_voltz_earned} V</Text>
                     {user.current_streak > 0 && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, backgroundColor: 'rgba(244, 63, 94, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
                             <Feather name="zap" size={10} color="#F43F5E" />
                             <Text style={{ color: '#F43F5E', fontSize: 10, fontWeight: 'bold', marginLeft: 2 }}>
                                 {user.current_streak}
@@ -82,15 +79,14 @@ export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
                     )}
                 </View>
 
-                {/* The Pedestal */}
-                <LinearGradient
-                    colors={[color, 'rgba(0,0,0,0.8)']}
-                    style={[styles.pedestal, { height: height, opacity: 0.3 }]}
-                />
-                {/* Glass overlay on pedestal */}
-                <BlurView intensity={20} tint="dark" style={[styles.pedestalGlass, { height: height }]} >
-                    {isCurrentUser && <Text style={{ color: 'white', fontSize: 10, marginTop: 10 }}>YOU</Text>}
-                </BlurView>
+                {/* The Pedestal - Glassmorphic */}
+                <View style={[styles.pedestal, { height: height, backgroundColor: colors.glassBg, borderColor: color }]}>
+                    <LinearGradient
+                        colors={[color + '40', 'transparent']} // Fade from color to transparent
+                        style={StyleSheet.absoluteFill}
+                    />
+                    {isCurrentUser && <Text style={{ color: 'white', fontSize: 10, marginTop: 10, textAlign: 'center', fontWeight: 'bold' }}>YOU</Text>}
+                </View>
 
             </TouchableOpacity>
         );
@@ -177,20 +173,20 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     voltz: {
-        fontSize: 10,
+        fontSize: 12, // Slightly Larger
         fontWeight: 'bold',
+        fontFamily: 'Oswald_700Bold',
     },
     pedestal: {
         width: '100%',
-        borderTopLeftRadius: 8,
-        borderTopRightRadius: 8,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
         position: 'absolute',
         bottom: 0,
+        borderTopWidth: 1,
+        borderLeftWidth: 1,
+        borderRightWidth: 1,
+        overflow: 'hidden',
     },
-    pedestalGlass: {
-        width: '100%',
-        borderTopLeftRadius: 8,
-        borderTopRightRadius: 8,
-        alignItems: 'center',
-    }
+    // Removed pedestalGlass
 });

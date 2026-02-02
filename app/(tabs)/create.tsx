@@ -1,38 +1,41 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useRouter } from 'expo-router';
 import { RecentReadsList } from '../../components/create/RecentReadsList';
-import { SparklesIcon, ClockIcon, PencilSquareIcon, CameraIcon } from 'react-native-heroicons/outline';
+import { PencilSquareIcon, CameraIcon } from 'react-native-heroicons/outline';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-
-const { width } = Dimensions.get('window');
+import { GlassGlowingCard } from '../../components/create/GlassGlowingCard';
 
 export default function CreateScreen() {
-    const { colors, theme } = useTheme();
+    const { colors } = useTheme();
     const router = useRouter();
 
     const ActionButton = ({ icon: Icon, title, subtitle, color, onPress }: any) => (
-        <TouchableOpacity style={[styles.actionButton, { borderColor: colors.border }]} onPress={onPress}>
-            <BlurView intensity={20} tint={theme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-            <View style={[styles.iconCircle, { backgroundColor: color + '20' }]}>
-                <Icon size={24} color={color} />
+        <GlassGlowingCard
+            style={styles.actionButtonContainer}
+            glowColor={color}
+            onPress={onPress}
+        >
+            <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                <View style={[styles.iconCircle, { backgroundColor: color + '20', borderColor: color + '40', borderWidth: 1 }]}>
+                    <Icon size={24} color={color} />
+                </View>
+                <View>
+                    <Text style={[styles.actionTitle, { color: colors.text }]}>{title}</Text>
+                    <Text style={[styles.actionSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
+                </View>
             </View>
-            <View>
-                <Text style={[styles.actionTitle, { color: colors.text }]}>{title}</Text>
-                <Text style={[styles.actionSubtitle, { color: colors.text + '80' }]}>{subtitle}</Text>
-            </View>
-        </TouchableOpacity>
+        </GlassGlowingCard>
     );
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <LinearGradient
-                colors={[colors.primary + '10', 'transparent']}
+                colors={[colors.primary + '05', 'transparent']} // Subtle global gradient
                 style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 0.4 }}
             />
 
             <SafeAreaView style={styles.safeArea}>
@@ -69,9 +72,14 @@ export default function CreateScreen() {
                     {/* Drafts or Projects (Placeholder) */}
                     <View style={styles.section}>
                         <Text style={[styles.sectionTitle, { color: colors.text }]}>Drafts</Text>
-                        <View style={{ padding: 20, alignItems: 'center', justifyContent: 'center', height: 100 }}>
-                            <Text style={{ color: colors.text + '60' }}>No drafts yet. Start creating!</Text>
-                        </View>
+                        <GlassGlowingCard
+                            glowColor={colors.primary}
+                            style={{ width: '100%', height: 120 }}
+                        >
+                            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                                <Text style={{ color: colors.text + '60', fontFamily: 'Montserrat_400Regular' }}>No drafts yet. Start creating!</Text>
+                            </View>
+                        </GlassGlowingCard>
                     </View>
 
                 </ScrollView>
@@ -99,10 +107,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontFamily: 'Oswald_700Bold',
     },
-    profileButton: {
-        padding: 10,
-        borderRadius: 20,
-    },
     scrollContent: {
         paddingBottom: 100,
     },
@@ -120,14 +124,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 12,
     },
-    actionButton: {
+    actionButtonContainer: {
         flex: 1,
-        height: 140, // Tall buttons
-        borderRadius: 24,
-        overflow: 'hidden',
-        borderWidth: 1,
-        padding: 16,
-        justifyContent: 'space-between',
+        height: 150, // Slightly taller for better spacing
     },
     iconCircle: {
         width: 48,
@@ -137,12 +136,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     actionTitle: {
-        fontSize: 16,
+        fontSize: 20,
         fontWeight: 'bold',
-        marginTop: 8,
+        marginTop: 12,
+        fontFamily: 'Oswald_500Medium',
+        letterSpacing: 0.5,
     },
     actionSubtitle: {
-        fontSize: 12,
-        fontWeight: '500',
+        fontSize: 13,
+        fontWeight: '400',
+        fontFamily: 'Montserrat_400Regular',
+        opacity: 0.8,
     },
 });

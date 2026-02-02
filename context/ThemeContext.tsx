@@ -50,6 +50,12 @@ export interface ThemeColors {
   inputBorder: string;
   inputText: string;
   inputPlaceholder: string;
+
+  // Design System 2.0
+  gold: string;
+  glassBorder: string;
+  glassBg: string;
+  glassBgStrong: string;
 }
 
 const lightTheme: ThemeColors = {
@@ -89,6 +95,11 @@ const lightTheme: ThemeColors = {
   inputBorder: '#E5E7EB',
   inputText: '#1F2937',
   inputPlaceholder: '#9CA3AF',
+
+  gold: '#FFD700', // Standard gold
+  glassBorder: 'rgba(0, 0, 0, 0.1)',
+  glassBg: 'rgba(255, 255, 255, 0.6)',
+  glassBgStrong: 'rgba(255, 255, 255, 0.8)',
 };
 
 const darkTheme: ThemeColors = {
@@ -128,6 +139,11 @@ const darkTheme: ThemeColors = {
   inputBorder: '#2D2D3A',
   inputText: '#FFFFFF',
   inputPlaceholder: '#71717A',
+
+  gold: '#FDB202', // Design spec gold
+  glassBorder: 'rgba(255, 255, 255, 0.1)',
+  glassBg: 'rgba(255, 255, 255, 0.05)',
+  glassBgStrong: 'rgba(255, 255, 255, 0.08)',
 };
 
 interface ThemeContextType {

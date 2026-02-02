@@ -33,17 +33,24 @@ export default function InboxPage() {
 
             {/* Top Tabs Segmented Control */}
             <View style={styles.tabContainer}>
-                <View style={[styles.tabSegment, { backgroundColor: colors.card }]}>
+                <View style={[styles.tabSegment, { backgroundColor: colors.glassBg }]}>
                     <TouchableOpacity
                         style={[
                             styles.tabButton,
-                            activeTab === 'messages' && { backgroundColor: colors.background, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 }
+                            activeTab === 'messages' && {
+                                backgroundColor: colors.glassBgStrong,
+                                borderWidth: 1,
+                                borderColor: colors.glassBorder,
+                                shadowColor: colors.primary,
+                                shadowOpacity: 0.2,
+                                shadowRadius: 8
+                            }
                         ]}
                         onPress={() => setActiveTab('messages')}
                     >
                         <Text style={[
                             styles.tabText,
-                            { color: activeTab === 'messages' ? colors.text : colors.textSecondary }
+                            { color: activeTab === 'messages' ? colors.gold : colors.textSecondary }
                         ]}>
                             Messages
                         </Text>
@@ -52,13 +59,20 @@ export default function InboxPage() {
                     <TouchableOpacity
                         style={[
                             styles.tabButton,
-                            activeTab === 'activity' && { backgroundColor: colors.background, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 }
+                            activeTab === 'activity' && {
+                                backgroundColor: colors.glassBgStrong,
+                                borderWidth: 1,
+                                borderColor: colors.glassBorder,
+                                shadowColor: colors.primary,
+                                shadowOpacity: 0.2,
+                                shadowRadius: 8
+                            }
                         ]}
                         onPress={() => setActiveTab('activity')}
                     >
                         <Text style={[
                             styles.tabText,
-                            { color: activeTab === 'activity' ? colors.text : colors.textSecondary }
+                            { color: activeTab === 'activity' ? colors.gold : colors.textSecondary }
                         ]}>
                             Activity
                         </Text>
@@ -94,33 +108,40 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: 32,
-        fontWeight: '800',
+        fontWeight: 'bold',
+        fontFamily: 'Oswald_700Bold', // Consistent typography
     },
     iconButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        // Glass effect
     },
     tabContainer: {
         paddingHorizontal: 20,
-        marginBottom: 10,
+        marginBottom: 16,
     },
     tabSegment: {
         flexDirection: 'row',
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 4,
-        height: 44,
+        height: 48,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     tabButton: {
         flex: 1,
-        borderRadius: 10,
+        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
     },
     tabText: {
         fontSize: 14,
         fontWeight: '600',
+        fontFamily: 'Montserrat_600SemiBold',
     }
 });

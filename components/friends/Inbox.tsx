@@ -328,12 +328,16 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
       alignItems: 'center', // Center vertically for cleaner look
       paddingVertical: 16,
       paddingHorizontal: 16,
-      backgroundColor: colors.background, // Transparent/background
+      backgroundColor: 'rgba(30,30,30,0.4)', // Darker glass base
       borderBottomWidth: 1,
-      borderBottomColor: colors.border + '40',
+      borderBottomColor: 'rgba(255,255,255,0.05)',
+      borderTopWidth: 1, // Subtle top highlight
+      borderTopColor: 'rgba(255,255,255,0.1)', // "Faint white light source"
     },
     unreadNotification: {
-      backgroundColor: colors.primary + '05', // Very subtle tint
+      backgroundColor: 'rgba(244, 208, 63, 0.1)', // Gold tint for unread
+      borderLeftWidth: 3,
+      borderLeftColor: colors.primary,
     },
     notificationIcon: {
       position: 'absolute',
@@ -346,7 +350,7 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 2,
-      borderColor: colors.background, // Match container bg
+      borderColor: '#1E1E1E', // Match new bg
     },
     notificationAvatarContainer: {
       marginRight: 14,
@@ -356,19 +360,23 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
       width: 44,
       height: 44,
       borderRadius: 22,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.1)',
     },
     notificationContent: {
       flex: 1,
     },
     notificationText: {
-      fontSize: 15, // Slightly bigger
+      fontSize: 14,
       color: colors.text,
       marginBottom: 4,
       lineHeight: 20,
+      fontFamily: 'Montserrat_400Regular',
     },
     notificationTime: {
-      fontSize: 12,
+      fontSize: 11,
       color: colors.textSecondary,
+      fontFamily: 'Montserrat_400Regular',
     },
 
     // Empty state
@@ -385,7 +393,7 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
   });
 
   return (
-    <SafeAreaView style={dynamicStyles.container}>
+    <View style={dynamicStyles.container}>
       {/* Header */}
       {showHeader && (
         <View style={dynamicStyles.header}>
@@ -538,6 +546,6 @@ export function Inbox({ showHeader = true }: { showHeader?: boolean }) {
           currentUserId={user?.id}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }

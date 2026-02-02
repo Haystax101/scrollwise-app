@@ -69,7 +69,7 @@ export const ChatList = () => {
 
         return (
             <TouchableOpacity
-                style={[styles.itemContainer, { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.1)' }]}
+                style={styles.itemContainer}
                 onPress={() => handlePressChat(item.chat_id)}
                 activeOpacity={0.7}
             >
@@ -142,26 +142,31 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     listContent: {
-        padding: 16,
-        paddingBottom: 100
+        paddingBottom: 100, // Keep bottom padding for scrolling
     },
     itemContainer: {
         flexDirection: 'row',
         padding: 16,
-        marginBottom: 12,
-        borderRadius: 16,
-        borderWidth: 1,
+        // No margin bottom for contiguous items
+        // No border radius for full width
         alignItems: 'center',
+        backgroundColor: 'rgba(30,30,30,0.4)', // Darker glass base
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.05)',
+        borderTopWidth: 1, // Subtle top highlight
+        borderTopColor: 'rgba(255,255,255,0.1)', // "Faint white light source"
     },
     avatarContainer: {
         position: 'relative',
         marginRight: 16,
     },
     avatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: 52, // Slightly larger
+        height: 52,
+        borderRadius: 26,
         backgroundColor: '#333',
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     unreadBadgeData: {
         position: 'absolute',
@@ -174,7 +179,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 4,
         borderWidth: 2,
-        borderColor: '#000', // Match background usually, hardcoded dark for now
+        borderColor: '#1E1E1E', // Match generic dark bg
     },
     unreadCountText: {
         color: 'white',
@@ -194,15 +199,18 @@ const styles = StyleSheet.create({
     nameText: {
         fontSize: 16,
         fontWeight: '700',
+        fontFamily: 'Montserrat_700Bold',
         flex: 1,
         marginRight: 8,
     },
     timeText: {
         fontSize: 12,
+        fontFamily: 'Montserrat_400Regular',
     },
     messageText: {
         fontSize: 14,
         lineHeight: 20,
+        fontFamily: 'Montserrat_400Regular',
     },
     emptyContainer: {
         alignItems: 'center',
@@ -214,9 +222,11 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         marginTop: 16,
+        fontFamily: 'Oswald_700Bold',
     },
     emptySubText: {
         fontSize: 14,
         marginTop: 8,
+        fontFamily: 'Montserrat_400Regular',
     }
 });
