@@ -11,6 +11,8 @@ import { screenTracker } from '../../lib/screenTracking';
 import { View, StyleSheet } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 
+import { GoldGlowBackground } from '../../components/common/GoldGlowBackground';
+
 export default function FeedScreen() {
     const { user, loading } = useAuth();
     const router = useRouter();
@@ -77,6 +79,7 @@ export default function FeedScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <GoldGlowBackground />
             {/* Header Switcher */}
             <FeedToggleHeader
                 activeFeed={activeFeed}

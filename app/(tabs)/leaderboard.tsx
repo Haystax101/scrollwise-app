@@ -6,6 +6,7 @@ import { Podium } from '../../components/leaderboard/Podium';
 import { LeaderboardList } from '../../components/leaderboard/LeaderboardList';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { GoldGlowBackground } from '../../components/common/GoldGlowBackground';
 
 export default function LeaderboardScreen() {
     const { colors } = useTheme();
@@ -40,6 +41,7 @@ export default function LeaderboardScreen() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <GoldGlowBackground />
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 refreshControl={
@@ -74,7 +76,7 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: '800',
         textAlign: 'center',
-        marginBottom: 10,
+        marginBottom: 4,
         letterSpacing: 0.5,
     },
     listContainer: {

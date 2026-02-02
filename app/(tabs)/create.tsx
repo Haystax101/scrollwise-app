@@ -4,8 +4,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useRouter } from 'expo-router';
 import { RecentReadsList } from '../../components/create/RecentReadsList';
 import { PencilSquareIcon, CameraIcon } from 'react-native-heroicons/outline';
-import { LinearGradient } from 'expo-linear-gradient';
 import { GlassGlowingCard } from '../../components/create/GlassGlowingCard';
+import { GoldGlowBackground } from '../../components/common/GoldGlowBackground';
 
 export default function CreateScreen() {
     const { colors } = useTheme();
@@ -31,12 +31,7 @@ export default function CreateScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <LinearGradient
-                colors={[colors.primary + '05', 'transparent']} // Subtle global gradient
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 0.4 }}
-            />
+            <GoldGlowBackground />
 
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>

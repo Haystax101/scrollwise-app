@@ -6,6 +6,7 @@ import { ChatList } from '../../components/chat/ChatList';
 import { Inbox as SocialInbox } from '../../components/friends/Inbox';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { GoldGlowBackground } from '../../components/common/GoldGlowBackground';
 
 const { width } = Dimensions.get('window');
 
@@ -16,6 +17,7 @@ export default function InboxPage() {
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+            <GoldGlowBackground />
             {/* Main Header */}
             <View style={styles.header}>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Inbox</Text>

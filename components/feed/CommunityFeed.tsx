@@ -412,7 +412,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = (props) => {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.container}>
 
             {/* Header/Selector removed (handled by parent Index) */}
 

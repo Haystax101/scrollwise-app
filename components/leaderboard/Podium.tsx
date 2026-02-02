@@ -48,11 +48,19 @@ export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
             <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => router.push({ pathname: '/user-profile', params: { userId: user.id } })}
-                style={[styles.stepContainer, { height: height + 90 }]} // Increased height for spacing
+                style={[styles.stepContainer, { height: height + 80 }]} // Total height = Pedestal + Avatar space
             >
-                {/* Avatar Group */}
-                <View style={styles.avatarContainer}>
-                    <View style={[styles.avatarRing, { borderColor: color, shadowColor: color, shadowOpacity: 0.5, shadowRadius: 10 }]}>
+                {/* Avatar Group - Floats Above */}
+                <View style={[styles.avatarContainer, { height: 80, justifyContent: 'flex-end', zIndex: 100 }]}>
+                    <View style={[styles.avatarRing, {
+                        borderColor: color,
+                        shadowColor: color,
+                        shadowOpacity: 0.8,
+                        shadowRadius: 15,
+                        shadowOffset: { width: 0, height: 0 },
+                        backgroundColor: '#1a1a1a'
+                    }]}>
+                        {/* ... image ... */}
                         <Image
                             source={profileImageService.getProfileImageUrl(user.avatar_url)
                                 ? { uri: profileImageService.getProfileImageUrl(user.avatar_url)! }
@@ -63,32 +71,32 @@ export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
                     <View style={[styles.rankBadge, { backgroundColor: color }]}>
                         <Text style={[styles.rankText, { color: isFirst ? 'black' : 'white' }]}>{rank}</Text>
                     </View>
-                </View>
+                </View >
 
-                {/* Name & Voltz */}
-                <View style={styles.infoContainer}>
-                    <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{user.full_name}</Text>
-                    <Text style={[styles.voltz, { color: color }]}>{user.total_voltz_earned} V</Text>
-                    {user.current_streak > 0 && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, backgroundColor: 'rgba(244, 63, 94, 0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
-                            <Feather name="zap" size={10} color="#F43F5E" />
-                            <Text style={{ color: '#F43F5E', fontSize: 10, fontWeight: 'bold', marginLeft: 2 }}>
-                                {user.current_streak}
-                            </Text>
-                        </View>
-                    )}
-                </View>
-
-                {/* The Pedestal - Glassmorphic */}
-                <View style={[styles.pedestal, { height: height, backgroundColor: colors.glassBg, borderColor: color }]}>
+                {/* The Pedestal - Glassmorphic with Info Inside */}
+                < View style={[styles.pedestal, { height: height, backgroundColor: 'rgba(255,255,255,0.05)' }]} >
                     <LinearGradient
-                        colors={[color + '40', 'transparent']} // Fade from color to transparent
+                        colors={[color + '30', 'transparent']} // Subtler fade
                         style={StyleSheet.absoluteFill}
                     />
-                    {isCurrentUser && <Text style={{ color: 'white', fontSize: 10, marginTop: 10, textAlign: 'center', fontWeight: 'bold' }}>YOU</Text>}
-                </View>
 
-            </TouchableOpacity>
+                    {/* Info Inside Glass */}
+                    <View style={styles.infoContent}>
+                        <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>{user.full_name}</Text>
+                        <Text style={[styles.voltz, { color: color }]}>{user.total_voltz_earned} V</Text>
+                        {user.current_streak > 0 && (
+                            <View style={styles.streakBadge}>
+                                <Feather name="zap" size={10} color="#F43F5E" />
+                                <Text style={styles.streakText}>
+                                    {user.current_streak}
+                                </Text>
+                            </View>
+                        )}
+                        {isCurrentUser && <Text style={styles.youIndicator}>YOU</Text>}
+                    </View>
+                </View >
+
+            </TouchableOpacity >
         );
     };
 
@@ -128,18 +136,21 @@ const styles = StyleSheet.create({
     },
     stepContainer: {
         alignItems: 'center',
-        justifyContent: 'flex-end',
+        justifyContent: 'flex-start', // Start from top
         width: '100%',
+        position: 'relative',
     },
     avatarContainer: {
-        marginBottom: 5,
+        marginBottom: -35, // Overlap into the glass
         alignItems: 'center',
         position: 'relative',
+        zIndex: 50,
+        elevation: 50,
     },
     avatarRing: {
         borderWidth: 3,
         borderRadius: 40,
-        padding: 2,
+        padding: 4, // More breathing room
     },
     avatar: {
         width: 60,
@@ -149,31 +160,18 @@ const styles = StyleSheet.create({
     rankBadge: {
         position: 'absolute',
         bottom: -5,
-        width: 20,
-        height: 20,
-        borderRadius: 10,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'white',
+        borderWidth: 2,
+        borderColor: '#1E1E1E',
+        zIndex: 51,
     },
     rankText: {
         color: 'white',
-        fontSize: 10,
-        fontWeight: 'bold',
-    },
-    infoContainer: {
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    name: {
         fontSize: 12,
-        fontWeight: '600',
-        marginBottom: 2,
-        textAlign: 'center',
-    },
-    voltz: {
-        fontSize: 12, // Slightly Larger
         fontWeight: 'bold',
         fontFamily: 'Oswald_700Bold',
     },
@@ -183,10 +181,55 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 16,
         position: 'absolute',
         bottom: 0,
-        borderTopWidth: 1,
-        borderLeftWidth: 1,
-        borderRightWidth: 1,
         overflow: 'hidden',
+        justifyContent: 'flex-start', // Align content to top
+        paddingTop: 35, // Space for the avatar overhang
+        alignItems: 'center',
     },
-    // Removed pedestalGlass
+    infoContent: {
+        alignItems: 'center',
+        width: '100%',
+        paddingHorizontal: 4,
+    },
+    name: {
+        fontSize: 12,
+        fontWeight: '600',
+        marginBottom: 2,
+        textAlign: 'center',
+        textShadowColor: 'rgba(0, 0, 0, 0.5)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
+    },
+    voltz: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        fontFamily: 'Oswald_700Bold',
+        marginBottom: 2,
+        textShadowColor: 'rgba(0, 0, 0, 0.5)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
+    },
+    streakBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(244, 63, 94, 0.15)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8,
+        marginTop: 2,
+    },
+    streakText: {
+        color: '#F43F5E',
+        fontSize: 10,
+        fontWeight: 'bold',
+        marginLeft: 2,
+    },
+    youIndicator: {
+        color: 'white',
+        fontSize: 10,
+        marginTop: 6,
+        textAlign: 'center',
+        fontWeight: 'bold',
+        opacity: 0.8,
+    }
 });
