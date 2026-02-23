@@ -59,6 +59,7 @@ export interface Insight {
     friend_id: string;
     friend_avatar?: string;
   };
+  friend_likes?: { name: string; avatar?: string }[];
 }
 
 // Base interface for all content types

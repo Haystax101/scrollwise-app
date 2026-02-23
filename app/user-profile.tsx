@@ -26,7 +26,13 @@ export default function UserProfileRoute() {
         <UserDetailContent
             userId={userId}
             currentUserId={session?.user?.id}
-            onClose={() => router.back()} // Back behaves as Close
+            onClose={() => {
+                if (router.canGoBack()) {
+                    router.back();
+                } else {
+                    router.replace('/(tabs)/profile');
+                }
+            }}
         />
     );
 }

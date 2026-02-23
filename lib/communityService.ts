@@ -24,6 +24,9 @@ export interface FeedItem {
     comments_count?: number;
     saves_count?: number;
     views_count?: number;
+
+    // Social Proof
+    friend_likes?: { name: string, avatar?: string }[];
 }
 
 export const communityService = {
@@ -171,7 +174,7 @@ export const communityService = {
             return [];
         }
 
-        return (data || []).map((item: any) => ({
+        let insights = (data || []).map((item: any) => ({
             id: String(item.id),
             type: 'insight' as const,
             content: item.content || '',
@@ -183,7 +186,8 @@ export const communityService = {
                 name: item.profiles?.full_name || 'User',
                 avatar: item.profiles?.avatar_url || '',
                 handle: '',
-                role: item.profiles?.tagline || '', // Use tagline as role fallback
+                tagline: item.profiles?.tagline || '',
+                role: '', // Use tagline for tagline field, not role
                 company: '',
                 industry: '',
                 location: '',
@@ -199,8 +203,41 @@ export const communityService = {
             likes_count: item.likes_count,
             comments_count: item.comments_count,
             saves_count: item.saves_count,
-            views_count: item.views_count
+            views_count: item.views_count,
+            friend_likes: [] as { name: string, avatar?: string }[]
         } as any));
+
+        // Enrich with Friend Likes
+        if (userId) {
+            const { data: myFollowing } = await supabase
+                .from('follows')
+                .select('following_id')
+                .eq('follower_id', userId);
+            const myFollowingIds = myFollowing?.map(f => f.following_id) || [];
+
+            if (myFollowingIds.length > 0 && insights.length > 0) {
+                const insightIds = insights.map(i => i.id);
+                const { data: friendLikes } = await supabase
+                    .from('insight_likes')
+                    .select('insight_id, user_id, profiles(full_name, avatar_url)')
+                    .in('insight_id', insightIds)
+                    .in('user_id', myFollowingIds);
+
+                if (friendLikes) {
+                    insights = insights.map(insight => {
+                        const likes = friendLikes
+                            .filter((l: any) => l.insight_id === insight.id)
+                            .map((l: any) => ({
+                                name: l.profiles?.full_name || 'Friend',
+                                avatar: l.profiles?.avatar_url
+                            }));
+                        return { ...insight, friend_likes: likes };
+                    });
+                }
+            }
+        }
+
+        return insights;
     },
     // Fetch Timelapses for Feed
     async getTimelapses(limit = 100, userId: string, offset = 0): Promise<FeedItem[]> {
@@ -231,9 +268,10 @@ export const communityService = {
             .eq('follower_id', userId);
 
         const myFollowingIds = new Set(myFollowing?.map(f => f.following_id) || []);
+        const myFollowingIdsArray = Array.from(myFollowingIds);
 
         // 3. Filter & Sort
-        const processed = data
+        let processed = data
             .filter((item: any) => {
                 // Privacy Check
                 if (item.user_id === userId) return true;
@@ -254,7 +292,8 @@ export const communityService = {
                     name: item.profiles?.full_name || 'User',
                     avatar: item.profiles?.avatar_url || '',
                     handle: '',
-                    role: item.profiles?.tagline || ''
+                    tagline: item.profiles?.tagline || '',
+                    role: ''
                 },
                 author_name: item.profiles?.full_name || 'User',
                 author_avatar: item.profiles?.avatar_url || '',
@@ -267,7 +306,8 @@ export const communityService = {
                 views_count: item.views_count || 0,
 
                 // Helper for sorting
-                isFriend: myFollowingIds.has(item.user_id)
+                isFriend: myFollowingIds.has(item.user_id),
+                friend_likes: [] as { name: string, avatar?: string }[]
             }))
             .sort((a, b) => {
                 // Priority 1: Timelapses by Friends
@@ -277,6 +317,28 @@ export const communityService = {
                 // Priority 2: Recency
                 return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
             });
+
+        // 4. Enrich with Friend Likes
+        if (processed.length > 0 && myFollowingIdsArray.length > 0) {
+            const itemIds = processed.map(i => i.id);
+            const { data: friendLikes } = await supabase
+                .from('timelapse_likes')
+                .select('timelapse_id, user_id, profiles(full_name, avatar_url)')
+                .in('timelapse_id', itemIds)
+                .in('user_id', myFollowingIdsArray);
+
+            if (friendLikes) {
+                processed = processed.map(item => {
+                    const likes = friendLikes
+                        .filter((l: any) => l.timelapse_id === item.id)
+                        .map((l: any) => ({
+                            name: l.profiles?.full_name || 'Friend',
+                            avatar: l.profiles?.avatar_url
+                        }));
+                    return { ...item, friend_likes: likes };
+                });
+            }
+        }
 
         return processed;
     },
@@ -408,7 +470,8 @@ export const communityService = {
                 name: item.profiles?.full_name || 'User',
                 avatar: item.profiles?.avatar_url || '',
                 handle: '',
-                role: item.profiles?.tagline || '',
+                tagline: item.profiles?.tagline || '',
+                role: '',
                 company: '',
                 industry: '',
                 location: '',

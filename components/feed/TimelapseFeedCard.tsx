@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, Alert } from 'react-native';
 import { ShareSheet } from '../share/ShareSheet';
 import { useTheme } from '../../context/ThemeContext';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { supabase } from '../../lib/supabase';
 import { communityService } from '../../lib/communityService';
 import { PaperAirplaneIcon } from 'react-native-heroicons/outline';
+import { profileImageService } from '../../services/profileImageService';
 
 const { width } = Dimensions.get('window');
+const defaultProfileImage = require('../../assets/profileIconDefault.png');
 
 interface TimelapseFeedCardProps {
     item: any;
@@ -28,6 +30,11 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [shareSheetVisible, setShareSheetVisible] = useState(false);
 
+    // Loop Control
+    const loopCount = useRef(0);
+    const SHORT_VIDEO_THRESHOLD = 300;
+    const isShort = (item.duration || 0) < SHORT_VIDEO_THRESHOLD;
+
     // Prepare Player
     useEffect(() => {
         if (item.video_url) {
@@ -41,20 +48,45 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
     }, [item.video_url]);
 
     const player = useVideoPlayer(videoUrl, player => {
-        player.loop = true;
+        player.loop = !isShort;
         player.muted = true;
     });
 
+    // Handle visible state & resetting
     useEffect(() => {
-        if (isVisible && player) player.play();
-        else if (player) player.pause();
-    }, [isVisible, player]);
+        if (!player) return;
+
+        if (isVisible) {
+            if (isShort) {
+                loopCount.current = 0;
+            }
+            player.play();
+        } else {
+            player.pause();
+        }
+    }, [isVisible, player, isShort]);
+
+    // Manual Loop Logic for Short Videos
+    useEffect(() => {
+        if (!isShort || !player) return;
+
+        const subscription = player.addListener('playToEnd', () => {
+            if (loopCount.current < 2) {
+                loopCount.current += 1;
+                player.replay();
+            } else {
+                player.pause();
+            }
+        });
+
+        return () => {
+            subscription.remove();
+        };
+    }, [player, isShort]);
 
     useEffect(() => { checkStatus(); }, []);
 
     const checkStatus = async () => {
-        // ... (existing check logic)
-        // Optimization: checking only if ids available
         if (!currentUserId) return;
 
         const { data: likeData } = await supabase.from('timelapse_likes').select('id').eq('timelapse_id', item.id).eq('user_id', currentUserId).maybeSingle();
@@ -81,11 +113,7 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
     };
 
     const handleOptionsPress = () => {
-        // Only for OWN content
         if (item.user_id !== currentUserId) return;
-
-        // Simple Action Sheet using Alert for cross-platform ease (or ActionSheetIOS)
-        // Options: Delete, Save Video (TODO), Cancel
         const options = [
             { text: 'Cancel', style: 'cancel' },
             {
@@ -93,7 +121,6 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
                 style: 'destructive',
                 onPress: handleDelete
             }
-            // { text: 'Save Video to Photos', onPress: handleDownload } 
         ];
         // @ts-ignore
         Alert.alert('Options', undefined, options);
@@ -106,18 +133,12 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
                 text: 'Delete',
                 style: 'destructive',
                 onPress: async () => {
-                    // Perform Delete
-                    // 1. Delete DB Entry (Cascade should handle storage via triggers if setup, otherwise manual)
-                    // Currently manual deletion usually safest.
                     try {
                         const { error } = await supabase.from('timelapse_sessions').delete().eq('id', item.id);
                         if (error) throw error;
-
-                        // Clean storage (Optional if trigger exists, but good practice)
                         if (item.video_url) {
                             await supabase.storage.from('timelapses').remove([item.video_url]);
                         }
-
                         if (onDelete) onDelete();
                     } catch (e) {
                         Alert.alert('Error', 'Failed to delete timelapse');
@@ -127,14 +148,23 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
         ]);
     };
 
+    // Determine Avatar Source:
+    // Consistent with InsightCard
+    const avatarSource = item.author_avatar || item.author?.avatar
+        ? { uri: profileImageService.getProfileImageUrl(item.author_avatar || item.author?.avatar) }
+        : defaultProfileImage;
+
     return (
         <View style={[styles.card, { backgroundColor: 'rgba(30, 30, 30, 0.85)', borderColor: 'rgba(255, 255, 255, 0.1)' }]}>
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.authorRow} onPress={onProfilePress}>
-                    <Image source={{ uri: item.author_avatar || `https://ui-avatars.com/api/?name=${item.author_name}` }} style={styles.avatar} />
+                    <Image
+                        source={avatarSource}
+                        style={styles.avatar}
+                    />
                     <View>
-                        <Text style={[styles.authorName, { color: colors.text }]}>{item.author_name}</Text>
+                        <Text style={[styles.authorName, { color: colors.text }]}>{item.author_name || item.author?.name || 'Unknown'}</Text>
                         <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
                             {new Date(item.created_at).toLocaleDateString()}
                         </Text>
@@ -157,12 +187,13 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
             ) : null}
 
             {/* Video Player */}
-            <View style={styles.videoContainer}>
+            {/* Aspect Ratio Change: From 1 (Square) to 4/5 (0.8) for better vertical timelapse visibility */}
+            <View style={[styles.videoContainer, { aspectRatio: 3 / 4 }]}>
                 {videoUrl ? (
                     <VideoView
                         style={styles.video}
                         player={player}
-                        contentFit="cover"
+                        contentFit="cover" // Keep cover to fill space, but new AR shows more
                         nativeControls={false}
                     />
                 ) : (
@@ -171,14 +202,18 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
                 {/* Duration Badge */}
                 <View style={styles.durationBadge}>
                     <Feather name="clock" size={10} color="white" style={{ marginRight: 4 }} />
-                    <Text style={styles.durationText}>{Math.floor(item.duration / 60)}m</Text>
+                    <Text style={styles.durationText}>{Math.floor((item.duration || 0) / 60)}m</Text>
                 </View>
             </View>
 
             {/* Actions */}
             <View style={[styles.actions, { borderTopColor: colors.border }]}>
                 <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
-                    <Feather name="heart" size={24} color={liked ? "#E11D48" : colors.textSecondary} fill={liked ? "#E11D48" : "none"} />
+                    <Ionicons
+                        name={liked ? "heart" : "heart-outline"}
+                        size={24}
+                        color={liked ? "#EF4444" : colors.textSecondary}
+                    />
                     <Text style={[styles.actionText, { color: colors.textSecondary }]}>{likeCount}</Text>
                 </TouchableOpacity>
 
@@ -195,6 +230,19 @@ export const TimelapseFeedCard = React.memo<TimelapseFeedCardProps>(({ item, cur
                     <Feather name="bookmark" size={24} color={saved ? colors.primary : colors.textSecondary} fill={saved ? colors.primary : "none"} />
                 </TouchableOpacity>
             </View>
+
+            {/* Social Proof (Friend Likes) */}
+            {item.friend_likes && item.friend_likes.length > 0 && (
+                <View style={styles.likedByContainer}>
+                    <Text style={[styles.likedByText, { color: colors.text }]}>
+                        Liked by <Text style={styles.likedByBold}>{item.friend_likes[0].name}</Text>
+                        {likeCount > 1 && (
+                            <Text> and {formatLikeCount(likeCount - 1)} others</Text>
+                        )}
+                    </Text>
+                </View>
+            )}
+
             {/* Share Sheet */}
             <ShareSheet
                 visible={shareSheetVisible}
@@ -237,6 +285,7 @@ const styles = StyleSheet.create({
         height: 32,
         borderRadius: 16,
         marginRight: 10,
+        backgroundColor: '#333' // Fallback bg if image loads slow
     },
     authorName: {
         fontWeight: 'bold',
@@ -250,7 +299,7 @@ const styles = StyleSheet.create({
     },
     videoContainer: {
         width: '100%',
-        aspectRatio: 1,
+        // Aspect ratio handled inline
         backgroundColor: 'black',
         position: 'relative',
     },
@@ -292,5 +341,20 @@ const styles = StyleSheet.create({
     },
     actionText: {
         fontSize: 14,
+    },
+    likedByContainer: {
+        paddingHorizontal: 12,
+        paddingBottom: 12,
+    },
+    likedByText: {
+        fontSize: 13,
+    },
+    likedByBold: {
+        fontWeight: 'bold',
     }
 });
+
+const formatLikeCount = (count: number) => {
+    if (count >= 1000) return (count / 1000).toFixed(1) + 'k';
+    return count.toString();
+};

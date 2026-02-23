@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, RefreshControl } from 'react-native';
 import { ArticleCard } from './ArticleCard';
 import { PaperCard } from './PaperCard';
 import { BookCard } from './BookCard';
@@ -13,7 +13,7 @@ import { useIndustries } from '../context/IndustriesContext';
 import { CommentsModal } from './CommentsModal';
 import { supabase } from '../lib/supabase';
 import { useResponsiveLayout } from '../utils/screenUtils';
-import { getDeviceInfo, useDeviceOrientation } from '../utils/deviceDetection';
+import { getDeviceInfo } from '../utils/deviceDetection';
 
 /**
  * MainFeed Component - Completely Rewritten
@@ -221,6 +221,16 @@ function useContentTracking(
 ) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [scrollCount, setScrollCount] = useState(0);
+  const viewTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (viewTimerRef.current) {
+        clearTimeout(viewTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleViewableItemsChanged = useCallback(({ viewableItems }: any) => {
     if (viewableItems.length > 0) {
@@ -231,24 +241,37 @@ function useContentTracking(
       const oldIndex = currentIndex;
       setCurrentIndex(newIndex);
 
-      // Track viewed content
+      // Clear any pending view timer when index changes
+      if (viewTimerRef.current) {
+        clearTimeout(viewTimerRef.current);
+        viewTimerRef.current = null;
+      }
+
+      // Track viewed content with DELAY (3 seconds)
+      // This prevents "scrolling past" from marking content as viewed
       if (feedManager && currentItem) {
-        // Updated to pass the content item for quiz tracking
-        feedManager.markAsViewed(currentItem.id, currentItem.type, currentItem);
+        viewTimerRef.current = setTimeout(() => {
+          console.log(`👁️ View Timer Complete: Marking ${currentItem.type} ${currentItem.id} as viewed`);
 
-        // Track engagement
-        trackContentEngagement?.(
-          currentItem.type,
-          String(currentItem.id),
-          'view',
-          {
-            content_title: 'title' in currentItem ? currentItem.title : 'Insight',
-            scroll_position: newIndex
-          }
-        );
+          // 1. Mark as viewed in FeedManager (hides from feed)
+          feedManager.markAsViewed(currentItem.id, currentItem.type, currentItem);
 
-        // Record content view in database for quiz system
-        recordContentView?.(currentItem.id, currentItem.type);
+          // 2. Track analytics engagement
+          trackContentEngagement?.(
+            currentItem.type,
+            String(currentItem.id),
+            'view',
+            {
+              content_title: 'title' in currentItem ? currentItem.title : 'Insight',
+              scroll_position: newIndex,
+              duration_threshold: 3000
+            }
+          );
+
+          // 3. Record simple view count
+          recordContentView?.(currentItem.id, currentItem.type);
+
+        }, 3000); // 3 Seconds Threshold
       }
 
       // Track scroll activity and check for quiz triggers
@@ -263,19 +286,8 @@ function useContentTracking(
           content_type: currentItem?.type
         });
 
-        // Check if it's time to show a quiz using new QuizSessionManager - COMMENTED OUT
-        // if (!feedLocked && feedManager && showQuizForRecentContent) {
-        //   const quizCheck = feedManager.shouldShowQuiz();
-        //   if (quizCheck.show) {
-        //     console.log(`🧠 Quiz trigger: ${quizCheck.reason}`);
-        //     showQuizForRecentContent(newIndex);
-        //   } else {
-        //     console.log(`🧠 Quiz check: ${quizCheck.reason}`);
-        //   }
-        // }
-
         // Preemptive loading: start loading more content when we're close to the end
-        if (feedItems && loadMoreContent && hasMore && !isLoadingMore) { // Removed feedLocked check
+        if (feedItems && loadMoreContent && hasMore && !isLoadingMore) {
           const remainingItems = feedItems.length - newIndex;
           const threshold = 3; // Start loading when 3 items remaining
 
@@ -321,7 +333,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   const { allIndustries } = useIndustries();
   const { totalHeight } = useResponsiveLayout();
   const { isTablet } = getDeviceInfo();
-  const { isLandscape } = useDeviceOrientation();
+  // const { isLandscape } = useDeviceOrientation(); // Unused
 
   // Comments modal state
   const [commentsArticleId, setCommentsArticleId] = useState<number | null>(null);

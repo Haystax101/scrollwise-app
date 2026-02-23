@@ -76,10 +76,16 @@ export default function TabLayout() {
                     title: 'Create',
                     tabBarIcon: ({ color, focused }) => (
                         <View style={styles.createButtonContainer}>
-                            <View style={[styles.createButton, { backgroundColor: focused ? '#FFD700' : 'rgba(255, 255, 255, 0.2)' }]}>
+                            <View style={[
+                                styles.createButton,
+                                {
+                                    backgroundColor: focused ? '#FFD700' : 'rgba(255, 255, 255, 0.1)', // Faint light glass
+                                    borderColor: focused ? '#FFD700' : 'rgba(255, 255, 255, 0.2)'
+                                }
+                            ]}>
                                 {focused
-                                    ? <PlusIconSolid color="black" size={30} />
-                                    : <PlusIconOutline color="white" size={30} />
+                                    ? <PlusIconSolid color="black" size={26} />
+                                    : <PlusIconOutline color="white" size={26} />
                                 }
                             </View>
                         </View>
@@ -114,15 +120,23 @@ const styles = StyleSheet.create({
     createButtonContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-        top: Platform.OS === 'ios' ? 4 : 0, // Slight optical adjustment for icon centering
+        top: Platform.OS === 'ios' ? 4 : 0,
     },
     createButton: {
-        width: 44, // Slightly smaller
+        width: 44,
         height: 44,
-        borderRadius: 22,
+        borderRadius: 14, // Smaller Squircle
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)', // Fainter Glass border
         alignItems: 'center',
         justifyContent: 'center',
-        // removed border
-        backgroundColor: '#FFD700', // Ensure this is handled in the component prop too if dynamic
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.15, // Fainter shadow
+        shadowRadius: 3,
+        elevation: 4,
     }
 });

@@ -12,6 +12,7 @@ import { PhotoUploadModal } from './PhotoUploadModal';
 import { SocialProfileHeader } from './SocialProfileHeader';
 import { UGCArchiveGrid } from './UGCArchiveGrid'; // [NEW]
 import { NetworkModal } from './NetworkModal';
+import { GoldGlowBackground } from '../common/GoldGlowBackground';
 import SettingsModal from '../SettingsModal';
 import { supabase } from '../../lib/supabase';
 import { voltzService } from '../../lib/voltzService';
@@ -24,20 +25,20 @@ import type { Industry } from '../../types';
 // Define types locally to avoid import issues
 /*
 interface LearningStats {
-  connectionsCount: number;
-  totalInteractions: number;
-  achievementsCount: number;
+          connectionsCount: number;
+        totalInteractions: number;
+        achievementsCount: number;
 }
 
-interface ProfileData {
-  summary?: string;
+        interface ProfileData {
+          summary ?: string;
 }
 
-interface ProfilePassion {
-  passionate_about: string | null;
-  working_on: string | null;
+        interface ProfilePassion {
+          passionate_about: string | null;
+        working_on: string | null;
 }
-*/
+        */
 
 interface CareerGoal {
   goal: string;
@@ -92,7 +93,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   //   totalInteractions: 0,
   //   achievementsCount: 0
   // });
-  // const [profileData, setProfileData] = useState<ProfileData>({});
+  // const [profileData, setProfileData] = useState<ProfileData>({ });
   // const [profilePassions, setProfilePassions] = useState<ProfilePassion | null>(null);
   const [userTagline, setUserTagline] = useState<string | null>(null);
   const [userBio, setUserBio] = useState<string | null>(null);
@@ -178,9 +179,9 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
     /*
     if (isMountedRef.current) {
-      setLoading(true);
+                                          setLoading(true);
     }
-    */
+                                        */
     try {
       // Fetch basic profile info including tagline
       const { data: profileData, error: profileError } = await supabase
@@ -230,22 +231,22 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       /*
       try {
         const onboardingProgress = await onboardingService.getProgress(currentUser.id);
-        await onboardingService.checkAndAwardCompletion(currentUser.id);
+                                        await onboardingService.checkAndAwardCompletion(currentUser.id);
 
-        if (isMountedRef.current) {
+                                        if (isMountedRef.current) {
           if (!onboardingProgress || !onboardingProgress.is_completed) {
-            setShowOnboardingProgress(true);
+                                          setShowOnboardingProgress(true);
           } else {
-            setShowOnboardingProgress(false);
+                                          setShowOnboardingProgress(false);
           }
         }
       } catch (onboardingError) {
-        console.error('Error handling onboarding progress:', onboardingError);
-        if (isMountedRef.current) {
-          setShowOnboardingProgress(true);
+                                          console.error('Error handling onboarding progress:', onboardingError);
+                                        if (isMountedRef.current) {
+                                          setShowOnboardingProgress(true);
         }
       }
-      */
+                                        */
 
       // Fetch career goals using direct table queries (no RPC)
       try {
@@ -304,72 +305,72 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
       // Fetch connections count
       /*
-       const { count: connectionsCount } = await supabase
-         .from('friendships')
-         .select('*', { count: 'exact', head: true })
-         .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`)
-         .eq('status', 'accepted');
- 
-       // Calculate engagement stats
-       const [articleLikesRes, articleSavesRes, articleCommentsRes,
-         paperLikesRes, paperSavesRes, paperCommentsRes, bookLikesRes, bookSavesRes,
-         bookCommentsRes, insightLikesRes, insightSavesRes, insightCommentsRes] = await Promise.all([
-           supabase.from('article_likes').select('article_id').eq('user_id', currentUser.id),
-           supabase.from('article_saves').select('article_id').eq('user_id', currentUser.id),
-           supabase.from('comments').select('article_id').eq('user_id', currentUser.id),
-           supabase.from('paper_likes').select('paper_id').eq('user_id', currentUser.id),
-           supabase.from('paper_saves').select('paper_id').eq('user_id', currentUser.id),
-           supabase.from('paper_comments').select('paper_id').eq('user_id', currentUser.id),
-           supabase.from('book_likes').select('book_id').eq('user_id', currentUser.id),
-           supabase.from('book_saves').select('book_id').eq('user_id', currentUser.id),
-           supabase.from('book_comments').select('book_id').eq('user_id', currentUser.id),
-           supabase.from('insight_likes').select('insight_id').eq('user_id', currentUser.id),
-           supabase.from('insight_saves').select('insight_id').eq('user_id', currentUser.id),
-           supabase.from('insight_comments').select('insight_id').eq('user_id', currentUser.id)
-         ]);
- 
-       const totalInteractions = (articleLikesRes.data?.length || 0) +
-         (articleSavesRes.data?.length || 0) + (articleCommentsRes.data?.length || 0) +
-         (paperLikesRes.data?.length || 0) +
-         (paperSavesRes.data?.length || 0) + (paperCommentsRes.data?.length || 0) +
-         (bookLikesRes.data?.length || 0) +
-         (bookSavesRes.data?.length || 0) + (bookCommentsRes.data?.length || 0) +
-         (insightLikesRes.data?.length || 0) +
-         (insightSavesRes.data?.length || 0) + (insightCommentsRes.data?.length || 0);
- 
-       const { data: achievementsCountData } = await supabase
-         .from('user_achievements')
-         .select('id')
-         .eq('user_id', currentUser.id);
-       */
+       const {count: connectionsCount } = await supabase
+                                        .from('friendships')
+                                        .select('*', {count: 'exact', head: true })
+                                        .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`)
+                                        .eq('status', 'accepted');
+
+                                        // Calculate engagement stats
+                                        const [articleLikesRes, articleSavesRes, articleCommentsRes,
+                                        paperLikesRes, paperSavesRes, paperCommentsRes, bookLikesRes, bookSavesRes,
+                                        bookCommentsRes, insightLikesRes, insightSavesRes, insightCommentsRes] = await Promise.all([
+                                        supabase.from('article_likes').select('article_id').eq('user_id', currentUser.id),
+                                        supabase.from('article_saves').select('article_id').eq('user_id', currentUser.id),
+                                        supabase.from('comments').select('article_id').eq('user_id', currentUser.id),
+                                        supabase.from('paper_likes').select('paper_id').eq('user_id', currentUser.id),
+                                        supabase.from('paper_saves').select('paper_id').eq('user_id', currentUser.id),
+                                        supabase.from('paper_comments').select('paper_id').eq('user_id', currentUser.id),
+                                        supabase.from('book_likes').select('book_id').eq('user_id', currentUser.id),
+                                        supabase.from('book_saves').select('book_id').eq('user_id', currentUser.id),
+                                        supabase.from('book_comments').select('book_id').eq('user_id', currentUser.id),
+                                        supabase.from('insight_likes').select('insight_id').eq('user_id', currentUser.id),
+                                        supabase.from('insight_saves').select('insight_id').eq('user_id', currentUser.id),
+                                        supabase.from('insight_comments').select('insight_id').eq('user_id', currentUser.id)
+                                        ]);
+
+                                        const totalInteractions = (articleLikesRes.data?.length || 0) +
+                                        (articleSavesRes.data?.length || 0) + (articleCommentsRes.data?.length || 0) +
+                                        (paperLikesRes.data?.length || 0) +
+                                        (paperSavesRes.data?.length || 0) + (paperCommentsRes.data?.length || 0) +
+                                        (bookLikesRes.data?.length || 0) +
+                                        (bookSavesRes.data?.length || 0) + (bookCommentsRes.data?.length || 0) +
+                                        (insightLikesRes.data?.length || 0) +
+                                        (insightSavesRes.data?.length || 0) + (insightCommentsRes.data?.length || 0);
+
+                                        const {data: achievementsCountData } = await supabase
+                                        .from('user_achievements')
+                                        .select('id')
+                                        .eq('user_id', currentUser.id);
+                                        */
 
       /*
       if (isMountedRef.current) {
-        setLearningStats({
-          connectionsCount: connectionsCount || 0,
-          totalInteractions,
-          achievementsCount: achievementsCountData?.length || 0
-        });
+                                          setLearningStats({
+                                            connectionsCount: connectionsCount || 0,
+                                            totalInteractions,
+                                            achievementsCount: achievementsCountData?.length || 0
+                                          });
       }
-      */
+                                        */
 
       // Fetch profile passions data
       /*
-      const { data: passionsData, error: passionsError } = await supabase
-        .from('profile_passions')
-        .select('passionate_about, working_on')
-        .eq('user_id', currentUser.id)
-        .maybeSingle();
+      const {data: passionsData, error: passionsError } = await supabase
+                                        .from('profile_passions')
+                                        .select('passionate_about, working_on')
+                                        .eq('user_id', currentUser.id)
+                                        .maybeSingle();
 
-      if (passionsError && passionsError.code !== 'PGRST116') {
-        console.error('Error fetching profile passions:', passionsError);
-      } 
-      */
+                                        if (passionsError && passionsError.code !== 'PGRST116') {
+                                          console.error('Error fetching profile passions:', passionsError);
+      }
+                                        */
       /*
       else if (isMountedRef.current) {
-        setProfilePassions(passionsData);
+                                          setProfilePassions(passionsData);
       }
-      */
+                                        */
 
       // Fetch Follow Counts
       try {
@@ -399,9 +400,9 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
       /*
       if (isMountedRef.current) {
-        setProfileData(sectionMap);
+                                          setProfileData(sectionMap);
       }
-      */
+                                        */
 
     } catch (error) {
       console.error('Error fetching profile data:', error);
@@ -409,10 +410,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
     /*
     finally {
       if (isMountedRef.current) {
-        setLoading(false);
+                                          setLoading(false);
       }
     }
-    */
+                                        */
   }, [currentUser]);
 
   useEffect(() => {
@@ -428,10 +429,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   /*
   const handleEditCareerGoal = () => {
     if (isMountedRef.current) {
-      setShowCareerGoalModal(true);
+                                          setShowCareerGoalModal(true);
     }
   };
-  */
+                                        */
 
   const handleCareerGoalSave = (goalData: CareerGoal) => {
     if (isMountedRef.current) {
@@ -482,10 +483,10 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   /*
   const handleShowAllAchievements = () => {
     if (isMountedRef.current) {
-      setShowAllAchievements(true);
+                                          setShowAllAchievements(true);
     }
   };
-  */
+                                        */
 
 
   const handleIndustrySave = async (selectedIndustries: any[]) => {
@@ -572,12 +573,13 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
   return (
     <View style={styles.container}>
+      <GoldGlowBackground />
       <ScrollView
         style={styles.scrollContainer}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ backgroundColor: colors.background }}>
+        <View style={{ backgroundColor: 'transparent' }}>
           <SocialProfileHeader
             user={currentUser}
             fullName={fullName}

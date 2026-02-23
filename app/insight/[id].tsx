@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, Text } from 'react-native';
+import { View, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, Text, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -26,11 +26,13 @@ export default function InsightDetail() {
             id,
             content,
             created_at,
+            title,
+            image_url,
             likes_count,
             saves_count,
             comments_count,
             views_count,
-            author:profiles!author_id(full_name, avatar_url)
+            author:profiles!author_id(full_name, avatar_url, tagline)
           `)
           .eq('id', id)
           .single();
@@ -40,31 +42,32 @@ export default function InsightDetail() {
           return;
         }
 
-        if (data) {
-          const formattedInsight: Insight = {
-            id: data.id,
-            type: 'insight',
-            content: data.content,
-            created_at: data.created_at,
-            title: data.content ? data.content.substring(0, 50) + (data.content.length > 50 ? '...' : '') : '',
-            likes_count: data.likes_count || 0,
-            comments_count: data.comments_count || 0,
-            views_count: data.views_count || 0,
-            saves_count: data.saves_count || 0,
-            author: {
-              name: data.author?.full_name || 'User',
-              handle: '@' + (data.author?.full_name?.toLowerCase().replace(/\s+/g, '') || 'user'),
-              avatar: data.author?.avatar_url || '',
-              role: '',
-              company: '',
-              industry: '',
-              location: '',
-              currentProject: '',
-              projectTags: []
-            }
-          };
-          setInsight(formattedInsight);
-        }
+        const authorData = Array.isArray(data.author) ? data.author[0] : data.author;
+        const formattedInsight: Insight = {
+          id: data.id,
+          type: 'insight',
+          content: data.content,
+          created_at: data.created_at,
+          title: data.content ? data.content.substring(0, 50) + (data.content.length > 50 ? '...' : '') : '',
+          image_url: data.image_url,
+          likes_count: data.likes_count || 0,
+          comments_count: data.comments_count || 0,
+          views_count: data.views_count || 0,
+          saves_count: data.saves_count || 0,
+          author: {
+            name: authorData?.full_name || 'User',
+            handle: '@' + (authorData?.full_name?.toLowerCase().replace(/\s+/g, '') || 'user'),
+            avatar: authorData?.avatar_url || '',
+            tagline: authorData?.tagline || '',
+            role: '',
+            company: '',
+            industry: '',
+            location: '',
+            currentProject: '',
+            projectTags: []
+          }
+        };
+        setInsight(formattedInsight);
       } catch (error) {
         console.error('Error fetching insight:', error);
       } finally {
@@ -103,6 +106,9 @@ export default function InsightDetail() {
     },
     content: {
       flex: 1,
+    },
+    scrollContent: {
+      paddingVertical: 16,
     },
     loadingContainer: {
       flex: 1,
@@ -174,9 +180,9 @@ export default function InsightDetail() {
           <Text style={styles.headerTitle}>Insight</Text>
         </View>
       )}
-      <View style={styles.content}>
-        <InsightCard insight={insight} />
-      </View>
+      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+        <InsightCard insight={insight} isExpanded={true} />
+      </ScrollView>
     </SafeAreaView>
   );
 }

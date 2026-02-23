@@ -274,7 +274,7 @@ PODS:
     - ExpoModulesCore
   - ExpoSplashScreen (31.0.11):
     - ExpoModulesCore
-  - ExpoVideo (3.0.14):
+  - ExpoVideo (3.0.15):
     - ExpoModulesCore
   - ExpoWebBrowser (15.0.9):
     - ExpoModulesCore
@@ -2356,7 +2356,7 @@ PODS:
   - RNZipArchive/Core (7.0.2):
     - React-Core
     - SSZipArchive (~> 2.5.5)
-  - SDWebImage/Core (5.21.5)
+  - SDWebImage/Core (5.21.6)
   - SDWebImageWebPCoder (0.15.0):
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.17)
@@ -2754,7 +2754,7 @@ SPEC CHECKSUMS:
   ExpoModulesCore: e8ec7f8727caf51a49d495598303dd420ca994bf
   ExpoSecureStore: 9c6571fe3fcb045a671c4011c451546eaaab98fd
   ExpoSplashScreen: 268b2f128dc04284c21010540a6c4dd9f95003e3
-  ExpoVideo: 50f5b3f31c7b5fb5a8f61a0137e674096c54eb4f
+  ExpoVideo: d7d767743b54a4a301eda6460fcdf953d6163512
   ExpoWebBrowser: b973e1351fdcf5fec0c400997b1851f5a8219ec3
   EXStructuredHeaders: c951e77f2d936f88637421e9588c976da5827368
   EXUpdates: ef83273afc231a627b170358c90689ac30a4429d
@@ -2837,7 +2837,7 @@ SPEC CHECKSUMS:
   RNSVG: 31d6639663c249b7d5abc9728dde2041eb2a3c34
   RNWorklets: 76fce72926e28e304afb44f0da23b2d24f2c1fa0
   RNZipArchive: 4304f5100eab004eeb7349adc51997b3a28deb76
-  SDWebImage: e9c98383c7572d713c1a0d7dd2783b10599b9838
+  SDWebImage: 1bb6a1b84b6fe87b972a102bdc77dd589df33477
   SDWebImageWebPCoder: 0e06e365080397465cc73a7a9b472d8a3bd0f377
   SSZipArchive: c69881e8ac5521f0e622291387add5f60f30f3c4
   Yoga: 051f086b5ccf465ff2ed38a2cf5a558ae01aaaa1

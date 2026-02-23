@@ -4,6 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 import { UGCOptionsModal } from './UGCOptionsModal';
 import { UGCDetailModal } from './UGCDetailModal';
@@ -368,20 +369,26 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
 
             return (
                 <TouchableOpacity
-                    style={[styles.gridItem, styles.textPreviewItem, { borderColor: colors.background, backgroundColor: colors.card }]}
+                    style={[styles.gridItem, { borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' }]}
                     onPress={() => handleItemPress(item)}
                     onLongPress={() => handleItemLongPress(item)}
                     activeOpacity={0.7}
                 >
-                    <Text
-                        style={[styles.textPreviewContent, { color: colors.textSecondary }]}
-                        numberOfLines={3}
+                    <BlurView
+                        intensity={20}
+                        tint="systemMaterialDark"
+                        style={styles.textPreviewItem}
                     >
-                        {previewText}
-                    </Text>
-                    <View style={styles.textIconOverlay}>
-                        <Feather name="align-left" size={12} color={colors.primary} />
-                    </View>
+                        <Text
+                            style={[styles.textPreviewContent, { color: colors.textSecondary }]}
+                            numberOfLines={3}
+                        >
+                            {previewText}
+                        </Text>
+                        <View style={styles.textIconOverlay}>
+                            <Feather name="align-left" size={12} color={colors.primary} />
+                        </View>
+                    </BlurView>
                 </TouchableOpacity>
             );
         }
@@ -576,10 +583,10 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     textPreviewItem: {
+        flex: 1,
         padding: 8,
         justifyContent: 'center',
         alignItems: 'center',
-        overflow: 'hidden',
     },
     textPreviewContent: {
         fontSize: 10,

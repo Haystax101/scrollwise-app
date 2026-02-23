@@ -75,9 +75,10 @@ export const NetworkModal: React.FC<NetworkModalProps> = ({ visible, onClose, us
         // Since PublicProfileModal is likely triggered by a route or global state, we'll try to push content.
         // Actually, existing code uses `router.push` or local modals. 
         // Let's assume we push to a public profile page:
-        // Use replace to swap the current profile with the new one
-        // This prevents stacking multiple "User Profile" modals on top of each other
-        router.replace({
+        // We use push instead of replace because if opened from the main tab, 
+        // replacing would destroy the tab navigator root and break the back button.
+        // Stacking profiles is also standard mobile behavior (User A -> User B -> Back to User A).
+        router.push({
             pathname: '/user-profile',
             params: { userId: targetUserId }
         });

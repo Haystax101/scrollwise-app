@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { profileImageService } from '../../services/profileImageService';
+import { BlurView } from 'expo-blur';
 
 const { width } = Dimensions.get('window');
 
@@ -32,14 +33,17 @@ export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
 
         let height = 120; // Default (3rd)
         let color = '#CD7F32'; // Bronze
+        let gradientColors = ['rgba(205, 127, 50, 0.4)', 'rgba(205, 127, 50, 0.1)'] as const; // Bronze Gradient
         // removed unused label
 
         if (isFirst) {
             height = 160;
             color = colors.gold; // Use Theme Gold
+            gradientColors = ['rgba(255, 215, 0, 0.4)', 'rgba(255, 215, 0, 0.1)'] as const; // Gold Gradient
         } else if (isSecond) {
             height = 140;
             color = '#E0E0E0'; // Platinum/Silver
+            gradientColors = ['rgba(224, 224, 224, 0.4)', 'rgba(224, 224, 224, 0.1)'] as const; // Silver Gradient
         }
 
         const isCurrentUser = user.id === currentUserId;
@@ -74,10 +78,24 @@ export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
                 </View >
 
                 {/* The Pedestal - Glassmorphic with Info Inside */}
-                < View style={[styles.pedestal, { height: height, backgroundColor: 'rgba(255,255,255,0.05)' }]} >
+                <BlurView
+                    intensity={80}
+                    tint="systemMaterialDark"
+                    style={[styles.pedestal, { height: height }]}
+                >
                     <LinearGradient
-                        colors={[color + '30', 'transparent']} // Subtler fade
+                        colors={gradientColors}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 0.8 }}
                         style={StyleSheet.absoluteFill}
+                    />
+
+                    {/* Border highlight for top edge */}
+                    <LinearGradient
+                        colors={[color, 'transparent']}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1.5, opacity: 0.8 }}
                     />
 
                     {/* Info Inside Glass */}
@@ -94,7 +112,7 @@ export const Podium: React.FC<PodiumProps> = ({ users, currentUserId }) => {
                         )}
                         {isCurrentUser && <Text style={styles.youIndicator}>YOU</Text>}
                     </View>
-                </View >
+                </BlurView >
 
             </TouchableOpacity >
         );

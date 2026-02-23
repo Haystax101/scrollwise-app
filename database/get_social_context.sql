@@ -25,9 +25,9 @@ begin
   -- 1. Get friend IDs
   select array_agg(friend_id) into friend_ids
   from (
-    select friend_id from friendships where user_id = p_user_id
+    select addressee_id as friend_id from friendships where requester_id = p_user_id
     union
-    select user_id from friendships where friend_id = p_user_id
+    select requester_id as friend_id from friendships where addressee_id = p_user_id
   ) f;
 
   -- Return empty if no friends

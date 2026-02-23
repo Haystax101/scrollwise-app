@@ -234,7 +234,8 @@ export class FeedManager {
             *,
             profiles:author_id (
               full_name,
-              avatar_url
+              avatar_url,
+              tagline
             )
           `)
           // Filter out own insights for Community Feed
@@ -289,7 +290,29 @@ export class FeedManager {
 
       console.log(`🔧 FeedManager: Returning ${unviewedData.length} unique ${contentType} items after filtering`);
 
-      const feedItems = unviewedData.slice(0, count).map((item: any) =>
+      let finalData = unviewedData;
+
+      // If we don't have enough unviewed content, backfill with viewed content
+      if (unviewedData.length < count) {
+        const needed = count - unviewedData.length;
+        console.log(`🔧 FeedManager: Not enough new ${contentType} items. Need ${needed} more. Backfilling...`);
+
+        // Find items that WERE filtered out (viewed previously)
+        const viewedItems = data.filter((item: any) => {
+          const itemKey = `${contentType}-${item.id}`;
+          return viewedKeys.includes(itemKey) &&
+            !(contentType === 'insight' && this.blockedUserIds.has(item.author_id)) &&
+            !(contentType === 'insight' && item.author_id === this.userId);
+        });
+
+        // Shuffle the viewed items so the recycled feed doesn't feel stagnant
+        const shuffledViewedItems = this.shuffleArray(viewedItems);
+
+        // Append needed items
+        finalData = [...unviewedData, ...shuffledViewedItems.slice(0, needed)];
+      }
+
+      const feedItems = finalData.slice(0, count).map((item: any) =>
         this.convertToFeedItem(item, contentType)
       );
 
@@ -387,6 +410,7 @@ export class FeedManager {
             name: authorName,
             handle: `@${authorName.toLowerCase().replace(/\s+/g, '')}`,
             avatar: profile?.avatar_url || '',
+            tagline: profile?.tagline || '',
             role: '',
             company: '',
             industry: '',
@@ -451,7 +475,8 @@ export class FeedManager {
             *,
             profiles:author_id (
               full_name,
-              avatar_url
+              avatar_url,
+              tagline
             )
           `)
           .eq('id', contentId)

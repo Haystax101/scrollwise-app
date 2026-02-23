@@ -17,12 +17,13 @@ export const GoldGlowBackground: React.FC<GoldGlowBackgroundProps> = ({ style, o
 
     return (
         <LinearGradient
-            // Primary gold with low opacity fading to transparent
-            colors={[colors.primary + opacityHex, 'transparent']}
+            // Richer Sunset: Gold -> Orange -> Transparent
+            colors={['#FFD700' + '40', '#FFA500' + '20', 'transparent']}
             style={[StyleSheet.absoluteFill, style]}
+            locations={[0, 0.4, 1]}
             start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 0.35 }} // Fades out by top 35% of screen
-            pointerEvents="none" // Critical: Allow touches to pass through
+            end={{ x: 0.5, y: 0.6 }} // Extend further down for more pop
+            pointerEvents="none"
         />
     );
 };

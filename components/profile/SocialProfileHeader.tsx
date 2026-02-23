@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 interface SocialProfileHeaderProps {
     fullName: string;
@@ -85,7 +86,8 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
             {/* Top Row: Settings Only */}
             <View style={styles.topRow}>
                 <View />
-                <TouchableOpacity onPress={onSettings} style={[styles.iconButton, { backgroundColor: colors.card }]}>
+                <TouchableOpacity onPress={onSettings} style={styles.glassIconButton}>
+                    <BlurView intensity={30} tint="systemMaterialDark" style={[StyleSheet.absoluteFill, { borderRadius: 20 }]} />
                     <Feather name="settings" size={20} color={colors.text} />
                 </TouchableOpacity>
             </View>
@@ -98,7 +100,8 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
                             source={avatarUrl ? { uri: avatarUrl } : require('../../assets/profileIconDefault.png')}
                             style={[styles.avatar, { borderColor: colors.gold }]}
                         />
-                        <View style={[styles.editBadge, { backgroundColor: colors.card }]}>
+                        <View style={styles.glassEditBadge}>
+                            <BlurView intensity={50} tint="systemMaterialDark" style={[StyleSheet.absoluteFill, { borderRadius: 14 }]} />
                             <Feather name="camera" size={12} color={colors.text} />
                         </View>
                     </TouchableOpacity>
@@ -151,11 +154,13 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
                     {renderSocialLinks()}
 
                     <View style={styles.bioActionsRow}>
-                        <TouchableOpacity onPress={onEditIndustries}>
-                            <Text style={{ color: colors.gold, fontSize: 13, fontWeight: '600' }}>Edit Industries</Text>
+                        <TouchableOpacity onPress={onEditIndustries} style={styles.glassPillButton}>
+                            <BlurView intensity={30} tint="systemMaterialDark" style={[StyleSheet.absoluteFill, { borderRadius: 12 }]} />
+                            <Text style={{ color: colors.gold, fontSize: 12, fontWeight: '600', paddingHorizontal: 12, paddingVertical: 6 }}>Edit Industries</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity onPress={onShareProfile} style={styles.shareIconSmall}>
+                        <TouchableOpacity onPress={onShareProfile} style={styles.glassIconButtonSmall}>
+                            <BlurView intensity={30} tint="systemMaterialDark" style={[StyleSheet.absoluteFill, { borderRadius: 16 }]} />
                             <Feather name="share" size={16} color={colors.text} />
                         </TouchableOpacity>
                     </View>
@@ -165,25 +170,37 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
             {/* Stats Grid (Glass Cards) */}
             <View style={styles.statsGrid}>
                 {/* Level Card */}
-                <View style={[styles.glassStatCard, { backgroundColor: colors.glassBg, borderColor: colors.glassBorder }]}>
-                    <Text style={[styles.statValue, { color: colors.text }]}>{level}</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>LEVEL</Text>
+                <View style={styles.glassStatCardWrapper}>
+                    <BlurView intensity={40} tint="systemMaterialDark" style={styles.glassStatCardBlur}>
+                        <View style={{ borderColor: colors.glassBorder, borderWidth: 1, borderRadius: 16, flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={[styles.statValue, { color: colors.text }]}>{level}</Text>
+                            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>LEVEL</Text>
+                        </View>
+                    </BlurView>
                 </View>
 
                 {/* Voltz Card - Highlighted */}
-                <View style={[styles.glassStatCard, { backgroundColor: colors.glassBgStrong, borderColor: colors.gold }]}>
-                    <Text style={[styles.statValue, { color: colors.gold }]}>{voltz}</Text>
-                    <Text style={[styles.statLabel, { color: colors.gold }]}>VOLTZ</Text>
+                <View style={styles.glassStatCardWrapper}>
+                    <BlurView intensity={60} tint="systemMaterialDark" style={styles.glassStatCardBlur}>
+                        <View style={{ borderColor: colors.gold, borderWidth: 1, borderRadius: 16, flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 215, 0, 0.05)' }}>
+                            <Text style={[styles.statValue, { color: colors.gold }]}>{voltz}</Text>
+                            <Text style={[styles.statLabel, { color: colors.gold }]}>VOLTZ</Text>
+                        </View>
+                    </BlurView>
                 </View>
 
                 {/* Streak Card */}
-                <View style={[styles.glassStatCard, { backgroundColor: colors.glassBg, borderColor: colors.glassBorder }]}>
-                    <Text style={[styles.statValue, { color: colors.text }]}>{streak}</Text>
-                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>STREAK</Text>
+                <View style={styles.glassStatCardWrapper}>
+                    <BlurView intensity={40} tint="systemMaterialDark" style={styles.glassStatCardBlur}>
+                        <View style={{ borderColor: colors.glassBorder, borderWidth: 1, borderRadius: 16, flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={[styles.statValue, { color: colors.text }]}>{streak}</Text>
+                            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>STREAK</Text>
+                        </View>
+                    </BlurView>
                 </View>
             </View>
 
-            {/* Command Center Actions - Neon Button */}
+            {/* Command Center Actions - Glass Pill */}
             <View style={styles.actionRow}>
                 <TouchableOpacity
                     style={[
@@ -196,20 +213,23 @@ export const SocialProfileHeader: React.FC<SocialProfileHeaderProps> = ({
                     onPress={isClockedIn ? undefined : onClockIn}
                     disabled={isClockedIn}
                 >
+                    <BlurView intensity={80} tint="systemMaterialDark" style={StyleSheet.absoluteFill} />
                     <LinearGradient
                         colors={isClockedIn
                             ? [colors.card, colors.card] // Muted when done
-                            : [colors.glassBg, 'rgba(253, 178, 2, 0.15)'] // Subtle gold gradient when active
+                            : ['rgba(255,255,255,0.1)', 'rgba(253, 178, 2, 0.2)'] // Glassy gold gradient when active
                         }
                         style={StyleSheet.absoluteFill}
                     />
-                    <Feather name={isClockedIn ? "check-circle" : "clock"} size={20} color={isClockedIn ? colors.textSecondary : colors.gold} />
-                    <Text style={[
-                        styles.clockInText,
-                        { color: isClockedIn ? colors.textSecondary : colors.gold }
-                    ]}>
-                        {isClockedIn ? "Clocked In" : "Clock In"}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, zIndex: 10 }}>
+                        <Feather name={isClockedIn ? "check-circle" : "clock"} size={20} color={isClockedIn ? colors.textSecondary : colors.gold} />
+                        <Text style={[
+                            styles.clockInText,
+                            { color: isClockedIn ? colors.textSecondary : colors.gold }
+                        ]}>
+                            {isClockedIn ? "Clocked In" : "Clock In"}
+                        </Text>
+                    </View>
                 </TouchableOpacity>
             </View>
 
@@ -239,8 +259,18 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    glassIconButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
     // Updated Styles
-    // Updated Styles
+
     identitySection: {
         marginTop: 0,
         paddingHorizontal: 24,
@@ -270,7 +300,21 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
+
         borderColor: 'transparent',
+    },
+    glassEditBadge: {
+        position: 'absolute',
+        bottom: 4,
+        right: 4,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)'
     },
     bioContainer: {
         marginBottom: 16,
@@ -336,7 +380,18 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '600',
         textTransform: 'uppercase',
+
         letterSpacing: 1,
+    },
+    glassStatCardWrapper: {
+        flex: 1,
+        borderRadius: 16,
+        overflow: 'hidden',
+        height: 80, // Fixed height for consistency
+    },
+    glassStatCardBlur: {
+        flex: 1,
+        borderRadius: 16, // Matches wrapper
     },
 
     // Action Row
@@ -376,6 +431,22 @@ const styles = StyleSheet.create({
     },
     shareIconSmall: {
         padding: 4,
+    },
+    glassPillButton: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    glassIconButtonSmall: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     linksRow: {
         flexDirection: 'row',

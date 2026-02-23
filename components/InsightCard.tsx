@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions, Modal, ScrollView } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import type { Insight } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -32,9 +33,10 @@ interface Comment {
 
 interface InsightCardProps {
   insight: Insight;
+  isExpanded?: boolean;
 }
 
-const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
+const InsightCard: React.FC<InsightCardProps> = ({ insight, isExpanded = false }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
   const [showDetails, setShowDetails] = useState(false);
@@ -63,12 +65,29 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       width: '100%',
     },
     container: {
-      backgroundColor: colors.glassBg,
+      backgroundColor: 'transparent',
       borderRadius: 24,
       marginHorizontal: 16,
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: 'rgba(255,255,255,0.15)',
       overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.15,
+      shadowRadius: 16,
+      elevation: 8,
+    },
+    blurContainer: {
+      // flex: 1, // Removed to allow content to determine height
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    gradientBorder: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 1.5,
+      zIndex: 10,
     },
     flagButton: {
       position: 'absolute',
@@ -118,12 +137,11 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     timestampContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginLeft: 6,
+      marginLeft: 4,
     },
     timestamp: {
       fontSize: 12,
       color: colors.textSecondary,
-      marginLeft: 2,
     },
     moreButton: {
       padding: 4,
@@ -140,14 +158,16 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     },
     insightImage: {
       width: '100%',
-      aspectRatio: 1, // Square or 4:5 usually for insta, but let's do 16:9 or 4:3 if we can, or just width/height.
-      // If we don't know aspect ratio, width 100% height null with resizeMode covers.
-      // But standard feed usually has fixed aspect or variable.
-      // Let's try flexible height. 
-      height: 400, // Explicit height for now or aspect ratio?
-      // Let's use standard square for uniformity or 4:3
-      backgroundColor: colors.surface,
+      backgroundColor: isExpanded ? 'transparent' : colors.surface,
       marginBottom: 12,
+      // Feed: 4:3 (Shorter, crops vertically)
+      // Detail: 1:1 (Square)
+      aspectRatio: isExpanded ? 1 : 1.33,
+      // Use cover for both to fill space and avoid "padding", unless expanded needs full view.
+      // User complained about padding in expanded, so let's try cover there too, or maybe just remove bg.
+      // "Not everything fitting" -> padding wasting space.
+      resizeMode: isExpanded ? 'contain' : 'cover',
+      borderRadius: 16, // Soft corners
     },
     // Views section (above separator)
     viewsSection: {
@@ -183,6 +203,10 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 20,
+    },
+    flagButtonFooter: {
+      marginLeft: 12,
+      justifyContent: 'center',
     },
     superchargedButton: {
       backgroundColor: '#333',
@@ -696,14 +720,25 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
 
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes}m`;
+    if (diffInMinutes < 1) {
+      return 'Just now';
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes} minutes ago`;
     } else if (diffInMinutes < 1440) {
-      return `${Math.floor(diffInMinutes / 60)}h`;
+      const hours = Math.floor(diffInMinutes / 60);
+      return `${hours}h ago`;
     } else {
-      return `${Math.floor(diffInMinutes / 1440)}d`;
+      const days = Math.floor(diffInMinutes / 1440);
+      return `${days}d ago`;
     }
   };
+
+  // Debug logging for tagline issue
+  useEffect(() => {
+    if (!insight.author.tagline) {
+      console.log('🔍 InsightCard: Missing tagline for author:', insight.author.name, insight.author);
+    }
+  }, [insight.author]);
 
   const calculateLevel = (totalVoltz: number): number => {
     // Level thresholds: 100, 300, 600, 1000, 1500, 2100, 2800, 3600, etc.
@@ -773,178 +808,221 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
   return (
     <View style={dynamicStyles.wrapper}>
       <View style={dynamicStyles.container}>
-        <View style={dynamicStyles.flagButton}>
-          <ReportButton
-            contentId={insight.id}
-            contentType="insight"
-            authorId={authorId || (insight as any).author_id || ''}
-            authorName={insight.author.name}
-            size={20}
-          />
-        </View>
-        {/* User Header */}
-        <TouchableOpacity style={dynamicStyles.userHeader} onPress={() => authorId && handleUserPress(authorId)}>
-          <Image
-            source={
-              insight.author.avatar
-                ? { uri: profileImageService.getProfileImageUrl(insight.author.avatar) }
-                : defaultProfileImage
-            }
-            style={dynamicStyles.avatar}
-          />
-          <View style={dynamicStyles.userInfo}>
-            <View style={dynamicStyles.headerRow}>
-              <View style={dynamicStyles.textContainer}>
-                <Text style={dynamicStyles.name}>{insight.author.name}</Text>
-                {insight.author.tagline && (
-                  <Text style={dynamicStyles.tagline}>{insight.author.tagline}</Text>
-                )}
-                {insight.created_at && (
-                  <View style={dynamicStyles.timestampContainer}>
-                    <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
-                    <Text style={dynamicStyles.timestamp}>{formatTimestamp(insight.created_at)}</Text>
+        <BlurView intensity={80} tint="systemMaterialDark" style={dynamicStyles.blurContainer}>
+
+          {/* Flag button removed from top right */}
+          {/* User Header */}
+          <TouchableOpacity style={dynamicStyles.userHeader} onPress={() => authorId && handleUserPress(authorId)}>
+            <Image
+              source={
+                insight.author.avatar
+                  ? { uri: profileImageService.getProfileImageUrl(insight.author.avatar) }
+                  : defaultProfileImage
+              }
+              style={dynamicStyles.avatar}
+            />
+            <View style={dynamicStyles.userInfo}>
+              <View style={dynamicStyles.headerRow}>
+                <View style={dynamicStyles.textContainer}>
+                  <Text style={dynamicStyles.name}>{insight.author.name}</Text>
+                  {/* Tagline below name */}
+                  {insight.author.tagline && (
+                    <Text style={dynamicStyles.tagline} numberOfLines={1}>{insight.author.tagline}</Text>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {/* Timestamp moved to top right (replaces flag) */}
+            <View style={dynamicStyles.timestampContainer}>
+              <Ionicons name="time-outline" size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
+              <Text style={dynamicStyles.timestamp}>{formatTimestamp(insight.created_at || new Date().toISOString())}</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Content */}
+          <View style={{ marginBottom: 12 }}>
+            <View style={dynamicStyles.contentSection}>
+              <Text
+                style={dynamicStyles.contentText}
+                numberOfLines={isExpanded ? undefined : 3}
+                onTextLayout={(e) => {
+                  if (isExpanded) {
+                    setIsTextTruncated(false);
+                    return;
+                  }
+                  const { lines } = e.nativeEvent;
+                  // If we hit the limit (3) OR text is long, show read more
+                  setIsTextTruncated(lines.length >= 3 || insight.content.length > 200);
+                }}
+              >
+                {insight.content}
+              </Text>
+              {isTextTruncated && !isExpanded && (
+                <TouchableOpacity
+                  style={dynamicStyles.readMoreButton}
+                  onPress={() => {
+                    // Navigate to detail view
+                    const router = require('expo-router').router;
+                    router.push({
+                      pathname: `/insight/${insight.id}`,
+                      params: { showBackButton: 'true' }
+                    });
+                  }}
+                >
+                  <Text style={dynamicStyles.readMoreText}>Read more</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {(insight.image_url || insight.image) && (
+              <View>
+                <Image
+                  source={{ uri: insight.image_url || insight.image || '' }}
+                  style={dynamicStyles.insightImage}
+                />
+              </View>
+            )}
+          </View>
+
+          {/* Views Section - Above separator */}
+          {/* Views Section - Above separator - Only show if not expanded */}
+          {!isExpanded && (
+            <View style={dynamicStyles.viewsSection}>
+              <View style={dynamicStyles.topRow}>
+                <View style={dynamicStyles.viewsContainer}>
+                  <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
+                  <Text style={dynamicStyles.viewsText}>{formatNumber(views)} views</Text>
+                </View>
+
+                {/* Flag Button Moved Here */}
+                <View style={dynamicStyles.flagButtonFooter}>
+                  <ReportButton
+                    contentId={insight.id}
+                    contentType="insight"
+                    authorId={authorId || (insight as any).author_id || ''}
+                    authorName={insight.author.name}
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Engagement Bar */}
+          {/* Engagement Bar - Only show if not expanded */}
+          {!isExpanded && (
+            <View style={dynamicStyles.engagementSection}>
+              <View style={dynamicStyles.actionRow}>
+                <TouchableOpacity
+                  style={dynamicStyles.actionButton}
+                  onPress={toggleLike}
+                >
+                  <Ionicons
+                    name={hasLiked ? "heart" : "heart-outline"}
+                    size={20}
+                    color={hasLiked ? "#EF4444" : colors.text}
+                  />
+                  <Text style={[dynamicStyles.actionText, hasLiked && { color: '#EF4444' }]}>
+                    {formatNumber(likes)}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={dynamicStyles.actionButton} onPress={() => setCommentsOpen(true)}>
+                  <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
+                  <Text style={dynamicStyles.actionText}>{formatNumber(comments)}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={dynamicStyles.actionButton}
+                  onPress={toggleSave}
+                >
+                  <Ionicons
+                    name={hasSaved ? "bookmark" : "bookmark-outline"}
+                    size={20}
+                    color={hasSaved ? "#FDE047" : colors.text}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={dynamicStyles.actionButton}
+                  onPress={() => setShareSheetVisible(true)}
+                >
+                  <Ionicons name="paper-plane-outline" size={20} color={colors.text} />
+                </TouchableOpacity>
+
+                {isSupercharged && (
+                  <View style={[dynamicStyles.superchargeButton, dynamicStyles.superchargedButton]}>
+                    <Text style={dynamicStyles.superchargeText}>Supercharged</Text>
+                    <Ionicons name="flash" size={16} color="#FDE047" style={{ marginLeft: 4 }} />
                   </View>
                 )}
               </View>
             </View>
-          </View>
-        </TouchableOpacity>
-
-        {/* Content */}
-        <View style={{ marginBottom: 12 }}>
-          {(insight.image_url || insight.image) && (
-            <Image
-              source={{ uri: insight.image_url || insight.image || '' }}
-              style={{ width: '100%', height: 300, marginBottom: 12, borderRadius: 12 }}
-              resizeMode="cover"
-            />
           )}
 
-          <View style={dynamicStyles.contentSection}>
-            <Text
-              style={dynamicStyles.contentText}
-              numberOfLines={14}
-              onTextLayout={(e) => {
-                const { lines } = e.nativeEvent;
-                setIsTextTruncated(lines.length >= 14);
-              }}
-            >
-              {insight.content}
-            </Text>
-            {isTextTruncated && (
-              <TouchableOpacity
-                style={dynamicStyles.readMoreButton}
-                onPress={() => setShowReadMoreModal(true)}
-              >
-                <Text style={dynamicStyles.readMoreText}>Read More</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        {/* Views Section - Above separator */}
-        <View style={dynamicStyles.viewsSection}>
-          <View style={dynamicStyles.viewsContainer}>
-            <Ionicons name="eye-outline" size={16} color={colors.textSecondary} />
-            <Text style={dynamicStyles.viewsText}>{formatNumber(views)} views</Text>
-          </View>
-        </View>
-
-        {/* Engagement Bar */}
-        <View style={dynamicStyles.engagementSection}>
-          <View style={dynamicStyles.actionRow}>
-            <TouchableOpacity
-              style={dynamicStyles.actionButton}
-              onPress={toggleLike}
-            >
-              <Ionicons
-                name={hasLiked ? "heart" : "heart-outline"}
-                size={20}
-                color={hasLiked ? "#FDE047" : colors.text}
-              />
-              <Text style={[dynamicStyles.actionText, hasLiked && { color: '#FDE047' }]}>
-                {formatNumber(likes)}
+          {/* Friend Likes - Only show if not expanded */}
+          {!isExpanded && insight.friend_likes && insight.friend_likes.length > 0 && (
+            <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+              <Text style={{ fontSize: 13, color: colors.text }}>
+                Liked by <Text style={{ fontWeight: 'bold' }}>{insight.friend_likes[0].name}</Text>
+                {likes > 1 && (
+                  <Text> and {formatNumber(likes - 1)} others</Text>
+                )}
               </Text>
-            </TouchableOpacity>
+            </View>
+          )}
 
-            <TouchableOpacity style={dynamicStyles.actionButton} onPress={() => setCommentsOpen(true)}>
-              <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
-              <Text style={dynamicStyles.actionText}>{formatNumber(comments)}</Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={dynamicStyles.actionButton}
-              onPress={toggleSave}
-            >
-              <Ionicons
-                name={hasSaved ? "bookmark" : "bookmark-outline"}
-                size={20}
-                color={hasSaved ? "#FDE047" : colors.text}
-              />
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={dynamicStyles.actionButton}
-              onPress={() => setShareSheetVisible(true)}
-            >
-              <Ionicons name="paper-plane-outline" size={20} color={colors.text} />
-            </TouchableOpacity>
-
-            {isSupercharged && (
-              <View style={[dynamicStyles.superchargeButton, dynamicStyles.superchargedButton]}>
-                <Text style={dynamicStyles.superchargeText}>Supercharged</Text>
-                <Ionicons name="flash" size={16} color="#FDE047" style={{ marginLeft: 4 }} />
+          {/* Expandable profile details */}
+          {showDetails && (
+            <View style={dynamicStyles.expandedDetails}>
+              <View style={dynamicStyles.detailRow}>
+                {insight.author.industry && (
+                  <View style={dynamicStyles.detailItem}>
+                    <Text style={dynamicStyles.detailLabel}>Industry</Text>
+                    <Text style={dynamicStyles.detailValue}>{insight.author.industry}</Text>
+                  </View>
+                )}
+                {insight.author.company && (
+                  <View style={dynamicStyles.detailItem}>
+                    <Text style={dynamicStyles.detailLabel}>Company</Text>
+                    <Text style={dynamicStyles.detailValue}>{insight.author.company}</Text>
+                  </View>
+                )}
               </View>
-            )}
-          </View>
-        </View>
-
-
-
-        {/* Expandable profile details */}
-        {showDetails && (
-          <View style={dynamicStyles.expandedDetails}>
-            <View style={dynamicStyles.detailRow}>
-              {insight.author.industry && (
-                <View style={dynamicStyles.detailItem}>
-                  <Text style={dynamicStyles.detailLabel}>Industry</Text>
-                  <Text style={dynamicStyles.detailValue}>{insight.author.industry}</Text>
-                </View>
-              )}
-              {insight.author.company && (
-                <View style={dynamicStyles.detailItem}>
-                  <Text style={dynamicStyles.detailLabel}>Company</Text>
-                  <Text style={dynamicStyles.detailValue}>{insight.author.company}</Text>
-                </View>
-              )}
+              <View style={dynamicStyles.detailRow}>
+                {insight.author.role && (
+                  <View style={dynamicStyles.detailItem}>
+                    <Text style={dynamicStyles.detailLabel}>Role</Text>
+                    <Text style={dynamicStyles.detailValue}>{insight.author.role}</Text>
+                  </View>
+                )}
+                {insight.author.location && (
+                  <View style={dynamicStyles.detailItem}>
+                    <Text style={dynamicStyles.detailLabel}>Location</Text>
+                    <Text style={dynamicStyles.detailValue}>{insight.author.location}</Text>
+                  </View>
+                )}
+              </View>
             </View>
-            <View style={dynamicStyles.detailRow}>
-              {insight.author.role && (
-                <View style={dynamicStyles.detailItem}>
-                  <Text style={dynamicStyles.detailLabel}>Role</Text>
-                  <Text style={dynamicStyles.detailValue}>{insight.author.role}</Text>
-                </View>
-              )}
-              {insight.author.location && (
-                <View style={dynamicStyles.detailItem}>
-                  <Text style={dynamicStyles.detailLabel}>Location</Text>
-                  <Text style={dynamicStyles.detailValue}>{insight.author.location}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
+          )}
+        </BlurView>
       </View>
 
       {/* User Detail Modal */}
-      {selectedUserId && (
-        <UserDetailModal
-          visible={userModalVisible}
-          onClose={handleCloseUserModal}
-          userId={selectedUserId}
-          currentUserId={user?.id}
-        />
-      )}
+      {
+        selectedUserId && (
+          <UserDetailModal
+            visible={userModalVisible}
+            onClose={handleCloseUserModal}
+            userId={selectedUserId}
+            currentUserId={user?.id}
+          />
+        )
+      }
 
       <CommentsModal
         videoId={insight.id}
@@ -1050,7 +1128,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
           }
         }}
       />
-    </View>
+    </View >
   );
 };
 
