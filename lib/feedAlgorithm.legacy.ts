@@ -75,7 +75,7 @@ export class FeedAlgorithm {
    */
   nuclearReset(): void {
     try {
-      console.log('🔥 NUCLEAR RESET: Clearing all tracking and cache data');
+      console.log('NUCLEAR RESET: Clearing all tracking and cache data');
       
       // Clear all in-memory state
       this.viewedIds.clear();
@@ -90,9 +90,9 @@ export class FeedAlgorithm {
       storage.delete(viewedKey);
       storage.delete(cacheKey);
       
-      console.log('🔥 NUCLEAR RESET: Complete - all data cleared');
+      console.log('NUCLEAR RESET: Complete - all data cleared');
     } catch (error) {
-      console.error('🔥 NUCLEAR RESET: Error during reset:', error);
+      console.error('NUCLEAR RESET: Error during reset:', error);
     }
   }
 

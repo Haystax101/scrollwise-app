@@ -66,9 +66,9 @@ export class NotificationService {
         lightColor: '#FF6B9D',
       });
 
-      console.log('✅ Android notification channels created');
+      console.log('Android notification channels created');
     } catch (error) {
-      console.error('❌ Error setting up Android channels:', error);
+      console.error('Error setting up Android channels:', error);
     }
   }
 
@@ -330,7 +330,7 @@ export class NotificationService {
     // Add push token refresh listener (handles token rollovers)
     if (callbacks.onPushTokenRefresh) {
       const tokenSubscription = Notifications.addPushTokenListener((event) => {
-        console.log('🔄 Push token refreshed:', event.data);
+        console.log('Push token refreshed:', event.data);
         callbacks.onPushTokenRefresh?.(event.data);
       });
       subscriptions.push(tokenSubscription);

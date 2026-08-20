@@ -40,7 +40,7 @@ export const UGCDetailModal: React.FC<UGCDetailModalProps> = ({
 
     React.useEffect(() => {
         if (item) {
-            console.log('🖼️ UGCDetailModal mounting with item:', {
+            console.log('UGCDetailModal mounting with item:', {
                 id: item.id,
                 has_image: !!item.image_url,
                 has_video: !!item.video_url

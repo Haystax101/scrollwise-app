@@ -54,7 +54,7 @@ export function useVoltzStats(userId: string | undefined): UseVoltzStatsResult {
 
         // Check if user leveled up (compare with previous level)
         if (previousLevel !== null && statsData.level > previousLevel) {
-          console.log('🎉 Level up detected!', previousLevel, '→', statsData.level);
+          console.log('Level up detected!', previousLevel, '→', statsData.level);
 
           // Trigger haptic feedback for level up
           try {
@@ -113,7 +113,7 @@ export function useVoltzStats(userId: string | undefined): UseVoltzStatsResult {
 
             // If level changed, trigger haptic feedback immediately
             if (levelChanged && newStats.level > oldStats.level) {
-              console.log('🎉 Level up detected in real-time!', oldStats.level, '→', newStats.level);
+              console.log('Level up detected in real-time!', oldStats.level, '→', newStats.level);
 
               try {
                 await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

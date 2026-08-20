@@ -206,10 +206,10 @@ serve(async (req: Request) => {
     let expoResponse;
     retryCount = 0;
 
-    console.log(`📤 Sending ${messages.length} push notification(s) to Expo...`);
-    console.log(`📱 Tokens: ${tokens.map(t => t.push_token.substring(0, 20) + '...').join(', ')}`);
-    console.log(`🔔 Notification: "${notificationTitle}" - "${notificationBody}"`);
-    console.log(`⏰ Priority: ${isHighPriority ? 'high' : 'default'}, Type: ${payload.type}`);
+    console.log(`Sending ${messages.length} push notification(s) to Expo...`);
+    console.log(`Tokens: ${tokens.map(t => t.push_token.substring(0, 20) + '...').join(', ')}`);
+    console.log(`Notification: "${notificationTitle}"- "${notificationBody}"`);
+    console.log(`⏰ Priority: ${isHighPriority ? 'high': 'default'}, Type: ${payload.type}`);
 
     while (retryCount < maxRetries) {
       try {
@@ -226,16 +226,16 @@ serve(async (req: Request) => {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`❌ Expo API error ${response.status}: ${errorText}`);
+          console.error(`Expo API error ${response.status}: ${errorText}`);
           throw new Error(`Expo API returned ${response.status}: ${response.statusText}`);
         }
 
         expoResponse = await response.json();
-        console.log(`✅ Expo API response:`, JSON.stringify(expoResponse, null, 2));
+        console.log(`Expo API response:`, JSON.stringify(expoResponse, null, 2));
         break;
       } catch (error) {
         retryCount++;
-        console.error(`⚠️ Attempt ${retryCount}/${maxRetries} failed:`, error);
+        console.error(`Attempt ${retryCount}/${maxRetries} failed:`, error);
         if (retryCount >= maxRetries) throw error;
         await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
       }
@@ -244,21 +244,21 @@ serve(async (req: Request) => {
     // Process Expo response and handle token cleanup
     const failedTokens: string[] = [];
     if (Array.isArray(expoResponse.data)) {
-      console.log(`📊 Processing ${expoResponse.data.length} ticket(s)...`);
+      console.log(`Processing ${expoResponse.data.length} ticket(s)...`);
       for (let i = 0; i < expoResponse.data.length; i++) {
         const result = expoResponse.data[i];
         console.log(`Ticket ${i + 1}: status=${result.status}, id=${result.id || 'N/A'}, message=${result.message || 'N/A'}`);
 
         if (result.status === "error") {
-          console.error(`❌ Ticket ${i + 1} failed:`, result.details || result.message);
+          console.error(`Ticket ${i + 1} failed:`, result.details || result.message);
           const token = tokens[i];
           if (result.details?.error === "DeviceNotRegistered" ||
               result.details?.error === "InvalidCredentials") {
-            console.log(`🗑️ Marking token as inactive: ${token.push_token.substring(0, 20)}...`);
+            console.log(`Marking token as inactive: ${token.push_token.substring(0, 20)}...`);
             failedTokens.push(token.push_token);
           }
         } else if (result.status === "ok") {
-          console.log(`✅ Ticket ${i + 1} accepted by Expo (will be delivered to APNs/FCM)`);
+          console.log(`Ticket ${i + 1} accepted by Expo (will be delivered to APNs/FCM)`);
         }
       }
     }
@@ -285,14 +285,14 @@ serve(async (req: Request) => {
         .map((result: any) => result.id);
 
       if (tickets.length > 0) {
-        console.log(`📋 Generated ${tickets.length} push ticket(s) for notification ${payload.notification_id}`);
-        console.log(`🎫 Ticket IDs: ${tickets.join(", ")}`);
+        console.log(`Generated ${tickets.length} push ticket(s) for notification ${payload.notification_id}`);
+        console.log(`Ticket IDs: ${tickets.join(", ")}`);
 
         // Wait a moment then check receipts
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         try {
-          console.log(`🔍 Checking receipts for tickets...`);
+          console.log(`Checking receipts for tickets...`);
           const receiptResponse = await fetch("https://exp.host/--/api/v2/push/getReceipts", {
             method: "POST",
             headers: {
@@ -305,28 +305,28 @@ serve(async (req: Request) => {
 
           if (receiptResponse.ok) {
             const receipts = await receiptResponse.json();
-            console.log(`📨 Push Receipts:`, JSON.stringify(receipts, null, 2));
+            console.log(`Push Receipts:`, JSON.stringify(receipts, null, 2));
 
             // Check each receipt for errors
             for (const ticketId of tickets) {
               const receipt = receipts.data?.[ticketId];
               if (receipt) {
                 if (receipt.status === "ok") {
-                  console.log(`✅ Receipt ${ticketId}: Successfully delivered to APNs/FCM`);
+                  console.log(`Receipt ${ticketId}: Successfully delivered to APNs/FCM`);
                 } else if (receipt.status === "error") {
-                  console.error(`❌ Receipt ${ticketId}: DELIVERY FAILED`);
-                  console.error(`   Error: ${receipt.message}`);
-                  console.error(`   Details:`, JSON.stringify(receipt.details, null, 2));
+                  console.error(`Receipt ${ticketId}: DELIVERY FAILED`);
+                  console.error(`Error: ${receipt.message}`);
+                  console.error(`Details:`, JSON.stringify(receipt.details, null, 2));
                 }
               } else {
                 console.log(`⏳ Receipt ${ticketId}: Not yet available (check again in a few minutes)`);
               }
             }
           } else {
-            console.error(`❌ Failed to fetch receipts: ${receiptResponse.status}`);
+            console.error(`Failed to fetch receipts: ${receiptResponse.status}`);
           }
         } catch (receiptError) {
-          console.error(`⚠️ Error checking receipts:`, receiptError);
+          console.error(`Error checking receipts:`, receiptError);
         }
       }
     }

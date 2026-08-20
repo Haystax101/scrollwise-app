@@ -72,3 +72,13 @@ ios/build/
 
 # TypeScript
 *.tsbuildinfo
+# Local Expo state
+.expo/
+.expo-shared/
+
+# OS / editor
+.DS_Store
+
+# Build output
+dist/
+web-build/

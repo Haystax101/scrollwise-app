@@ -1,3 +1,12 @@
+/**
+ * Client-side search API.
+ *
+ * Wraps the search edge functions and the narrower filtered queries behind one
+ * typed surface, so screens never talk to Supabase directly and the retrieval
+ * strategy can change without touching the UI. hybridSearch is the default path;
+ * the searchBy* helpers exist for cases where the filter is already known and
+ * ranking is unnecessary.
+ */
 import { supabase } from './supabase';
 
 export interface SearchResult {

@@ -17,27 +17,27 @@ export class DeepLinkHandler {
    */
   static parseDeepLink(url: string): DeepLinkData | null {
     try {
-      console.log('🔗 DeepLink: Parsing URL:', url);
+      console.log('DeepLink: Parsing URL:', url);
 
       // Handle Universal Links (https://learningsupercharged.com/shared/...)
       if (url.includes('learningsupercharged.com')) {
-        console.log('🔗 DeepLink: Processing Universal Link');
+        console.log('DeepLink: Processing Universal Link');
         return this.parseUniversalLink(url);
       }
 
       // Handle custom scheme URLs manually for better control
       if (url.startsWith('supercharged:')) {
-        console.log('🔗 DeepLink: Processing custom scheme URL manually');
+        console.log('DeepLink: Processing custom scheme URL manually');
         return this.parseCustomSchemeUrl(url);
       }
 
       const parsed = Linking.parse(url);
-      console.log('🔗 DeepLink: Expo-linking parsed result:', JSON.stringify(parsed, null, 2));
+      console.log('DeepLink: Expo-linking parsed result:', JSON.stringify(parsed, null, 2));
 
       // Handle custom scheme (supercharged://...)
       if (parsed.path) {
-        console.log('🔗 DeepLink: Parsed path:', parsed.path);
-        console.log('🔗 DeepLink: Parsed hostname:', parsed.hostname);
+        console.log('DeepLink: Parsed path:', parsed.path);
+        console.log('DeepLink: Parsed hostname:', parsed.hostname);
 
         // Pattern: supercharged://content/article/123?ref=abc or supercharged:///content/article/123
         let pathToCheck = parsed.path;
@@ -45,19 +45,19 @@ export class DeepLinkHandler {
         // Handle triple slash case where hostname might be included
         if (parsed.hostname && parsed.hostname.startsWith('content')) {
           pathToCheck = parsed.hostname + (parsed.path ? parsed.path : '');
-          console.log('🔗 DeepLink: Using combined hostname+path:', pathToCheck);
+          console.log('DeepLink: Using combined hostname+path:', pathToCheck);
         }
 
         if (pathToCheck.startsWith('content/')) {
           const pathParts = pathToCheck.split('/');
-          console.log('🔗 DeepLink: Path parts:', pathParts);
+          console.log('DeepLink: Path parts:', pathParts);
 
           if (pathParts.length >= 3) {
             const contentType = pathParts[1] as 'article' | 'paper' | 'book' | 'insight';
             const contentId = pathParts[2];
             const referralCode = parsed.queryParams?.ref as string;
 
-            console.log('🔗 DeepLink: Extracted content:', { contentType, contentId, referralCode });
+            console.log('DeepLink: Extracted content:', { contentType, contentId, referralCode });
 
             return {
               contentType,
@@ -77,11 +77,11 @@ export class DeepLinkHandler {
         }
       }
 
-      console.warn('🔗 DeepLink: Unrecognized URL pattern:', url);
+      console.warn('DeepLink: Unrecognized URL pattern:', url);
       return null;
 
     } catch (error) {
-      console.error('🔗 DeepLink: Error parsing URL:', error);
+      console.error('DeepLink: Error parsing URL:', error);
       return null;
     }
   }
@@ -91,12 +91,12 @@ export class DeepLinkHandler {
    */
   private static parseCustomSchemeUrl(url: string): DeepLinkData | null {
     try {
-      console.log('🔗 DeepLink: Manual parsing of custom scheme URL:', url);
+      console.log('DeepLink: Manual parsing of custom scheme URL:', url);
 
       // Remove scheme and normalize slashes
       // Handle: supercharged://content/paper/902 or supercharged:///content/paper/902
       let urlPath = url.replace(/^supercharged:\/*/i, '');
-      console.log('🔗 DeepLink: URL path after scheme removal:', urlPath);
+      console.log('DeepLink: URL path after scheme removal:', urlPath);
 
       // Remove query parameters from path for proper parsing
       const queryIndex = urlPath.indexOf('?');
@@ -106,7 +106,7 @@ export class DeepLinkHandler {
 
       // Split by / and filter out empty parts
       const pathParts = urlPath.split('/').filter(part => part.length > 0);
-      console.log('🔗 DeepLink: Path parts:', pathParts);
+      console.log('DeepLink: Path parts:', pathParts);
 
       // Check for content pattern: ['content', 'paper', '902']
       if (pathParts.length >= 3 && pathParts[0] === 'content') {
@@ -122,7 +122,7 @@ export class DeepLinkHandler {
           referralCode = urlParams.get('ref') || undefined;
         }
 
-        console.log('🔗 DeepLink: Manual parse result:', { contentType, contentId, referralCode });
+        console.log('DeepLink: Manual parse result:', { contentType, contentId, referralCode });
 
         return {
           contentType,
@@ -134,7 +134,7 @@ export class DeepLinkHandler {
       // Check for profile pattern: ['profile', '123']
       if (pathParts.length >= 2 && pathParts[0] === 'profile') {
         const userId = pathParts[1];
-        console.log('🔗 DeepLink: Extracted profile ID:', userId);
+        console.log('DeepLink: Extracted profile ID:', userId);
         return {
           screen: 'profile',
           contentId: userId
@@ -158,11 +158,11 @@ export class DeepLinkHandler {
         }
       }
 
-      console.warn('🔗 DeepLink: Custom scheme URL does not match expected patterns');
+      console.warn('DeepLink: Custom scheme URL does not match expected patterns');
       return null;
 
     } catch (error) {
-      console.error('🔗 DeepLink: Error in manual custom scheme parsing:', error);
+      console.error('DeepLink: Error in manual custom scheme parsing:', error);
       return null;
     }
   }
@@ -175,7 +175,7 @@ export class DeepLinkHandler {
       const urlObj = new URL(url);
       const searchParams = urlObj.searchParams;
 
-      // Extract content parameter (format: "article:123" or "paper:456")
+      // Extract content parameter (format: "article:123"or "paper:456")
       const content = searchParams.get('content');
       const referralCode = searchParams.get('ref');
 
@@ -200,7 +200,7 @@ export class DeepLinkHandler {
 
       return null;
     } catch (error) {
-      console.error('🔗 DeepLink: Error parsing Universal Link:', error);
+      console.error('DeepLink: Error parsing Universal Link:', error);
       return null;
     }
   }
@@ -210,15 +210,15 @@ export class DeepLinkHandler {
    */
   static async handleDeepLink(url: string): Promise<void> {
     try {
-      console.log('🔗 DeepLink: Starting to handle URL:', url);
+      console.log('DeepLink: Starting to handle URL:', url);
 
       const linkData = this.parseDeepLink(url);
       if (!linkData) {
-        console.warn('🔗 DeepLink: Failed to parse URL, no link data extracted');
+        console.warn('DeepLink: Failed to parse URL, no link data extracted');
         return;
       }
 
-      console.log('🔗 DeepLink: Successfully processed link data:', JSON.stringify(linkData, null, 2));
+      console.log('DeepLink: Successfully processed link data:', JSON.stringify(linkData, null, 2));
 
       // Store the deep link data for processing after app is ready
       const pendingData = {
@@ -228,17 +228,17 @@ export class DeepLinkHandler {
       };
 
       await AsyncStorage.setItem('pending_deep_link', JSON.stringify(pendingData));
-      console.log('🔗 DeepLink: Stored pending deep link data:', pendingData);
+      console.log('DeepLink: Stored pending deep link data:', pendingData);
 
       // Process referral if present
       if (linkData.referralCode) {
-        console.log('🔗 DeepLink: Processing referral code:', linkData.referralCode);
+        console.log('DeepLink: Processing referral code:', linkData.referralCode);
         await this.processReferral(linkData.referralCode);
       }
 
     } catch (error) {
-      console.error('🔗 DeepLink: Error handling deep link:', error);
-      console.error('🔗 DeepLink: Error details:', {
+      console.error('DeepLink: Error handling deep link:', error);
+      console.error('DeepLink: Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
       });
@@ -250,52 +250,52 @@ export class DeepLinkHandler {
    */
   static async processPendingDeepLink(router: any): Promise<void> {
     try {
-      console.log('🔗 DeepLink: Checking for pending deep links...');
+      console.log('DeepLink: Checking for pending deep links...');
 
       const pendingLinkString = await AsyncStorage.getItem('pending_deep_link');
       if (!pendingLinkString) {
-        console.log('🔗 DeepLink: No pending deep links found');
+        console.log('DeepLink: No pending deep links found');
         return;
       }
 
       const linkData = JSON.parse(pendingLinkString);
-      console.log('🔗 DeepLink: Found pending link data:', JSON.stringify(linkData, null, 2));
+      console.log('DeepLink: Found pending link data:', JSON.stringify(linkData, null, 2));
 
       // Check if link is not too old (5 minutes max)
       const maxAge = 5 * 60 * 1000; // 5 minutes
       const age = Date.now() - linkData.timestamp;
       if (age > maxAge) {
-        console.log(`🔗 DeepLink: Pending link too old (${Math.round(age / 1000)}s), removing`);
+        console.log(`DeepLink: Pending link too old (${Math.round(age / 1000)}s), removing`);
         await AsyncStorage.removeItem('pending_deep_link');
         return;
       }
 
-      console.log(`🔗 DeepLink: Processing pending link (age: ${Math.round(age / 1000)}s):`, linkData);
+      console.log(`DeepLink: Processing pending link (age: ${Math.round(age / 1000)}s):`, linkData);
 
       // Navigate based on link type
       if (linkData.contentType && linkData.contentId) {
-        console.log(`🔗 DeepLink: Navigating to content: ${linkData.contentType} ${linkData.contentId}`);
+        console.log(`DeepLink: Navigating to content: ${linkData.contentType} ${linkData.contentId}`);
         await this.navigateToContent(router, linkData.contentType, linkData.contentId);
       } else if (linkData.screen === 'invite') {
-        console.log('🔗 DeepLink: Navigating to friends/invite screen');
+        console.log('DeepLink: Navigating to friends/invite screen');
         router.push('/friends');
       } else if (linkData.screen === 'profile' && linkData.contentId) {
-        console.log(`🔗 DeepLink: Navigating to profile: ${linkData.contentId}`);
+        console.log(`DeepLink: Navigating to profile: ${linkData.contentId}`);
         router.push({
           pathname: '/user-profile',
           params: { userId: linkData.contentId }
         });
       } else {
-        console.warn('🔗 DeepLink: Unhandled link data structure:', linkData);
+        console.warn('DeepLink: Unhandled link data structure:', linkData);
       }
 
       // Clear the pending link
-      console.log('🔗 DeepLink: Clearing pending deep link');
+      console.log('DeepLink: Clearing pending deep link');
       await AsyncStorage.removeItem('pending_deep_link');
 
     } catch (error) {
-      console.error('🔗 DeepLink: Error processing pending deep link:', error);
-      console.error('🔗 DeepLink: Error details:', {
+      console.error('DeepLink: Error processing pending deep link:', error);
+      console.error('DeepLink: Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
       });
@@ -303,9 +303,9 @@ export class DeepLinkHandler {
       // Clear the pending link on error to prevent repeated failures
       try {
         await AsyncStorage.removeItem('pending_deep_link');
-        console.log('🔗 DeepLink: Cleared pending link due to processing error');
+        console.log('DeepLink: Cleared pending link due to processing error');
       } catch (clearError) {
-        console.error('🔗 DeepLink: Failed to clear pending link:', clearError);
+        console.error('DeepLink: Failed to clear pending link:', clearError);
       }
     }
   }
@@ -319,7 +319,7 @@ export class DeepLinkHandler {
     contentId: string
   ): Promise<void> {
     try {
-      console.log(`🔗 DeepLink: Starting navigation to ${contentType} ${contentId}`);
+      console.log(`DeepLink: Starting navigation to ${contentType} ${contentId}`);
 
       const navigationParams = {
         pathname: '/feed',
@@ -331,16 +331,16 @@ export class DeepLinkHandler {
         }
       };
 
-      console.log('🔗 DeepLink: Navigation params:', JSON.stringify(navigationParams, null, 2));
+      console.log('DeepLink: Navigation params:', JSON.stringify(navigationParams, null, 2));
 
       // Try direct navigation first
       await router.push(navigationParams);
 
-      console.log(`🔗 DeepLink: Successfully navigated to feed with ${contentType} ${contentId}`);
+      console.log(`DeepLink: Successfully navigated to feed with ${contentType} ${contentId}`);
 
     } catch (error) {
-      console.error('🔗 DeepLink: Error navigating to content:', error);
-      console.error('🔗 DeepLink: Navigation error details:', {
+      console.error('DeepLink: Error navigating to content:', error);
+      console.error('DeepLink: Navigation error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
         contentType,
@@ -348,11 +348,11 @@ export class DeepLinkHandler {
       });
 
       try {
-        console.log('🔗 DeepLink: Attempting fallback navigation to feed');
+        console.log('DeepLink: Attempting fallback navigation to feed');
         await router.push('/feed');
-        console.log('🔗 DeepLink: Fallback navigation successful');
+        console.log('DeepLink: Fallback navigation successful');
       } catch (fallbackError) {
-        console.error('🔗 DeepLink: Fallback navigation also failed:', fallbackError);
+        console.error('DeepLink: Fallback navigation also failed:', fallbackError);
       }
     }
   }
@@ -369,7 +369,7 @@ export class DeepLinkHandler {
           referralCode,
           timestamp: Date.now()
         }));
-        console.log('🔗 DeepLink: Stored referral for after login:', referralCode);
+        console.log('DeepLink: Stored referral for after login:', referralCode);
         return;
       }
 
@@ -381,7 +381,7 @@ export class DeepLinkHandler {
         .single();
 
       if (referrer) {
-        console.log('🔗 DeepLink: Found referrer:', referrer.full_name);
+        console.log('DeepLink: Found referrer:', referrer.full_name);
 
         // Update the referral record to mark as opened
         await supabase
@@ -394,11 +394,11 @@ export class DeepLinkHandler {
           .eq('referral_code', referralCode);
 
         // You could show a notification about the referrer here
-        console.log(`🔗 DeepLink: Processed referral from ${referrer.full_name}`);
+        console.log(`DeepLink: Processed referral from ${referrer.full_name}`);
       }
 
     } catch (error) {
-      console.error('🔗 DeepLink: Error processing referral:', error);
+      console.error('DeepLink: Error processing referral:', error);
     }
   }
 
@@ -419,7 +419,7 @@ export class DeepLinkHandler {
       await AsyncStorage.removeItem('pending_referral');
 
     } catch (error) {
-      console.error('🔗 DeepLink: Error processing pending referral:', error);
+      console.error('DeepLink: Error processing pending referral:', error);
     }
   }
 }
@@ -434,35 +434,35 @@ export function useDeepLinkHandler() {
     // Handle deep link when app is opened from a link
     const handleInitialURL = async () => {
       try {
-        console.log('🔗 DeepLink: Checking for initial URL...');
+        console.log('DeepLink: Checking for initial URL...');
         const initialURL = await Linking.getInitialURL();
         if (initialURL) {
-          console.log('🔗 DeepLink: App opened with URL:', initialURL);
-          console.log('🔗 DeepLink: URL type:', typeof initialURL);
+          console.log('DeepLink: App opened with URL:', initialURL);
+          console.log('DeepLink: URL type:', typeof initialURL);
           await DeepLinkHandler.handleDeepLink(initialURL);
 
           // Small delay to ensure router is ready (balanced for reliability and speed)
           setTimeout(() => {
-            console.log('🔗 DeepLink: Processing pending deep link after 500ms delay');
+            console.log('DeepLink: Processing pending deep link after 500ms delay');
             DeepLinkHandler.processPendingDeepLink(router);
           }, 500);
         } else {
-          console.log('🔗 DeepLink: No initial URL found');
+          console.log('DeepLink: No initial URL found');
         }
       } catch (error) {
-        console.error('🔗 DeepLink: Error handling initial URL:', error);
+        console.error('DeepLink: Error handling initial URL:', error);
       }
     };
 
     // Handle deep link when app is already running
     const handleURL = (event: { url: string }) => {
-      console.log('🔗 DeepLink: App received URL while running:', event.url);
-      console.log('🔗 DeepLink: Event object:', JSON.stringify(event, null, 2));
+      console.log('DeepLink: App received URL while running:', event.url);
+      console.log('DeepLink: Event object:', JSON.stringify(event, null, 2));
       DeepLinkHandler.handleDeepLink(event.url);
 
       // Process immediately since app is already running
       setTimeout(() => {
-        console.log('🔗 DeepLink: Processing pending deep link after 500ms delay');
+        console.log('DeepLink: Processing pending deep link after 500ms delay');
         DeepLinkHandler.processPendingDeepLink(router);
       }, 500);
     };

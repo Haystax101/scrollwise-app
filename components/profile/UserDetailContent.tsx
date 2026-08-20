@@ -68,7 +68,7 @@ export const UserDetailContent: React.FC<UserDetailContentProps> = ({
         setError(null);
 
         try {
-            // console.log('🔍 UserDetailContent: Fetching profile for user:', userId);
+            // console.log('UserDetailContent: Fetching profile for user:', userId);
 
             // Fetch basic profile info
             const { data: profileData, error: profileError } = await supabase
@@ -78,7 +78,7 @@ export const UserDetailContent: React.FC<UserDetailContentProps> = ({
                 .single();
 
             if (profileError) {
-                console.error('❌ UserDetailContent: Error fetching profile:', profileError);
+                console.error('UserDetailContent: Error fetching profile:', profileError);
                 throw profileError;
             }
 
@@ -149,7 +149,7 @@ export const UserDetailContent: React.FC<UserDetailContentProps> = ({
             setProfile(completeProfile);
 
         } catch (error) {
-            console.error('❌ UserDetailContent: Error fetching user profile:', error);
+            console.error('UserDetailContent: Error fetching user profile:', error);
             setError('Failed to load profile information');
         } finally {
             setLoading(false);
@@ -226,7 +226,7 @@ export const UserDetailContent: React.FC<UserDetailContentProps> = ({
                                 throw new Error(data?.error || 'Failed to update block status');
                             }
                         } catch (error) {
-                            console.error('❌ Error toggling block:', error);
+                            console.error('Error toggling block:', error);
                             Alert.alert('Error', 'Failed to update block status. Please try again.');
                         } finally {
                             setBlockLoading(false);

@@ -45,7 +45,7 @@ export const VaultContentViewer: React.FC<VaultContentViewerProps> = ({ content,
       if (content.type === 'book' && !content.key_insights) {
         setLoading(true);
         try {
-          console.log('📚 VAULT: Fetching full book data for ID:', content.id);
+          console.log('VAULT: Fetching full book data for ID:', content.id);
           const { data: fullBook, error } = await supabase
             .from('books')
             .select('*')
@@ -53,10 +53,10 @@ export const VaultContentViewer: React.FC<VaultContentViewerProps> = ({ content,
             .single();
 
           if (error) {
-            console.error('📚 VAULT: Error fetching full book:', error);
+            console.error('VAULT: Error fetching full book:', error);
             setFullContent(content);
           } else {
-            console.log('📚 VAULT: Fetched full book with insights:', {
+            console.log('VAULT: Fetched full book with insights:', {
               id: fullBook.id,
               title: fullBook.title,
               key_insights_length: fullBook.key_insights?.length || 0
@@ -64,7 +64,7 @@ export const VaultContentViewer: React.FC<VaultContentViewerProps> = ({ content,
             setFullContent(fullBook as Book);
           }
         } catch (error) {
-          console.error('📚 VAULT: Error fetching book:', error);
+          console.error('VAULT: Error fetching book:', error);
           setFullContent(content);
         } finally {
           setLoading(false);

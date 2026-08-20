@@ -48,7 +48,7 @@ export const AnimatedLevelProgressBar: React.FC<AnimatedLevelProgressBarProps> =
   const progressPercentage = Math.min(Math.max(levelProgress, 0), 100);
   
   // Debug logging to see what values we're receiving
-  console.log('🎯 AnimatedLevelProgressBar props:', {
+  console.log('AnimatedLevelProgressBar props:', {
     level,
     currentVoltz,
     levelProgress,

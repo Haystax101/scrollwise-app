@@ -1,3 +1,15 @@
+/**
+ * Progressive search: results in two waves, so the UI is never blank.
+ *
+ * The semantic path has to round-trip to an embedding model before it can query
+ * anything, which costs a few hundred milliseconds. Keyword search is a single
+ * indexed Postgres query and returns almost immediately.
+ *
+ * Rather than make the user wait for the slower path, this returns the keyword
+ * hits as soon as they land, then the fused semantic results once the embedding
+ * resolves. Perceived latency drops to roughly the cost of the fast path while
+ * final quality still comes from both.
+ */
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { SupabaseClient, createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';

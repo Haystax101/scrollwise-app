@@ -64,7 +64,7 @@ export const ProfilePassionsOnlyModal: React.FC<ProfilePassionsOnlyModalProps> =
         throw error;
       }
 
-      console.log('✅ Passions saved successfully');
+      console.log('Passions saved successfully');
       onSave();
     } catch (error) {
       console.error('Error saving passions:', error);

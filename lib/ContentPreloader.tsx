@@ -44,7 +44,7 @@ export class ContentPreloader {
         return cached;
       }
 
-      console.log('🚀 Starting content preloading...');
+      console.log('Starting content preloading...');
       const startTime = Date.now();
 
       // Parallel requests for different content types
@@ -65,11 +65,11 @@ export class ContentPreloader {
       await this.cacheContent(preloadedContent);
 
       const loadTime = Date.now() - startTime;
-      console.log(`✅ Content preloading completed in ${loadTime}ms`);
+      console.log(`Content preloading completed in ${loadTime}ms`);
       
       return preloadedContent;
     } catch (error) {
-      console.error('❌ Content preloading failed:', error);
+      console.error('Content preloading failed:', error);
       return null;
     }
   }

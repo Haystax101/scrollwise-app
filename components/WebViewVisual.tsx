@@ -21,7 +21,7 @@ export const WebViewVisual: React.FC<WebViewVisualProps> = ({
 
   const webViewRef = useRef<WebView>(null);
 
-  console.log('🎬 WebViewVisual: Received height prop:', height);
+  console.log('WebViewVisual: Received height prop:', height);
 
   // Check if animationCode is already a complete HTML document
   const isCompleteHTML = animationCode.trim().toLowerCase().startsWith('<!doctype html') ||
@@ -96,8 +96,8 @@ export const WebViewVisual: React.FC<WebViewVisualProps> = ({
   }
 
   // LOGGING: Print the final HTML to see what we are sending
-  console.log('📄 WebViewVisual: Final HTML content (Head):', htmlContent.substring(0, 500));
-  console.log('📄 WebViewVisual: Final HTML content (Tail):', htmlContent.slice(-200));
+  console.log('WebViewVisual: Final HTML content (Head):', htmlContent.substring(0, 500));
+  console.log('WebViewVisual: Final HTML content (Tail):', htmlContent.slice(-200));
 
   // Base64 Encode (DISABLED FOR POC)
   // const b64 = Buffer.from(htmlContent).toString('base64');
@@ -105,7 +105,7 @@ export const WebViewVisual: React.FC<WebViewVisualProps> = ({
 
   const handleError = (syntheticEvent: any) => {
     const { nativeEvent } = syntheticEvent;
-    console.error('❌ WebViewVisual error:', {
+    console.error('WebViewVisual error:', {
       description: nativeEvent.description,
       code: nativeEvent.code,
       domain: nativeEvent.domain,
@@ -128,7 +128,7 @@ export const WebViewVisual: React.FC<WebViewVisualProps> = ({
       style={[styles.container, { height }]}
       onLayout={(event) => {
         const { width, height } = event.nativeEvent.layout;
-        console.log('📐 WebViewVisual container dimensions:', { width, height });
+        console.log('WebViewVisual container dimensions:', { width, height });
       }}
     >
       {isLoading && (
@@ -145,7 +145,7 @@ export const WebViewVisual: React.FC<WebViewVisualProps> = ({
         bounces={false}
         originWhitelist={['*']}
         onLoadEnd={() => {
-          console.log('✅ WebViewVisual loaded successfully');
+          console.log('WebViewVisual loaded successfully');
           setIsLoading(false);
 
           // Inject JavaScript to report canvas/body dimensions AND DOM CONTENT
@@ -196,14 +196,14 @@ export const WebViewVisual: React.FC<WebViewVisualProps> = ({
           try {
             const data = JSON.parse(event.nativeEvent.data);
             if (data.type === 'dimensions') {
-              console.log('📐 WebView content report:', data);
+              console.log('WebView content report:', data);
             } else if (data.type === 'error' || data.type === 'console_error') {
-              console.error('❌ WebView JS Error:', data);
+              console.error('WebView JS Error:', data);
             } else {
-              console.log('📨 WebView message:', event.nativeEvent.data);
+              console.log('WebView message:', event.nativeEvent.data);
             }
           } catch (e) {
-            console.log('📨 WebView message (raw):', event.nativeEvent.data);
+            console.log('WebView message (raw):', event.nativeEvent.data);
           }
         }}
       />

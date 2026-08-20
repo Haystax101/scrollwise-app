@@ -37,7 +37,7 @@ export const useContentTracking = ({ contentId, contentType, totalSlides = 0 }: 
         const sessionId = sessionIdRef.current;
 
         // Debug: explicitly show we are attempting to send data
-        console.log(`[Tracking DEBUG] 🚀 Syncing Session... Depth=${scrollDepth}%, Slides=${uniqueSlides}`);
+        console.log(`[Tracking DEBUG]  Syncing Session... Depth=${scrollDepth}%, Slides=${uniqueSlides}`);
 
         try {
             const { error } = await supabase.rpc('log_interaction', {
@@ -73,10 +73,10 @@ export const useContentTracking = ({ contentId, contentType, totalSlides = 0 }: 
     // Update Scroll Depth (0-100)
     const updateScrollDepth = useCallback((depth: number) => {
         if (depth > maxScrollDepthRef.current) {
-            console.log(`[Tracking DEBUG] 📜 Depth New Max: ${depth}%`);
+            console.log(`[Tracking DEBUG]  Depth New Max: ${depth}%`);
             maxScrollDepthRef.current = depth;
 
-            // Map scroll depth to completion? 
+            // Map scroll depth to completion?
             // If it's a regular article, scroll depth IS completion.
             // If explicit completion is needed, we handle that elsewhere.
             if (depth > maxCompletionRef.current) {
@@ -90,7 +90,7 @@ export const useContentTracking = ({ contentId, contentType, totalSlides = 0 }: 
     // Track Slide View
     const trackSlideView = useCallback((slideIndex: number) => {
         if (!slidesViewedRef.current.has(slideIndex)) {
-            console.log(`[Tracking DEBUG] 📸 Slide Viewed: ${slideIndex + 1}/${totalSlides}`);
+            console.log(`[Tracking DEBUG]  Slide Viewed: ${slideIndex + 1}/${totalSlides}`);
             slidesViewedRef.current.add(slideIndex);
 
             // Update completion based on slides

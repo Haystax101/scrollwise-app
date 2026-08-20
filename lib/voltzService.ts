@@ -120,7 +120,7 @@ export const voltzService = {
         return false;
       }
 
-      console.log('✅ Level-up flag reset for user:', userId);
+      console.log('Level-up flag reset for user:', userId);
       return true;
     } catch (error) {
       console.error('Exception resetting level-up flag:', error);

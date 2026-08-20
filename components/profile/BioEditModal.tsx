@@ -56,7 +56,7 @@ export const BioEditModal: React.FC<BioEditModalProps> = ({
                 throw error;
             }
 
-            console.log('✅ Bio saved successfully');
+            console.log('Bio saved successfully');
             onSave(finalBio);
         } catch (error) {
             console.error('Error saving bio:', error);

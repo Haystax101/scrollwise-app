@@ -15,12 +15,12 @@ export const streakService = {
    */
   async initializeStreak(userId: string, targetDays: number = 30): Promise<boolean> {
     if (!userId || userId.trim() === '') {
-      console.log('⚠️ streakService.initializeStreak: Invalid userId provided:', userId);
+      console.log('streakService.initializeStreak: Invalid userId provided:', userId);
       return false;
     }
 
     try {
-      console.log('🎯 Initializing streak for user:', { userId, targetDays });
+      console.log('Initializing streak for user:', { userId, targetDays });
 
       const { error } = await supabase.rpc('setup_user_learning_streak', {
         user_id_param: userId,
@@ -28,14 +28,14 @@ export const streakService = {
       });
 
       if (error) {
-        console.error('❌ Error initializing streak:', error);
+        console.error('Error initializing streak:', error);
         return false;
       }
 
-      console.log('✅ Streak initialized successfully');
+      console.log('Streak initialized successfully');
       return true;
     } catch (error) {
-      console.error('❌ Unexpected error initializing streak:', error);
+      console.error('Unexpected error initializing streak:', error);
       return false;
     }
   },
@@ -48,12 +48,12 @@ export const streakService = {
     activityTypes: string[] = ['app_open']
   ): Promise<boolean> {
     if (!userId || userId.trim() === '') {
-      console.log('⚠️ streakService.logDailyActivity: Invalid userId provided:', userId);
+      console.log('streakService.logDailyActivity: Invalid userId provided:', userId);
       return false;
     }
 
     try {
-      console.log('📊 Logging daily activity:', { userId, activityTypes });
+      console.log('Logging daily activity:', { userId, activityTypes });
 
       const { error } = await supabase.rpc('log_daily_activity', {
         user_id_param: userId,
@@ -61,14 +61,14 @@ export const streakService = {
       });
 
       if (error) {
-        console.error('❌ Error logging daily activity:', error);
+        console.error('Error logging daily activity:', error);
         return false;
       }
 
-      console.log('✅ Daily activity logged successfully');
+      console.log('Daily activity logged successfully');
       return true;
     } catch (error) {
-      console.error('❌ Unexpected error logging activity:', error);
+      console.error('Unexpected error logging activity:', error);
       return false;
     }
   },
@@ -78,24 +78,24 @@ export const streakService = {
    */
   async getStreakInfo(userId: string): Promise<StreakInfo | null> {
     if (!userId || userId.trim() === '') {
-      console.log('⚠️ streakService.getStreakInfo: Invalid userId provided:', userId);
+      console.log('streakService.getStreakInfo: Invalid userId provided:', userId);
       return null;
     }
 
     try {
-      console.log('📈 Getting streak info for user:', userId);
+      console.log('Getting streak info for user:', userId);
 
       const { data, error } = await supabase.rpc('get_user_streak_info', {
         user_id_param: userId
       });
 
       if (error) {
-        console.error('❌ Error getting streak info:', error);
+        console.error('Error getting streak info:', error);
         return null;
       }
 
       if (!data || data.length === 0) {
-        console.log('⚠️ No streak data found, returning defaults');
+        console.log('No streak data found, returning defaults');
         return {
           current_streak: 1,
           longest_streak: 1,
@@ -107,10 +107,10 @@ export const streakService = {
       }
 
       const streakInfo = data[0];
-      console.log('✅ Streak info retrieved:', streakInfo);
+      console.log('Streak info retrieved:', streakInfo);
       return streakInfo;
     } catch (error) {
-      console.error('❌ Unexpected error getting streak info:', error);
+      console.error('Unexpected error getting streak info:', error);
       return null;
     }
   },
@@ -121,7 +121,7 @@ export const streakService = {
   async checkTodayActivity(userId: string): Promise<boolean> {
     try {
       const today = new Date().toISOString().split('T')[0]; // GMT date
-      console.log('🗓️ Checking activity for date:', today);
+      console.log('Checking activity for date:', today);
 
       const { data, error } = await supabase
         .from('user_daily_activities')
@@ -131,15 +131,15 @@ export const streakService = {
         .maybeSingle();
 
       if (error) {
-        console.error('❌ Error checking today activity:', error);
+        console.error('Error checking today activity:', error);
         return false;
       }
 
       const hasActivity = !!data;
-      console.log('📊 Today activity check result:', hasActivity);
+      console.log('Today activity check result:', hasActivity);
       return hasActivity;
     } catch (error) {
-      console.error('❌ Unexpected error checking today activity:', error);
+      console.error('Unexpected error checking today activity:', error);
       return false;
     }
   },
@@ -149,7 +149,7 @@ export const streakService = {
    */
   async updateStreakTarget(userId: string, newTarget: number): Promise<boolean> {
     try {
-      console.log('🎯 Updating streak target:', { userId, newTarget });
+      console.log('Updating streak target:', { userId, newTarget });
 
       const { error } = await supabase
         .from('user_streaks')
@@ -162,14 +162,14 @@ export const streakService = {
         .eq('is_active', true);
 
       if (error) {
-        console.error('❌ Error updating streak target:', error);
+        console.error('Error updating streak target:', error);
         return false;
       }
 
-      console.log('✅ Streak target updated successfully');
+      console.log('Streak target updated successfully');
       return true;
     } catch (error) {
-      console.error('❌ Unexpected error updating streak target:', error);
+      console.error('Unexpected error updating streak target:', error);
       return false;
     }
   },
@@ -179,7 +179,7 @@ export const streakService = {
    */
   async getStreakHistory(userId: string, days: number = 30): Promise<any[]> {
     try {
-      console.log('📊 Getting streak history:', { userId, days });
+      console.log('Getting streak history:', { userId, days });
 
       const endDate = new Date();
       const startDate = new Date();
@@ -194,14 +194,14 @@ export const streakService = {
         .order('activity_date', { ascending: true });
 
       if (error) {
-        console.error('❌ Error getting streak history:', error);
+        console.error('Error getting streak history:', error);
         return [];
       }
 
-      console.log('✅ Streak history retrieved:', data?.length, 'days');
+      console.log('Streak history retrieved:', data?.length, 'days');
       return data || [];
     } catch (error) {
-      console.error('❌ Unexpected error getting streak history:', error);
+      console.error('Unexpected error getting streak history:', error);
       return [];
     }
   },

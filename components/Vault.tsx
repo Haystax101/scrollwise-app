@@ -110,7 +110,7 @@ export const Vault: React.FC = () => {
     }
 
     try {
-      console.log(`🔍 Vault: Fetching prioritized content for industry ${industryId}`);
+      console.log(`Vault: Fetching prioritized content for industry ${industryId}`);
 
       // Function to fetch prioritized content for a specific type
       const fetchPrioritizedContent = async (
@@ -120,7 +120,7 @@ export const Vault: React.FC = () => {
         selectFields: string,
         ignoreViews: boolean = false
       ) => {
-        console.log(`🔍 Vault: Fetching ${ignoreViews ? 'all' : 'unviewed'} ${tableName} for industry ${industryId}`);
+        console.log(`Vault: Fetching ${ignoreViews ? 'all': 'unviewed'} ${tableName} for industry ${industryId}`);
 
         // If ignoring views, just fetch latest content without filtering
         if (ignoreViews) {
@@ -132,11 +132,11 @@ export const Vault: React.FC = () => {
             .limit(5);
 
           if (error) {
-            console.warn(`🔍 Vault: Error fetching ${tableName}:`, error);
+            console.warn(`Vault: Error fetching ${tableName}:`, error);
             return [];
           }
 
-          console.log(`🔍 Vault: Found ${data?.length || 0} ${tableName} (ignoring views)`);
+          console.log(`Vault: Found ${data?.length || 0} ${tableName} (ignoring views)`);
           return data || [];
         }
 
@@ -148,7 +148,7 @@ export const Vault: React.FC = () => {
 
         const viewedIdsArray = viewedIds?.map(item => item[contentIdField]) || [];
 
-        console.log(`🔍 Vault: User has viewed ${viewedIdsArray.length} ${tableName} items`);
+        console.log(`Vault: User has viewed ${viewedIdsArray.length} ${tableName} items`);
 
         // Get unviewed content (exclude viewed IDs)
         let unviewedQuery = supabase
@@ -166,7 +166,7 @@ export const Vault: React.FC = () => {
         const { data: unviewedData, error: unviewedError } = await unviewedQuery;
 
         if (unviewedError) {
-          console.warn(`🔍 Vault: Error fetching unviewed ${tableName}:`, unviewedError);
+          console.warn(`Vault: Error fetching unviewed ${tableName}:`, unviewedError);
           // Fallback to basic query without view filtering
           const { data: fallbackData } = await supabase
             .from(tableName)
@@ -179,12 +179,12 @@ export const Vault: React.FC = () => {
         }
 
         const unviewedCount = unviewedData?.length || 0;
-        console.log(`🔍 Vault: Found ${unviewedCount} unviewed ${tableName} for industry ${industryId}`);
+        console.log(`Vault: Found ${unviewedCount} unviewed ${tableName} for industry ${industryId}`);
 
         // If we have less than 5 unviewed items, fill the remainder with viewed content
         if (unviewedCount < 5) {
           const remainingNeeded = 5 - unviewedCount;
-          console.log(`🔍 Vault: Need ${remainingNeeded} more ${tableName}, fetching viewed content`);
+          console.log(`Vault: Need ${remainingNeeded} more ${tableName}, fetching viewed content`);
 
           // Get viewed content to fill remainder
           let viewedQuery = supabase
@@ -204,7 +204,7 @@ export const Vault: React.FC = () => {
 
           const { data: viewedData } = await viewedQuery;
 
-          console.log(`🔍 Vault: Found ${viewedData?.length || 0} viewed ${tableName} to fill remainder`);
+          console.log(`Vault: Found ${viewedData?.length || 0} viewed ${tableName} to fill remainder`);
 
           // Combine unviewed (first) + viewed (remainder)
           return [...(unviewedData || []), ...(viewedData || [])];
@@ -256,25 +256,25 @@ export const Vault: React.FC = () => {
         link: '#'
       }));
 
-      console.log(`🔍 Vault: Final prioritized results - articles: ${articles.length}, papers: ${papers.length}, books: ${books.length}`);
+      console.log(`Vault: Final prioritized results - articles: ${articles.length}, papers: ${papers.length}, books: ${books.length}`);
 
       return { articles, papers, books };
     } catch (error) {
-      console.error('🔍 Vault: Error fetching prioritized content by industry:', error);
+      console.error('Vault: Error fetching prioritized content by industry:', error);
       return { articles: [], papers: [], books: [] };
     }
   }, [user]);
 
   const loadInitialContent = useCallback(async (forceRefresh = false) => {
     if (!user) {
-      console.log('🔍 Vault: No user available, skipping content load');
+      console.log('Vault: No user available, skipping content load');
       return;
     }
 
     // Check cache validity (skip cache check if forceRefresh is true)
     const now = Date.now();
     if (!forceRefresh && lastFetchTime > 0 && (now - lastFetchTime) < CACHE_DURATION) {
-      console.log('🔍 Vault: Using cached data (fetch was', Math.floor((now - lastFetchTime) / 1000 / 60), 'minutes ago)');
+      console.log('Vault: Using cached data (fetch was', Math.floor((now - lastFetchTime) / 1000 / 60), 'minutes ago)');
       return;
     }
 
@@ -282,17 +282,17 @@ export const Vault: React.FC = () => {
     setLoading({ articles: true, papers: true, books: true });
 
     try {
-      console.log('🔍 Vault: Loading initial content for user:', user.id, 'industry:', selectedIndustry);
+      console.log('Vault: Loading initial content for user:', user.id, 'industry:', selectedIndustry);
 
       let vaultResults: VaultData;
 
       if (selectedIndustry) {
         // If industry is selected, fetch content directly by industry with prioritization
-        console.log('🔍 Vault: Fetching prioritized content by industry:', selectedIndustry);
+        console.log('Vault: Fetching prioritized content by industry:', selectedIndustry);
         vaultResults = await fetchContentByIndustry(selectedIndustry);
       } else {
         // If no industry selected, fetch recent content across all industries
-        console.log('🔍 Vault: Fetching recent content across all industries');
+        console.log('Vault: Fetching recent content across all industries');
 
         const [articlesData, papersData, booksData] = await Promise.all([
           // Articles - show unviewed first
@@ -335,16 +335,16 @@ export const Vault: React.FC = () => {
           link: '#'
         }));
 
-        console.log('🔍 Vault: General content responses - articles:', articles.length, 'papers:', papers.length, 'books:', books.length);
+        console.log('Vault: General content responses - articles:', articles.length, 'papers:', papers.length, 'books:', books.length);
 
         vaultResults = { articles, papers, books };
       }
 
-      console.log('🔍 Vault: Final initial content - articles:', vaultResults.articles.length, 'papers:', vaultResults.papers.length, 'books:', vaultResults.books.length);
+      console.log('Vault: Final initial content - articles:', vaultResults.articles.length, 'papers:', vaultResults.papers.length, 'books:', vaultResults.books.length);
       setVaultData(vaultResults);
       setLastFetchTime(Date.now()); // Update cache timestamp
     } catch (error) {
-      console.error('🔍 Vault: Error loading initial content:', error);
+      console.error('Vault: Error loading initial content:', error);
       setError('Failed to load content');
       setVaultData({ articles: [], papers: [], books: [] });
     } finally {
@@ -362,7 +362,7 @@ export const Vault: React.FC = () => {
 
   const performSearch = useCallback(async (query: string) => {
     if (!user) {
-      console.log('🔍 Vault: No user available, skipping search');
+      console.log('Vault: No user available, skipping search');
       return;
     }
 
@@ -370,13 +370,13 @@ export const Vault: React.FC = () => {
     setLoading({ articles: true, papers: true, books: true });
 
     try {
-      console.log('🔍 Vault: Performing search:', query, 'industry:', selectedIndustry);
+      console.log('Vault: Performing search:', query, 'industry:', selectedIndustry);
 
       let vaultResults: VaultData;
 
       if (selectedIndustry && !query.trim()) {
         // If industry is selected but no search query, fetch content directly by industry
-        console.log('🔍 Vault: Fetching content by industry:', selectedIndustry);
+        console.log('Vault: Fetching content by industry:', selectedIndustry);
         vaultResults = await fetchContentByIndustry(selectedIndustry);
       } else {
         // Use regular search functionality
@@ -386,7 +386,7 @@ export const Vault: React.FC = () => {
           immediateKeywordSearch(query, selectedIndustry || undefined, 'book')
         ]);
 
-        console.log('🔍 Vault: Search responses - articles:', articlesResponse.results?.length, 'papers:', papersResponse.results?.length, 'books:', booksResponse.results?.length);
+        console.log('Vault: Search responses - articles:', articlesResponse.results?.length, 'papers:', papersResponse.results?.length, 'books:', booksResponse.results?.length);
 
         vaultResults = {
           articles: articlesResponse.results || [],
@@ -395,10 +395,10 @@ export const Vault: React.FC = () => {
         };
       }
 
-      console.log('🔍 Vault: Final search results - articles:', vaultResults.articles.length, 'papers:', vaultResults.papers.length, 'books:', vaultResults.books.length);
+      console.log('Vault: Final search results - articles:', vaultResults.articles.length, 'papers:', vaultResults.papers.length, 'books:', vaultResults.books.length);
       setVaultData(vaultResults);
     } catch (error) {
-      console.error('🔍 Vault: Error performing search:', error);
+      console.error('Vault: Error performing search:', error);
       setError('Search failed');
       setVaultData({ articles: [], papers: [], books: [] });
     } finally {

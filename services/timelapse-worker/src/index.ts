@@ -24,7 +24,7 @@ app.post('/process', async (req: Request, res: Response) => {
     const cleanUserId = userId?.trim();
     const cleanSessionId = sessionId?.trim();
 
-    console.log(`🔍 REQ: Processing Request Received`);
+    console.log(`REQ: Processing Request Received`);
     console.log(`-- Inputs: User='${cleanUserId}', Session='${cleanSessionId}'`);
 
     if (!cleanSessionId || !cleanUserId) {
@@ -33,9 +33,9 @@ app.post('/process', async (req: Request, res: Response) => {
 
     // 2. Fire and Forget (Async Processing)
     // We do NOT await this. It runs in the background.
-    // Cloud Run Gen 2 with "CPU always allocated" recommended.
+    // Cloud Run Gen 2 with "CPU always allocated"recommended.
     processSessionBackground(cleanSessionId, cleanUserId).catch(err => {
-        console.error(`❌ Background Process Failed for ${cleanSessionId}:`, err);
+        console.error(`Background Process Failed for ${cleanSessionId}:`, err);
     });
 
     // 3. Return accepted immediately
@@ -53,7 +53,7 @@ async function processSessionBackground(sessionId: string, userId: string) {
     const imagesDir = path.join(workDir, 'images');
     const outputDir = path.join(workDir, 'output');
 
-    console.log(`🚀 [Background] Starting job for ${sessionId}`);
+    console.log(`[Background] Starting job for ${sessionId}`);
 
     try {
         // Cleanup
@@ -69,19 +69,19 @@ async function processSessionBackground(sessionId: string, userId: string) {
 
         if (userError) throw userError;
 
-        console.log(`   Found ${userLevel?.length || 0} items.`);
+        console.log(`Found ${userLevel?.length || 0} items.`);
         if (!userLevel || userLevel.length === 0) {
-            console.log("   [EMPTY] - The worker cannot see ANY session folders.");
+            console.log("[EMPTY] - The worker cannot see ANY session folders.");
             // Fallback check omitted for brevity in background mode, but could add back
             throw new Error(`User folder '${userId}' not found or empty.`);
         }
 
         const sessionFolderItem = userLevel.find(item => item.name === sessionId);
         if (!sessionFolderItem) {
-            console.log(`   ❌ Session folder '${sessionId}' NOT found in user listing.`);
-            console.log(`   Available: ${userLevel.map(i => i.name).join(', ')}`);
+            console.log(`Session folder '${sessionId}'NOT found in user listing.`);
+            console.log(`Available: ${userLevel.map(i => i.name).join(', ')}`);
         } else {
-            console.log(`   ✅ Session folder found in listing.`);
+            console.log(`Session folder found in listing.`);
         }
 
         // DIAGNOSTIC 2: List Specific Session Folder
@@ -99,7 +99,7 @@ async function processSessionBackground(sessionId: string, userId: string) {
             throw new Error("Folder exists but contains no zip files.");
         }
 
-        console.log(`\n✅ Found ${zips.length} zips. Processing...`);
+        console.log(`\n Found ${zips.length} zips. Processing...`);
 
         // --- PROCESSING LOGIC ---
         for (const zipFile of zips) {
@@ -113,14 +113,14 @@ async function processSessionBackground(sessionId: string, userId: string) {
             const localZipPath = path.join(workDir, zipFile.name);
             const arrayBuffer = await fileData.arrayBuffer();
             fs.writeFileSync(localZipPath, Buffer.from(arrayBuffer));
-            console.log(`   Saved ${fileData.size} bytes to ${localZipPath}`);
+            console.log(`Saved ${fileData.size} bytes to ${localZipPath}`);
 
             // Unzip using system command
             try {
-                console.log(`   Unzipping ${localZipPath} to ${imagesDir}...`);
+                console.log(`Unzipping ${localZipPath} to ${imagesDir}...`);
                 await execPromise(`unzip -o "${localZipPath}" -d "${imagesDir}"`);
             } catch (zipErr) {
-                console.error(`   Failed to unzip ${zipFile.name}:`, zipErr);
+                console.error(`Failed to unzip ${zipFile.name}:`, zipErr);
             }
         }
 
@@ -176,7 +176,7 @@ async function processSessionBackground(sessionId: string, userId: string) {
         console.log(`Piping FFmpeg stdout to Supabase Storage: ${storagePath}`);
 
         // Upload Stream
-        // duplex: 'half' is required for Node.js fetch streaming in some environments
+        // duplex: 'half'is required for Node.js fetch streaming in some environments
         const uploadPromise = supabase.storage
             .from('timelapses')
             .upload(storagePath, ffmpegProcess.stdout, {
@@ -217,7 +217,7 @@ async function processSessionBackground(sessionId: string, userId: string) {
         if (dbErr) {
             console.error("DB Update Failed:", dbErr);
         } else {
-            console.log("✅ DB Updated. Job Complete.");
+            console.log("DB Updated. Job Complete.");
         }
 
         // 7. Cleanup raw uploads
@@ -226,11 +226,11 @@ async function processSessionBackground(sessionId: string, userId: string) {
         if (filesToRemove.length > 0) {
             const { error: rmError } = await supabase.storage.from('raw-uploads').remove(filesToRemove);
             if (rmError) console.error("Failed to cleanup raw uploads:", rmError);
-            else console.log("   Deleted raw zips.");
+            else console.log("Deleted raw zips.");
         }
 
     } catch (e: any) {
-        console.error("❌ Background Processing Error:", e);
+        console.error("Background Processing Error:", e);
         // update DB to failed?
         await supabase.from('timelapse_sessions')
             .update({ status: 'failed' }) // Assuming 'failed' is a valid status

@@ -64,7 +64,7 @@ export const ProfileProjectsModal: React.FC<ProfileProjectsModalProps> = ({
         throw error;
       }
 
-      console.log('✅ Projects saved successfully');
+      console.log('Projects saved successfully');
       onSave();
     } catch (error) {
       console.error('Error saving projects:', error);

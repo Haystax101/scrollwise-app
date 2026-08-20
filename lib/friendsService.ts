@@ -124,7 +124,7 @@ export class FriendsService {
       );
     }
 
-    console.log('✅ Friend request accepted successfully:', { friendshipId, data });
+    console.log('Friend request accepted successfully:', { friendshipId, data });
   }
 
   /**
@@ -171,7 +171,7 @@ export class FriendsService {
       );
     }
 
-    console.log('✅ Friend request declined successfully:', { friendshipId, data });
+    console.log('Friend request declined successfully:', { friendshipId, data });
   }
 
   /**
@@ -215,7 +215,7 @@ export class FriendsService {
       );
     }
 
-    console.log('✅ Friend request canceled successfully:', { friendshipId, data });
+    console.log('Friend request canceled successfully:', { friendshipId, data });
   }
 
   /**
@@ -454,19 +454,19 @@ export class FriendsService {
    * Get friend suggestions
    */
   static async getFriendSuggestions(limit: number = 10): Promise<FriendSuggestion[]> {
-    console.log('🔍 getFriendSuggestions called with limit:', limit);
+    console.log('getFriendSuggestions called with limit:', limit);
 
     const { data: currentUser } = await supabase.auth.getUser();
     if (!currentUser.user) {
-      console.error('❌ getFriendSuggestions: User not authenticated');
+      console.error('getFriendSuggestions: User not authenticated');
       throw new FriendsError('Not authenticated', 'UNAUTHENTICATED');
     }
 
-    console.log('✅ getFriendSuggestions: User authenticated:', currentUser.user.id);
+    console.log('getFriendSuggestions: User authenticated:', currentUser.user.id);
 
     try {
       // Always use the RPC function to get fresh data with profile information
-    console.log('🔄 Skipping cache, using RPC function for fresh profile data');
+    console.log('Skipping cache, using RPC function for fresh profile data');
 
     // Use RPC function to get suggestions with profile data
     const { data, error } = await supabase.rpc('generate_friend_suggestions', {
@@ -528,7 +528,7 @@ export class FriendsService {
     return mappedSuggestions;
 
     } catch (error) {
-      console.error('🚨 getFriendSuggestions: Unexpected error:', error);
+      console.error('getFriendSuggestions: Unexpected error:', error);
       if (error instanceof FriendsError) {
         throw error;
       } else {

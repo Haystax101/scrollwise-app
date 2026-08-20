@@ -1,3 +1,15 @@
+/**
+ * Smart search: hybrid retrieval that degrades instead of failing.
+ *
+ * Both retrieval paths are dispatched with Promise.allSettled rather than
+ * Promise.all, deliberately. The embedding call depends on a third-party model
+ * API; the keyword query does not. Under Promise.all a model outage would reject
+ * the pair and the user would get an error page for a query Postgres could have
+ * answered on its own.
+ *
+ * With allSettled, a failed embedding costs semantic recall and nothing else:
+ * the lexical results still return, and search stays up.
+ */
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { SupabaseClient, createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';

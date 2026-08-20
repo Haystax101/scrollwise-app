@@ -99,7 +99,7 @@ export const Discover: React.FC = () => {
       
       // Show cached content immediately if available
       if (cachedContent && cachedContent.length > 0) {
-        console.log(`⚡ Discover: Showing cached content for ${selectedIndustry || 'all'}`);
+        console.log(`Discover: Showing cached content for ${selectedIndustry || 'all'}`);
         setSearchResults(cachedContent);
         setKeywordResults(cachedContent);
         setShowingCachedContent(true);
@@ -112,7 +112,7 @@ export const Discover: React.FC = () => {
       const freshResults = await freshContent;
       
       if (freshResults.length > 0) {
-        console.log(`🔄 Discover: Updating with fresh content for ${selectedIndustry || 'all'}`);
+        console.log(`Discover: Updating with fresh content for ${selectedIndustry || 'all'}`);
         setSearchResults(freshResults);
         setKeywordResults(freshResults);
         setShowingCachedContent(false);

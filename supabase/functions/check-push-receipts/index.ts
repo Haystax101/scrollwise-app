@@ -24,7 +24,7 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`🔍 Checking ${ticketIds.length} receipt(s)...`);
+    console.log(`Checking ${ticketIds.length} receipt(s)...`);
 
     const response = await fetch("https://exp.host/--/api/v2/push/getReceipts", {
       method: "POST",
@@ -38,12 +38,12 @@ serve(async (req: Request) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`❌ Expo receipts API error: ${errorText}`);
+      console.error(`Expo receipts API error: ${errorText}`);
       throw new Error(`Expo API returned ${response.status}`);
     }
 
     const receipts = await response.json();
-    console.log(`📨 Receipts:`, JSON.stringify(receipts, null, 2));
+    console.log(`Receipts:`, JSON.stringify(receipts, null, 2));
 
     // Analyze receipts
     const results = {
@@ -56,17 +56,17 @@ serve(async (req: Request) => {
     for (const ticketId of ticketIds) {
       const receipt = receipts.data[ticketId];
       if (!receipt) {
-        console.log(`⚠️ No receipt for ticket: ${ticketId}`);
+        console.log(`No receipt for ticket: ${ticketId}`);
         continue;
       }
 
       if (receipt.status === "ok") {
         results.ok++;
-        console.log(`✅ Ticket ${ticketId}: Delivered successfully`);
+        console.log(`Ticket ${ticketId}: Delivered successfully`);
       } else if (receipt.status === "error") {
         results.error++;
-        console.error(`❌ Ticket ${ticketId}: ${receipt.message}`);
-        console.error(`   Error details:`, receipt.details);
+        console.error(`Ticket ${ticketId}: ${receipt.message}`);
+        console.error(`Error details:`, receipt.details);
         results.errors.push({
           ticketId,
           message: receipt.message,

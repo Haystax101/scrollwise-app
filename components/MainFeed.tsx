@@ -53,53 +53,53 @@ function useFeedData(feedManager: FeedManager | null, isVisible: boolean, initia
   const displayedIds = useMemo(() => new Set(feedItems.map(item => String(item.id))), [feedItems]);
 
   const loadInitialContent = useCallback(async () => {
-    console.log('📱 MainFeed: loadInitialContent called', { feedManager: !!feedManager, isVisible });
+    console.log('MainFeed: loadInitialContent called', { feedManager: !!feedManager, isVisible });
     if (!feedManager || !isVisible) {
-      console.log('📱 MainFeed: No feedManager or not visible, returning early');
+      console.log('MainFeed: No feedManager or not visible, returning early');
       return;
     }
 
-    console.log('📱 MainFeed: Setting isLoading to true');
+    console.log('MainFeed: Setting isLoading to true');
     setIsLoading(true);
     try {
       let initialContent: FeedItem[] = [];
 
       // If we have an initial content ID, fetch it first
       if (initialContentId && initialContentType) {
-        console.log(`🎯 MainFeed: Loading initial content - ID: ${initialContentId} (type: ${typeof initialContentId}), Type: ${initialContentType}`);
+        console.log(`MainFeed: Loading initial content - ID: ${initialContentId} (type: ${typeof initialContentId}), Type: ${initialContentType}`);
         const specificContent = await feedManager.fetchSpecificContent(
           initialContentId,
           initialContentType as 'article' | 'paper' | 'book' | 'insight'
         );
         if (specificContent) {
-          console.log(`✅ MainFeed: Successfully loaded initial content: ${specificContent.type} ${specificContent.id}`);
+          console.log(`MainFeed: Successfully loaded initial content: ${specificContent.type} ${specificContent.id}`);
           initialContent = [specificContent];
         } else {
-          console.error(`❌ MainFeed: Failed to load initial content: ${initialContentType} ${initialContentId}`);
+          console.error(`MainFeed: Failed to load initial content: ${initialContentType} ${initialContentId}`);
         }
       }
 
       // Fetch additional content for the feed
       const targetCount = initialContent.length > 0 ? 9 : 10;
-      console.log(`📱 MainFeed: Fetching ${targetCount} additional content items...`);
+      console.log(`MainFeed: Fetching ${targetCount} additional content items...`);
       const additionalContent = await feedManager.fetchContent(targetCount);
-      console.log(`📱 MainFeed: fetchContent returned ${additionalContent.length} items`);
+      console.log(`MainFeed: fetchContent returned ${additionalContent.length} items`);
 
       // Combine and deduplicate
       const allContent = [...initialContent, ...additionalContent];
-      console.log(`📱 MainFeed: Combined content: ${allContent.length} items total`);
+      console.log(`MainFeed: Combined content: ${allContent.length} items total`);
 
       const uniqueContent = allContent.filter((item, index, self) =>
         self.findIndex(i => String(i.id) === String(item.id)) === index
       );
-      console.log(`📱 MainFeed: After deduplication: ${uniqueContent.length} unique items`);
+      console.log(`MainFeed: After deduplication: ${uniqueContent.length} unique items`);
 
       if (uniqueContent.length === 0) {
-        console.error(`📱 MainFeed: ❌ No content loaded! This will trigger empty state.`);
-        console.error(`📱 MainFeed: Initial content: ${initialContent.length}, Additional: ${additionalContent.length}`);
+        console.error(`MainFeed:  No content loaded! This will trigger empty state.`);
+        console.error(`MainFeed: Initial content: ${initialContent.length}, Additional: ${additionalContent.length}`);
         setFeedItems([]);
       } else {
-        console.log(`📱 MainFeed: ✅ Successfully loaded ${uniqueContent.length} feed items`);
+        console.log(`MainFeed:  Successfully loaded ${uniqueContent.length} feed items`);
         setFeedItems(uniqueContent);
       }
 
@@ -107,48 +107,48 @@ function useFeedData(feedManager: FeedManager | null, isVisible: boolean, initia
       setHasMore(true);
 
       // Only set loading to false after we've set the feed items
-      console.log('📱 MainFeed: Setting isLoading to false after content is set');
+      console.log('MainFeed: Setting isLoading to false after content is set');
       setIsLoading(false);
     } catch (error) {
-      console.error('📱 MainFeed: Error loading initial content:', error);
+      console.error('MainFeed: Error loading initial content:', error);
       setIsLoading(false);
     }
   }, [feedManager, initialContentId, initialContentType, isVisible]);
 
   const loadMoreContent = useCallback(async () => {
-    console.log(`📱 MainFeed: loadMoreContent called - feedManager: ${!!feedManager}, isLoadingMore: ${isLoadingMore}, hasMore: ${hasMore}`);
+    console.log(`MainFeed: loadMoreContent called - feedManager: ${!!feedManager}, isLoadingMore: ${isLoadingMore}, hasMore: ${hasMore}`);
     if (!feedManager || isLoadingMore || !hasMore) {
-      console.log(`📱 MainFeed: loadMoreContent early return - not loading`);
+      console.log(`MainFeed: loadMoreContent early return - not loading`);
       return;
     }
 
-    console.log(`📱 MainFeed: Starting to load more content - current feed size: ${feedItems.length}`);
+    console.log(`MainFeed: Starting to load more content - current feed size: ${feedItems.length}`);
     setIsLoadingMore(true);
     try {
       const moreContent = await feedManager.fetchContent(10);
-      console.log(`📱 MainFeed: Fetched ${moreContent.length} more items from FeedManager`);
+      console.log(`MainFeed: Fetched ${moreContent.length} more items from FeedManager`);
 
       // Filter out already displayed content
       const newContent = moreContent.filter(item => !displayedIds.has(String(item.id)));
-      console.log(`📱 MainFeed: After deduplication: ${newContent.length} new items (filtered ${moreContent.length - newContent.length} duplicates)`);
+      console.log(`MainFeed: After deduplication: ${newContent.length} new items (filtered ${moreContent.length - newContent.length} duplicates)`);
 
       if (newContent.length > 0) {
         setFeedItems(prev => {
           const updated = [...prev, ...newContent];
-          console.log(`📱 MainFeed: Feed updated - from ${prev.length} to ${updated.length} items`);
+          console.log(`MainFeed: Feed updated - from ${prev.length} to ${updated.length} items`);
           return updated;
         });
         // Continue loading if we got any content from database, even if some was filtered
         setHasMore(true);
-        console.log(`📱 MainFeed: hasMore remains true (added ${newContent.length} new items from ${moreContent.length} fetched)`);
+        console.log(`MainFeed: hasMore remains true (added ${newContent.length} new items from ${moreContent.length} fetched)`);
       } else {
         // Only stop if database returned nothing OR returned very little (suggesting we're near the end)
         const shouldContinue = moreContent.length >= 3; // Be more conservative
         setHasMore(shouldContinue);
-        console.log(`📱 MainFeed: No new content after deduplication - hasMore set to ${shouldContinue} (database returned ${moreContent.length} items)`);
+        console.log(`MainFeed: No new content after deduplication - hasMore set to ${shouldContinue} (database returned ${moreContent.length} items)`);
       }
     } catch (error) {
-      console.error('📱 MainFeed: Error loading more content:', error);
+      console.error('MainFeed: Error loading more content:', error);
     } finally {
       setIsLoadingMore(false);
     }
@@ -157,26 +157,26 @@ function useFeedData(feedManager: FeedManager | null, isVisible: boolean, initia
   const refreshContent = useCallback(async () => {
     if (!feedManager) return;
 
-    console.log('📱 MainFeed: refreshContent called, setting isRefreshing to true');
+    console.log('MainFeed: refreshContent called, setting isRefreshing to true');
     setIsRefreshing(true);
     try {
-      console.log('📱 MainFeed: Fetching fresh content for refresh...');
+      console.log('MainFeed: Fetching fresh content for refresh...');
       const freshContent = await feedManager.fetchContent(10);
-      console.log(`📱 MainFeed: Refresh fetchContent returned ${freshContent.length} items`);
+      console.log(`MainFeed: Refresh fetchContent returned ${freshContent.length} items`);
 
       const uniqueContent = freshContent.filter((item, index, self) =>
         self.findIndex(i => String(i.id) === String(item.id)) === index
       );
-      console.log(`📱 MainFeed: After refresh deduplication: ${uniqueContent.length} unique items`);
+      console.log(`MainFeed: After refresh deduplication: ${uniqueContent.length} unique items`);
 
       // Set content and refresh state together to avoid race condition
       setFeedItems(uniqueContent);
       setHasMore(true);
 
-      console.log('📱 MainFeed: Setting isRefreshing to false after content is set');
+      console.log('MainFeed: Setting isRefreshing to false after content is set');
       setIsRefreshing(false);
     } catch (error) {
-      console.error('📱 MainFeed: Error refreshing content:', error);
+      console.error('MainFeed: Error refreshing content:', error);
       setIsRefreshing(false);
     }
   }, [feedManager]);
@@ -248,10 +248,10 @@ function useContentTracking(
       }
 
       // Track viewed content with DELAY (3 seconds)
-      // This prevents "scrolling past" from marking content as viewed
+      // This prevents "scrolling past"from marking content as viewed
       if (feedManager && currentItem) {
         viewTimerRef.current = setTimeout(() => {
-          console.log(`👁️ View Timer Complete: Marking ${currentItem.type} ${currentItem.id} as viewed`);
+          console.log(`View Timer Complete: Marking ${currentItem.type} ${currentItem.id} as viewed`);
 
           // 1. Mark as viewed in FeedManager (hides from feed)
           feedManager.markAsViewed(currentItem.id, currentItem.type, currentItem);
@@ -292,7 +292,7 @@ function useContentTracking(
           const threshold = 3; // Start loading when 3 items remaining
 
           if (remainingItems <= threshold) {
-            console.log(`🚀 Preemptive loading triggered - ${remainingItems} items remaining, threshold: ${threshold}`);
+            console.log(`Preemptive loading triggered - ${remainingItems} items remaining, threshold: ${threshold}`);
             loadMoreContent();
           }
         }
@@ -384,22 +384,22 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
   // Handle quiz answer - COMMENTED OUT
   // const handleQuizAnswer = useCallback(async (answerIndex: number) => {
-  //   if (!quizQuestion || !feedManager) return;
+  // if (!quizQuestion || !feedManager) return;
   //
-  //   try {
-  //     await feedManager.handleQuizAttempt(quizQuestion, answerIndex);
-  //     console.log('🧠 Quiz attempt recorded');
-  //   } catch (error) {
-  //     console.error('Error handling quiz attempt:', error);
-  //   }
+  // try {
+  // await feedManager.handleQuizAttempt(quizQuestion, answerIndex);
+  // console.log('Quiz attempt recorded');
+  // } catch (error) {
+  // console.error('Error handling quiz attempt:', error);
+  // }
   // }, [quizQuestion, feedManager]);
 
   // Handle quiz close - COMMENTED OUT
   // const handleQuizClose = useCallback(() => {
-  //   setQuizVisible(false);
-  //   setFeedLocked(false);
-  //   setQuizQuestion(null);
-  //   console.log('🧠 Quiz closed');
+  // setQuizVisible(false);
+  // setFeedLocked(false);
+  // setQuizQuestion(null);
+  // console.log('Quiz closed');
   // }, []);
 
   // Use custom hooks for data and tracking
@@ -425,28 +425,28 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
   // Show quiz for recently viewed content using QuizSessionManager - COMMENTED OUT
   // const showQuizForRecentContent = useCallback(async (currentIndexParam: number) => {
-  //   if (!user || !feedManager) return;
+  // if (!user || !feedManager) return;
   //
-  //   try {
-  //     // Get the content that was viewed in THIS session (before current item)
-  //     const currentSessionContent = feedItems.slice(0, currentIndexParam);
+  // try {
+  // // Get the content that was viewed in THIS session (before current item)
+  // const currentSessionContent = feedItems.slice(0, currentIndexParam);
   //
-  //     console.log(`🧠 Generating quiz from ${currentSessionContent.length} pieces of current session content (items 0-${currentIndexParam-1})`);
+  // console.log(`Generating quiz from ${currentSessionContent.length} pieces of current session content (items 0-${currentIndexParam-1})`);
   //
-  //     // Generate quiz question from current session content only
-  //     const quiz = await feedManager.generateQuizQuestionFromContent(currentSessionContent);
+  // // Generate quiz question from current session content only
+  // const quiz = await feedManager.generateQuizQuestionFromContent(currentSessionContent);
   //
-  //     if (quiz) {
-  //       setQuizQuestion(quiz);
-  //       setQuizVisible(true);
-  //       setFeedLocked(true);
-  //       console.log('🧠 Quiz shown for content:', quiz.sourceTitle);
-  //     } else {
-  //       console.log('🧠 No quiz question generated from current session content');
-  //     }
-  //   } catch (error) {
-  //     console.error('Error showing quiz for recent content:', error);
-  //   }
+  // if (quiz) {
+  // setQuizQuestion(quiz);
+  // setQuizVisible(true);
+  // setFeedLocked(true);
+  // console.log('Quiz shown for content:', quiz.sourceTitle);
+  // } else {
+  // console.log('No quiz question generated from current session content');
+  // }
+  // } catch (error) {
+  // console.error('Error showing quiz for recent content:', error);
+  // }
   // }, [user, feedManager, feedItems]);
 
   const {
@@ -469,9 +469,9 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
   // Load initial content when feed manager is ready
   useEffect(() => {
-    console.log('📱 MainFeed: useEffect triggered', { feedManager: !!feedManager });
+    console.log('MainFeed: useEffect triggered', { feedManager: !!feedManager });
     if (feedManager) {
-      console.log('📱 MainFeed: Calling loadInitialContent from useEffect');
+      console.log('MainFeed: Calling loadInitialContent from useEffect');
       loadInitialContent();
     }
   }, [feedManager, loadInitialContent]);
@@ -487,7 +487,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
         // If article has slides, use ContentCard
         if (article.hasSlides) {
-          console.log(`📱 MainFeed: Rendering ContentCard for article ${article.id} (has slides)`);
+          console.log(`MainFeed: Rendering ContentCard for article ${article.id} (has slides)`);
           return (
             <ContentCard
               contentId={article.id}
@@ -507,7 +507,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         }
 
         // Debug logging for article passed to ArticleCard
-        console.log(`📱 MainFeed: Rendering ArticleCard for article ${article.id}:`, {
+        console.log(`MainFeed: Rendering ArticleCard for article ${article.id}:`, {
           id: article.id,
           title: article.title?.substring(0, 30),
           summary_length: article.summary?.length || 0,
@@ -532,7 +532,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
         // If paper has slides, use ContentCard
         if (paper.hasSlides) {
-          console.log(`📱 MainFeed: Rendering ContentCard for paper ${paper.id} (has slides)`);
+          console.log(`MainFeed: Rendering ContentCard for paper ${paper.id} (has slides)`);
           return (
             <ContentCard
               contentId={paper.id}
@@ -562,7 +562,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
       case 'video':
       case 'podcast':
         // Videos and podcasts are always from content_slides, so use ContentCard
-        console.log(`📱 MainFeed: Rendering ContentCard for ${item.type} ${item.id}`);
+        console.log(`MainFeed: Rendering ContentCard for ${item.type} ${item.id}`);
         return (
           <ContentCard
             contentId={item.id}
@@ -590,7 +590,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
       case 'insight':
         return <InsightCard insight={item as Insight} />;
       default:
-        console.warn(`📱 MainFeed: Unknown content type: ${(item as any).type}`);
+        console.warn(`MainFeed: Unknown content type: ${(item as any).type}`);
         return null;
     }
   }, [currentIndex, showBackButton, backTo, handleOpenComments, handleUserInteraction]);
@@ -622,7 +622,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
   // Loading state
   if (isLoading) {
-    console.log('📱 MainFeed: Rendering loading state');
+    console.log('MainFeed: Rendering loading state');
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -642,8 +642,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
   // Empty state - but don't show if we're refreshing
   if (feedItems.length === 0 && !isRefreshing) {
-    console.log('📱 MainFeed: SHOWING "No content available" screen');
-    // console.log('📱 MainFeed: Current state - isLoading:', isLoading, 'isRefreshing:', isRefreshing, 'feedItems.length:', feedItems.length);
+    console.log('MainFeed: SHOWING "No content available"screen');
+    // console.log('MainFeed: Current state - isLoading:', isLoading, 'isRefreshing:', isRefreshing, 'feedItems.length:', feedItems.length);
 
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
@@ -685,21 +685,21 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         }
         ListFooterComponent={renderFooter}
         onEndReached={() => {
-          console.log(`🚀 FlatList onEndReached triggered - feedItems.length: ${feedItems.length}, hasMore: ${hasMore}, isLoadingMore: ${isLoadingMore}`);
+          console.log(`FlatList onEndReached triggered - feedItems.length: ${feedItems.length}, hasMore: ${hasMore}, isLoadingMore: ${isLoadingMore}`);
           loadMoreContent();
         }}
         onEndReachedThreshold={0.8}
         onScrollBeginDrag={() => {
-          console.log(`📱 FlatList onScrollBeginDrag - feedItems.length: ${feedItems.length}`);
+          console.log(`FlatList onScrollBeginDrag - feedItems.length: ${feedItems.length}`);
         }}
         onScrollEndDrag={() => {
-          console.log(`📱 FlatList onScrollEndDrag - feedItems.length: ${feedItems.length}`);
+          console.log(`FlatList onScrollEndDrag - feedItems.length: ${feedItems.length}`);
         }}
         onMomentumScrollBegin={() => {
-          console.log(`📱 FlatList onMomentumScrollBegin - feedItems.length: ${feedItems.length}`);
+          console.log(`FlatList onMomentumScrollBegin - feedItems.length: ${feedItems.length}`);
         }}
         onMomentumScrollEnd={() => {
-          console.log(`📱 FlatList onMomentumScrollEnd - feedItems.length: ${feedItems.length}`);
+          console.log(`FlatList onMomentumScrollEnd - feedItems.length: ${feedItems.length}`);
         }}
         // Performance optimizations - responsive for tablets
         removeClippedSubviews={true}

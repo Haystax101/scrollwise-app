@@ -75,7 +75,7 @@ export class FeedAlgorithm {
    */
   nuclearReset(): void {
     try {
-      console.log('🔥 NUCLEAR RESET: Clearing all tracking and cache data');
+      console.log('NUCLEAR RESET: Clearing all tracking and cache data');
       
       // Clear all in-memory state
       this.viewedIds.clear();
@@ -90,9 +90,9 @@ export class FeedAlgorithm {
       storage.delete(viewedKey);
       storage.delete(cacheKey);
       
-      console.log('🔥 NUCLEAR RESET: Complete - all data cleared');
+      console.log('NUCLEAR RESET: Complete - all data cleared');
     } catch (error) {
-      console.error('🔥 NUCLEAR RESET: Error during reset:', error);
+      console.error('NUCLEAR RESET: Error during reset:', error);
     }
   }
 
@@ -107,7 +107,7 @@ export class FeedAlgorithm {
       if (viewedData) {
         const viewedArray = JSON.parse(viewedData);
         this.viewedIds = new Set(viewedArray);
-        console.log(`🔥 MMKV: Loaded ${this.viewedIds.size} viewed items SYNCHRONOUSLY`);
+        console.log(`MMKV: Loaded ${this.viewedIds.size} viewed items SYNCHRONOUSLY`);
       }
 
       // Load fast fetch cache synchronously with freshness check
@@ -129,18 +129,18 @@ export class FeedAlgorithm {
           if (potentiallyFresh.length >= 2) {
             this.fastFetchCache = cached.cache;
             this.fastFetchCacheTimestamp = cached.timestamp;
-            console.log(`🔥 MMKV: Loaded ${this.fastFetchCache.length} cached items (${potentiallyFresh.length} unviewed)`);
+            console.log(`MMKV: Loaded ${this.fastFetchCache.length} cached items (${potentiallyFresh.length} unviewed)`);
           } else {
-            console.log(`🔥 MMKV: Cache contains mostly viewed content, clearing`);
+            console.log(`MMKV: Cache contains mostly viewed content, clearing`);
             storage.delete(cacheKey);
           }
         } else {
-          console.log(`🔥 MMKV: Cache expired (${Math.round(cacheAge / 1000)}s old), clearing`);
+          console.log(`MMKV: Cache expired (${Math.round(cacheAge / 1000)}s old), clearing`);
           storage.delete(cacheKey);
         }
       }
     } catch (error) {
-      console.error('🔥 MMKV: Error loading persistent data:', error);
+      console.error('MMKV: Error loading persistent data:', error);
     }
   }
 
@@ -232,8 +232,8 @@ export class FeedAlgorithm {
         const existingViewedCount = this.viewedIds.size;
         dbViewedKeys.forEach(key => this.viewedIds.add(key));
         
-        console.log(`🔍 FeedAlgorithm: Merged viewed content - AsyncStorage: ${existingViewedCount}, DB: ${dbViewedKeys.length}, Total: ${this.viewedIds.size} viewed items`);
-        console.log(`🔍 FeedAlgorithm: Initialized ${this.likedIds.size} liked items, ${this.savedIds.size} saved items`);
+        console.log(`FeedAlgorithm: Merged viewed content - AsyncStorage: ${existingViewedCount}, DB: ${dbViewedKeys.length}, Total: ${this.viewedIds.size} viewed items`);
+        console.log(`FeedAlgorithm: Initialized ${this.likedIds.size} liked items, ${this.savedIds.size} saved items`);
       }
     } catch (error) {
       console.error('Error in initializeUserInteractions:', error);
@@ -246,7 +246,7 @@ export class FeedAlgorithm {
    */
   async fetchArticlesFast(targetCount: number = 2): Promise<FeedItem[]> {
     try {
-      console.log(`🔥 MMKV FAST FETCH: Starting with ${this.viewedIds.size} viewed items loaded synchronously`);
+      console.log(`MMKV FAST FETCH: Starting with ${this.viewedIds.size} viewed items loaded synchronously`);
       
       // Check if we can use cached articles (not viewed, not expired)
       if (this.canUseFastCache()) {
@@ -255,13 +255,13 @@ export class FeedAlgorithm {
         );
         
         if (unviewedCache.length >= targetCount) {
-          console.log(`🔥 MMKV: Using ${unviewedCache.length} cached unviewed articles`);
+          console.log(`MMKV: Using ${unviewedCache.length} cached unviewed articles`);
           return unviewedCache.slice(0, targetCount);
         }
       }
 
       // Need to refresh cache - fetch new articles excluding viewed ones
-      console.log(`🔥 MMKV: Refreshing cache - excluding ${this.viewedIds.size} viewed items`);
+      console.log(`MMKV: Refreshing cache - excluding ${this.viewedIds.size} viewed items`);
       
       // Get articles that haven't been viewed
       const viewedArticleIds = Array.from(this.viewedIds)
@@ -285,7 +285,7 @@ export class FeedAlgorithm {
       const { data: articles, error: articlesError } = await query.limit(targetCount + 5); // Get extra for cache
 
       if (articlesError) {
-        console.error('🔥 MMKV: Error in fast fetch articles:', articlesError);
+        console.error('MMKV: Error in fast fetch articles:', articlesError);
         return [];
       }
 
@@ -306,7 +306,7 @@ export class FeedAlgorithm {
         this.fetchedIds.add(this.normalizeId(item.id));
       });
 
-      console.log(`🔥 MMKV: Retrieved ${returnItems.length} fresh articles, cached ${feedItems.length} total`);
+      console.log(`MMKV: Retrieved ${returnItems.length} fresh articles, cached ${feedItems.length} total`);
       return returnItems;
       
     } catch (error) {
@@ -335,9 +335,9 @@ export class FeedAlgorithm {
         timestamp: this.fastFetchCacheTimestamp
       };
       storage.set(cacheKey, JSON.stringify(cacheData));
-      console.log(`🔥 MMKV: Persisted cache with ${this.fastFetchCache.length} items`);
+      console.log(`MMKV: Persisted cache with ${this.fastFetchCache.length} items`);
     } catch (error) {
-      console.error('🔥 MMKV: Error persisting cache:', error);
+      console.error('MMKV: Error persisting cache:', error);
     }
   }
 
@@ -349,9 +349,9 @@ export class FeedAlgorithm {
       const viewedKey = `${VIEWED_CONTENT_KEY}_${this.userId}`;
       const viewedArray = Array.from(this.viewedIds);
       storage.set(viewedKey, JSON.stringify(viewedArray));
-      console.log(`🔥 MMKV: Persisted ${viewedArray.length} viewed items`);
+      console.log(`MMKV: Persisted ${viewedArray.length} viewed items`);
     } catch (error) {
-      console.error('🔥 MMKV: Error persisting viewed content:', error);
+      console.error('MMKV: Error persisting viewed content:', error);
     }
   }
 
@@ -361,7 +361,7 @@ export class FeedAlgorithm {
    */
   async refreshFastCacheBackground(): Promise<void> {
     try {
-      console.log('🔄 Background: Refreshing fast cache...');
+      console.log('Background: Refreshing fast cache...');
       
       // Get articles that haven't been viewed
       const viewedArticleIds = Array.from(this.viewedIds)
@@ -390,7 +390,7 @@ export class FeedAlgorithm {
         this.fastFetchCacheTimestamp = Date.now();
         this.persistCache();
         
-        console.log(`✅ Background: Fast cache refreshed with ${feedItems.length} fresh articles`);
+        console.log(`Background: Fast cache refreshed with ${feedItems.length} fresh articles`);
       } else {
         console.error('Error refreshing fast cache:', error);
       }
@@ -408,7 +408,7 @@ export class FeedAlgorithm {
     
     if (!this.viewedIds.has(viewKey)) {
       this.viewedIds.add(viewKey);
-      console.log(`👁️ Marked as viewed: ${viewKey} (total viewed: ${this.viewedIds.size})`);
+      console.log(`Marked as viewed: ${viewKey} (total viewed: ${this.viewedIds.size})`);
       
       // Persist viewed content to MMKV synchronously
       this.persistViewedContent();
@@ -417,7 +417,7 @@ export class FeedAlgorithm {
       if (contentType === 'article' && this.fastFetchCache.some(item => 
         this.normalizeId(item.id) === this.normalizeId(contentId)
       )) {
-        console.log('🔄 Triggering background cache refresh (viewed cached content)');
+        console.log('Triggering background cache refresh (viewed cached content)');
         // Refresh in background without blocking
         this.refreshFastCacheBackground().catch(error => {
           console.error('Background cache refresh failed:', error);
@@ -430,7 +430,7 @@ export class FeedAlgorithm {
    * Force refresh fast cache - call on pull-to-refresh or tab changes
    */
   async forceFastCacheRefresh(): Promise<void> {
-    console.log('🔄 Force refreshing fast cache...');
+    console.log('Force refreshing fast cache...');
     this.fastFetchCacheTimestamp = 0; // Invalidate current cache
     await this.refreshFastCacheBackground();
   }
@@ -440,10 +440,10 @@ export class FeedAlgorithm {
    * Checks which cached articles have been viewed and replaces them
    */
   async proactiveCacheRefresh(): Promise<void> {
-    console.log('🎯 Proactive: Checking cache for viewed articles...');
+    console.log('Proactive: Checking cache for viewed articles...');
     
     if (!this.canUseFastCache()) {
-      console.log('🎯 Proactive: No valid cache, performing full refresh');
+      console.log('Proactive: No valid cache, performing full refresh');
       await this.refreshFastCacheBackground();
       return;
     }
@@ -457,11 +457,11 @@ export class FeedAlgorithm {
       this.viewedIds.has(`article-${this.normalizeId(item.id)}`)
     );
 
-    console.log(`🎯 Proactive: Cache status - ${unviewedInCache.length} unviewed, ${viewedInCache.length} viewed`);
+    console.log(`Proactive: Cache status - ${unviewedInCache.length} unviewed, ${viewedInCache.length} viewed`);
 
     // If we have enough unviewed articles, we're good
     if (unviewedInCache.length >= 2) {
-      console.log('🎯 Proactive: Cache is fresh, no refresh needed');
+      console.log('Proactive: Cache is fresh, no refresh needed');
       return;
     }
 
@@ -496,12 +496,12 @@ export class FeedAlgorithm {
         this.fastFetchCacheTimestamp = Date.now();
         this.persistCache();
         
-        console.log(`✅ Proactive: Replaced ${articlesToFetch} viewed articles with fresh ones (total cache: ${this.fastFetchCache.length})`);
+        console.log(`Proactive: Replaced ${articlesToFetch} viewed articles with fresh ones (total cache: ${this.fastFetchCache.length})`);
       } else {
-        console.error('🎯 Proactive: Error fetching replacement articles:', error);
+        console.error('Proactive: Error fetching replacement articles:', error);
       }
     } catch (error) {
-      console.error('🎯 Proactive: Exception in cache refresh:', error);
+      console.error('Proactive: Exception in cache refresh:', error);
     }
   }
 
@@ -511,9 +511,9 @@ export class FeedAlgorithm {
    */
   async initializeInBackground(): Promise<void> {
     try {
-      console.log('🔄 Starting background algorithm initialization...');
+      console.log('Starting background algorithm initialization...');
       await this.initializeUserInteractions();
-      console.log('✅ Background algorithm initialization complete');
+      console.log('Background algorithm initialization complete');
     } catch (error) {
       console.error('Error in background initialization:', error);
     }
@@ -566,12 +566,12 @@ export class FeedAlgorithm {
       
       // Progressive fallback if we didn't get enough content
       if (feedItems.length < Math.max(3, targetCount * 0.5)) {
-        console.log(`⚠️ FeedAlgorithm: Only got ${feedItems.length} items, applying fallback strategy...`);
+        console.log(`FeedAlgorithm: Only got ${feedItems.length} items, applying fallback strategy...`);
         const fallbackItems = await this.fetchFallbackContent(targetCount - feedItems.length);
         feedItems.push(...fallbackItems);
       }
       
-      console.log(`✅ FeedAlgorithm: Returning ${feedItems.length} items (${feedItems.filter(item => item.type === 'article').length} articles, ${feedItems.filter(item => item.type === 'paper').length} papers, ${feedItems.filter(item => item.type === 'book').length} books, ${feedItems.filter(item => item.type === 'insight').length} insights)`);
+      console.log(`FeedAlgorithm: Returning ${feedItems.length} items (${feedItems.filter(item => item.type === 'article').length} articles, ${feedItems.filter(item => item.type === 'paper').length} papers, ${feedItems.filter(item => item.type === 'book').length} books, ${feedItems.filter(item => item.type === 'insight').length} insights)`);
       return feedItems;
     } catch (error) {
       console.error('Error in fetchArticles:', error);
@@ -619,7 +619,7 @@ export class FeedAlgorithm {
         }
       }
       
-      console.log(`🔄 FeedAlgorithm: Fallback strategy returned ${fallbackItems.length} items`);
+      console.log(`FeedAlgorithm: Fallback strategy returned ${fallbackItems.length} items`);
       return fallbackItems.slice(0, targetCount);
     } catch (error) {
       console.error('Error in fetchFallbackContent:', error);
@@ -678,14 +678,14 @@ export class FeedAlgorithm {
         
         // Exclude viewed content from the database query itself
         if (processedViewedIds.length > 0) {
-          console.log(`🔍 Excluding ${processedViewedIds.length} viewed ${contentType} IDs from DB query:`, processedViewedIds.slice(0, 5));
+          console.log(`Excluding ${processedViewedIds.length} viewed ${contentType} IDs from DB query:`, processedViewedIds.slice(0, 5));
           query = query.not('id', 'in', `(${processedViewedIds.join(',')})`);
         }
         
         const { data, error } = await query;
 
         if (error || !data) {
-          console.log(`⚠️ FeedAlgorithm: No data for ${contentType} in industry ${industryId}:`, error?.message || 'No data returned');
+          console.log(`FeedAlgorithm: No data for ${contentType} in industry ${industryId}:`, error?.message || 'No data returned');
           continue;
         }
 
@@ -698,19 +698,19 @@ export class FeedAlgorithm {
           const isSaved = this.savedIds.has(itemId);
           
           if (isFetched) {
-            console.log(`🔍 Item ${itemId} FILTERED: already fetched`);
+            console.log(`Item ${itemId} FILTERED: already fetched`);
             return false;
           }
           if (excludeInteracted && isLiked) {
-            console.log(`🔍 Item ${itemId} FILTERED: liked`);
+            console.log(`Item ${itemId} FILTERED: liked`);
             return false;
           }
           if (excludeInteracted && isSaved) {
-            console.log(`🔍 Item ${itemId} FILTERED: saved`);
+            console.log(`Item ${itemId} FILTERED: saved`);
             return false;
           }
           
-          console.log(`✅ Item ${itemId} PASSES all filters`);
+          console.log(`Item ${itemId} PASSES all filters`);
           return true;
         });
 
@@ -723,13 +723,13 @@ export class FeedAlgorithm {
         // Sort by score and take the best items from this industry
         industryContent.sort((a, b) => b.score - a.score);
         industryContentMap.set(industryId, industryContent.slice(0, itemsPerIndustry));
-        console.log(`📊 FeedAlgorithm: ${contentType} in ${industryId}: ${data.length} total → ${filteredData.length} after filtering → ${industryContent.slice(0, itemsPerIndustry).length} selected`);
+        console.log(`FeedAlgorithm: ${contentType} in ${industryId}: ${data.length} total → ${filteredData.length} after filtering → ${industryContent.slice(0, itemsPerIndustry).length} selected`);
         
         // Debug first few items if filtering is happening
         if (data.length > 0 && filteredData.length === 0) {
-          console.log(`🔍 DEBUG: Sample IDs from data:`, data.slice(0, 2).map(item => `${this.normalizeId(item.id)} (${typeof item.id})`));
-          console.log(`🔍 DEBUG: fetchedIds size: ${this.fetchedIds.size}, first few:`, Array.from(this.fetchedIds).slice(0, 5));
-          console.log(`🔍 DEBUG: viewedIds size: ${this.viewedIds.size}, first few:`, Array.from(this.viewedIds).slice(0, 5));
+          console.log(`DEBUG: Sample IDs from data:`, data.slice(0, 2).map(item => `${this.normalizeId(item.id)} (${typeof item.id})`));
+          console.log(`DEBUG: fetchedIds size: ${this.fetchedIds.size}, first few:`, Array.from(this.fetchedIds).slice(0, 5));
+          console.log(`DEBUG: viewedIds size: ${this.viewedIds.size}, first few:`, Array.from(this.viewedIds).slice(0, 5));
         }
       }
 
@@ -780,14 +780,14 @@ export class FeedAlgorithm {
 
       // Exclude viewed insights using insight_views table data
       if (viewedInsightIds.length > 0) {
-        console.log(`🔍 Excluding ${viewedInsightIds.length} viewed insights from DB query:`, viewedInsightIds.slice(0, 5));
+        console.log(`Excluding ${viewedInsightIds.length} viewed insights from DB query:`, viewedInsightIds.slice(0, 5));
         query = query.not('id', 'in', `(${viewedInsightIds.join(',')})`);
       }
 
       const { data, error } = await query;
 
       if (error || !data) {
-        console.log(`⚠️ FeedAlgorithm: No insights data:`, error?.message || 'No data returned');
+        console.log(`FeedAlgorithm: No insights data:`, error?.message || 'No data returned');
         return [];
       }
 
@@ -830,19 +830,19 @@ export class FeedAlgorithm {
         const isSaved = this.savedIds.has(itemId);
         
         if (isFetched) {
-          console.log(`🔍 Insight ${itemId} FILTERED: already fetched`);
+          console.log(`Insight ${itemId} FILTERED: already fetched`);
           return false;
         }
         if (excludeInteracted && isLiked) {
-          console.log(`🔍 Insight ${itemId} FILTERED: liked`);
+          console.log(`Insight ${itemId} FILTERED: liked`);
           return false;
         }
         if (excludeInteracted && isSaved) {
-          console.log(`🔍 Insight ${itemId} FILTERED: saved`);
+          console.log(`Insight ${itemId} FILTERED: saved`);
           return false;
         }
         
-        console.log(`✅ Insight ${itemId} PASSES all filters`);
+        console.log(`Insight ${itemId} PASSES all filters`);
         return true;
       });
 
@@ -860,7 +860,7 @@ export class FeedAlgorithm {
       scoredInsights.sort((a, b) => b.score - a.score);
       const selectedInsights = scoredInsights.slice(0, targetCount);
 
-      console.log(`📊 FeedAlgorithm: insights: ${data.length} total → ${filteredData.length} after filtering → ${selectedInsights.length} selected`);
+      console.log(`FeedAlgorithm: insights: ${data.length} total → ${filteredData.length} after filtering → ${selectedInsights.length} selected`);
 
       return selectedInsights;
     } catch (error) {
@@ -898,7 +898,7 @@ export class FeedAlgorithm {
         (content.likes_count * 0.4 + content.saves_count * 0.6) / 100
       );
       
-      // Base score: engagement (0-1) + quality boost (0.2) 
+      // Base score: engagement (0-1) + quality boost (0.2)
       baseScore = Math.max(0.2, engagementScore);
       
       // Decay rate: slower decay for papers/books (research content), faster for articles (news)
@@ -1121,7 +1121,7 @@ export class FeedAlgorithm {
       // Check for preloaded content first for instant display
       const preloadedContent = feedContentPreloader.getCachedContent(contentId, contentType);
       if (preloadedContent) {
-        console.log(`⚡ FeedAlgorithm: Using preloaded ${contentType} ${contentId}`);
+        console.log(`FeedAlgorithm: Using preloaded ${contentType} ${contentId}`);
         
         // Add to fetched IDs to avoid duplicates in regular feed
         this.fetchedIds.add(this.normalizeId(contentId));
@@ -1133,7 +1133,7 @@ export class FeedAlgorithm {
         });
       }
 
-      console.log(`🔄 FeedAlgorithm: Fetching ${contentType} ${contentId} from database`);
+      console.log(`FeedAlgorithm: Fetching ${contentType} ${contentId} from database`);
       
       const tableName = contentType === 'paper' ? 'papers' : 
                         contentType === 'book' ? 'books' : 

@@ -12,11 +12,11 @@ export default function ContentHandler() {
   const { type, id } = useLocalSearchParams();
 
   useEffect(() => {
-    console.log('🔗 ContentHandler: Handling content route:', { type, id });
+    console.log('ContentHandler: Handling content route:', { type, id });
 
     // Validate parameters
     if (!type || !id) {
-      console.error('🔗 ContentHandler: Missing type or id parameters');
+      console.error('ContentHandler: Missing type or id parameters');
       router.replace('/feed');
       return;
     }
@@ -24,12 +24,12 @@ export default function ContentHandler() {
     // Validate content type
     const validTypes = ['article', 'paper', 'book', 'insight'];
     if (!validTypes.includes(type as string)) {
-      console.error('🔗 ContentHandler: Invalid content type:', type);
+      console.error('ContentHandler: Invalid content type:', type);
       router.replace('/feed');
       return;
     }
 
-    console.log(`🔗 ContentHandler: Redirecting to feed with ${type} ${id}`);
+    console.log(`ContentHandler: Redirecting to feed with ${type} ${id}`);
 
     // Redirect to feed with content parameters
     router.replace({

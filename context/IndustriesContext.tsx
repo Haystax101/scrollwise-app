@@ -27,21 +27,21 @@ export const IndustriesProvider = ({ children }: { children: ReactNode }) => {
 
   // Fetch all canonical industries once
   const fetchAllIndustries = async () => {
-    console.log('🏭 IndustriesContext: Fetching all canonical industries...');
+    console.log('IndustriesContext: Fetching all canonical industries...');
     const { data, error } = await supabase.from('industries').select('id, name');
     if (error) {
-      console.error('❌ IndustriesContext: Error fetching all industries:', error);
+      console.error('IndustriesContext: Error fetching all industries:', error);
     } else {
-      console.log('✅ IndustriesContext: All industries fetched:', data);
+      console.log('IndustriesContext: All industries fetched:', data);
       setAllIndustries(data || []);
     }
   };
 
   // Fetch the user's selected industries
   const fetchUserIndustries = async () => {
-    console.log('🏭 IndustriesContext: Fetching user industries...');
+    console.log('IndustriesContext: Fetching user industries...');
     if (user) {
-      console.log('👤 IndustriesContext: Current user:', user.id);
+      console.log('IndustriesContext: Current user:', user.id);
       // First, get the user's industry IDs from user_industries
       const { data: userIndustriesData, error: userIndustriesError } = await supabase
         .from('user_industries')
@@ -49,14 +49,14 @@ export const IndustriesProvider = ({ children }: { children: ReactNode }) => {
         .eq('user_id', user.id);
 
       if (userIndustriesError) {
-        console.error('❌ IndustriesContext: Error fetching user industry links:', userIndustriesError);
+        console.error('IndustriesContext: Error fetching user industry links:', userIndustriesError);
         setIndustries([]);
         return;
       }
 
       if (userIndustriesData && userIndustriesData.length > 0) {
         const industryIds = userIndustriesData.map(link => link.industry_id);
-        console.log('✅ IndustriesContext: User industry IDs found:', industryIds);
+        console.log('IndustriesContext: User industry IDs found:', industryIds);
 
         // Now, fetch the full industry objects for those IDs
         const { data: industriesData, error: industriesError } = await supabase
@@ -65,18 +65,18 @@ export const IndustriesProvider = ({ children }: { children: ReactNode }) => {
           .in('id', industryIds);
 
         if (industriesError) {
-          console.error('❌ IndustriesContext: Error fetching industry details:', industriesError);
+          console.error('IndustriesContext: Error fetching industry details:', industriesError);
           setIndustries([]);
         } else {
-          console.log('✅ IndustriesContext: User industries details fetched:', industriesData);
+          console.log('IndustriesContext: User industries details fetched:', industriesData);
           setIndustries(industriesData || []);
         }
       } else {
-        console.log('⚠️ IndustriesContext: No user industries found, setting empty array');
+        console.log('IndustriesContext: No user industries found, setting empty array');
         setIndustries([]);
       }
     } else {
-      console.log('⚠️ IndustriesContext: No user, setting empty array');
+      console.log('IndustriesContext: No user, setting empty array');
       setIndustries([]);
     }
   };
@@ -95,7 +95,7 @@ export const IndustriesProvider = ({ children }: { children: ReactNode }) => {
           table: 'user_industries',
           filter: `user_id=eq.${user.id}`,
         }, (payload) => {
-          console.log('🔄 IndustriesContext: Real-time industry change detected:', payload);
+          console.log('IndustriesContext: Real-time industry change detected:', payload);
           // Refresh industries when any change is detected
           fetchUserIndustries();
         })

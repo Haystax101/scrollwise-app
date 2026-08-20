@@ -87,7 +87,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, is
   }
 
   // Debug logging for article received by ArticleCard
-  console.log(`🎯 ArticleCard: Received article ${article.id}:`, {
+  console.log(`ArticleCard: Received article ${article.id}:`, {
     id: article.id,
     title: article.title?.substring(0, 30),
     summary_length: article.summary?.length || 0,
@@ -127,7 +127,7 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, is
 
   const shouldUseWebView = useMemo(() => {
     const result = !!(article.animation_code && !webViewError);
-    // console.log(`🎬 ArticleCard ${article.id} - shouldUseWebView:`, { ... });
+    // console.log(`ArticleCard ${article.id} - shouldUseWebView:`, { ... });
     return result;
   }, [article.animation_code, webViewError, article.id]);
 
@@ -444,8 +444,8 @@ export const ArticleCard: React.FC<ArticleCardProps> = React.memo(({ article, is
               industry={article.industry_id}
               postId={article.id}
             // StaticVisual might interpret height differently, so for now we leave it alone or pass a prop if needed.
-            // Assuming StaticVisual adjusts to container or passed height if updated. 
-            // For safety, let's keep StaticVisual logic mostly intact unless requested, 
+            // Assuming StaticVisual adjusts to container or passed height if updated.
+            // For safety, let's keep StaticVisual logic mostly intact unless requested,
             // BUT the container height (style.visualSection) is already forcing it.
             />
           )}

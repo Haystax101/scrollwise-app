@@ -38,11 +38,11 @@ export default function SuggestionsPage() {
   const loadSuggestions = async () => {
     try {
       setLoading(true);
-      console.log('📄 Suggestions page: Loading suggestions...');
+      console.log('Suggestions page: Loading suggestions...');
       const suggestionsData = await FriendsService.getFriendSuggestions(20);
-      console.log('📄 Suggestions page: Received suggestions:', suggestionsData.length);
-      console.log('📄 Suggestions page: First suggestion:', suggestionsData[0]);
-      console.log('📄 Suggestions page: All suggestion user IDs:', suggestionsData.map(s => s.suggested_user_id));
+      console.log('Suggestions page: Received suggestions:', suggestionsData.length);
+      console.log('Suggestions page: First suggestion:', suggestionsData[0]);
+      console.log('Suggestions page: All suggestion user IDs:', suggestionsData.map(s => s.suggested_user_id));
       setSuggestions(suggestionsData);
     } catch (error) {
       console.error('Error loading suggestions:', error);
@@ -54,22 +54,22 @@ export default function SuggestionsPage() {
   const handleSendFriendRequest = async (userId: string, userName: string) => {
     setProcessingUsers(prev => new Set(prev).add(userId));
     try {
-      console.log('📄 Suggestions: Sending friend request to user:', userId);
+      console.log('Suggestions: Sending friend request to user:', userId);
       await FriendsService.sendFriendRequest(userId);
-      console.log('📄 Suggestions: Friend request sent successfully');
+      console.log('Suggestions: Friend request sent successfully');
       Alert.alert('Success', `Friend request sent to ${userName}!`);
 
       // Remove from current suggestions immediately
       setSuggestions(prev => prev.filter(s => s.suggested_user_id !== userId));
 
       // Reload suggestions to ensure database-level filtering works
-      console.log('📄 Suggestions: Reloading suggestions to ensure filtering works');
+      console.log('Suggestions: Reloading suggestions to ensure filtering works');
       setTimeout(() => {
         loadSuggestions();
       }, 1000); // Small delay to ensure database update is complete
 
     } catch (error) {
-      console.error('📄 Suggestions: Error sending friend request:', error);
+      console.error('Suggestions: Error sending friend request:', error);
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to send request');
     } finally {
       setProcessingUsers(prev => {
@@ -341,7 +341,7 @@ export default function SuggestionsPage() {
                   </Text>
                   <View style={dynamicStyles.reasonsContainer}>
                     {suggestion.suggestion_reasons?.map((reason, index) => {
-                      console.log('📄 Suggestions: Raw reason:', reason);
+                      console.log('Suggestions: Raw reason:', reason);
 
                       // Ensure we show count format for shared industries
                       let displayReason = reason;
@@ -355,7 +355,7 @@ export default function SuggestionsPage() {
                         const parts = reason.split(',').map(part => part.trim()).filter(part => part.length > 0);
                         const count = parts.length;
                         displayReason = count === 1 ? '1 shared industry' : `${count} shared industries`;
-                        console.log('📄 Suggestions: Converted reason from', reason, 'to', displayReason);
+                        console.log('Suggestions: Converted reason from', reason, 'to', displayReason);
                       }
 
                       return (

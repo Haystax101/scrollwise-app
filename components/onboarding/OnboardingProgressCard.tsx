@@ -99,7 +99,7 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
           }
         }
       )
-      // Subscribe to profile_passions for "passionate_about" and "working_on" field updates
+      // Subscribe to profile_passions for "passionate_about"and "working_on"field updates
       .on(
         'postgres_changes',
         {
@@ -367,7 +367,7 @@ export const OnboardingProgressCard: React.FC<OnboardingProgressCardProps> = ({
             You've completed all the getting started steps. Welcome to the community!
           </Text>
           <TouchableOpacity style={styles.collectVoltzButton} onPress={() => {
-            console.log('🪙 Collect Voltz button pressed - award completion bonus');
+            console.log('Collect Voltz button pressed - award completion bonus');
             // TODO: Award voltz bonus for completing onboarding
           }}>
             <Text style={styles.collectVoltzText}>Collect Voltz 🪙</Text>

@@ -33,29 +33,29 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   const [uploading, setUploading] = useState(false);
 
   const requestPermission = async () => {
-    console.log('📷 requestPermission: Starting media library permission request...');
+    console.log('requestPermission: Starting media library permission request...');
 
     if (Platform.OS !== 'web') {
-      console.log('📷 Platform is not web, requesting media library permissions...');
+      console.log('Platform is not web, requesting media library permissions...');
 
       try {
         // First check current permission status
         const currentPermission = await ImagePicker.getMediaLibraryPermissionsAsync();
-        console.log('📷 Current media library permission status:', currentPermission);
+        console.log('Current media library permission status:', currentPermission);
 
         let permissionResult;
         if (currentPermission.status !== 'granted') {
-          console.log('📷 Permission not granted, requesting permission...');
+          console.log('Permission not granted, requesting permission...');
           permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          console.log('📷 Permission request result:', permissionResult);
+          console.log('Permission request result:', permissionResult);
         } else {
-          console.log('📷 Permission already granted');
+          console.log('Permission already granted');
           permissionResult = currentPermission;
         }
 
         if (permissionResult.status !== 'granted') {
-          console.log('❌ Media library permission denied. Status:', permissionResult.status);
-          console.log('📋 Permission details:', JSON.stringify(permissionResult, null, 2));
+          console.log('Media library permission denied. Status:', permissionResult.status);
+          console.log('Permission details:', JSON.stringify(permissionResult, null, 2));
 
           let alertTitle = 'Permission Required';
           let alertMessage = '';
@@ -69,12 +69,12 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                 {
                   text: 'Open Settings',
                   onPress: async () => {
-                    console.log('🔄 User chose to open settings from denied state');
+                    console.log('User chose to open settings from denied state');
                     try {
                       const retryResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                      console.log('🔄 Retry permission result:', retryResult);
+                      console.log('Retry permission result:', retryResult);
                     } catch (error) {
-                      console.error('❌ Error retrying permission:', error);
+                      console.error('Error retrying permission:', error);
                     }
                   }
                 }
@@ -87,11 +87,11 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                 {
                   text: 'Allow',
                   onPress: async () => {
-                    console.log('🔄 User chose to retry permission from undetermined state');
+                    console.log('User chose to retry permission from undetermined state');
                     const retryResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                    console.log('🔄 Retry permission result:', retryResult);
+                    console.log('Retry permission result:', retryResult);
                     if (retryResult.status === 'granted') {
-                      console.log('✅ Permission granted on retry');
+                      console.log('Permission granted on retry');
                       Alert.alert('Success', 'Photo library access granted! You can now upload photos.');
                     }
                   }
@@ -110,43 +110,43 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
           return false;
         }
 
-        console.log('✅ Media library permission granted successfully');
+        console.log('Media library permission granted successfully');
         return true;
       } catch (error) {
-        console.error('❌ Error requesting media library permission:', error);
+        console.error('Error requesting media library permission:', error);
         Alert.alert('Error', 'Failed to request camera roll permission. Please try again.');
         return false;
       }
     }
 
-    console.log('📷 Platform is web, skipping permission request');
+    console.log('Platform is web, skipping permission request');
     return true;
   };
 
   const requestCameraPermission = async () => {
-    console.log('📸 requestCameraPermission: Starting camera permission request...');
+    console.log('requestCameraPermission: Starting camera permission request...');
 
     if (Platform.OS !== 'web') {
-      console.log('📸 Platform is not web, requesting camera permissions...');
+      console.log('Platform is not web, requesting camera permissions...');
 
       try {
         // First check current permission status
         const currentPermission = await ImagePicker.getCameraPermissionsAsync();
-        console.log('📸 Current camera permission status:', currentPermission);
+        console.log('Current camera permission status:', currentPermission);
 
         let permissionResult;
         if (currentPermission.status !== 'granted') {
-          console.log('📸 Permission not granted, requesting permission...');
+          console.log('Permission not granted, requesting permission...');
           permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-          console.log('📸 Permission request result:', permissionResult);
+          console.log('Permission request result:', permissionResult);
         } else {
-          console.log('📸 Permission already granted');
+          console.log('Permission already granted');
           permissionResult = currentPermission;
         }
 
         if (permissionResult.status !== 'granted') {
-          console.log('❌ Camera permission denied. Status:', permissionResult.status);
-          console.log('📋 Permission details:', JSON.stringify(permissionResult, null, 2));
+          console.log('Camera permission denied. Status:', permissionResult.status);
+          console.log('Permission details:', JSON.stringify(permissionResult, null, 2));
 
           let alertTitle = 'Permission Required';
           let alertMessage = '';
@@ -160,12 +160,12 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                 {
                   text: 'Open Settings',
                   onPress: async () => {
-                    console.log('🔄 User chose to open settings from camera denied state');
+                    console.log('User chose to open settings from camera denied state');
                     try {
                       const retryResult = await ImagePicker.requestCameraPermissionsAsync();
-                      console.log('🔄 Retry camera permission result:', retryResult);
+                      console.log('Retry camera permission result:', retryResult);
                     } catch (error) {
-                      console.error('❌ Error retrying camera permission:', error);
+                      console.error('Error retrying camera permission:', error);
                     }
                   }
                 }
@@ -178,11 +178,11 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                 {
                   text: 'Allow',
                   onPress: async () => {
-                    console.log('🔄 User chose to retry camera permission from undetermined state');
+                    console.log('User chose to retry camera permission from undetermined state');
                     const retryResult = await ImagePicker.requestCameraPermissionsAsync();
-                    console.log('🔄 Retry camera permission result:', retryResult);
+                    console.log('Retry camera permission result:', retryResult);
                     if (retryResult.status === 'granted') {
-                      console.log('✅ Camera permission granted on retry');
+                      console.log('Camera permission granted on retry');
                       Alert.alert('Success', 'Camera access granted! You can now take photos.');
                     }
                   }
@@ -201,28 +201,28 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
           return false;
         }
 
-        console.log('✅ Camera permission granted successfully');
+        console.log('Camera permission granted successfully');
         return true;
       } catch (error) {
-        console.error('❌ Error requesting camera permission:', error);
+        console.error('Error requesting camera permission:', error);
         Alert.alert('Error', 'Failed to request camera permission. Please try again.');
         return false;
       }
     }
 
-    console.log('📸 Platform is web, skipping permission request');
+    console.log('Platform is web, skipping permission request');
     return true;
   };
 
   const uploadImage = async (uri: string) => {
     try {
-      console.log('🚀 uploadImage called with URI:', uri);
+      console.log('uploadImage called with URI:', uri);
       setUploading(true);
-      console.log('✅ setUploading(true) completed');
+      console.log('setUploading(true) completed');
 
-      console.log('📞 Calling profileImageService.uploadProfileImage...');
+      console.log('Calling profileImageService.uploadProfileImage...');
       const result = await profileImageService.uploadProfileImage(userId, uri);
-      console.log('✅ profileImageService.uploadProfileImage completed:', result);
+      console.log('profileImageService.uploadProfileImage completed:', result);
 
       if (result.error) {
         throw new Error(result.error.message);
@@ -244,21 +244,21 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   };
 
   const handleTakePhoto = async () => {
-    console.log('📷 handleTakePhoto called');
-    console.log('📷 Platform:', Platform.OS);
-    console.log('📷 Platform version:', Platform.Version);
+    console.log('handleTakePhoto called');
+    console.log('Platform:', Platform.OS);
+    console.log('Platform version:', Platform.Version);
 
     try {
       const hasPermission = await requestCameraPermission();
-      console.log('📷 requestCameraPermission returned:', hasPermission);
+      console.log('requestCameraPermission returned:', hasPermission);
 
       if (!hasPermission) {
-        console.log('❌ Camera permission denied, exiting handleTakePhoto');
+        console.log('Camera permission denied, exiting handleTakePhoto');
         return;
       }
-      console.log('✅ Camera permission granted, proceeding with camera launch');
+      console.log('Camera permission granted, proceeding with camera launch');
 
-      console.log('📞 About to call ImagePicker.launchCameraAsync with config:', {
+      console.log('About to call ImagePicker.launchCameraAsync with config:', {
         mediaTypes: 'images',
         allowsEditing: true,
         aspect: [1, 1],
@@ -276,27 +276,27 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
         exif: false,
       });
 
-      console.log('✅ ImagePicker.launchCameraAsync completed with result:', JSON.stringify(result, null, 2));
+      console.log('ImagePicker.launchCameraAsync completed with result:', JSON.stringify(result, null, 2));
 
       if (!result.canceled && result.assets && result.assets.length > 0 && result.assets[0]) {
         const selectedAsset = result.assets[0];
-        console.log('📸 Image selected successfully:', {
+        console.log('Image selected successfully:', {
           uri: selectedAsset.uri,
           width: selectedAsset.width,
           height: selectedAsset.height,
           type: selectedAsset.type,
           fileSize: selectedAsset.fileSize
         });
-        console.log('🚀 Calling uploadImage...');
+        console.log('Calling uploadImage...');
         await uploadImage(selectedAsset.uri);
       } else {
-        console.log('❌ Image picker was canceled or no valid asset selected:', {
+        console.log('Image picker was canceled or no valid asset selected:', {
           canceled: result.canceled,
           assetsLength: result.assets?.length || 0
         });
       }
     } catch (error) {
-      console.error('❌ Unexpected error in handleTakePhoto:', error);
+      console.error('Unexpected error in handleTakePhoto:', error);
       Alert.alert(
         'Error',
         'An unexpected error occurred while trying to access the camera. Please try again.',
@@ -306,21 +306,21 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   };
 
   const handleChooseFromLibrary = async () => {
-    console.log('📚 handleChooseFromLibrary called');
-    console.log('📚 Platform:', Platform.OS);
-    console.log('📚 Platform version:', Platform.Version);
+    console.log('handleChooseFromLibrary called');
+    console.log('Platform:', Platform.OS);
+    console.log('Platform version:', Platform.Version);
 
     try {
       const hasPermission = await requestPermission();
-      console.log('📚 requestPermission returned:', hasPermission);
+      console.log('requestPermission returned:', hasPermission);
 
       if (!hasPermission) {
-        console.log('❌ Library permission denied, exiting handleChooseFromLibrary');
+        console.log('Library permission denied, exiting handleChooseFromLibrary');
         return;
       }
-      console.log('✅ Library permission granted, proceeding with library launch');
+      console.log('Library permission granted, proceeding with library launch');
 
-      console.log('📞 About to call ImagePicker.launchImageLibraryAsync with config:', {
+      console.log('About to call ImagePicker.launchImageLibraryAsync with config:', {
         mediaTypes: 'images',
         allowsEditing: true,
         aspect: [1, 1],
@@ -338,27 +338,27 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
         exif: false,
       });
 
-      console.log('✅ ImagePicker.launchImageLibraryAsync completed with result:', JSON.stringify(result, null, 2));
+      console.log('ImagePicker.launchImageLibraryAsync completed with result:', JSON.stringify(result, null, 2));
 
       if (!result.canceled && result.assets && result.assets.length > 0 && result.assets[0]) {
         const selectedAsset = result.assets[0];
-        console.log('📚 Image selected successfully:', {
+        console.log('Image selected successfully:', {
           uri: selectedAsset.uri,
           width: selectedAsset.width,
           height: selectedAsset.height,
           type: selectedAsset.type,
           fileSize: selectedAsset.fileSize
         });
-        console.log('🚀 Calling uploadImage...');
+        console.log('Calling uploadImage...');
         await uploadImage(selectedAsset.uri);
       } else {
-        console.log('❌ Image library picker was canceled or no valid asset selected:', {
+        console.log('Image library picker was canceled or no valid asset selected:', {
           canceled: result.canceled,
           assetsLength: result.assets?.length || 0
         });
       }
     } catch (error) {
-      console.error('❌ Unexpected error in handleChooseFromLibrary:', error);
+      console.error('Unexpected error in handleChooseFromLibrary:', error);
       Alert.alert(
         'Error',
         'An unexpected error occurred while trying to access the photo library. Please try again.',
@@ -388,7 +388,7 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
                 Alert.alert('Error', 'Failed to remove photo. Please try again.');
               }
             } catch (error) {
-              console.error('❌ Remove photo error:', error);
+              console.error('Remove photo error:', error);
               Alert.alert('Error', 'Failed to remove photo. Please try again.');
             } finally {
               setUploading(false);

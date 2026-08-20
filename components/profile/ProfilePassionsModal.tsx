@@ -73,7 +73,7 @@ export const ProfilePassionsModal: React.FC<ProfilePassionsModalProps> = ({
         throw error;
       }
 
-      console.log('✅ Profile passions saved successfully');
+      console.log('Profile passions saved successfully');
       onSave();
     } catch (error) {
       console.error('Error saving profile passions:', error);

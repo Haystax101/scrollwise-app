@@ -20,14 +20,14 @@ export default function SharedScreen() {
 
   useEffect(() => {
     const handleDeepLink = async () => {
-      console.log('🔗 SharedScreen: Processing deep link with params:', params);
+      console.log('SharedScreen: Processing deep link with params:', params);
 
-      // Extract content parameter (format: "article:123" or "paper:456")
+      // Extract content parameter (format: "article:123"or "paper:456")
       const contentParam = params.get('content');
       const referralCode = params.get('ref');
 
       if (!contentParam) {
-        console.warn('🔗 SharedScreen: No content parameter, redirecting to feed');
+        console.warn('SharedScreen: No content parameter, redirecting to feed');
         router.replace('/feed');
         return;
       }
@@ -36,17 +36,17 @@ export default function SharedScreen() {
       const [contentType, contentId] = contentParam.split(':');
 
       if (!contentType || !contentId) {
-        console.error('🔗 SharedScreen: Invalid content format:', contentParam);
+        console.error('SharedScreen: Invalid content format:', contentParam);
         router.replace('/feed');
         return;
       }
 
-      console.log('🔗 SharedScreen: Parsed content:', { contentType, contentId, referralCode });
+      console.log('SharedScreen: Parsed content:', { contentType, contentId, referralCode });
 
       // Track referral if code provided and user is logged in
       if (referralCode && user) {
         try {
-          console.log('🔗 SharedScreen: Tracking referral:', referralCode);
+          console.log('SharedScreen: Tracking referral:', referralCode);
           await supabase.rpc('track_referral_click', {
             p_referral_code: referralCode,
             p_user_id: user.id,
@@ -54,13 +54,13 @@ export default function SharedScreen() {
             p_content_id: parseInt(contentId, 10)
           });
         } catch (error) {
-          console.error('🔗 SharedScreen: Error tracking referral:', error);
+          console.error('SharedScreen: Error tracking referral:', error);
           // Continue anyway - don't block navigation
         }
       }
 
       // Navigate to feed with content parameters
-      console.log('🔗 SharedScreen: Navigating to feed with content');
+      console.log('SharedScreen: Navigating to feed with content');
       router.replace({
         pathname: '/feed',
         params: {

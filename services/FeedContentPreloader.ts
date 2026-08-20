@@ -54,12 +54,12 @@ export class FeedContentPreloader {
     // Check if already cached and not expired
     const cachedContent = this.getCachedContent(contentId, contentType);
     if (cachedContent) {
-      console.log(`⚡ FeedPreloader: Using cached ${contentType} ${contentId}`);
+      console.log(`FeedPreloader: Using cached ${contentType} ${contentId}`);
       return cachedContent;
     }
 
     try {
-      console.log(`🔄 FeedPreloader: Pre-loading ${contentType} ${contentId}`);
+      console.log(`FeedPreloader: Pre-loading ${contentType} ${contentId}`);
       
       // Fetch from appropriate table
       const tableName = contentType === 'paper' ? 'papers' : 
@@ -73,12 +73,12 @@ export class FeedContentPreloader {
         .limit(1);
 
       if (error) {
-        console.error(`❌ FeedPreloader: Database error for ${contentType} ${contentId}:`, error);
+        console.error(`FeedPreloader: Database error for ${contentType} ${contentId}:`, error);
         return null;
       }
 
       if (!data || data.length === 0) {
-        console.warn(`⚠️ FeedPreloader: No content found for ${contentType} ${contentId}`);
+        console.warn(`FeedPreloader: No content found for ${contentType} ${contentId}`);
         return null;
       }
 
@@ -87,11 +87,11 @@ export class FeedContentPreloader {
       // Cache the content
       await this.cacheContent(contentId, contentType, content);
       
-      console.log(`✅ FeedPreloader: Successfully preloaded ${contentType} ${contentId}`);
+      console.log(`FeedPreloader: Successfully preloaded ${contentType} ${contentId}`);
       return content;
       
     } catch (error) {
-      console.error(`❌ FeedPreloader: Exception preloading ${contentType} ${contentId}:`, error);
+      console.error(`FeedPreloader: Exception preloading ${contentType} ${contentId}:`, error);
       return null;
     }
   }
@@ -147,7 +147,7 @@ export class FeedContentPreloader {
     try {
       await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.memoryCache));
     } catch (error) {
-      console.error('❌ FeedPreloader: Error saving to AsyncStorage:', error);
+      console.error('FeedPreloader: Error saving to AsyncStorage:', error);
     }
   }
 
@@ -171,10 +171,10 @@ export class FeedContentPreloader {
         }
         
         this.memoryCache = validCache;
-        console.log(`📦 FeedPreloader: Loaded ${Object.keys(validCache).length} cached items from storage`);
+        console.log(`FeedPreloader: Loaded ${Object.keys(validCache).length} cached items from storage`);
       }
     } catch (error) {
-      console.error('❌ FeedPreloader: Error loading cache from storage:', error);
+      console.error('FeedPreloader: Error loading cache from storage:', error);
     }
   }
 
@@ -182,18 +182,18 @@ export class FeedContentPreloader {
    * Preload multiple content items (useful for batch operations)
    */
   async preloadMultipleContent(items: Array<{ id: number | string; type: 'article' | 'paper' | 'book' | 'insight' }>): Promise<void> {
-    console.log(`🚀 FeedPreloader: Batch preloading ${items.length} items`);
+    console.log(`FeedPreloader: Batch preloading ${items.length} items`);
     
     const promises = items.map(item => 
       this.preloadContent(item.id, item.type)
         .catch(error => {
-          console.error(`❌ FeedPreloader: Failed to preload ${item.type} ${item.id}:`, error);
+          console.error(`FeedPreloader: Failed to preload ${item.type} ${item.id}:`, error);
           return null;
         })
     );
     
     await Promise.all(promises);
-    console.log(`✅ FeedPreloader: Completed batch preloading`);
+    console.log(`FeedPreloader: Completed batch preloading`);
   }
 
   /**
@@ -218,9 +218,9 @@ export class FeedContentPreloader {
     this.memoryCache = {};
     try {
       await AsyncStorage.removeItem(this.STORAGE_KEY);
-      console.log('✅ FeedPreloader: Cache cleared');
+      console.log('FeedPreloader: Cache cleared');
     } catch (error) {
-      console.error('❌ FeedPreloader: Error clearing cache:', error);
+      console.error('FeedPreloader: Error clearing cache:', error);
     }
   }
 

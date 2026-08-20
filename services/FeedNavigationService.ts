@@ -26,7 +26,7 @@ export class FeedNavigationService {
    */
   public registerFeedAlgorithm(algorithm: FeedAlgorithm): void {
     this.feedAlgorithm = algorithm;
-    console.log('📡 FeedNavService: Feed algorithm registered');
+    console.log('FeedNavService: Feed algorithm registered');
   }
 
   /**
@@ -35,7 +35,7 @@ export class FeedNavigationService {
    */
   public unregisterFeedAlgorithm(): void {
     this.feedAlgorithm = null;
-    console.log('📡 FeedNavService: Feed algorithm unregistered');
+    console.log('FeedNavService: Feed algorithm unregistered');
   }
 
   /**
@@ -45,7 +45,7 @@ export class FeedNavigationService {
   public onFeedTabActive(): void {
     if (!this.isOnFeedTab) {
       this.isOnFeedTab = true;
-      console.log('📡 FeedNavService: User entered feed tab');
+      console.log('FeedNavService: User entered feed tab');
     }
   }
 
@@ -56,15 +56,15 @@ export class FeedNavigationService {
   public onFeedTabInactive(): void {
     if (this.isOnFeedTab) {
       this.isOnFeedTab = false;
-      console.log('📡 FeedNavService: User left feed tab - starting proactive cache refresh');
+      console.log('FeedNavService: User left feed tab - starting proactive cache refresh');
       
       // Trigger proactive cache refresh in background
       if (this.feedAlgorithm) {
         this.feedAlgorithm.proactiveCacheRefresh().catch(error => {
-          console.error('📡 FeedNavService: Proactive cache refresh failed:', error);
+          console.error('FeedNavService: Proactive cache refresh failed:', error);
         });
       } else {
-        console.warn('📡 FeedNavService: No feed algorithm registered for proactive refresh');
+        console.warn('FeedNavService: No feed algorithm registered for proactive refresh');
       }
     }
   }
@@ -73,10 +73,10 @@ export class FeedNavigationService {
    * Manual trigger for cache refresh (for testing or special cases)
    */
   public triggerProactiveRefresh(): void {
-    console.log('📡 FeedNavService: Manual proactive refresh triggered');
+    console.log('FeedNavService: Manual proactive refresh triggered');
     if (this.feedAlgorithm) {
       this.feedAlgorithm.proactiveCacheRefresh().catch(error => {
-        console.error('📡 FeedNavService: Manual proactive refresh failed:', error);
+        console.error('FeedNavService: Manual proactive refresh failed:', error);
       });
     }
   }

@@ -30,7 +30,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
       setLoading(true);
       try {
         // Fetch leaderboard data using direct table queries (more robust than potentially dysfunctional RPC)
-        console.log('📊 Fetching leaderboard data for user:', user.id);
+        console.log('Fetching leaderboard data for user:', user.id);
         
         // Get top users from leaderboard table, ordered by voltz (rank is computed client-side)
         const { data: leaderboardData, error: leaderboardError } = await supabase
@@ -50,7 +50,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
         }
 
         if (!leaderboardData || leaderboardData.length === 0) {
-          console.log('📊 No leaderboard data found');
+          console.log('No leaderboard data found');
           setDisplayUsers([]);
           return;
         }
@@ -67,7 +67,7 @@ export const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ loading: paren
             rank: index + 1 // Rank based on position in sorted array
           }));
 
-        console.log('📊 Transformed leaderboard data:', transformedData.length, 'users');
+        console.log('Transformed leaderboard data:', transformedData.length, 'users');
 
         if (transformedData && transformedData.length > 0) {
           const currentUser = transformedData.find((u) => u.user_id === user.id);

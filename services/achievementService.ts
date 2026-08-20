@@ -90,7 +90,7 @@ export class AchievementService {
     try {
       // Validate userId parameter
       if (!userId || userId.trim() === '') {
-        console.error('❌ Invalid userId provided to getUserAchievements:', userId);
+        console.error('Invalid userId provided to getUserAchievements:', userId);
         return [];
       }
 
@@ -163,11 +163,11 @@ export class AchievementService {
   // Get achievement progress for specific achievements
   static async getAchievementProgress(userId: string, achievementId?: string): Promise<AchievementProgress[]> {
     try {
-      console.log('🔍 getAchievementProgress called with:', { userId, achievementId });
+      console.log('getAchievementProgress called with:', { userId, achievementId });
       
       // Validate userId parameter
       if (!userId || userId.trim() === '') {
-        console.error('❌ Invalid userId provided to getAchievementProgress:', userId);
+        console.error('Invalid userId provided to getAchievementProgress:', userId);
         return [];
       }
       
@@ -177,26 +177,26 @@ export class AchievementService {
         .eq('user_id', userId);
 
       if (achievementId && achievementId.trim() !== '') {
-        console.log('🔍 Adding achievement_id filter:', achievementId);
+        console.log('Adding achievement_id filter:', achievementId);
         query = query.eq('achievement_id', achievementId);
       } else if (achievementId !== undefined) {
-        console.warn('⚠️ achievementId provided but is empty/invalid:', JSON.stringify(achievementId));
+        console.warn('achievementId provided but is empty/invalid:', JSON.stringify(achievementId));
       }
 
-      console.log('🔍 Executing achievement progress query...');
+      console.log('Executing achievement progress query...');
       const { data, error } = await query;
 
       if (error) {
-        console.error('❌ Database error fetching achievement progress:', error);
-        console.error('❌ Query parameters:', { userId, achievementId });
+        console.error('Database error fetching achievement progress:', error);
+        console.error('Query parameters:', { userId, achievementId });
         return [];
       }
 
-      console.log('✅ Successfully fetched achievement progress:', data?.length || 0, 'records');
+      console.log('Successfully fetched achievement progress:', data?.length || 0, 'records');
       return data || [];
     } catch (error) {
-      console.error('❌ Exception fetching achievement progress:', error);
-      console.error('❌ Parameters:', { userId, achievementId });
+      console.error('Exception fetching achievement progress:', error);
+      console.error('Parameters:', { userId, achievementId });
       return [];
     }
   }
@@ -367,60 +367,60 @@ export class AchievementService {
   // Get all achievements with user progress (earned + unearned)
   static async getAllAchievementsWithProgress(userId: string): Promise<EnhancedAchievement[]> {
     try {
-      console.log('🚀 Starting getAllAchievementsWithProgress for user:', userId);
+      console.log('Starting getAllAchievementsWithProgress for user:', userId);
       
       // Validate userId parameter
       if (!userId || userId.trim() === '') {
-        console.error('❌ Invalid userId provided to getAllAchievementsWithProgress:', userId);
+        console.error('Invalid userId provided to getAllAchievementsWithProgress:', userId);
         return [];
       }
       
       // Fetch all available achievements
-      console.log('📋 Fetching available achievements...');
+      console.log('Fetching available achievements...');
       const availableAchievements = await this.getAvailableAchievements();
-      console.log('✅ Available achievements fetched:', availableAchievements.length);
+      console.log('Available achievements fetched:', availableAchievements.length);
       
       // Fetch user's earned achievements
-      console.log('🏆 Fetching user achievements...');
+      console.log('Fetching user achievements...');
       const userAchievements = await this.getUserAchievements(userId);
-      console.log('✅ User achievements fetched:', userAchievements.length);
+      console.log('User achievements fetched:', userAchievements.length);
       
       // Fetch user's achievement progress
-      console.log('📊 Fetching user achievement progress...');
+      console.log('Fetching user achievement progress...');
       const achievementProgress = await this.getAchievementProgress(userId);
-      console.log('✅ Achievement progress fetched:', achievementProgress.length);
+      console.log('Achievement progress fetched:', achievementProgress.length);
       
       // Create a map of earned achievements for quick lookup
-      console.log('🗺️ Creating earned achievements map...');
+      console.log('Creating earned achievements map...');
       const earnedAchievementMap = new Map<string, UserAchievement>();
       userAchievements.forEach(userAch => {
         if (userAch.achievement_id && userAch.achievement_id.trim() !== '') {
           earnedAchievementMap.set(userAch.achievement_id, userAch);
         } else {
-          console.warn('⚠️ Skipping user achievement with invalid achievement_id:', {
+          console.warn('Skipping user achievement with invalid achievement_id:', {
             id: userAch.id,
             achievement_id: userAch.achievement_id,
             title: userAch.title
           });
         }
       });
-      console.log('✅ Earned achievements map created with', earnedAchievementMap.size, 'valid entries');
+      console.log('Earned achievements map created with', earnedAchievementMap.size, 'valid entries');
       
       // Create a map of progress for quick lookup
-      console.log('📈 Creating progress map...');
+      console.log('Creating progress map...');
       const progressMap = new Map<string, AchievementProgress>();
       achievementProgress.forEach(progress => {
         if (progress.achievement_id && progress.achievement_id.trim() !== '') {
           progressMap.set(progress.achievement_id, progress);
         } else {
-          console.warn('⚠️ Skipping progress record with invalid achievement_id:', {
+          console.warn('Skipping progress record with invalid achievement_id:', {
             id: progress.id,
             achievement_id: progress.achievement_id,
             user_id: progress.user_id
           });
         }
       });
-      console.log('✅ Progress map created with', progressMap.size, 'valid entries');
+      console.log('Progress map created with', progressMap.size, 'valid entries');
       
       // Merge data to create enhanced achievements
       const enhancedAchievements: EnhancedAchievement[] = availableAchievements.map(achievement => {

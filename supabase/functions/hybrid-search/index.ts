@@ -1,3 +1,29 @@
+/**
+ * Hybrid search: semantic + lexical retrieval, fused with Reciprocal Rank Fusion.
+ *
+ * Neither retrieval method is sufficient alone. Vector search understands intent
+ * ("how do I stop procrastinating" matches an article on habit loops that shares
+ * no keywords) but drifts on proper nouns and exact phrases. Keyword search nails
+ * those and is useless for paraphrase. So both run, in parallel, and their results
+ * are merged.
+ *
+ * The merge is Reciprocal Rank Fusion (Cormack et al., 2009). Each result scores
+ * 1 / (k + rank) in every list it appears in, and those scores are summed:
+ *
+ *     score(d) = sum over lists L of  1 / (k + rank_L(d))
+ *
+ * RRF is used here rather than a weighted sum of the raw scores because cosine
+ * similarity and ts_rank_cd are not on comparable scales, and normalising them
+ * against each other requires tuning that would drift as content changes. RRF
+ * only reads *rank*, so it is scale-free and needs no per-corpus calibration.
+ * k = 60 is the standard damping constant: it stops any single list's top hit
+ * from dominating the fused ordering.
+ *
+ * A document surfaced by both retrievers therefore outranks one that a single
+ * retriever loved, which is the behaviour we want for a discovery feed.
+ *
+ * Backing SQL: database/search_functions.sql (vector_search, keyword_search).
+ */
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { SupabaseClient, createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -235,6 +261,8 @@ function reciprocalRankFusion(resultsSets: any[][], k = 60): any[] {
           return;
         }
         
+        // 1 / (k + rank). Rank alone decides the contribution, so the two
+        // retrievers' incomparable score scales never have to be reconciled.
         const score = 1 / (k + index + 1);
         const key = `${item.content_type}-${item.id}`;
         rankedLists.set(key, (rankedLists.get(key) || 0) + score);

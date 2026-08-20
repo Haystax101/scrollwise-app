@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({ currentScreen, navigateTo }) => 
     const isLeavingFeed = currentScreen === 'home' && screenName !== 'home';
     const isGoingToFeed = currentScreen !== 'home' && screenName === 'home';
 
-    console.log(`🚀 Navigation: ${currentScreen} → ${screenName} (leavingFeed: ${isLeavingFeed}, goingToFeed: ${isGoingToFeed})`);
+    console.log(`Navigation: ${currentScreen} → ${screenName} (leavingFeed: ${isLeavingFeed}, goingToFeed: ${isGoingToFeed})`);
 
     if (isLeavingFeed) {
       // User is navigating away from feed - trigger proactive cache refresh

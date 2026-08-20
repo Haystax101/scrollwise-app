@@ -1,3 +1,0 @@
-Append to end of every prompt if possible:
-Feel free to clarify anything with me. Refer to relevant documentation where possible and only implement changes of which you are 95%+ sure. Refer to the structure.md file frequently to ensure your changes fit seemlessly into the overarching app.
-

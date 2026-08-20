@@ -110,16 +110,16 @@ export const profileImageService = {
     fileName?: string
   ): Promise<{ url: string | null; path: string | null; error: Error | null }> {
     try {
-      console.log('🚀 Starting profile image upload for user:', userId);
-      console.log('📷 Original image URI:', imageUri);
+      console.log('Starting profile image upload for user:', userId);
+      console.log('Original image URI:', imageUri);
 
       // Get current avatar_url to delete old file later
-      console.log('🔍 Getting current avatar URL to delete old file...');
+      console.log('Getting current avatar URL to delete old file...');
       const currentAvatarPath = await this.getCurrentUserAvatarPath(userId);
       if (currentAvatarPath) {
-        console.log('🎯 Found existing avatar to delete:', currentAvatarPath);
+        console.log('Found existing avatar to delete:', currentAvatarPath);
       } else {
-        console.log('✨ No existing avatar found for user (first upload or no previous avatar)');
+        console.log('No existing avatar found for user (first upload or no previous avatar)');
       }
 
       // Compress image before upload to save bucket space
@@ -178,7 +178,7 @@ export const profileImageService = {
       }
 
       // Clean up ALL old avatar files for this user, keeping only the current one
-      console.log('🧹 Cleaning up old avatar files for user...');
+      console.log('Cleaning up old avatar files for user...');
 
       // Add a small delay to ensure new upload is fully completed before cleanup
       console.log('⏳ Waiting 1 second for upload to complete before cleanup...');
@@ -186,13 +186,13 @@ export const profileImageService = {
 
       const cleanupResult = await this.cleanupUserAvatarFiles(userId, data.path);
       if (cleanupResult.cleaned > 0) {
-        console.log(`✅ Successfully cleaned up ${cleanupResult.cleaned} old avatar file(s)`);
+        console.log(`Successfully cleaned up ${cleanupResult.cleaned} old avatar file(s)`);
       } else {
-        console.log('ℹ️ No old avatar files found to clean up');
+        console.log('ℹ No old avatar files found to clean up');
       }
 
       if (cleanupResult.errors.length > 0) {
-        console.warn('⚠️ Some cleanup errors occurred:', cleanupResult.errors);
+        console.warn('Some cleanup errors occurred:', cleanupResult.errors);
       }
 
       // Generate public URL
@@ -256,7 +256,7 @@ export const profileImageService = {
    */
   async removeUserAvatar(userId: string): Promise<boolean> {
     try {
-      console.log('🗑️ Removing user avatar for user:', userId);
+      console.log('Removing user avatar for user:', userId);
 
       // Update database first (set avatar_url to null)
       const { error } = await supabase
@@ -265,30 +265,30 @@ export const profileImageService = {
         .eq('id', userId);
 
       if (error) {
-        console.error('❌ Error removing user avatar from database:', error);
+        console.error('Error removing user avatar from database:', error);
         return false;
       }
 
-      console.log('✅ Successfully updated database to remove avatar_url');
+      console.log('Successfully updated database to remove avatar_url');
 
       // Clean up ALL avatar files for this user from storage
-      console.log('🧹 Cleaning up all avatar files for user...');
+      console.log('Cleaning up all avatar files for user...');
       const cleanupResult = await this.cleanupUserAvatarFiles(userId, ''); // Empty string means delete all user files
 
       if (cleanupResult.cleaned > 0) {
-        console.log(`✅ Successfully cleaned up ${cleanupResult.cleaned} avatar file(s) from storage`);
+        console.log(`Successfully cleaned up ${cleanupResult.cleaned} avatar file(s) from storage`);
       } else {
-        console.log('ℹ️ No avatar files found in storage to clean up');
+        console.log('ℹ No avatar files found in storage to clean up');
       }
 
       if (cleanupResult.errors.length > 0) {
-        console.warn('⚠️ Some cleanup errors occurred:', cleanupResult.errors);
+        console.warn('Some cleanup errors occurred:', cleanupResult.errors);
         // Still return true since database was updated successfully
       }
 
       return true;
     } catch (error) {
-      console.error('❌ Exception removing user avatar:', error);
+      console.error('Exception removing user avatar:', error);
       return false;
     }
   },
@@ -331,8 +331,8 @@ export const profileImageService = {
         return null;
       }
 
-      console.log('✅ Current avatar path found:', avatarPath);
-      console.log('📋 Avatar path details:', {
+      console.log('Current avatar path found:', avatarPath);
+      console.log('Avatar path details:', {
         path: avatarPath,
         pathType: typeof avatarPath,
         pathLength: avatarPath.length,
@@ -354,15 +354,15 @@ export const profileImageService = {
       console.log('Attempting to delete avatar from storage:', avatarPath);
 
       // The Supabase storage remove API expects an array of file paths
-      console.log('🗑️ Calling Supabase storage remove with:', [avatarPath]);
+      console.log('Calling Supabase storage remove with:', [avatarPath]);
 
       const { data, error } = await supabase.storage
         .from('avatars')
         .remove([avatarPath]);
 
       if (error) {
-        console.error('❌ Supabase storage deletion error:', error);
-        console.error('❌ Error details:', {
+        console.error('Supabase storage deletion error:', error);
+        console.error('Error details:', {
           message: error.message,
           name: error.name,
           avatarPath
@@ -371,7 +371,7 @@ export const profileImageService = {
       }
 
       // Log the exact response from Supabase
-      console.log('📋 Supabase delete response:', {
+      console.log('Supabase delete response:', {
         data: data,
         dataType: typeof data,
         dataLength: data?.length,
@@ -381,16 +381,16 @@ export const profileImageService = {
 
       // Check if deletion actually occurred
       if (!data || data.length === 0) {
-        console.warn('⚠️ Deletion request succeeded but no files were reported as deleted');
-        console.warn('⚠️ This might mean:');
-        console.warn('   - File didn\'t exist in storage');
-        console.warn('   - Path was incorrect');
-        console.warn('   - File was already deleted');
-        console.warn('   - Timing issue with concurrent operations');
+        console.warn('Deletion request succeeded but no files were reported as deleted');
+        console.warn('This might mean:');
+        console.warn('- File didn\'t exist in storage');
+        console.warn('- Path was incorrect');
+        console.warn('- File was already deleted');
+        console.warn('- Timing issue with concurrent operations');
         return false;
       }
 
-      console.log('✅ Successfully deleted avatar from storage:', {
+      console.log('Successfully deleted avatar from storage:', {
         avatarPath,
         deletedFiles: data,
         deletedCount: data.length,
@@ -398,8 +398,8 @@ export const profileImageService = {
       });
       return true;
     } catch (error) {
-      console.error('❌ Exception during avatar deletion:', error);
-      console.error('❌ Exception details:', {
+      console.error('Exception during avatar deletion:', error);
+      console.error('Exception details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
         avatarPath
@@ -414,8 +414,8 @@ export const profileImageService = {
    */
   async cleanupUserAvatarFiles(userId: string, currentFilePath: string): Promise<{ cleaned: number; errors: string[] }> {
     try {
-      console.log('🧹 Starting cleanup of old avatar files for user:', userId);
-      console.log('🎯 Current file to keep:', currentFilePath);
+      console.log('Starting cleanup of old avatar files for user:', userId);
+      console.log('Current file to keep:', currentFilePath);
 
       // Get all files in the avatars bucket
       const { data: allFiles, error: listError } = await supabase.storage
@@ -423,12 +423,12 @@ export const profileImageService = {
         .list();
 
       if (listError) {
-        console.error('❌ Error listing avatar files:', listError);
+        console.error('Error listing avatar files:', listError);
         return { cleaned: 0, errors: [listError.message] };
       }
 
       if (!allFiles || allFiles.length === 0) {
-        console.log('📁 No files found in avatars bucket');
+        console.log('No files found in avatars bucket');
         return { cleaned: 0, errors: [] };
       }
 
@@ -437,7 +437,7 @@ export const profileImageService = {
         file.name && file.name.startsWith(userId)
       );
 
-      console.log('📋 User files analysis:', {
+      console.log('User files analysis:', {
         totalFiles: allFiles.length,
         userFiles: userFiles.length,
         userFileNames: userFiles.map(f => f.name),
@@ -449,13 +449,13 @@ export const profileImageService = {
         file.name !== currentFilePath
       );
 
-      console.log('🗑️ Files to delete:', {
+      console.log('Files to delete:', {
         count: filesToDelete.length,
         files: filesToDelete.map(f => f.name)
       });
 
       if (filesToDelete.length === 0) {
-        console.log('✨ No old files to clean up');
+        console.log('No old files to clean up');
         return { cleaned: 0, errors: [] };
       }
 
@@ -465,13 +465,13 @@ export const profileImageService = {
       // Delete each old file
       for (const file of filesToDelete) {
         try {
-          console.log(`🗑️ Deleting old file: ${file.name}`);
+          console.log(`Deleting old file: ${file.name}`);
 
           const { data, error } = await supabase.storage
             .from('avatars')
             .remove([file.name]);
 
-          console.log(`🔍 Delete response for ${file.name}:`, {
+          console.log(`Delete response for ${file.name}:`, {
             hasError: !!error,
             error: error,
             data: data,
@@ -481,29 +481,29 @@ export const profileImageService = {
 
           if (error) {
             const errorMsg = `Failed to delete ${file.name}: ${error.message}`;
-            console.error('❌', errorMsg);
+            console.error('', errorMsg);
             errors.push(errorMsg);
           } else if (!data || data.length === 0) {
             const warningMsg = `Delete request for ${file.name} succeeded but no files were deleted (likely permissions issue)`;
-            console.warn('⚠️', warningMsg);
-            console.warn('💡 Check Supabase Storage policies for DELETE operations on avatars bucket');
+            console.warn('', warningMsg);
+            console.warn('Check Supabase Storage policies for DELETE operations on avatars bucket');
             errors.push(warningMsg);
           } else {
-            console.log('✅ Successfully deleted:', file.name);
+            console.log('Successfully deleted:', file.name);
             cleaned++;
           }
         } catch (error) {
           const errorMsg = `Exception deleting ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          console.error('❌', errorMsg);
+          console.error('', errorMsg);
           errors.push(errorMsg);
         }
       }
 
-      console.log(`🧹 Cleanup completed: ${cleaned} files cleaned, ${errors.length} errors`);
+      console.log(`Cleanup completed: ${cleaned} files cleaned, ${errors.length} errors`);
       return { cleaned, errors };
 
     } catch (error) {
-      console.error('❌ Exception during user avatar cleanup:', error);
+      console.error('Exception during user avatar cleanup:', error);
       return { cleaned: 0, errors: [error instanceof Error ? error.message : 'Unknown error'] };
     }
   },

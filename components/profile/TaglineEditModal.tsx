@@ -56,7 +56,7 @@ export const TaglineEditModal: React.FC<TaglineEditModalProps> = ({
         throw error;
       }
 
-      console.log('✅ Tagline saved successfully');
+      console.log('Tagline saved successfully');
       onSave(finalTagline);
     } catch (error) {
       console.error('Error saving tagline:', error);
@@ -91,7 +91,7 @@ export const TaglineEditModal: React.FC<TaglineEditModalProps> = ({
                 throw error;
               }
 
-              console.log('✅ Tagline removed successfully');
+              console.log('Tagline removed successfully');
               onSave(null);
             } catch (error) {
               console.error('Error removing tagline:', error);

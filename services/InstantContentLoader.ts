@@ -44,7 +44,7 @@ export class InstantContentLoader {
     // Check memory cache first
     const memoryResult = this.getFromMemoryCache(cacheKey, query);
     if (memoryResult) {
-      console.log(`📦 InstantLoader: Memory cache hit for ${cacheKey}`);
+      console.log(`InstantLoader: Memory cache hit for ${cacheKey}`);
       return memoryResult;
     }
 
@@ -53,11 +53,11 @@ export class InstantContentLoader {
     if (storageResult) {
       // Move to memory cache for faster subsequent access
       this.addToMemoryCache(cacheKey, storageResult, query);
-      console.log(`💾 InstantLoader: Storage cache hit for ${cacheKey}`);
+      console.log(`InstantLoader: Storage cache hit for ${cacheKey}`);
       return storageResult;
     }
 
-    console.log(`❌ InstantLoader: No cache found for ${cacheKey}`);
+    console.log(`InstantLoader: No cache found for ${cacheKey}`);
     return null;
   }
 
@@ -68,13 +68,13 @@ export class InstantContentLoader {
     const cacheKey = industryId || 'all';
     
     try {
-      console.log(`🔄 InstantLoader: Pre-loading content for ${cacheKey}`);
+      console.log(`InstantLoader: Pre-loading content for ${cacheKey}`);
       
       let response;
       
       // If this is initial content loading (not an actual search), fetch recent content directly
       if (query === 'discover_initial' || query === '') {
-        console.log(`🏠 InstantLoader: Fetching recent content for industry ${cacheKey}`);
+        console.log(`InstantLoader: Fetching recent content for industry ${cacheKey}`);
         response = await this.fetchRecentContentByIndustry(industryId);
       } else {
         // Use search for actual queries
@@ -82,7 +82,7 @@ export class InstantContentLoader {
       }
       
       if (response.error) {
-        console.error(`❌ InstantLoader: Error pre-loading ${cacheKey}:`, response.error);
+        console.error(`InstantLoader: Error pre-loading ${cacheKey}:`, response.error);
         return [];
       }
 
@@ -91,10 +91,10 @@ export class InstantContentLoader {
       // Cache in both memory and storage
       await this.cacheContent(cacheKey, content, query);
       
-      console.log(`✅ InstantLoader: Pre-loaded ${content.length} items for ${cacheKey}`);
+      console.log(`InstantLoader: Pre-loaded ${content.length} items for ${cacheKey}`);
       return content;
     } catch (error) {
-      console.error(`❌ InstantLoader: Exception pre-loading ${cacheKey}:`, error);
+      console.error(`InstantLoader: Exception pre-loading ${cacheKey}:`, error);
       return [];
     }
   }
@@ -103,7 +103,7 @@ export class InstantContentLoader {
    * Pre-load content for multiple industries in background
    */
   async preloadMultipleIndustries(industryIds: string[], query: string = ''): Promise<void> {
-    console.log(`🚀 InstantLoader: Pre-loading ${industryIds.length} industries`);
+    console.log(`InstantLoader: Pre-loading ${industryIds.length} industries`);
     
     // Process industries in batches to avoid overwhelming the API
     const batchSize = 3;
@@ -114,7 +114,7 @@ export class InstantContentLoader {
         batch.map(industryId => 
           this.preloadIndustryContent(industryId, query)
             .catch(error => {
-              console.error(`❌ InstantLoader: Failed to pre-load ${industryId}:`, error);
+              console.error(`InstantLoader: Failed to pre-load ${industryId}:`, error);
               return [];
             })
         )
@@ -126,7 +126,7 @@ export class InstantContentLoader {
       }
     }
     
-    console.log(`✅ InstantLoader: Completed pre-loading for ${industryIds.length} industries`);
+    console.log(`InstantLoader: Completed pre-loading for ${industryIds.length} industries`);
   }
 
   /**
@@ -169,7 +169,7 @@ export class InstantContentLoader {
       
       await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(existingCache));
     } catch (error) {
-      console.error('❌ InstantLoader: Error saving to AsyncStorage:', error);
+      console.error('InstantLoader: Error saving to AsyncStorage:', error);
     }
   }
 
@@ -219,7 +219,7 @@ export class InstantContentLoader {
       
       return cached.content;
     } catch (error) {
-      console.error('❌ InstantLoader: Error loading from AsyncStorage:', error);
+      console.error('InstantLoader: Error loading from AsyncStorage:', error);
       return null;
     }
   }
@@ -254,7 +254,7 @@ export class InstantContentLoader {
       const cacheJson = await AsyncStorage.getItem(this.STORAGE_KEY);
       return cacheJson ? JSON.parse(cacheJson) : {};
     } catch (error) {
-      console.error('❌ InstantLoader: Error loading cache from storage:', error);
+      console.error('InstantLoader: Error loading cache from storage:', error);
       return {};
     }
   }
@@ -266,9 +266,9 @@ export class InstantContentLoader {
     this.memoryCache = {};
     try {
       await AsyncStorage.removeItem(this.STORAGE_KEY);
-      console.log('✅ InstantLoader: Cache cleared');
+      console.log('InstantLoader: Cache cleared');
     } catch (error) {
-      console.error('❌ InstantLoader: Error clearing cache:', error);
+      console.error('InstantLoader: Error clearing cache:', error);
     }
   }
 
@@ -280,7 +280,7 @@ export class InstantContentLoader {
       const limit = this.MAX_CACHED_ITEMS_PER_INDUSTRY;
       let allResults: SearchResult[] = [];
       
-      console.log(`📊 InstantLoader: Fetching recent content for industry ${industryId || 'all'}`);
+      console.log(`InstantLoader: Fetching recent content for industry ${industryId || 'all'}`);
       
       // Define content types and their distribution
       const contentTypes = [
@@ -307,7 +307,7 @@ export class InstantContentLoader {
         const { data, error } = await query;
         
         if (error) {
-          console.error(`❌ InstantLoader: Error fetching ${type} from ${table}:`, error);
+          console.error(`InstantLoader: Error fetching ${type} from ${table}:`, error);
           continue;
         }
         
@@ -334,14 +334,14 @@ export class InstantContentLoader {
           }));
           
           allResults.push(...results);
-          console.log(`✅ InstantLoader: Fetched ${results.length} ${type} items`);
+          console.log(`InstantLoader: Fetched ${results.length} ${type} items`);
         }
       }
       
       // Shuffle results for variety
       const shuffledResults = allResults.sort(() => Math.random() - 0.5);
       
-      console.log(`📊 InstantLoader: Total fetched: ${shuffledResults.length} items for industry ${industryId || 'all'}`);
+      console.log(`InstantLoader: Total fetched: ${shuffledResults.length} items for industry ${industryId || 'all'}`);
       
       return {
         results: shuffledResults.slice(0, limit),
@@ -350,7 +350,7 @@ export class InstantContentLoader {
         isProFeature: false
       };
     } catch (error) {
-      console.error(`❌ InstantLoader: Exception in fetchRecentContentByIndustry:`, error);
+      console.error(`InstantLoader: Exception in fetchRecentContentByIndustry:`, error);
       return {
         results: [],
         searchType: 'recent',

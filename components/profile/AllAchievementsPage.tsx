@@ -41,18 +41,18 @@ export const AllAchievementsPage: React.FC<AllAchievementsPageProps> = ({
 
   const loadAchievements = async () => {
     if (!userId || userId.trim() === '') {
-      console.error('❌ AllAchievementsPage: Cannot load achievements - invalid userId:', userId);
+      console.error('AllAchievementsPage: Cannot load achievements - invalid userId:', userId);
       setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
-      console.log('🏆 AllAchievementsPage: Loading all achievements for user:', userId);
+      console.log('AllAchievementsPage: Loading all achievements for user:', userId);
       const enhancedAchievements = await AchievementService.getAllAchievementsWithProgress(userId);
       setAchievements(enhancedAchievements);
     } catch (error) {
-      console.error('❌ AllAchievementsPage: Error loading achievements:', error);
+      console.error('AllAchievementsPage: Error loading achievements:', error);
     } finally {
       setLoading(false);
     }

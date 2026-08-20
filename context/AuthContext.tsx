@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const fetchSession = async () => {
-      // The `data.session` is typed correctly by the Supabase client
+      // The `data.session`is typed correctly by the Supabase client
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
@@ -62,13 +62,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         streakService.logDailyActivity(session.user.id, ['app_open'])
           .then(success => {
             if (success) {
-              console.log('✅ Daily activity logged for streak tracking (app launch)');
+              console.log('Daily activity logged for streak tracking (app launch)');
             } else {
-              console.log('⚠️ Failed to log daily activity for streak (app launch)');
+              console.log('Failed to log daily activity for streak (app launch)');
             }
           })
           .catch(error => {
-            console.error('❌ Error logging daily activity (app launch):', error);
+            console.error('Error logging daily activity (app launch):', error);
           });
       }
     };
@@ -77,7 +77,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Listen for changes in authentication state
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('AuthContext: Auth state changed:', event, session ? 'User logged in' : 'User logged out');
+      console.log('AuthContext: Auth state changed:', event, session ? 'User logged in': 'User logged out');
       setSession(session);
       setUser(session?.user ?? null);
 
@@ -106,13 +106,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         streakService.logDailyActivity(session.user.id, ['app_open', 'sign_in'])
           .then(success => {
             if (success) {
-              console.log('✅ Daily activity logged for streak tracking');
+              console.log('Daily activity logged for streak tracking');
             } else {
-              console.log('⚠️ Failed to log daily activity for streak');
+              console.log('Failed to log daily activity for streak');
             }
           })
           .catch(error => {
-            console.error('❌ Error logging daily activity:', error);
+            console.error('Error logging daily activity:', error);
           });
       } else if (event === 'SIGNED_OUT') {
         // Track sign out event
@@ -151,9 +151,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const preloader = ContentPreloader.getInstance();
       preloader.startPreloading(industryIds);
       
-      console.log('🚀 Content preloading started for user industries:', industryIds);
+      console.log('Content preloading started for user industries:', industryIds);
     } catch (error) {
-      console.error('❌ Failed to start content preloading:', error);
+      console.error('Failed to start content preloading:', error);
     }
   };
 

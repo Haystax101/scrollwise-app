@@ -184,7 +184,7 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
             } else {
                 if (activeTab === 'insights') {
                     // Debug log for user issue
-                    console.log('🔍 Fetched insights:', data.map(i => ({ id: i.id, has_image: !!i.image_url, url_len: i.image_url?.length })));
+                    console.log('Fetched insights:', data.map(i => ({ id: i.id, has_image: !!i.image_url, url_len: i.image_url?.length })));
                 }
                 setItems(data);
             }
@@ -281,28 +281,28 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
                                     // Extract filename from URL (assuming it's the last part)
                                     const filename = selectedOptionItem.image_url.split('/').pop();
                                     if (filename) {
-                                        console.log('🗑️ Deleting insight image:', filename);
+                                        console.log('Deleting insight image:', filename);
                                         await supabase.storage
                                             .from('content-images')
                                             .remove([filename]);
                                     }
                                 } catch (err) {
-                                    console.log('⚠️ Failed to clean up insight image:', err);
+                                    console.log('Failed to clean up insight image:', err);
                                     // Continue with DB delete even if file cleanup fails
                                 }
                             } else if (activeTab === 'timelapses') {
                                 try {
                                     // 1. Delete Video File
-                                    // Use video_url which is the actual file path in 'timelapses' bucket
+                                    // Use video_url which is the actual file path in 'timelapses'bucket
                                     if (selectedOptionItem.video_url) {
-                                        console.log('🗑️ Deleting timelapse video:', selectedOptionItem.video_url);
+                                        console.log('Deleting timelapse video:', selectedOptionItem.video_url);
                                         await supabase.storage
                                             .from('timelapses')
                                             .remove([selectedOptionItem.video_url]);
                                     }
 
                                     // 2. Delete Thumbnails
-                                    // Thumbnails are stored in 'timelapse-images' bucket under folder: userId/itemId/
+                                    // Thumbnails are stored in 'timelapse-images'bucket under folder: userId/itemId/
                                     const pathPrefix = `${userId}/${selectedOptionItem.id}`;
                                     const { data: files } = await supabase.storage
                                         .from('timelapse-images')
@@ -310,28 +310,28 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
 
                                     if (files && files.length > 0) {
                                         const filePaths = files.map(f => `${pathPrefix}/${f.name}`);
-                                        console.log('🗑️ Deleting timelapse thumbnails:', filePaths);
+                                        console.log('Deleting timelapse thumbnails:', filePaths);
                                         await supabase.storage
                                             .from('timelapse-images')
                                             .remove(filePaths);
                                     }
                                 } catch (err) {
-                                    console.log('⚠️ Failed to clean up timelapse files:', err);
+                                    console.log('Failed to clean up timelapse files:', err);
                                     // Continue with DB delete
                                 }
                             }
 
-                            console.log('🗑️ Attempting to delete item from DB:', { table, id: selectedOptionItem.id });
+                            console.log('Attempting to delete item from DB:', { table, id: selectedOptionItem.id });
                             const { error } = await supabase
                                 .from(table)
                                 .delete()
                                 .eq('id', selectedOptionItem.id);
 
                             if (error) {
-                                console.log('❌ Delete Error:', error);
+                                console.log('Delete Error:', error);
                                 throw error;
                             } else {
-                                console.log('✅ Delete Successful');
+                                console.log('Delete Successful');
                             }
 
                             // Refresh content
@@ -440,8 +440,8 @@ export const UGCArchiveGrid: React.FC<UGCArchiveGridProps> = ({ userId }) => {
                     source={{ uri: item.image_url }}
                     style={styles.image}
                     resizeMode="cover"
-                    onError={(e) => console.log(`❌ Grid Image Load Error [${item.id}]:`, e.nativeEvent.error, item.image_url)}
-                    onLoad={() => console.log(`✅ Grid Image Loaded [${item.id}]`)}
+                    onError={(e) => console.log(`Grid Image Load Error [${item.id}]:`, e.nativeEvent.error, item.image_url)}
+                    onLoad={() => console.log(`Grid Image Loaded [${item.id}]`)}
                 />
             </TouchableOpacity>
         );

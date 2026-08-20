@@ -61,7 +61,7 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
   const [filteredContent, setFilteredContent] = useState<SavedContent[]>([]);
 
   useEffect(() => {
-    console.log('📄 SavedContentSection: Component mounted, user:', user?.id);
+    console.log('SavedContentSection: Component mounted, user:', user?.id);
     if (user) {
       fetchSavedContent();
     }
@@ -90,14 +90,14 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
 
   const fetchSavedContent = useCallback(async () => {
     if (!user) {
-      console.log('📄 SavedContentSection: No user available');
+      console.log('SavedContentSection: No user available');
       return;
     }
 
-    console.log('📄 SavedContentSection: Fetching saved content for user:', user.id);
+    console.log('SavedContentSection: Fetching saved content for user:', user.id);
     setLoading(true);
     try {
-      console.log('📄 SavedContentSection: Starting to fetch saved content for user:', user.id);
+      console.log('SavedContentSection: Starting to fetch saved content for user:', user.id);
 
       // Fetch all saved content types with correct field names
       const [articlesRes, papersRes, booksRes, contentSlidesRes] = await Promise.all([
@@ -164,21 +164,21 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
           .limit(10)
       ]);
 
-      console.log('📄 SavedContentSection: Query results - articles:', articlesRes.data?.length, 'papers:', papersRes.data?.length, 'books:', booksRes.data?.length, 'content_slides:', contentSlidesRes.data?.length);
-      console.log('📄 SavedContentSection: Articles error:', articlesRes.error);
-      console.log('📄 SavedContentSection: Papers error:', papersRes.error);
-      console.log('📄 SavedContentSection: Books error:', booksRes.error);
-      console.log('📄 SavedContentSection: Content slides error:', contentSlidesRes.error);
+      console.log('SavedContentSection: Query results - articles:', articlesRes.data?.length, 'papers:', papersRes.data?.length, 'books:', booksRes.data?.length, 'content_slides:', contentSlidesRes.data?.length);
+      console.log('SavedContentSection: Articles error:', articlesRes.error);
+      console.log('SavedContentSection: Papers error:', papersRes.error);
+      console.log('SavedContentSection: Books error:', booksRes.error);
+      console.log('SavedContentSection: Content slides error:', contentSlidesRes.error);
 
       // Log first few results for debugging
       if (articlesRes.data?.length) {
-        console.log('📄 SavedContentSection: First article result:', articlesRes.data[0]);
+        console.log('SavedContentSection: First article result:', articlesRes.data[0]);
       }
       if (papersRes.data?.length) {
-        console.log('📄 SavedContentSection: First paper result:', papersRes.data[0]);
+        console.log('SavedContentSection: First paper result:', papersRes.data[0]);
       }
       if (booksRes.data?.length) {
-        console.log('📄 SavedContentSection: First book result:', booksRes.data[0]);
+        console.log('SavedContentSection: First book result:', booksRes.data[0]);
       }
 
       // Process and combine all saved content
@@ -268,8 +268,8 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
         }
       }
 
-      console.log('📄 SavedContentSection: Processed data - total saved items:', allSaved.length);
-      console.log('📄 SavedContentSection: Saved items breakdown:', {
+      console.log('SavedContentSection: Processed data - total saved items:', allSaved.length);
+      console.log('SavedContentSection: Saved items breakdown:', {
         articles: allSaved.filter(item => item.type === 'article').length,
         papers: allSaved.filter(item => item.type === 'paper').length,
         books: allSaved.filter(item => item.type === 'book').length
@@ -278,14 +278,14 @@ export const SavedContentSection: React.FC<SavedContentSectionProps> = ({ search
       // Sort by saved_at date
       allSaved.sort((a, b) => new Date(b.saved_at).getTime() - new Date(a.saved_at).getTime());
 
-      console.log('📄 SavedContentSection: Final sorted saved items:', allSaved.length);
+      console.log('SavedContentSection: Final sorted saved items:', allSaved.length);
       if (allSaved.length > 0) {
-        console.log('📄 SavedContentSection: First saved item:', allSaved[0]);
+        console.log('SavedContentSection: First saved item:', allSaved[0]);
       }
 
       setSavedContent(allSaved);
     } catch (error) {
-      console.error('📄 SavedContentSection: Error fetching saved content:', error);
+      console.error('SavedContentSection: Error fetching saved content:', error);
     } finally {
       setLoading(false);
     }

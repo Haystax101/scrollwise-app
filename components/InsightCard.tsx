@@ -165,7 +165,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight, isExpanded = false }
       aspectRatio: isExpanded ? 1 : 1.33,
       // Use cover for both to fill space and avoid "padding", unless expanded needs full view.
       // User complained about padding in expanded, so let's try cover there too, or maybe just remove bg.
-      // "Not everything fitting" -> padding wasting space.
+      // "Not everything fitting"-> padding wasting space.
       resizeMode: isExpanded ? 'contain' : 'cover',
       borderRadius: 16, // Soft corners
     },
@@ -736,7 +736,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ insight, isExpanded = false }
   // Debug logging for tagline issue
   useEffect(() => {
     if (!insight.author.tagline) {
-      console.log('🔍 InsightCard: Missing tagline for author:', insight.author.name, insight.author);
+      console.log('InsightCard: Missing tagline for author:', insight.author.name, insight.author);
     }
   }, [insight.author]);
 

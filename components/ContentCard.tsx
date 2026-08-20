@@ -148,7 +148,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
         return;
       }
 
-      console.log(`📊 ContentCard ${contentId}: Slides data:`, {
+      console.log(`ContentCard ${contentId}: Slides data:`, {
         hasChartOnCover: !!data.slides_chart_configs?.[0],
         coverChartType: data.slides_chart_configs?.[0]?.chartType,
         totalSlides: data.slides_text?.length,
@@ -374,7 +374,7 @@ export const ContentCard: React.FC<ContentCardProps> = React.memo(({
         if (layoutVariant === 'above') {
           return isSmallScreen ? styles.imageContainerSmallSE : styles.imageContainerSmall;
         }
-        // For 'below' layout, use smaller container if there's a quote
+        // For 'below'layout, use smaller container if there's a quote
         if (isSmallScreen) {
           return quoteData.isQuote ? styles.imageContainerQuoteSE : styles.imageContainerSE;
         }

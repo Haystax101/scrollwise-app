@@ -149,7 +149,7 @@ export class FeedManager {
         return [];
       }
 
-      console.log(`📊 ContentCard: Found ${slidesData.length} items with slides`);
+      console.log(`ContentCard: Found ${slidesData.length} items with slides`);
 
       // Filter out viewed content using the standard view key format
       const unviewedSlides = slidesData.filter((slide: any) => {
@@ -157,7 +157,7 @@ export class FeedManager {
         return !this.viewedContentIds.has(viewKey);
       });
 
-      console.log(`📊 ContentCard: ${unviewedSlides.length} unviewed items with slides after filtering`);
+      console.log(`ContentCard: ${unviewedSlides.length} unviewed items with slides after filtering`);
 
       // Map slides to feed items
       // Note: Interaction counts start at 0 and update via optimistic UI in ContentCard
@@ -261,7 +261,7 @@ export class FeedManager {
         return [];
       }
 
-      console.log(`🔧 FeedManager: Fetched ${data.length} ${contentType} items from database`);
+      console.log(`FeedManager: Fetched ${data.length} ${contentType} items from database`);
 
       // Filter out viewed content client-side for all content types
       const viewedKeys = Array.from(this.viewedContentIds);
@@ -270,7 +270,7 @@ export class FeedManager {
         const itemKey = `${contentType}-${item.id}`;
         // Filter out viewed content
         if (viewedKeys.includes(itemKey)) {
-          console.log(`🔧 FeedManager: Filtering out viewed content: ${itemKey}`);
+          console.log(`FeedManager: Filtering out viewed content: ${itemKey}`);
           return false;
         }
         // Filter out blocked users for insights
@@ -278,24 +278,24 @@ export class FeedManager {
 
         // Debug logging for insight filtering
         if (contentType === 'insight' && item.author_id === this.userId) {
-          console.log(`🔧 FeedManager: Filtering out OWN insight: ${item.id} (author: ${item.author_id})`);
+          console.log(`FeedManager: Filtering out OWN insight: ${item.id} (author: ${item.author_id})`);
           return false;
         } else if (contentType === 'insight' && item.author_id === this.userId) {
           // Case where it slipped through via some other equality check failure?
-          console.error(`🔧 FeedManager: OWN insight slipped through preliminary filter: ${item.id}`);
+          console.error(`FeedManager: OWN insight slipped through preliminary filter: ${item.id}`);
         }
 
         return true;
       });
 
-      console.log(`🔧 FeedManager: Returning ${unviewedData.length} unique ${contentType} items after filtering`);
+      console.log(`FeedManager: Returning ${unviewedData.length} unique ${contentType} items after filtering`);
 
       let finalData = unviewedData;
 
       // If we don't have enough unviewed content, backfill with viewed content
       if (unviewedData.length < count) {
         const needed = count - unviewedData.length;
-        console.log(`🔧 FeedManager: Not enough new ${contentType} items. Need ${needed} more. Backfilling...`);
+        console.log(`FeedManager: Not enough new ${contentType} items. Need ${needed} more. Backfilling...`);
 
         // Find items that WERE filtered out (viewed previously)
         const viewedItems = data.filter((item: any) => {
@@ -357,7 +357,7 @@ export class FeedManager {
           colour: data.colour
         } as Article;
 
-        console.log(`🔧 FeedManager: Converted article ${data.id} to FeedItem:`, {
+        console.log(`FeedManager: Converted article ${data.id} to FeedItem:`, {
           id: article.id,
           hasAnimationCode: !!article.animation_code,
           hasNarrativeCode: !!article.narrative_code,

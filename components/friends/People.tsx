@@ -46,7 +46,7 @@ export function People({ initialUserId }: PeopleProps) {
 
   useEffect(() => {
     if (initialUserId) {
-      console.log('🔗 People Component: Opening profile for:', initialUserId);
+      console.log('People Component: Opening profile for:', initialUserId);
       setSelectedUserId(initialUserId);
       setShowUserModal(true);
     }
@@ -74,37 +74,37 @@ export function People({ initialUserId }: PeopleProps) {
 
   const loadData = async () => {
     try {
-      // console.log('🔍 PEOPLE: Starting loadData...');
+      // console.log('PEOPLE: Starting loadData...');
       setLoading(true);
 
       // Load leaderboard data
-      // console.log('🔍 PEOPLE: Loading leaderboard...');
+      // console.log('PEOPLE: Loading leaderboard...');
       const leaderboardData = await FriendsService.getFriendsLeaderboard();
-      // console.log('🔍 PEOPLE: Leaderboard data:', leaderboardData.global_with_friends_highlighted.slice(0, 3));
+      // console.log('PEOPLE: Leaderboard data:', leaderboardData.global_with_friends_highlighted.slice(0, 3));
       setLeaderboard(leaderboardData.global_with_friends_highlighted.slice(0, 3));
 
       // Load friend suggestions (show 6 by default - updated from 3)
-      // console.log('🔍 PEOPLE: Loading friend suggestions...');
+      // console.log('PEOPLE: Loading friend suggestions...');
       const suggestionsData = await FriendsService.getFriendSuggestions(6);
-      // console.log('🔍 PEOPLE: Suggestions data:', suggestionsData);
+      // console.log('PEOPLE: Suggestions data:', suggestionsData);
       setSuggestions(suggestionsData);
 
       // Load friends
-      // console.log('🔍 PEOPLE: Loading friends...');
+      // console.log('PEOPLE: Loading friends...');
       const friendsData = await FriendsService.getFriends();
-      // console.log('🔍 PEOPLE: Friends data:', friendsData.slice(0, 6));
+      // console.log('PEOPLE: Friends data:', friendsData.slice(0, 6));
       setFriends(friendsData.slice(0, 6));
 
       // Load friend requests count
-      // console.log('🔍 PEOPLE: Loading friend requests...');
+      // console.log('PEOPLE: Loading friend requests...');
       const requests = await FriendsService.getFriendRequests();
-      // console.log('🔍 PEOPLE: Requests count:', requests.incoming.length);
+      // console.log('PEOPLE: Requests count:', requests.incoming.length);
       setRequestsCount(requests.incoming.length);
 
     } catch (error) {
-      console.error('🚨 People page error loading data:', error);
+      console.error('People page error loading data:', error);
       if (error instanceof Error) {
-        console.error('🚨 Error details:', error.message, error.stack);
+        console.error('Error details:', error.message, error.stack);
       }
     } finally {
       setLoading(false);
@@ -480,26 +480,26 @@ export function People({ initialUserId }: PeopleProps) {
   });
 
   // Temporarily remove console.log to test
-  // console.log('🔍 PEOPLE RENDER: Starting render with:', {
-  //   searchResults: searchResults.length,
-  //   leaderboard: leaderboard.length,
-  //   suggestions: suggestions.length,
-  //   friends: friends.length,
-  //   requestsCount
+  // console.log('PEOPLE RENDER: Starting render with:', {
+  // searchResults: searchResults.length,
+  // leaderboard: leaderboard.length,
+  // suggestions: suggestions.length,
+  // friends: friends.length,
+  // requestsCount
   // });
 
   const renderLeaderboard = () => {
     return leaderboard.map((entry, index) => {
-      // console.log('🔍 PEOPLE RENDER: Leaderboard entry:', entry);
+      // console.log('PEOPLE RENDER: Leaderboard entry:', entry);
       const isCurrentUser = entry.user_id === user?.id;
-      // console.log('🏆 Leaderboard entry:', {
-      //   user_id: entry.user_id,
-      //   full_name: entry.full_name,
-      //   avatar_url: entry.avatar_url,
-      //   avatar_url_type: typeof entry.avatar_url,
-      //   avatar_url_length: entry.avatar_url?.length,
-      //   isCurrentUser,
-      //   shouldUseDefault: !(entry.avatar_url && entry.avatar_url.trim() && entry.avatar_url !== 'null' && entry.avatar_url !== 'undefined')
+      // console.log('Leaderboard entry:', {
+      // user_id: entry.user_id,
+      // full_name: entry.full_name,
+      // avatar_url: entry.avatar_url,
+      // avatar_url_type: typeof entry.avatar_url,
+      // avatar_url_length: entry.avatar_url?.length,
+      // isCurrentUser,
+      // shouldUseDefault: !(entry.avatar_url && entry.avatar_url.trim() && entry.avatar_url !== 'null'&& entry.avatar_url !== 'undefined')
       // });
       return (
         <TouchableOpacity
@@ -526,7 +526,7 @@ export function People({ initialUserId }: PeopleProps) {
             }
             style={dynamicStyles.leaderboardAvatar}
             defaultSource={require('../../assets/profileIconDefault.png')}
-            onError={() => console.log('🖼️ Avatar failed to load for:', entry.full_name)}
+            onError={() => console.log('Avatar failed to load for:', entry.full_name)}
           />
           <View style={dynamicStyles.leaderboardInfo}>
             <Text style={[
@@ -549,7 +549,7 @@ export function People({ initialUserId }: PeopleProps) {
 
   const renderSuggestions = () => {
     return suggestions.map((suggestion) => {
-      // console.log('🔍 PEOPLE RENDER: Suggestion:', suggestion);
+      // console.log('PEOPLE RENDER: Suggestion:', suggestion);
       const hasBeenAdded = addedUsers.has(suggestion.suggested_user_id);
       return (
         <View key={suggestion.id} style={dynamicStyles.suggestionCard}>
@@ -594,7 +594,7 @@ export function People({ initialUserId }: PeopleProps) {
 
   const renderFriends = () => {
     return friends.map((friendItem) => {
-      // console.log('🔍 PEOPLE RENDER: Friend item:', friendItem);
+      // console.log('PEOPLE RENDER: Friend item:', friendItem);
       return (
         <TouchableOpacity
           key={friendItem.id}

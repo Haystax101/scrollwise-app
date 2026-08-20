@@ -32,15 +32,15 @@ export const StreakSelection: React.FC<StreakSelectionProps> = ({ onNext, onBack
         const result = await NotificationService.registerForPushNotifications();
 
         if (result.success) {
-          console.log('✅ Notifications enabled during onboarding');
+          console.log('Notifications enabled during onboarding');
           onNext({ streakGoal: selectedDays, enableNotifications: true });
         } else {
-          console.log('⚠️ User declined notifications or they failed to enable');
+          console.log('User declined notifications or they failed to enable');
           // Still proceed, just without notifications
           onNext({ streakGoal: selectedDays, enableNotifications: false });
         }
       } else {
-        console.log('📱 Device does not support push notifications');
+        console.log('Device does not support push notifications');
         onNext({ streakGoal: selectedDays, enableNotifications: false });
       }
     } catch (error) {

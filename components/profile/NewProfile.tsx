@@ -55,7 +55,7 @@ interface NewProfileProps {
 }
 
 export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigateTo, signOut, deleteAccount }) => {
-  console.log('🔍 NewProfile: Component initializing', {
+  console.log('NewProfile: Component initializing', {
     hasUser: !!userProp,
     userId: userProp?.id,
     userEmail: userProp?.email
@@ -89,9 +89,9 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
   const [industries, setIndustries] = useState<Industry[]>([]);
   // const [showOnboardingProgress, setShowOnboardingProgress] = useState<boolean>(false);
   // const [learningStats, setLearningStats] = useState<LearningStats>({
-  //   connectionsCount: 0,
-  //   totalInteractions: 0,
-  //   achievementsCount: 0
+  // connectionsCount: 0,
+  // totalInteractions: 0,
+  // achievementsCount: 0
   // });
   // const [profileData, setProfileData] = useState<ProfileData>({ });
   // const [profilePassions, setProfilePassions] = useState<ProfilePassion | null>(null);
@@ -216,7 +216,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
         // setVoltzForNextLevel(voltzStats.voltzForNextLevel);
         // setIsLevelled(voltzStats.isLevelled);
 
-        console.log('📊 Profile loaded - isLevelled:', voltzStats.isLevelled, 'Level:', voltzStats.level);
+        console.log('Profile loaded - isLevelled:', voltzStats.isLevelled, 'Level:', voltzStats.level);
       }
 
       // CRITICAL: Proper update sequence for real-time changes
@@ -278,9 +278,9 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
             companies: companies.length > 0 ? companies : undefined
           });
 
-          console.log('✅ Career goal loaded successfully:', goalData.goal);
+          console.log('Career goal loaded successfully:', goalData.goal);
         } else {
-          console.log('📝 No career goal found for user');
+          console.log('No career goal found for user');
         }
       } catch (careerGoalsError) {
         console.error('Exception fetching career goals:', careerGoalsError);
@@ -421,7 +421,7 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
 
     // Track profile view (analytics temporarily disabled)
     if (currentUser?.id) {
-      console.log('📊 Profile viewed by user:', currentUser.id);
+      console.log('Profile viewed by user:', currentUser.id);
     }
   }, [currentUser?.id]);
 
@@ -501,23 +501,23 @@ export const NewProfile: React.FC<NewProfileProps> = ({ user: userProp, navigate
       setIndustries(formattedIndustries);
       setShowIndustrySelection(false);
 
-      console.log('🔄 Profile: Refreshing industries context after industry update...');
+      console.log('Profile: Refreshing industries context after industry update...');
       await refreshIndustries();
-      console.log('✅ Profile: Industries context refreshed successfully');
+      console.log('Profile: Industries context refreshed successfully');
 
       // TODO: AsyncStorage operations disabled due to potential native build crash
       // try {
-      //   const AsyncStorage = await import('@react-native-async-storage/async-storage');
-      //   const viewedKey = `viewed_content_${currentUser?.id}`;
-      //   await AsyncStorage.default.removeItem(viewedKey);
-      //   console.log('🧹 Profile: Cleared viewed content cache to show fresh industry content');
+      // const AsyncStorage = await import('@react-native-async-storage/async-storage');
+      // const viewedKey = `viewed_content_${currentUser?.id}`;
+      // await AsyncStorage.default.removeItem(viewedKey);
+      // console.log('Profile: Cleared viewed content cache to show fresh industry content');
       // } catch (cacheError) {
-      //   console.warn('⚠️ Profile: Failed to clear viewed content cache:', cacheError);
+      // console.warn('Profile: Failed to clear viewed content cache:', cacheError);
       // }
-      console.log('⚠️ AsyncStorage cache clearing disabled for crash testing');
+      console.log('AsyncStorage cache clearing disabled for crash testing');
 
     } catch (error) {
-      console.error('❌ Profile: Error in handleIndustrySave:', error);
+      console.error('Profile: Error in handleIndustrySave:', error);
     }
   };
 

@@ -1,3 +1,14 @@
+/**
+ * Embedding service: one place that turns text into a vector.
+ *
+ * Every producer of embeddings goes through here (content ingestion, the three
+ * search functions) so that queries and documents are always encoded by the same
+ * model. Mixing models across a corpus silently corrupts a vector index, because
+ * distances between vectors from different models are meaningless.
+ *
+ * Model: Gemini text-embedding-004. Callers retry with exponential backoff, since
+ * this sits on the critical path of user-facing search.
+ */
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 
