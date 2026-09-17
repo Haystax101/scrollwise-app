@@ -82,3 +82,6 @@ ios/build/
 # Build output
 dist/
 web-build/
+
+# Android debug signing key
+*.keystore
